@@ -1,0 +1,13 @@
+[project]
+name = "aucs-workers"
+version = "0.1.0"
+description = "옥스 수집·추출·작업"
+requires-python = ">=3.12"
+dependencies = ["aucs-rules"]
+
+[tool.uv.sources]
+aucs-rules = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

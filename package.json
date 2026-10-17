@@ -1,0 +1,9 @@
+{
+  "name": "auction-platform",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "check:web": "pnpm --filter web check"
+  }
+}

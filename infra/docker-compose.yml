@@ -1,0 +1,12 @@
+# 내 PC용 DB 자리 (지금은 Supabase를 쓰므로 켜지 않아도 됩니다)
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: aucs
+      POSTGRES_PASSWORD: aucs_local
+      POSTGRES_DB: aucs
+    ports: ["5433:5432"]
+    volumes: [db_data:/var/lib/postgresql/data]
+volumes:
+  db_data:

@@ -1,0 +1,9 @@
+{
+  "name": "옥스",
+  "short_name": "옥스",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": []
+}

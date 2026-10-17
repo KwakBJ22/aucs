@@ -1,0 +1,10 @@
+[project]
+name = "aucs-rules"
+version = "0.1.0"
+description = "옥스 분석 규칙 (순수 함수)"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -1,0 +1,37 @@
+[project]
+name = "auction-platform"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["aucs-api", "aucs-rules", "aucs-workers"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/rules", "workers"]
+
+[tool.uv.sources]
+aucs-api = { workspace = true }
+aucs-rules = { workspace = true }
+aucs-workers = { workspace = true }
+
+[dependency-groups]
+dev = ["ruff>=0.12", "mypy>=1.16", "pytest>=8.4", "httpx>=0.28"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "aucs_rules.*"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests", "packages/rules/tests", "workers/tests"]
