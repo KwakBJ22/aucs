@@ -13,10 +13,15 @@ if (-not $pnpm) { $pnpm = "$env:APPDATA\npm\pnpm.cmd" }
 while ($true) {
   "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 켜기" | Out-File -Append -Encoding utf8 $log
   if ($Name -eq 'api') {
-    & $uv run uvicorn aucs_api.main:app --port 8100 --reload --reload-dir apps/api/src --reload-dir packages/rules/src *>> $log
+    & $uv sync --all-packages 2>&1 | Out-File -Append -Encoding utf8 $log
+    & $uv run uvicorn aucs_api.main:app --port 8100 --reload --reload-dir apps/api/src --reload-dir packages/rules/src 2>&1 | Out-File -Append -Encoding utf8 $log
   } else {
-    if (-not (Test-Path "$root\node_modules")) { & $pnpm install *>> $log }
-    & $pnpm dev:web *>> $log
+    # 새 꾸러미가 생기면(pnpm-lock.yaml 이 더 새로우면) 먼저 설치
+    $mark = "$root\node_modules\.modules.yaml"
+    if (-not (Test-Path $mark) -or (Get-Item "$root\pnpm-lock.yaml").LastWriteTime -gt (Get-Item $mark).LastWriteTime) {
+      & $pnpm install 2>&1 | Out-File -Append -Encoding utf8 $log
+    }
+    & $pnpm dev:web 2>&1 | Out-File -Append -Encoding utf8 $log
   }
   "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 꺼짐 — 5초 뒤 다시 켬" | Out-File -Append -Encoding utf8 $log
   Start-Sleep -Seconds 5
