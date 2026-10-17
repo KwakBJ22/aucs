@@ -2,6 +2,6 @@
 
 from aucs_rules.result import RuleResult, Status
 
-ENGINE_VERSION = "rules-0.1.0"
+ENGINE_VERSION = "rules-0.2.0"
 
 __all__ = ["ENGINE_VERSION", "RuleResult", "Status"]
