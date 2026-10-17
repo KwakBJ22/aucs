@@ -10,7 +10,8 @@ $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
 if (-not $uv) { $uv = "$env:USERPROFILE\.local\bin\uv.exe" }
 $mod = @{ items = 'aucs_workers.collectors.court_items'; results = 'aucs_workers.collectors.court_results';
           docs = 'aucs_workers.collectors.court_docs --archive'; analyze = 'aucs_workers.jobs.analyze' }[$Job]
-& $uv run python -m $mod.Split(' ') *>&1 | Tee-Object -FilePath $log
+$parts = $mod -split ' '
+& $uv run python -m @parts *>&1 | Tee-Object -FilePath $log
 if ($LASTEXITCODE -ne 0) {
   Add-Type -AssemblyName System.Windows.Forms
   [System.Windows.Forms.MessageBox]::Show("옥스 $Job 작업이 멈췄습니다.`n`n로그: $log`n`n코워크에 알려 주세요.", '옥스 — 수집 확인') | Out-Null
