@@ -1,5 +1,5 @@
 ﻿# 옥스 수집·분석 실행기 — 작업 스케줄러가 부릅니다. 결과는 logs\ 에 남깁니다.
-param([Parameter(Mandatory = $true)][ValidateSet('items', 'results', 'docs', 'analyze')][string]$Job)
+param([Parameter(Mandatory = $true)][ValidateSet('items', 'results', 'docs', 'analyze', 'trades')][string]$Job)
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -9,7 +9,7 @@ $env:PYTHONIOENCODING = 'utf-8'
 $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
 if (-not $uv) { $uv = "$env:USERPROFILE\.local\bin\uv.exe" }
 $mod = @{ items = 'aucs_workers.collectors.court_items'; results = 'aucs_workers.collectors.court_results';
-          docs = 'aucs_workers.collectors.court_docs --archive'; analyze = 'aucs_workers.jobs.analyze' }[$Job]
+          docs = 'aucs_workers.collectors.court_docs --archive'; analyze = 'aucs_workers.jobs.analyze'; trades = 'aucs_workers.collectors.trades --months 3' }[$Job]
 $parts = $mod -split ' '
 & $uv run python -m @parts *>&1 | Tee-Object -FilePath $log
 if ($LASTEXITCODE -ne 0) {
