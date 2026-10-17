@@ -1,3 +1,4 @@
+import { HeartButton } from "./heart-button";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import type { ItemCard as Card } from "@/lib/api/items";
@@ -58,6 +59,7 @@ export function ItemCard({ c }: { c: Card }) {
           </div>
         )}
       </div>
+      <HeartButton id={c.item_id} />
     </div>
   );
 }

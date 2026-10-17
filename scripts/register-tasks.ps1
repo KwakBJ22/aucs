@@ -12,6 +12,7 @@ Add-Daily '매각결과' 'results' '10:00' 1
 Add-Daily '물건' 'items' '11:30' 2
 Add-Daily '서류보관' 'docs' '13:30' 2
 Add-Daily '분석' 'analyze' '15:30' 1
+Add-Daily '알림' 'notify' '16:30' 1
 foreach ($t in '경매물건_주간', '매각결과_주간', '서류보관_매일') {
   Disable-ScheduledTask -TaskPath '\Auction\' -TaskName $t -ErrorAction SilentlyContinue | Out-Null
   Write-Host "끔: \Auction\$t (지우지 않음)"

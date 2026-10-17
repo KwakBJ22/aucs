@@ -8,6 +8,9 @@ import { fetchItems, type ItemList } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { loadProfile, type Profile } from "@/lib/profile";
+import { meApi } from "@/lib/api/me";
+import { useSession } from "@/lib/auth";
+import { subscribePush } from "@/lib/push";
 
 const t = copy.home;
 
@@ -15,6 +18,30 @@ export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mine, setMine] = useState<ItemList | null>(null);
+  const { session } = useSession();
+  const token = session?.access_token ?? null;
+  const [alertMsg, setAlertMsg] = useState("");
+
+  // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
+  useEffect(() => {
+    const p = loadProfile();
+    if (token && p)
+      meApi
+        .saveProfile(token, { regions: p.regions, cash: p.cash, purpose: p.purpose })
+        .catch(() => {});
+  }, [token]);
+
+  async function turnOnAlert(p: Profile) {
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    await meApi.addSearch(token, copy.alert.name, { sigungu: p.regions, max_cash: p.cash });
+    const r = await subscribePush(token);
+    setAlertMsg(
+      r === "ok" ? copy.alert.saved : r === "denied" ? copy.alert.denied : copy.alert.unsupported,
+    );
+  }
 
   useEffect(() => {
     const p = loadProfile();
@@ -42,26 +69,54 @@ export default function Home() {
     <main className="page">
       <div className="topbar">
         <div className="brand">{copy.appName}</div>
-        <Link href="/login" style={{ fontSize: 14, fontWeight: 600 }}>
-          {t.login}
-        </Link>
+        {token ? (
+          <Link
+            href="/notifications"
+            aria-label={copy.noti.title}
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
+              <path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" />
+            </svg>
+          </Link>
+        ) : (
+          <Link href="/login" style={{ fontSize: 14, fontWeight: 600 }}>
+            {t.login}
+          </Link>
+        )}
       </div>
-      <Link
-        href="/login"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          background: "var(--blue-soft)",
-          borderRadius: 14,
-          padding: "12px 14px",
-          color: "var(--blue-text)",
-          fontSize: 14,
-          fontWeight: 600,
-        }}
-      >
-        <span>{t.loginBanner}</span>
-        <span aria-hidden="true">›</span>
-      </Link>
+      {!token && (
+        <Link
+          href="/login"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            background: "var(--blue-soft)",
+            borderRadius: 14,
+            padding: "12px 14px",
+            color: "var(--blue-text)",
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          <span>{t.loginBanner}</span>
+          <span aria-hidden="true">›</span>
+        </Link>
+      )}
 
       {closing.length > 0 && (
         <section className="section">
@@ -113,6 +168,24 @@ export default function Home() {
         <div className="sub" style={{ marginBottom: 4 }}>
           {summary}
         </div>
+        <button
+          className="btn"
+          style={{
+            background: "var(--blue-soft)",
+            color: "var(--blue-text)",
+            margin: "8px 0 4px",
+            height: 44,
+            fontSize: 14,
+          }}
+          onClick={() => void turnOnAlert(profile)}
+        >
+          {copy.alert.button}
+        </button>
+        {alertMsg && (
+          <p className="sub" style={{ margin: "0 0 4px" }}>
+            {alertMsg}
+          </p>
+        )}
         {mine && mine.items.length === 0 && <p className="sub">{t.empty}</p>}
         {mine?.items.slice(0, 5).map((c) => (
           <ItemCard key={c.item_id} c={c} />
@@ -151,9 +224,11 @@ export default function Home() {
           ))}
         </div>
       </section>
-      <Link href="/login" className="btn kakao">
-        {t.kakao}
-      </Link>
+      {!token && (
+        <Link href="/login" className="btn kakao">
+          {t.kakao}
+        </Link>
+      )}
     </main>
   );
 }
