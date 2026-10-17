@@ -1,22 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import "./globals.css";
 import { copy } from "@/lib/copy.ko";
 
 export const metadata: Metadata = { title: copy.appName, manifest: "/manifest.json" };
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f4f5f7" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body
-        style={{
-          margin: 0,
-          fontFamily: "system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif",
-          background: "#fff",
-          color: "#111",
-        }}
-      >
-        {children}
-      </body>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

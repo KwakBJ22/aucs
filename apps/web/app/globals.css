@@ -1,0 +1,195 @@
+/* 옥스 디자인 기본값 (스토리보드): 파랑 하나 + 의미색(초록 확인·회색 모름·주황 주의·빨강 치명) */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --text: #16181d;
+  --muted: #5b616e;
+  --faint: #6b717d;
+  --line: #eef0f3;
+  --blue: #1f5eea;
+  --blue-soft: #eaf1fe;
+  --blue-text: #1647b8;
+  --green: #0f6b4c;
+  --green-soft: #e7f5ef;
+  --gray-chip: #f1f2f4;
+  --gray-text: #4a505b;
+  --orange: #8a4600;
+  --orange-soft: #fff3e3;
+  --amber: #b25e00;
+  --red: #c23b32;
+  --kakao: #fee500;
+  --kakao-text: #191600;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #1a1d23;
+    --text: #eceef2;
+    --muted: #a3a9b5;
+    --faint: #8a909c;
+    --line: #2a2e36;
+    --blue: #5b8cff;
+    --blue-soft: #1b2a4d;
+    --blue-text: #a9c2ff;
+    --green: #6fd3a8;
+    --green-soft: #133428;
+    --gray-chip: #2a2e36;
+    --gray-text: #c3c8d1;
+    --orange: #ffb766;
+    --orange-soft: #3a2a14;
+    --amber: #ffb766;
+    --red: #ff6b61;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+body {
+  font-family:
+    Pretendard,
+    -apple-system,
+    "Apple SD Gothic Neo",
+    "Malgun Gothic",
+    sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 4px 16px 96px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 8px 4px 0;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+}
+.section {
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 12px 0;
+}
+.section h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.chip.green {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.chip.gray {
+  background: var(--gray-chip);
+  color: var(--gray-text);
+}
+.chip.orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+.fatal {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 17px;
+  font-weight: 600;
+  width: 100%;
+}
+.btn.primary {
+  background: var(--blue);
+  color: #fff;
+}
+.btn.kakao {
+  background: var(--kakao);
+  color: var(--kakao-text);
+  height: 52px;
+  font-size: 15px;
+}
+.btn:disabled {
+  opacity: 0.4;
+}
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding-bottom: 14px;
+  z-index: 10;
+}
+.tabbar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--faint);
+  font-size: 11px;
+  min-height: 44px;
+}
+.tabbar a.on {
+  color: var(--blue);
+  font-weight: 700;
+}
+.menu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 15px;
+}
+.menu-row:last-child {
+  border-bottom: 0;
+}
