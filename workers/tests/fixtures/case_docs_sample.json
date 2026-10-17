@@ -1,0 +1,188 @@
+{
+"case_info": {
+"dma_csBasInf": {
+"cortOfcCd": "B000250",
+"csNo": "20250130056099",
+"csNm": "부동산강제경매",
+"cortAuctnJdbnNm": "경매7계",
+"userCsNo": "2025타경56099",
+"clmAmt": 100000000
+},
+"dlt_dstrtDemnLstprdDts": [
+{
+"cortOfcCd": "B000250",
+"csNo": "20250130056099",
+"dspslObjctSeq": 1,
+"auctnLstDvsCd": "03",
+"rprsAdongSdCd": "41",
+"rprsAdongSggCd": "590",
+"rprsAdongEmdCd": "262",
+"rprsAdongRiCd": "21",
+"rprsLtnoAddr": "2005",
+"bldNm": "푸르뫼금강에스쁘아",
+"adongSdNm": "경기도",
+"adongSggNm": "화성시",
+"adongEmdNm": "남양읍",
+"adongRiNm": "남양리",
+"orddcsDvsCd": "021",
+"orddcsYmd": "20250609",
+"dstrtDemnLstprdPbancYmd": "20250609",
+"dstrtDemnLstprdYmd": "20250818",
+"rdnmSdNm": "경기도",
+"rdnmSggNm": "화성시",
+"rdnmEmdNm": "남양읍",
+"rdnm": "화성로1081번길",
+"rdnmBldNo": "49-10",
+"rdnmRefcAddr": "(푸르뫼금강에스쁘아)",
+"addrTypCd": "A",
+"bldDtlDts": "102동 11층1105호"
+}
+]
+},
+"deliveries": {
+"dlt_ofdocDtsLst": [
+{
+"ofdocRcptYmd": "20250521",
+"rcptDts": "채권자 소송대리인 배OO 보정서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250522",
+"rcptDts": "채권자 소송대리인 배OO 보정서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250528",
+"rcptDts": "등기소 수OOOOO OOO 등기필증 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250618",
+"rcptDts": "기타 권OO 현황조사보고서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250618",
+"rcptDts": "감정인 최OO 감정평가서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250620",
+"rcptDts": "감정인 선OOOOOOOOO 감정평가서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250626",
+"rcptDts": "교부권자 화OO 미체납교부청구서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250808",
+"rcptDts": "교부권자 화OO 교부청구 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20250818",
+"rcptDts": "채권자 소송대리인 배OO 채권계산서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20260720",
+"rcptDts": "기타 조OO 기일입찰조서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20260824",
+"rcptDts": "검찰청 수OOOOOO 전언통신문 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20260825",
+"rcptDts": "채권자 소송대리인 배OO 소송대리인 사임신고서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20260901",
+"rcptDts": "기타 조OO 기일입찰조서 제출",
+"rcptRslt": ""
+},
+{
+"ofdocRcptYmd": "20261012",
+"rcptDts": "기타 조OO 기일입찰조서 제출",
+"rcptRslt": ""
+}
+],
+"dlt_dlvrDtsLst": [
+{
+"dlvrbkRegYmd": "20250609",
+"lastDlvrblRchYmd": "2025.06.16 폐문부재",
+"dlvrDts": "채무자겸소유자 박OO 개시결정정본 발송"
+},
+{
+"dlvrbkRegYmd": "20250609",
+"lastDlvrblRchYmd": "2025.06.09 도달",
+"dlvrDts": "채권자대리인 배OO 개시결정정본 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.11 송달간주",
+"dlvrDts": "주무관서 국OOOOOOO OOOO 최고서 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.11 송달간주",
+"dlvrDts": "주무관서 화OOOO 최고서 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.11 송달간주",
+"dlvrDts": "주무관서 화OOO 최고서 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.11 송달간주",
+"dlvrDts": "공유자 배OO 통지서 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.10 도달",
+"dlvrDts": "집행관 수OOO OOO 조사명령 발송"
+},
+{
+"dlvrbkRegYmd": "20250610",
+"lastDlvrblRchYmd": "2025.06.18 도달",
+"dlvrDts": "감정인 선OOOOOOOOO OOO 평가명령 발송"
+},
+{
+"dlvrbkRegYmd": "20250620",
+"lastDlvrblRchYmd": "2025.08.09 도달",
+"dlvrDts": "채무자겸소유자 1 박OO 개시결정정본 발송"
+},
+{
+"dlvrbkRegYmd": "20260629",
+"lastDlvrblRchYmd": "2026.06.29 송달간주",
+"dlvrDts": "채무자겸소유자 박OO 매각기일 및 매각결정기일통지서 발송"
+},
+{
+"dlvrbkRegYmd": "20260629",
+"lastDlvrblRchYmd": "2026.06.29 송달간주",
+"dlvrDts": "공유자 배OO 매각기일 및 매각결정기일통지서 발송"
+},
+{
+"dlvrbkRegYmd": "20260629",
+"lastDlvrblRchYmd": "2026.06.29 송달간주",
+"dlvrDts": "교부권자 화OO 매각기일 및 매각결정기일통지서 발송"
+},
+{
+"dlvrbkRegYmd": "20260629",
+"lastDlvrblRchYmd": "2026.06.29 도달",
+"dlvrDts": "채권자대리인 배OO 매각기일 및 매각결정기일통지서 발송"
+},
+{
+"dlvrbkRegYmd": "20261012",
+"lastDlvrblRchYmd": "",
+"dlvrDts": "채권자 박OO 추납통지서 발송"
+}
+]
+}
+}
