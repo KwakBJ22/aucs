@@ -1,0 +1,3 @@
+-- 0007 회원 자료: 관심 물건·저장한 조건·푸시 구독·보낸 알림·알림함. 모두 본인만(RLS). Supabase에 적용됨(10/17).
+-- 알림 중복 막기: alert_events (user_id, item_id, kind, new_value) 유일 — 같은 물건+종류+지금 값은 한 번만.
+-- 전체 SQL은 Supabase 마이그레이션 0007_app_member_tables 와 같습니다.
