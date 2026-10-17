@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 uv run ruff check .;               if ($LASTEXITCODE) { exit 1 }
 uv run ruff format --check .;      if ($LASTEXITCODE) { exit 1 }
-uv run mypy packages/rules/src apps/api/src; if ($LASTEXITCODE) { exit 1 }
+uv run python -m mypy packages/rules/src apps/api/src workers/src; if ($LASTEXITCODE) { exit 1 }
 uv run pytest -q;                  if ($LASTEXITCODE) { exit 1 }
 pnpm --filter web check;           if ($LASTEXITCODE) { exit 1 }
 Write-Host "검사 통과"

@@ -3,7 +3,13 @@ name = "aucs-workers"
 version = "0.1.0"
 description = "옥스 수집·추출·작업"
 requires-python = ">=3.12"
-dependencies = ["aucs-rules"]
+dependencies = [
+  "aucs-rules",
+  "psycopg[binary]>=3.2",
+  "python-dotenv>=1.1",
+  "playwright>=1.52",
+  "pyproj>=3.7",
+]
 
 [tool.uv.sources]
 aucs-rules = { workspace = true }

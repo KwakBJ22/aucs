@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy packages/rules/src apps/api/src
+uv run python -m mypy packages/rules/src apps/api/src workers/src
 uv run pytest -q
 pnpm --filter web check
 echo "검사 통과"

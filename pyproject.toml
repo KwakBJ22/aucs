@@ -24,6 +24,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # 길이는 ruff format 이 맞춤 (SQL·JS 글은 예외)
 
 [tool.mypy]
 python_version = "3.12"
