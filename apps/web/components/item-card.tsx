@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HeartButton } from "./heart-button";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
@@ -17,7 +18,10 @@ function Chip({ c }: { c: Card }) {
 export function ItemCard({ c }: { c: Card }) {
   const urgent = c.d_day != null && c.d_day <= 7;
   return (
-    <div style={{ display: "flex", gap: 12, padding: "12px 0" }}>
+    <Link
+      href={`/item/${encodeURIComponent(c.item_id)}`}
+      style={{ display: "flex", gap: 12, padding: "12px 0", color: "inherit" }}
+    >
       <div
         style={{
           width: 72,
@@ -60,6 +64,6 @@ export function ItemCard({ c }: { c: Card }) {
         )}
       </div>
       <HeartButton id={c.item_id} />
-    </div>
+    </Link>
   );
 }

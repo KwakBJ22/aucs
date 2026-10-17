@@ -140,7 +140,7 @@ def make_watch_alerts(conn: psycopg.Connection) -> int:
             eid = _event(conn, uid, item_id, ch.kind, ch.prev, ch.new)
             if eid and ch.prev is not None:
                 title, body = change_text(place.strip(), ch)
-                _noti(conn, uid, eid, title, body, "/watch")
+                _noti(conn, uid, eid, title, body, f"/item/{item_id}")
                 n += 1
     return n
 

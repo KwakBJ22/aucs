@@ -9,7 +9,11 @@ export function HeartButton({ id }: { id: string }) {
   return (
     <button
       aria-label={on ? copy.watch.remove : copy.watch.add}
-      onClick={() => void toggle(id)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void toggle(id);
+      }}
       style={{
         border: 0,
         background: "none",

@@ -3,9 +3,9 @@
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from aucs_api.services import items
+from aucs_api.services import item_detail, items
 
 router = APIRouter()
 
@@ -25,3 +25,11 @@ def get_items(
 @router.get("/regions")
 def get_regions() -> list[dict[str, Any]]:
     return items.regions()
+
+
+@router.get("/items/{item_id}")
+def get_item(item_id: str) -> dict[str, Any]:
+    d = item_detail.detail(item_id, date.today())
+    if d is None:
+        raise HTTPException(404, "물건을 찾을 수 없어요")
+    return d

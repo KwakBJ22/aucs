@@ -41,3 +41,25 @@ export function fetchItems(opts: {
 }
 
 export const fetchRegions = () => getJson<RegionRow[]>("/regions");
+
+export type Question = {
+  key: "buy" | "hold" | "worth" | "cost" | "check";
+  title: string;
+  answer: string;
+  tone: "green" | "gray" | "orange" | "red" | "blue";
+  body: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+};
+export type ItemDetail = ItemCard & {
+  verdict: string;
+  fatal: string | null;
+  address: string | null;
+  sale_place: string | null;
+  dept_name: string | null;
+  next_round: { min_price_krw: number | null; reduction_pct: number | null; verified: boolean };
+  rounds: { sale_date: string; min_price_krw: number | null; result: string }[];
+  tags: { label: string; ok: boolean }[];
+  questions: Question[];
+  computed_at: string | null;
+};
+
+export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
