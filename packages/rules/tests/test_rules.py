@@ -92,3 +92,17 @@ def test_risk_fatal_first_and_villa() -> None:
     assert top_signal(sig).level == "fatal"
     assert any(s.rule_id == "risk.neighborhood_villa" for s in sig)
     assert signals({"tenants_checked": False})[0].status == Status.UNKNOWN
+
+
+def test_small_lease_from_rule_table_rows() -> None:
+    from aucs_rules.tenants import flatten_small_lease_table
+
+    rows = [{"valid_from": D(2023, 2, 21), "valid_to": None,
+             "value": {"seoul": {"deposit_limit_krw": 165_000_000, "amount_krw": 55_000_000}}}]  # fmt: skip
+    t = Tenant(D(2024, 1, 1), deposit_krw=100_000_000)
+    assert (
+        small_lease_amount(
+            t, "seoul", D(2024, 1, 1), None, None, flatten_small_lease_table(rows)
+        ).value
+        == 55_000_000
+    )

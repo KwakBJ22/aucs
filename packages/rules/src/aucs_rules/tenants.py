@@ -116,3 +116,13 @@ def family_tenant(t: Tenant) -> RuleResult:
     return RuleResult(
         False, Status.ESTIMATED if t.relation_text else Status.UNKNOWN, "tenants.family", []
     )
+
+
+def flatten_small_lease_table(rule_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """ref.rule_tables 'small_lease_limit' 행(지역별 값 묶음) → small_lease_amount 가 읽는 줄들."""
+    out = []
+    for r in rule_rows:
+        for region_class, v in r["value"].items():
+            out.append({"valid_from": r["valid_from"], "valid_to": r.get("valid_to"), "region_class": region_class,
+                        "deposit_limit_krw": v["deposit_limit_krw"], "amount_krw": v["amount_krw"]})  # fmt: skip
+    return out
