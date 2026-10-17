@@ -4,10 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aucs_api import settings
-from aucs_api.routers import health
+from aucs_api.routers import admin, health
 
 app = FastAPI(title="옥스 API")
 app.add_middleware(
-    CORSMiddleware, allow_origins=settings.WEB_ORIGINS, allow_methods=["GET"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=settings.WEB_ORIGINS,
+    allow_methods=["GET", "PUT"],
+    allow_headers=["*"],
 )
 app.include_router(health.router)
+app.include_router(admin.router)

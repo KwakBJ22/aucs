@@ -10,3 +10,6 @@ load_dotenv(ROOT / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 WEB_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+# 관리자 화면 열쇠 (2단계 로그인 전까지 개발용). 비어 있으면 관리자 주소는 모두 막힘.
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
