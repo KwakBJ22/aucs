@@ -1,4 +1,4 @@
-# 형식·타입·시험을 한 번에 돌립니다 (Windows PowerShell).
+﻿# 형식·타입·시험을 한 번에 돌립니다 (Windows PowerShell).
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 uv run ruff check .;               if ($LASTEXITCODE) { exit 1 }
