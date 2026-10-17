@@ -80,7 +80,8 @@ def parse_trade(
         "prop_type": prop_type,
         "sub_type": it.get("houseType") or it.get("buildingUse") or None,
         "sigungu_code": sgg,
-        "region_code": region.get((sgg, dong)),
+        "region_code": region.get((sgg, dong))
+        or region.get((sgg, dong.split(" ")[0])),  # 「진접읍 금곡리」 → 읍 코드
         "dong_name": dong or None,
         "complex_name": it.get("aptNm") or it.get("mhouseNm") or it.get("offiNm") or None,
         "lot_no": it.get("jibun") or None,

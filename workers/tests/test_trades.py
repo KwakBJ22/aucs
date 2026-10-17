@@ -33,3 +33,15 @@ def test_parse_lease() -> None:
 
 def test_months_back() -> None:
     assert months_back(3, date(2026, 1, 15)) == ["202601", "202512", "202511"]
+
+
+def test_eup_ri_falls_back_to_eup() -> None:
+    it = {
+        "dealYear": "2026",
+        "dealMonth": "10",
+        "dealDay": "1",
+        "umdNm": "진접읍 금곡리",
+        "dealAmount": "30,000",
+    }
+    t = parse_trade(it, "sale", "apt", "41360", {("41360", "진접읍"): "4136025000"})
+    assert t and t["region_code"] == "4136025000"
