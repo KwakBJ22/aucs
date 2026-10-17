@@ -52,18 +52,30 @@ def rate_range(
     failed_count: int | None,
     include_special: bool = False,
 ) -> RuleResult:
-    """기준일(as_of)부터 12개월 안의 매각 사례로 범위를 냅니다."""
+    """기준일(as_of)부터 12개월 안의 매각 사례로 범위를 냅니다.
+
+    표본이 10건 미만이면 차례로 넓힙니다: 시군구 → 시도 → 유찰횟수 빼기 → 면적대 빼기.
+    넓힌 단계는 결과의 relaxed 에 남깁니다(화면에 「표본 적음」·「넓혀 계산」 표시).
+    """
     since = as_of - timedelta(days=365)
     band = area_band(area_m2)
-    base = [
+    pool0 = [
         s for s in sales
         if since <= s.sale_date <= as_of and s.usage_name == usage_name
-        and area_band(s.area_m2) == band and (s.failed_count or 0) == (failed_count or 0)
         and (include_special or not s.is_special_case)
     ]  # fmt: skip
-    scope, pool = "sigungu", [s for s in base if s.sigungu == sigungu]
-    if len(pool) < MIN_SAMPLE:
-        scope, pool = "sido", [s for s in base if s.sido == sido]
+    steps: list[tuple[str, list[str], list[Sale]]] = []
+    same_band = [s for s in pool0 if area_band(s.area_m2) == band]
+    same_fail = [s for s in same_band if (s.failed_count or 0) == (failed_count or 0)]
+    steps.append(("sigungu", [], [s for s in same_fail if s.sigungu == sigungu]))
+    steps.append(("sido", [], [s for s in same_fail if s.sido == sido]))
+    steps.append(("sido", ["failed_count"], [s for s in same_band if s.sido == sido]))
+    steps.append(("sido", ["failed_count", "area"], [s for s in pool0 if s.sido == sido]))
+    scope, relaxed, pool = steps[-1]
+    for step in steps:
+        if len(step[2]) >= MIN_SAMPLE:
+            scope, relaxed, pool = step
+            break
     rates = [s.sale_rate for s in pool]
     if not rates:
         return RuleResult(None, Status.UNKNOWN, "sale_rate.none", [{"scope": scope}])
@@ -73,6 +85,7 @@ def rate_range(
         "p75": _quantile(rates, 0.75),
         "n": len(rates),
         "scope": scope,
+        "relaxed": relaxed,
         "small_sample": len(rates) < MIN_SAMPLE,
     }
     return RuleResult(value, Status.ESTIMATED, "sale_rate.range", [{"band": band}])

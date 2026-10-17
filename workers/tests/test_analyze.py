@@ -26,3 +26,11 @@ def test_facts_to_signals() -> None:
         "risk.tenants_unknown",
     } <= ids
     assert top_signal(signals(f)).level == "high"
+
+
+def test_sigungu_from_address() -> None:
+    from aucs_workers.jobs.analyze import sigungu_from_address
+
+    assert sigungu_from_address("경기 용인시 수지구 성복동 760") == "용인시"
+    assert sigungu_from_address("서울 강남구 역삼동 1") == "강남구"
+    assert sigungu_from_address(None) is None

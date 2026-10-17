@@ -120,15 +120,25 @@ def load_sales(conn: psycopg.Connection, today: date) -> list[Sale]:
     """최근 12개월 매각 사례 (면적은 우리 물건 표에서 이어 붙임)."""
     rows = conn.execute(
         """select s.sale_date, s.sido, i.sigungu, s.usage_name, coalesce(s.building_area_m2, i.building_area_m2),
-                  s.failed_count, s.sale_rate, s.is_share or s.is_special_case
+                  s.failed_count, s.sale_rate, s.is_share or s.is_special_case, s.address
            from core.sale_results s left join core.items i on i.item_id = s.item_id
            where s.result = 'sold' and s.sale_rate is not null and s.sale_date >= %s""",
         (today - timedelta(days=365),),
     ).fetchall()
-    return [
-        Sale(r[0], r[1], r[2], r[3], float(r[4]) if r[4] else None, r[5], float(r[6]), bool(r[7]))
-        for r in rows
-    ]
+    out = []
+    for d, sido, sigungu, usage, area, failed, rate, special, address in rows:
+        area_f = float(area) if area else None
+        sg = sigungu or sigungu_from_address(address)
+        out.append(Sale(d, sido, sg, usage, area_f, failed, float(rate), bool(special)))
+    return out
+
+
+def sigungu_from_address(address: str | None) -> str | None:
+    """「경기 용인시 수지구 …」 → 용인시, 「서울 강남구 …」 → 강남구."""
+    parts = (address or "").split()
+    if len(parts) > 1 and parts[1][-1:] in ("시", "군", "구"):
+        return parts[1]
+    return None
 
 
 def main() -> None:
