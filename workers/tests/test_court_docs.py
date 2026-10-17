@@ -34,3 +34,35 @@ def test_case_docs_extract() -> None:
     assert len(ev) == 28
     assert all(e["category"] and e["importance"] in ("high", "mid", "low") for e in ev)
     assert any(e["category"] == "경매 개시" for e in ev)
+
+
+def test_status_report_tenants() -> None:
+    from aucs_workers.extract.case_docs import (
+        occupant_unknown,
+        parse_dot_date,
+        parse_krw,
+        tenants_from_status_report,
+    )
+
+    assert parse_krw("150,000,000") == 150_000_000
+    assert parse_krw("500만 원") == 5_000_000
+    assert parse_krw("1억2,000만원") == 120_000_000
+    assert parse_krw("미상") is None and parse_krw("없음") == 0
+    assert parse_dot_date("2025.05.15.(전입세대확인서)") == date(2025, 5, 15)
+    assert parse_dot_date("미전입") is None
+    sr = {
+        "dlt_ordTsLserLtn": [
+            {
+                "intrpsNm": "홍길동",
+                "mvinDtlCtt": "2021.03.30.",
+                "lesDposDts": "2억원",
+                "rgstryCrtcpCfmtnCtt": "미상",
+            }
+        ],
+        "dlt_ordTsRlet": [{"gdsPossCtt": "현장출장 방문 시 아무도 만나지 못하여(폐문부재)"}],
+    }
+    t = tenants_from_status_report(sr)[0]
+    assert (
+        t["name_masked"] == "홍○○" and t["deposit_krw"] == 200_000_000 and t["fixed_date"] is None
+    )
+    assert occupant_unknown(sr)
