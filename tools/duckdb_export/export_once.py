@@ -124,8 +124,9 @@ def main() -> None:
                 )
             )
         cur.execute(
-            "create temp table _sr (like core.sale_results including defaults) on commit drop"
+            "create temp table _sr on commit drop as select * from core.sale_results with no data"
         )
+        cur.execute("alter table _sr drop column result_id")
         copy_rows(cur, "copy _sr (court_code, case_no, item_no, sale_date, item_id, usage_name, address, sido,"
                        " appraisal_krw, min_price_krw, winning_bid_krw, sale_rate, failed_count, result, is_share, origin)"
                        " from stdin", rows)  # fmt: skip
