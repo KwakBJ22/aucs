@@ -15,6 +15,7 @@ import os
 import time
 from datetime import date, timedelta
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 import psycopg
@@ -173,7 +174,8 @@ def main() -> None:
     ap.add_argument("--months", type=int, default=3)
     ap.add_argument("--types", nargs="*", default=list(TYPES))
     a = ap.parse_args()
-    key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip()
+    key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
+    key = unquote(key) if "%" in key else key  # Encoding 키를 넣어도 Decoding 키로
     if not key:
         raise SystemExit("DATA_GO_KR_SERVICE_KEY 가 비어 있습니다 (.env)")
     today = date.today()
