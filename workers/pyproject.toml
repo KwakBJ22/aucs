@@ -11,6 +11,10 @@ dependencies = [
   "pyproj>=3.7",
   "httpx>=0.28",
   "xmltodict>=0.14",
+  "numpy>=2.0",
+  "pillow>=11.0",
+  "pypdfium2>=4.30",
+  "pypdf>=5.0",
 ]
 
 [tool.uv.sources]

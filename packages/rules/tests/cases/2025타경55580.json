@@ -2,19 +2,79 @@
   "case": "B000250-2025타경55580",
   "note": "수원 용인 성복힐스테이트3차. 등기부 글자인식 결과(2026-10 로컬 시스템). 정답: 말소기준 2021-03-31 근저당(을1), 가암큐 → 가압류 보정, 알 수 없는 13번은 확인 필요",
   "rights": [
-    {"section": "갑", "rank_no": "4", "purpose": "소유권이전", "receipt_date": "2021-03-31", "receipt_no": 50758},
-    {"section": "을", "rank_no": "1", "purpose": "근저당권설정", "receipt_date": "2021-03-31", "receipt_no": 50759, "amount_krw": 462000000},
-    {"section": "을", "rank_no": "5", "purpose": "근저당권설정", "receipt_date": "2022-01-24", "receipt_no": 9370, "amount_krw": 720000000},
-    {"section": "갑", "rank_no": "9", "purpose": "가암큐", "receipt_date": "2023-07-26", "receipt_no": 100726, "amount_krw": 80000000},
-    {"section": "갑", "rank_no": "6", "purpose": "가압류", "receipt_date": "2023-08-09", "receipt_no": 107745, "amount_krw": 15257412},
-    {"section": "갑", "rank_no": "11", "purpose": "임의경매개시결정", "receipt_date": "2025-04-17", "receipt_no": 1757012},
-    {"section": "갑", "rank_no": "13", "purpose": "ㅇㅇ르갑류", "receipt_date": "2026-02-11", "receipt_no": 827708}
+    {
+      "section": "갑",
+      "rank_no": "4",
+      "purpose": "소유권이전",
+      "receipt_date": "2021-03-31",
+      "receipt_no": 50758
+    },
+    {
+      "section": "을",
+      "rank_no": "1",
+      "purpose": "근저당권설정",
+      "receipt_date": "2021-03-31",
+      "receipt_no": 50759,
+      "amount_krw": 462000000
+    },
+    {
+      "section": "을",
+      "rank_no": "5",
+      "purpose": "근저당권설정",
+      "receipt_date": "2022-01-24",
+      "receipt_no": 9370,
+      "amount_krw": 720000000
+    },
+    {
+      "section": "갑",
+      "rank_no": "9",
+      "purpose": "가암큐",
+      "receipt_date": "2023-07-26",
+      "receipt_no": 100726,
+      "amount_krw": 80000000
+    },
+    {
+      "section": "갑",
+      "rank_no": "6",
+      "purpose": "가압류",
+      "receipt_date": "2023-08-09",
+      "receipt_no": 107745,
+      "amount_krw": 15257412
+    },
+    {
+      "section": "갑",
+      "rank_no": "11",
+      "purpose": "임의경매개시결정",
+      "receipt_date": "2025-04-17",
+      "receipt_no": 1757012
+    },
+    {
+      "section": "갑",
+      "rank_no": "13",
+      "purpose": "ㅇㅇ르갑류",
+      "receipt_date": "2026-02-11",
+      "receipt_no": 827708
+    }
   ],
   "expect": {
     "base_rank_no": "1",
     "base_date": "2021-03-31",
-    "judgments": {"1": "말소기준", "5": "소멸", "9": "소멸", "6": "소멸", "11": "소멸", "13": "확인 필요", "4": "해당 없음"}
+    "judgments": {
+      "1": "말소기준",
+      "5": "소멸",
+      "9": "소멸",
+      "6": "소멸",
+      "11": "소멸",
+      "13": "확인 필요",
+      "4": "해당 없음"
+    }
   },
-  "tenant": {"move_in_date": "2021-05-10", "relation_text": "소유자의 모"},
-  "expect_tenant": {"opposing_power": false, "family": true}
+  "tenant": {
+    "move_in_date": "2021-05-10",
+    "relation_text": "소유자의 모"
+  },
+  "expect_tenant": {
+    "opposing_power": false,
+    "family": true
+  }
 }

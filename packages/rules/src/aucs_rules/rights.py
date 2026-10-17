@@ -4,6 +4,7 @@
 개발 기준이며 출시 전 법률 전문가 검토 대상입니다.
 """
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -26,7 +27,12 @@ ASSUMED_IF_PRIOR = {
     "injunction",
     "transfer_claim_provisional_registration",
     "jeonse",
+    "notice_registration",
+    "repurchase",
+    "trust",
 }
+# 판정 대상이 아닌 참고 등기 (회생·변경·질권·근저당권이전 등)
+REFERENCE_KINDS = {"rehab", "change", "pledge", "mortgage_transfer"}
 
 
 @dataclass(frozen=True)
@@ -42,7 +48,14 @@ class Right:
     jeonse_claimed: bool = False  # 전세권자가 배당요구·경매신청했는지
     jeonse_whole_building: bool = False
     verified: bool = False  # 원문 대조로 검증됨
+    move_in_date: date | None = None  # 임차권등기의 주민등록일자
+    holder: str = ""
     source: dict[str, Any] = field(default_factory=dict)  # 문서·쪽 등
+
+
+def is_subordinate(r: Right) -> bool:
+    """부기등기(순위번호 17-1 등)는 주등기에 딸린 것."""
+    return "-" in (r.rank_no or "")
 
 
 def _key(r: Right) -> tuple[date, int]:
@@ -57,6 +70,8 @@ def find_base_right(rights: list[Right]) -> RuleResult:
     """말소기준권리 = 기준 종류 중 접수일(같으면 접수번호)이 가장 빠른 것."""
     candidates = []
     for r in rights:
+        if is_subordinate(r):
+            continue
         k = _kind(r)
         if k in BASE_KINDS or (k == "jeonse" and r.jeonse_claimed and r.jeonse_whole_building):
             candidates.append(r)
@@ -82,8 +97,12 @@ def judge_right(r: Right, base: Right | None) -> RuleResult:
     name = normalize_purpose(r.purpose)
     k = _kind(r)
     ev = [{"rank_no": r.rank_no, "purpose": r.purpose, "normalized": name}]
+    if is_subordinate(r):
+        return RuleResult("부기", Status.ESTIMATED, "rights.subordinate", ev)
     if k is None:
         return RuleResult("확인 필요", Status.NEEDS_CHECK, "rights.kind.unknown", ev)
+    if k in REFERENCE_KINDS:
+        return RuleResult("참고", Status.ESTIMATED, "rights.reference", ev)
     if k == "ownership":
         return RuleResult("해당 없음", Status.CONFIRMED, "rights.ownership", ev)
     if base is None:
@@ -93,9 +112,29 @@ def judge_right(r: Right, base: Right | None) -> RuleResult:
     prior = _key(r) < _key(base)
     if prior and k in ASSUMED_IF_PRIOR and not (k == "jeonse" and r.jeonse_claimed):
         return RuleResult("인수", Status.ESTIMATED, "rights.assumed_prior", ev)
-    if prior and k == "lease_right":
-        return RuleResult("확인 필요", Status.NEEDS_CHECK, "rights.lease_prior", ev)
+    if k == "lease_right":
+        # 임차권등기: 대항력은 주민등록일자 기준 (주택임대차보호법 제3조의3)
+        if r.move_in_date is None or base.receipt_date is None:
+            return RuleResult("확인 필요", Status.NEEDS_CHECK, "rights.lease.no_move_in", ev)
+        if r.move_in_date < base.receipt_date:
+            return RuleResult(
+                "인수",
+                Status.ESTIMATED,
+                "rights.lease.assumed",
+                [*ev, {"move_in_date": str(r.move_in_date)}],
+            )
+        return RuleResult("소멸", Status.ESTIMATED, "rights.lease.extinguished", ev)
     return RuleResult("소멸", Status.ESTIMATED, "rights.extinguished", ev)
+
+
+_PUBLIC = re.compile(
+    r"^(국|대한민국|[가-힣]+(?:특별시|광역시|도|시|군|구)(?:청)?|[가-힣]+세무서장?|국민건강보험공단|근로복지공단|국민연금공단)"
+)
+
+
+def local_tax_suspect(r: Right) -> bool:
+    """압류 권리자가 국가·지자체면 당해세 의심 [검증 필요]."""
+    return _kind(r) == "seizure" and bool(_PUBLIC.search((r.holder or "").strip()))
 
 
 def analyze(rights: list[Right]) -> dict[str, Any]:

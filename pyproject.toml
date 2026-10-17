@@ -36,3 +36,7 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["apps/api/tests", "packages/rules/tests", "workers/tests"]
+
+[[tool.mypy.overrides]]
+module = "aucs_workers.extract.registry_ocr"  # 지금 시스템에서 그대로 옮긴 글자 인식 코드
+ignore_errors = true
