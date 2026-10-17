@@ -163,7 +163,15 @@ export default function Item() {
       .catch(() => setD(null));
   }, [id]);
 
-  if (d === undefined) return null;
+  if (d === undefined)
+    return (
+      <main className="page" aria-busy="true">
+        <div className="topbar" />
+        {[120, 260].map((h) => (
+          <section key={h} className="section" style={{ height: h, opacity: 0.5 }} />
+        ))}
+      </main>
+    );
   if (d === null)
     return (
       <main className="page">

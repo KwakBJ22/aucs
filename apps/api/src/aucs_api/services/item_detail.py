@@ -95,7 +95,7 @@ def build_detail(
         else "임차인 자료가 없어요 · 등기부는 아직 안 봤어요"
     )  # fmt: skip
     questions = [
-        q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''} {r['building_desc'] or ''}".strip(), "gray",
+        q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''}".strip(" ·"), "gray",
           {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"], "building": r["building_desc"],
            "is_share": r["is_share"], "note": r["note_masked"]}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
@@ -105,7 +105,7 @@ def build_detail(
            "range_krw": [int(app * rate["p25"] / 100), int(app * rate["p75"] / 100)] if rate and app else None}),
         q("cost", "얼마가 드나", f"입찰보증금 {won(c['deposit_krw'])}원부터", "gray",
           {"deposit_krw": c["deposit_krw"], "min_price_krw": mn}),
-        q("check", "무엇을 확인하나", f"확인할 것 {len(unknown)}가지" if unknown else "자료는 다 모였어요",
+        q("check", "무엇을 확인하나", (unknown[0]["title"].split(" — ")[0] + (f" 외 {len(unknown) - 1}가지" if len(unknown) > 1 else "")) if unknown else "자료는 다 모였어요",
           "gray" if unknown else "green",
           {"unknown": unknown, "events": events,
            "claim_deadline": r["claim_deadline"].isoformat() if r["claim_deadline"] else None}),

@@ -104,7 +104,7 @@ export const copy = {
     notFound: "물건을 찾을 수 없어요",
     nextRound: "이번에 유찰되면 · 다음 최저가",
     nextRoundGuess: "(저감률 추정)",
-    rounds: "지난 기일",
+    rounds: "매각기일",
     rangeLabel: "감정가 기준 예상 낙찰가",
     sample: (n: number) => `최근 1년 비슷한 물건 ${n}건 기준`,
     deposit: "입찰보증금(최저가의 10%)",
