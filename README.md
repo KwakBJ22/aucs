@@ -25,3 +25,8 @@ pnpm dev:web
 
 ## 폴더
 `docs/design/07-folders.md` 참고. 작업 규칙은 `CLAUDE.md`, 용어는 `docs/glossary.md`.
+
+## 되돌려야 할 임시 조치
+| 조치 | 언제 되돌리나 | 되돌리는 법 |
+|---|---|---|
+| 0004 실거래 단지명 색인 제거 (무료 500MB 한도 때문, 10/17) | Pro 전환 또는 용량 여유가 생길 때 | `.\scripts\apply-sql.ps1 db\undo\0004_restore_trades_index.sql` |
