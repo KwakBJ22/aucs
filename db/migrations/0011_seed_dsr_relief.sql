@@ -1,0 +1,5 @@
+-- 0011 기준표: 처분 조건부 대출 비율이 들어간 loan_ltv 새 줄 · DSR · 생애최초 감면. Supabase에 적용됨(10/18). 모두 [검토 전 — 개발 기준].
+-- 실제 넣은 값은 ref.rule_tables (loan_ltv 2026-10-18 / dsr 2026-08-01 / first_home_relief 2025-01-01) 그대로.
+-- loan_ltv owner_sell: regulated 40 · metro 70 · other 70
+-- dsr: limit_pct 40 · base_rate_pct 4.5 · stress_pp regulated 3.0 / metro 3.0 / other 0.75 · years 30
+-- first_home_relief: price_max_krw 1,200,000,000 · max_krw 2,000,000
