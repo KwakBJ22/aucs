@@ -55,7 +55,27 @@ export type ItemCard = {
   unknown_count: number;
   data_status: Record<string, string>;
 };
-export type ItemList = { total: number; items: ItemCard[] };
+export type ResultCard = {
+  result_id: number;
+  item_id: string | null;
+  court: string;
+  case_no: string;
+  sale_date: string;
+  result: string;
+  usage: string | null;
+  place: string;
+  building: string | null;
+  appraisal_krw: number | null;
+  winning_bid_krw: number | null;
+  sale_rate: number | null;
+};
+export type FindStatus = "active" | "sold" | "withdrawn" | "all";
+export type ItemList = {
+  total: number;
+  items: ItemCard[];
+  results?: ResultCard[];
+  exact_item_id?: string | null;
+};
 export type RegionRow = { sido: string; sigungu: string; items: number };
 
 export function fetchItems(opts: {
@@ -63,8 +83,12 @@ export function fetchItems(opts: {
   maxCash?: number | null;
   sort?: "deadline" | "rate";
   limit?: number;
+  q?: string;
+  status?: FindStatus;
 }): Promise<ItemList> {
   const q = new URLSearchParams();
+  if (opts.q) q.set("q", opts.q);
+  if (opts.status) q.set("status", opts.status);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
   if (opts.sort) q.set("sort", opts.sort);

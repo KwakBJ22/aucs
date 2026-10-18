@@ -29,3 +29,13 @@ def test_card_signal_skips_unknown() -> None:
            {"rule_id": "risk.share", "level": "fatal", "status": "추정", "title": "지분 매각"}]  # fmt: skip
     c = card(row(signals=sig), TODAY)
     assert c["top_signal"]["rule_id"] == "risk.share" and c["unknown_count"] == 1
+
+
+def test_parse_query():
+    from aucs_api.services.items import parse_query
+
+    assert parse_query("2025타경55580") == {"kind": "case", "case_no": "2025타경55580"}
+    assert parse_query("25-55580") == {"kind": "case", "case_no": "2025타경55580"}
+    assert parse_query(" 55580 ") == {"kind": "case_suffix", "suffix": "타경55580"}
+    assert parse_query("성복 힐스테이트") == {"kind": "text", "text": "성복힐스테이트"}
+    assert parse_query("") is None

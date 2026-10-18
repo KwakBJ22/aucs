@@ -16,10 +16,18 @@ def get_items(
     max_cash: Annotated[int | None, Query(ge=0)] = None,
     sort: Annotated[str, Query(pattern="^(deadline|rate)$")] = "deadline",
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    q: Annotated[str | None, Query(max_length=40)] = None,
+    status: Annotated[str, Query(pattern="^(active|sold|withdrawn|all)$")] = "active",
 ) -> dict[str, Any]:
-    return items.list_items(
-        sigungu=sigungu or [], max_cash=max_cash, sort=sort, limit=limit, today=date.today()
-    )
+    """진행 중 물건(items)과 끝난 사건(results). status 에 따라 한쪽 또는 둘 다."""
+    out: dict[str, Any] = {"total": 0, "items": [], "results": [], "exact_item_id": None}
+    if status in ("active", "all"):
+        out.update(items.list_items(
+            sigungu=sigungu or [], max_cash=max_cash, sort=sort, limit=limit, today=date.today(), q=q,
+        ))  # fmt: skip
+    if status != "active":
+        out.update(items.search_results(q=q, status=status, sigungu=sigungu or [], limit=limit))
+    return out
 
 
 @router.get("/regions")

@@ -1,5 +1,6 @@
 """물건 카드·지역 목록 (공개 화면용). display_policy = public 만, 이름은 가린 값만 내보냅니다."""
 
+import re
 from datetime import date
 from typing import Any
 
@@ -62,11 +63,99 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
     }
 
 
+def parse_query(q: str | None) -> dict[str, Any] | None:
+    """검색어 → 찾는 방법. 사건번호(2025타경55580·25-55580·55580) / 글자(단지·동네·주소)."""
+    t = re.sub(r"\s+", "", q or "")
+    if not t:
+        return None
+    if m := re.fullmatch(r"(\d{2}|\d{4})(?:타경|-)(\d{1,7})", t):
+        year = m.group(1) if len(m.group(1)) == 4 else "20" + m.group(1)
+        return {"kind": "case", "case_no": f"{year}타경{int(m.group(2))}"}
+    if re.fullmatch(r"\d{3,7}", t):
+        return {"kind": "case_suffix", "suffix": f"타경{int(t)}"}
+    return {"kind": "text", "text": t}
+
+
+def _q_where(
+    pq: dict[str, Any] | None, case_col: str, text_cols: list[str], params: dict[str, Any]
+) -> str:
+    """검색 조건 SQL 조각 (글자는 띄어쓰기를 빼고 비교)."""
+    if pq is None:
+        return ""
+    if pq["kind"] == "case":
+        params["case_no"] = pq["case_no"]
+        return f" and {case_col} = %(case_no)s"
+    if pq["kind"] == "case_suffix":
+        params["suffix"] = "%" + pq["suffix"]
+        return f" and {case_col} like %(suffix)s"
+    params["text"] = "%" + pq["text"] + "%"
+    ors = " or ".join(f"replace(coalesce({c}, ''), ' ', '') ilike %(text)s" for c in text_cols)
+    return f" and ({ors})"
+
+
+RESULT_GROUPS = {"sold": ("sold",), "withdrawn": ("withdrawn", "dismissed", "changed")}
+RESULT_KO = {
+    "sold": "매각",
+    "failed": "유찰",
+    "changed": "변경",
+    "withdrawn": "취하",
+    "dismissed": "기각",
+}
+
+
+def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int) -> dict[str, Any]:
+    """끝난 사건(매각·취하·변경…) 찾기. 같은 물건은 가장 최근 결과 하나."""
+    pq = parse_query(q)
+    params: dict[str, Any] = {"limit": limit}
+    kinds = RESULT_GROUPS.get(status)
+    where = "s.display_policy = 'public'"
+    if kinds:
+        where += " and s.result = any(%(kinds)s)"
+        params["kinds"] = list(kinds)
+    if sigungu and pq is None:
+        where += " and i.sigungu = any(%(sigungu)s)"
+        params["sigungu"] = sigungu
+    where += _q_where(pq, "s.case_no", ["i.building_desc", "s.address"], params)
+    sql = f"""
+      select distinct on (s.court_code, s.case_no, s.item_no)
+             s.result_id, s.item_id, s.court_code, s.case_no, s.sale_date, s.result, s.usage_name,
+             s.appraisal_krw, s.winning_bid_krw, s.sale_rate, i.sigungu, i.gu, i.building_desc
+      from core.sale_results s left join core.items i on i.item_id = s.item_id
+      where {where}
+      order by s.court_code, s.case_no, s.item_no, s.sale_date desc"""
+    with connect() as c:
+        rows = c.execute(
+            f"select * from ({sql}) x order by sale_date desc limit %(limit)s", params
+        ).fetchall()
+    return {"results": [
+        {
+            "result_id": r["result_id"], "item_id": r["item_id"],
+            "court": COURT_NAME.get(r["court_code"], r["court_code"]), "case_no": r["case_no"],
+            "sale_date": r["sale_date"].isoformat(), "result": RESULT_KO.get(r["result"], r["result"]),
+            "usage": r["usage_name"], "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
+            "building": r["building_desc"], "appraisal_krw": r["appraisal_krw"],
+            "winning_bid_krw": r["winning_bid_krw"],
+            "sale_rate": round(float(r["sale_rate"])) if r["sale_rate"] is not None else None,
+        }
+        for r in rows
+    ]}  # fmt: skip
+
+
 def list_items(
-    *, sigungu: list[str], max_cash: int | None, sort: str, limit: int, today: date
+    *,
+    sigungu: list[str],
+    max_cash: int | None,
+    sort: str,
+    limit: int,
+    today: date,
+    q: str | None = None,
 ) -> dict[str, Any]:
     sql = _CARD_SQL
     params: dict[str, Any] = {"today": today, "limit": limit}
+    pq = parse_query(q)
+    if pq is not None:  # 검색할 때는 시작 질문의 지역·현금 조건을 빼고 찾음
+        sigungu, max_cash = [], None
+        sql += _q_where(pq, "c.case_no", ["i.building_desc", "i.address"], params)
     if sigungu:
         sql += " and i.sigungu = any(%(sigungu)s)"
         params["sigungu"] = sigungu
@@ -83,7 +172,9 @@ def list_items(
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
         total = c.execute(count_sql, params).fetchone()
-    return {"total": total["n"] if total else 0, "items": [card(r, today) for r in rows]}
+    items = [card(r, today) for r in rows]
+    exact = items[0]["item_id"] if pq and pq["kind"] == "case" and len(items) == 1 else None
+    return {"total": total["n"] if total else 0, "items": items, "exact_item_id": exact}
 
 
 def regions() -> list[dict[str, Any]]:

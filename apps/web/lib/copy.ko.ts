@@ -59,6 +59,16 @@ export const copy = {
     sortRate: "최저가율 낮은 순",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
     mapSoon: "지도는 카카오 지도 키를 받으면 붙여요",
+    searchPlaceholder: "사건번호·단지·동네",
+    status: { active: "진행 중", sold: "매각됨", withdrawn: "취하·변경", all: "전체" } as Record<
+      string,
+      string
+    >,
+    recent: "최근 검색",
+    noResult: "찾는 물건이 없어요",
+    searching: "검색 중에는 내 지역·현금 조건을 빼고 찾아요",
+    sold: (price: string, rate: number | null) =>
+      `낙찰 ${price}` + (rate != null ? ` · 감정가의 ${rate}%` : ""),
   },
   needLogin: {
     title: "로그인이 필요해요",
