@@ -147,7 +147,6 @@ export const copy = {
     moveIn: "전입",
     fixed: "확정",
     claim: "배당요구",
-    claimDeadline: "배당요구종기",
     share: "지분 매각",
     events: "사건 문건",
     doneFold: (n: number) => `끝난 확인 ${n}개`,

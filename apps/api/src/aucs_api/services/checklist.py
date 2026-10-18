@@ -84,6 +84,7 @@ def build_flow(
     sale_date: date | None,
     schedule_rows: list[dict[str, Any]],
     today: date,
+    failed_count: int | None = None,
 ) -> list[dict[str, Any]]:
     """사건 흐름 막대: 경매 시작 → 배당요구종기 → 첫 매각기일 → 이번 매각기일 → 매각결정 → 잔금 → 배당.
 
@@ -91,6 +92,8 @@ def build_flow(
     """
     ev_dates = sorted(str(e["date"]) for e in events if e.get("date"))
     first_round = rounds[0]["sale_date"] if rounds else None
+    if failed_count and first_round == sale_date:  # 유찰이 있었는데 앞 회차 기록이 없으면 모름
+        first_round = None
     sched = {r["key"]: r["start"] for r in schedule_rows}
 
     def iso(d: Any) -> str | None:

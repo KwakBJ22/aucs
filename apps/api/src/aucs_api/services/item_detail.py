@@ -137,7 +137,7 @@ def build_detail(
     )
     flow = build_flow(
         events=events, claim_deadline=r["claim_deadline"], rounds=rounds, sale_date=r["sale_date"],
-        schedule_rows=sched["rows"], today=today,
+        schedule_rows=sched["rows"], today=today, failed_count=r.get("failed_count"),
     )  # fmt: skip
     hold_ans = (
         warn[0]["title"] if warn

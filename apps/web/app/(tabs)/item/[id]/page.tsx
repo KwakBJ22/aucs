@@ -435,6 +435,12 @@ const STATE_CHIP: Record<string, string> = {
   "전문가 확인 필요": "orange",
 };
 
+// 올해는 「6/25」, 다른 해는 「25.6/25」
+function flowDate(d: string): string {
+  const md = `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  return d.slice(0, 4) === String(new Date().getFullYear()) ? md : `${d.slice(2, 4)}.${md}`;
+}
+
 // ITEM-06: 사건 흐름 막대 + 체크리스트(끝난 것은 접음) + 사건 문건
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CheckBody({ b }: { b: Record<string, any> }) {
@@ -475,7 +481,7 @@ function CheckBody({ b }: { b: Record<string, any> }) {
             </div>
             <div style={{ marginTop: 4, fontWeight: f.key === "now" ? 700 : 400 }}>{f.label}</div>
             <div className="sub" style={{ margin: 0, fontSize: 11 }}>
-              {f.date ? `${Number(f.date.slice(5, 7))}/${Number(f.date.slice(8, 10))}` : "-"}
+              {f.date ? flowDate(f.date) : "-"}
               {f.estimated && f.date ? ` ${t.flowGuess}` : ""}
             </div>
           </div>
@@ -518,7 +524,6 @@ function CheckBody({ b }: { b: Record<string, any> }) {
             </span>
           </div>
         ))}
-      {b.claim_deadline && <Row label={t.claimDeadline} value={b.claim_deadline} />}
       {b.events.length > 0 && (
         <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10 }}>{t.events}</div>
       )}
