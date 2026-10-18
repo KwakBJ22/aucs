@@ -673,7 +673,43 @@ type CheckItem = {
   state: string;
   hint: string | null;
   evidence: { doc: string; fetched_at: string | null } | null;
+  note?: string;
 };
+
+// 체크리스트의 등기부 줄을 내가 올린 등기부로 바꿈 (밤사이 분석은 손님 등기부를 모름)
+const CHECK_ORDER: Record<string, number> = {
+  "자료 충돌": 0,
+  "전문가 확인 필요": 1,
+  미확인: 2,
+  "확인 완료": 3,
+};
+function withMyRegistry(list: CheckItem[], u: RegistryUpload | null | undefined): CheckItem[] {
+  if (!u) return list;
+  const r = t.reg;
+  const out = list.map((x) => {
+    if (x.key !== "registry") return x;
+    if (u.status === "processing") return { ...x, state: "미확인", hint: r.checkReading };
+    if (u.status !== "parsed" || !u.ladder) return x;
+    const unsure = u.ladder.rows.filter(
+      (w) => w.judgment === "확인 필요" || w.mark === "추정",
+    ).length;
+    const at = u.created_at ? new Date(u.created_at) : null;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return {
+      ...x,
+      state: "확인 완료",
+      hint: null,
+      evidence: {
+        doc: r.checkDoc,
+        fetched_at: at
+          ? `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`
+          : null,
+      },
+      note: unsure ? r.checkNote(unsure) : undefined,
+    };
+  });
+  return out.sort((a, b) => (CHECK_ORDER[a.state] ?? 2) - (CHECK_ORDER[b.state] ?? 2));
+}
 type FlowStep = {
   key: string;
   label: string;
@@ -698,7 +734,8 @@ function flowDate(d: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CheckBody({ b }: { b: Record<string, any> }) {
   const [showDone, setShowDone] = useState(false);
-  const list = b.checklist as CheckItem[];
+  const reg = useContext(RegCtx);
+  const list = withMyRegistry(b.checklist as CheckItem[], reg?.u);
   const todo = list.filter((x) => x.state !== "확인 완료");
   const done = list.filter((x) => x.state === "확인 완료");
   const flow = b.flow as FlowStep[];
@@ -774,6 +811,7 @@ function CheckBody({ b }: { b: Record<string, any> }) {
             <span className="sub" style={{ margin: 0 }}>
               {" "}
               · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
+              {x.note ? ` · ${x.note}` : ""}
             </span>
           </div>
         ))}
@@ -797,7 +835,15 @@ function CheckBody({ b }: { b: Record<string, any> }) {
 
 // 「무엇을 떠안나」 줄: 내가 올린 등기부가 있으면 그 결과로
 function answerOf(q: Question, u: RegistryUpload | null | undefined): string {
-  if (q.key !== "hold" || !u) return q.answer;
+  if (!u) return q.answer;
+  if (q.key === "check" && Array.isArray(q.body?.checklist)) {
+    const todo = withMyRegistry(q.body.checklist as CheckItem[], u).filter(
+      (x) => x.state !== "확인 완료",
+    );
+    const first = todo[0];
+    return first ? t.reg.checkLeft(todo.length, first.label) : t.reg.checkAll;
+  }
+  if (q.key !== "hold") return q.answer;
   if (u.status === "processing") return t.reg.summaryReading;
   if (u.status === "parsed" && u.ladder) return t.reg.summaryMine(u.ladder.line);
   return q.answer;
