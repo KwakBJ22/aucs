@@ -38,7 +38,13 @@ _ITEM = (
     "st_setsrid(st_makepoint(%(lon)s::float, %(lat)s::float), 4326)::geography end, now(), now())"
     " on conflict (item_id) do update set "
     + ", ".join(f"{c} = excluded.{c}" for c in _ITEM_COLS[3:])
-    + ", geom = excluded.geom, fetched_at = now(), checked_at = now(), updated_at = now()"
+    + ", geom = excluded.geom, fetched_at = now(), checked_at = now()"
+    # 내용이 실제로 바뀐 때만 updated_at 을 올림 → 아침 분석(--stale)이 바뀐 물건만 다시 계산
+    + ", updated_at = case when ("
+    + ", ".join(f"core.items.{c}" for c in _ITEM_COLS[3:])
+    + ") is distinct from ("
+    + ", ".join(f"excluded.{c}" for c in _ITEM_COLS[3:])
+    + ") then now() else core.items.updated_at end"
 )
 
 _ROUND = """insert into core.rounds (round_id, item_id, sale_date, appraisal_krw, min_price_krw,

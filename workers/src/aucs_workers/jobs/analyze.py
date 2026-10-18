@@ -2,6 +2,7 @@
 
     uv run python -m aucs_workers.jobs.analyze            # 매각기일이 다가오는 물건 전부
     uv run python -m aucs_workers.jobs.analyze --item B000250-2025타경55580-1
+    uv run python -m aucs_workers.jobs.analyze --stale     # 새 물건·바뀐 물건·새 서류 받은 물건만 (아침 묶음)
 
 입력이 같으면(input_hash) 다시 쓰지 않고, 바뀌면 버전을 올립니다.
 """
@@ -191,6 +192,11 @@ def analyze_item(
         (item_id,),
     ).fetchone()
     if last and last["input_hash"] == h:
+        # 결과는 같아도 「확인한 시각」은 올려 둠 → --stale 이 같은 물건을 매일 다시 고르지 않게
+        cur.execute(
+            "update analysis.item_analysis set computed_at = now() where item_id = %s and version = %s",
+            (item_id, last["version"]),
+        )
         return False
     version = (last["version"] + 1) if last else 1
     cur.execute(
@@ -233,6 +239,17 @@ def load_sales(conn: psycopg.Connection, today: date) -> list[Sale]:
     return out
 
 
+STALE_SQL = """
+select i.item_id from core.items i
+left join lateral (select computed_at from analysis.item_analysis x where x.item_id = i.item_id
+                   order by version desc limit 1) a on true
+where i.sale_date >= %s
+  and (a.computed_at is null or i.updated_at > a.computed_at
+       or exists (select 1 from raw.court_doc_raw d where d.case_id = i.case_id and d.fetched_at > a.computed_at))
+order by i.sale_date
+"""
+
+
 def sigungu_from_address(address: str | None) -> str | None:
     """「경기 용인시 수지구 …」 → 용인시, 「서울 강남구 …」 → 강남구."""
     parts = (address or "").split()
@@ -244,6 +261,7 @@ def sigungu_from_address(address: str | None) -> str | None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--item")
+    ap.add_argument("--stale", action="store_true", help="분석이 없거나 그 뒤로 바뀐 물건만")
     a = ap.parse_args()
     today = date.today()
     with connect() as conn, run(conn, "analyze", "물건 분석") as job:
@@ -254,8 +272,13 @@ def main() -> None:
             (today,),
         ).fetchone()
         commercial_table = row[0] if row else None
-        ids = [a.item] if a.item else [r[0] for r in conn.execute(
-            "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
+        if a.item:
+            ids = [a.item]
+        elif a.stale:
+            ids = [r[0] for r in conn.execute(STALE_SQL, (today - timedelta(days=7),)).fetchall()]
+        else:
+            ids = [r[0] for r in conn.execute(
+                "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
         for item_id in ids:
             if analyze_item(conn, item_id, sales, today, commercial_table):
                 job.count += 1

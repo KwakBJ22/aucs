@@ -15,12 +15,14 @@ def status() -> dict[str, Any]:
         ).fetchall()
         counts = c.execute(
             """select (select count(*) from core.items where sale_date >= current_date) as items_upcoming,
+                      (select count(*) from core.items i where sale_date >= current_date
+                         and not exists (select 1 from analysis.item_analysis x where x.item_id = i.item_id)) as items_pending,
                       (select count(*) from core.sale_results) as sale_results,
                       (select count(*) from core.trades) as trades,
                       (select count(distinct case_id) from raw.court_doc_raw) as cases_with_docs,
                       pg_database_size(current_database()) as db_bytes"""
         ).fetchone()
-    return {"jobs": jobs, "counts": counts, "db_limit_bytes": 500 * 1024 * 1024}
+    return {"jobs": jobs, "counts": counts, "db_limit_bytes": 8 * 1024 * 1024 * 1024}
 
 
 def review_queue(limit: int = 50) -> dict[str, Any]:

@@ -22,6 +22,7 @@ from core.items i
 join core.cases c using (case_id)
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.display_policy = 'public' and i.sale_date >= %(today)s
+  and a.result is not null  -- 분석이 끝난 물건만 손님에게 보임(10/18 대표님)
 """
 
 
@@ -93,5 +94,6 @@ def regions() -> list[dict[str, Any]]:
                from (select distinct sido, split_part(sigungu, ' ', 1) as sigungu from ref.regions
                      where level = 'sigungu' and sido in ('서울특별시', '경기도')) r
                left join core.items i on i.sido = r.sido and i.sigungu = r.sigungu and i.sale_date >= current_date
+                 and exists (select 1 from analysis.item_analysis x where x.item_id = i.item_id)
                group by 1, 2 order by 1 desc, 2"""
         ).fetchall()
