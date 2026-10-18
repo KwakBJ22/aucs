@@ -5,11 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { HeartButton } from "@/components/heart-button";
 import {
   fetchBidCheck,
+  fetchCalc,
   fetchItem,
   type BidCheck,
+  type Calc,
   type ItemDetail,
   type Question,
 } from "@/lib/api/items";
+import { loadProfile, saveProfile } from "@/lib/profile";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 
@@ -22,7 +25,7 @@ const DOT: Record<Question["tone"], string> = {
   blue: "var(--blue)",
 };
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
     <div
       style={{
@@ -41,48 +44,179 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-// 입찰표 점검: 금액을 한글로 읽어 주고, 최저가 미만·2배 초과를 막습니다.
-function BidTry({ id }: { id: string }) {
-  const [v, setV] = useState("");
-  const [r, setR] = useState<BidCheck | null>(null);
+// 입찰가 계산(CALC-01): 집 수 → 세 경우 → 슬라이더 → 필요한 현금. 금액은 한글로도 읽어 줍니다.
+function CalcBox({ id }: { id: string }) {
+  const c = t.calc;
+  const prof = typeof window === "undefined" ? null : loadProfile();
+  const [homes, setHomes] = useState<number | null>(prof?.homes ?? null);
+  const [first, setFirst] = useState(Boolean(prof?.firstTime));
+  const [bid, setBid] = useState<number | null>(null);
+  const [loan, setLoan] = useState<number | null>(null);
+  const [editLoan, setEditLoan] = useState(false);
+  const [d, setD] = useState<Calc | null>(null);
+  const [chk, setChk] = useState<BidCheck | null>(null);
+
   useEffect(() => {
-    const n = Number(v.replace(/[^0-9]/g, ""));
-    if (!n) return setR(null);
+    if (homes == null) return;
     const h = setTimeout(() => {
-      fetchBidCheck(id, n)
-        .then(setR)
-        .catch(() => setR(null));
-    }, 300);
+      fetchCalc(id, { bid, homes, first, loan })
+        .then((r) => {
+          setD(r);
+          if (bid == null) setBid(r.selected.bid_krw);
+        })
+        .catch(() => setD(null));
+      if (bid)
+        fetchBidCheck(id, bid)
+          .then(setChk)
+          .catch(() => setChk(null));
+    }, 250);
     return () => clearTimeout(h);
-  }, [v, id]);
-  const color =
-    r?.level === "block" ? "var(--red)" : r?.level === "stop" ? "var(--amber)" : "var(--muted)";
+  }, [id, bid, homes, first, loan]);
+
+  const pickHomes = (n: number) => {
+    setHomes(n);
+    const p = loadProfile() ?? { regions: [], cash: null, purpose: null };
+    saveProfile({ ...p, homes: n, firstTime: n === 0 ? first : false });
+  };
+  const s = d?.selected;
+  const over = d?.cap_krw != null && s != null && s.bid_krw > d.cap_krw;
+  const myCash = prof?.cash ?? null;
   return (
-    <div style={{ marginTop: 12 }}>
-      <label className="sub" style={{ display: "block", margin: "0 0 4px" }}>
-        {t.bidTry}
-      </label>
-      <input
-        inputMode="numeric"
-        value={v}
-        placeholder={t.bidPlaceholder}
-        onChange={(e) => setV(e.target.value)}
-        style={{
-          width: "100%",
-          fontSize: 16,
-          padding: "10px 12px",
-          border: "1px solid var(--line)",
-          borderRadius: 8,
-        }}
-      />
-      {r && (
-        <div style={{ fontSize: 14, marginTop: 6 }}>
-          <b>{r.korean}</b>
-          <div style={{ color }}>
-            {r.message} · {t.bidDeposit(won(r.deposit_krw))}
+    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+      <div style={{ fontSize: 14, fontWeight: 600 }}>{c.homesQ}</div>
+      <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+        {c.homes.map((label, i) => (
+          <button
+            key={label}
+            className={`chip ${homes === i ? "green" : "gray"}`}
+            style={{ minHeight: 36, border: 0 }}
+            onClick={() => pickHomes(i)}
+          >
+            {label}
+          </button>
+        ))}
+        {homes === 0 && (
+          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
+            <input type="checkbox" checked={first} onChange={(e) => setFirst(e.target.checked)} />
+            {c.firstTime}
+          </label>
+        )}
+      </div>
+      {d && s && (
+        <>
+          {d.cases.length > 0 && (
+            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+              {d.cases.map((x) => (
+                <button
+                  key={x.key}
+                  onClick={() => setBid(x.bid_krw)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 4px",
+                    borderRadius: 8,
+                    border: `1px solid ${s.bid_krw === x.bid_krw ? "var(--green)" : "var(--line)"}`,
+                    background: "none",
+                    color: "inherit",
+                    fontSize: 12,
+                  }}
+                >
+                  <b style={{ fontSize: 13 }}>{c.cases[x.key]}</b>
+                  <div>{won(x.bid_krw)}</div>
+                  <div className="sub" style={{ margin: 0 }}>
+                    {c.chance(x.chance)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          <input
+            type="range"
+            min={d.slider.min}
+            max={d.slider.max}
+            step={d.slider.step}
+            value={s.bid_krw}
+            onChange={(e) => setBid(Number(e.target.value))}
+            style={{ width: "100%", marginTop: 12 }}
+            aria-label={t.bidTry}
+          />
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{won(s.bid_krw)}</div>
+          {chk && (
+            <div style={{ fontSize: 13 }}>
+              {chk.korean}
+              {chk.level !== "ok" && (
+                <div style={{ color: chk.level === "block" ? "var(--red)" : "var(--amber)" }}>
+                  {chk.message}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ marginTop: 8 }}>
+            <Row
+              label={`${c.loan} · ${c.region[d.cls]} ${s.loan.pct}%`}
+              value={
+                <>
+                  − {won(s.loan_krw)}{" "}
+                  <button
+                    onClick={() => setEditLoan(!editLoan)}
+                    style={{ border: 0, background: "none", color: "var(--blue)", fontSize: 13 }}
+                  >
+                    {c.loanEdit}
+                  </button>
+                </>
+              }
+            />
+            {editLoan && (
+              <input
+                inputMode="numeric"
+                placeholder={c.loanPlaceholder}
+                onChange={(e) => {
+                  const n = Number(e.target.value.replace(/[^0-9]/g, ""));
+                  setLoan(e.target.value ? n : null);
+                }}
+                style={{
+                  width: "100%",
+                  fontSize: 16,
+                  padding: "8px 10px",
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                }}
+              />
+            )}
+            <div className="sub" style={{ margin: 0, fontSize: 12 }}>
+              {s.loan.note ?? c.loanHint}
+            </div>
+            <Row label={c.tax(s.tax.total_pct)} value={`+ ${won(s.tax.tax_krw)}`} />
+            <Row label={c.reg} value={`+ ${won(s.registration_krw)}`} />
+            {s.assumed_krw > 0 && <Row label={c.assumed} value={`+ ${won(s.assumed_krw)}`} />}
+            <Row
+              label={<b>{c.cash}</b>}
+              value={<b style={{ fontSize: 18 }}>{won(s.cash_krw)}</b>}
+            />
+            {myCash && (
+              <div
+                style={{
+                  fontSize: 13,
+                  textAlign: "right",
+                  color: s.cash_krw > myCash ? "var(--amber)" : "var(--muted)",
+                }}
+              >
+                {c.vsCash(s.cash_krw > myCash, won(Math.abs(s.cash_krw - myCash)))}
+              </div>
+            )}
+            {d.cap_krw != null && (
+              <div
+                style={{
+                  fontSize: 13,
+                  marginTop: 6,
+                  color: over ? "var(--red)" : "var(--muted)",
+                }}
+              >
+                ◆ {c.cap(won(d.cap_krw))}
+              </div>
+            )}
+            {d.resale && <div className="sub">{t.resale}</div>}
           </div>
-          {r.resale && <div className="sub">{t.resale}</div>}
-        </div>
+        </>
       )}
     </div>
   );
@@ -196,8 +330,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
         {b.deadlines.map((x: { key: string; label: string; short: string }) => (
           <Row key={x.key} label={x.label} value={x.short} />
         ))}
-        <BidTry id={d.item_id} />
-        <p className="sub">{t.calcSoon}</p>
+        <CalcBox id={d.item_id} />
       </>
     );
   return (

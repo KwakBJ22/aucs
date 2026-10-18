@@ -41,3 +41,17 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
     return d
+
+
+@router.get("/items/{item_id}/calc")
+def get_calc(
+    item_id: str,
+    bid: Annotated[int | None, Query(ge=1)] = None,
+    homes: Annotated[int, Query(ge=0, le=5)] = 0,
+    first: bool = False,
+    loan: Annotated[int | None, Query(ge=0)] = None,
+) -> dict[str, Any]:
+    d = item_detail.calc(item_id, bid_krw=bid, homes=homes, first_time=first, loan_krw=loan)
+    if d is None:
+        raise HTTPException(404, "물건을 찾을 수 없어요")
+    return d

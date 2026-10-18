@@ -225,3 +225,78 @@ def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:
     resale = "재매각" in (r["note_masked"] or "")
     res = check(bid_krw, r["min_price_krw"], deposit_rate_pct=20 if resale else 10, resale=resale)
     return {**res.value, "status": str(res.status)}
+
+
+_CALC_SQL = """
+select i.item_id, i.sido, i.address, i.appraisal_krw, i.min_price_krw, i.building_area_m2, i.note_masked,
+       a.result -> 'sale_rate' as sale_rate, a.result -> 'court_cell' as court_cell,
+       a.result -> 'local_peers' as local_peers, a.result -> 'new_item' as new_item,
+       a.result -> 'market' as market, a.result -> 'signals' as signals
+from core.items i
+left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
+where i.item_id = %s and i.display_policy = 'public'
+"""
+_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax")
+
+
+def build_calc(
+    r: dict[str, Any],
+    tables: dict[str, Any],
+    *,
+    bid_krw: int | None,
+    homes: int,
+    first_time: bool,
+    loan_krw: int | None,
+) -> dict[str, Any]:
+    """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
+    from aucs_rules.calc import area_class, bid_cases, cash_needed
+
+    app, mn = r["appraisal_krw"], r["min_price_krw"]
+    mkt = (r.get("market") or {}).get("price_krw")
+    cls = area_class(r.get("sido"), r.get("address"), tables["regulated_areas"])
+    area = float(r["building_area_m2"]) if r.get("building_area_m2") else None
+    resale = "재매각" in (r.get("note_masked") or "")
+    common = {
+        "min_price_krw": mn, "appraisal_krw": app, "market_krw": mkt, "area_m2": area, "cls": cls,
+        "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
+    }  # fmt: skip
+    _, _, rate = worth(r, r.get("signals") or [])
+    cases = []
+    if rate and app and not r.get("new_item"):
+        for c in bid_cases(app, mn, rate["p25"], rate["p50"], rate["p75"]):
+            v = cash_needed(c["bid_krw"], loan_override_krw=loan_krw, **common).value
+            cases.append({**c, "cash_krw": v["cash_krw"]})
+    bid = bid_krw or (cases[1]["bid_krw"] if cases else mn)
+    sel = cash_needed(bid, loan_override_krw=loan_krw, **common).value
+    cap = None
+    if mkt:
+        at = cash_needed(mkt, **common).value
+        cap = mkt - at["tax"]["tax_krw"] - at["registration_krw"]
+    return {
+        "cls": cls,
+        "cases": cases,
+        "selected": sel,
+        "cap_krw": cap,
+        "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
+        "resale": resale,
+    }
+
+
+def calc(
+    item_id: str, *, bid_krw: int | None, homes: int, first_time: bool, loan_krw: int | None
+) -> dict[str, Any] | None:
+    with connect() as c:
+        r = c.execute(_CALC_SQL, (item_id,)).fetchone()
+        if not r or not r["min_price_krw"]:
+            return None
+        tables = {
+            k: c.execute(
+                "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
+                "order by valid_from desc limit 1",
+                (k,),
+            ).fetchone()["value"]
+            for k in _TABLE_KEYS
+        }
+    return build_calc(
+        r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw
+    )

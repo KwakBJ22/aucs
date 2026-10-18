@@ -100,3 +100,32 @@ export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURI
 
 export const fetchBidCheck = (id: string, bid: number) =>
   getJson<BidCheck>(`/items/${encodeURIComponent(id)}/bid-check?bid=${bid}`);
+
+export type CashBreakdown = {
+  bid_krw: number;
+  deposit_krw: number;
+  loan_krw: number;
+  loan: { pct: number; cap_krw: number | null; who: string; note: string | null };
+  tax: { tax_krw: number; rate: number; total_pct: number; heavy: boolean };
+  registration_krw: number;
+  assumed_krw: number;
+  cash_krw: number;
+  total_krw: number;
+};
+export type Calc = {
+  cls: "regulated" | "metro" | "other";
+  cases: { key: string; bid_krw: number; rate: number; chance: string; cash_krw: number }[];
+  selected: CashBreakdown;
+  cap_krw: number | null;
+  slider: { min: number; max: number; step: number };
+  resale: boolean;
+};
+export function fetchCalc(
+  id: string,
+  o: { bid?: number | null; homes: number; first: boolean; loan?: number | null },
+): Promise<Calc> {
+  const q = new URLSearchParams({ homes: String(o.homes), first: String(o.first) });
+  if (o.bid) q.set("bid", String(o.bid));
+  if (o.loan != null) q.set("loan", String(o.loan));
+  return getJson<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);
+}

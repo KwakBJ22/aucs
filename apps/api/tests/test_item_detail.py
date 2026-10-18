@@ -52,3 +52,24 @@ def test_worth_with_market():
     d = build_detail(full(market=m, new_item=False), [], [], [], None, TODAY, [])
     # 감정가 1,015,000,000 × 78~90% ÷ 시세 1,200,000,000 → 66~76%
     assert d["questions"][2]["answer"] == "시세의 66~76%쯤에 낙찰될 것 같아요"
+
+
+def test_build_calc_cases_and_cap():
+    from aucs_api.services.item_detail import build_calc
+
+    tables = {
+        "regulated_areas": {"seoul_all": True, "gyeonggi": []},
+        "loan_ltv": {"regulated": {"none": 40, "first_time": 70, "owner": 0}, "metro": {"none": 70, "first_time": 70, "owner": 0},
+                     "other": {"none": 70, "first_time": 80, "owner": 60},
+                     "caps_regulated": [[1_500_000_000, 600_000_000], [None, 200_000_000]], "cap_metro_krw": 600_000_000},
+        "acquisition_tax": {"heavy": {"regulated": {"2": 8.0, "3": 12.0}, "other": {"3": 8.0}}, "edu_rate_of_basic": 10,
+                            "edu_heavy": 0.4, "farm_over85": {"basic": 0.2, "8": 0.6, "12": 1.0}},
+    }  # fmt: skip
+    r = full(sido="서울특별시", address="서울 관악구", building_area_m2=84,
+             market={"price_krw": 1_200_000_000}, new_item=False)  # fmt: skip
+    d = build_calc(r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None)
+    assert d["cls"] == "regulated" and len(d["cases"]) == 3
+    assert d["selected"]["bid_krw"] == d["cases"][1]["bid_krw"]
+    assert (
+        d["cap_krw"] == 1_200_000_000 - d["selected"]["tax"]["tax_krw"] * 0 - 39_600_000 - 2_400_000
+    )

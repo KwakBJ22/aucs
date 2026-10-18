@@ -1,6 +1,12 @@
 // 시작 질문 답 (로그인 전에는 이 기기에만 저장). 저장이 안 되는 브라우저에서도 화면은 동작.
 export type Purpose = "live" | "rent" | "resell";
-export type Profile = { regions: string[]; cash: number | null; purpose: Purpose | null };
+export type Profile = {
+  regions: string[];
+  cash: number | null;
+  purpose: Purpose | null;
+  homes?: number | null; // 지금 가진 집 수(계산 화면에서 한 번 물음)
+  firstTime?: boolean;
+};
 
 const KEY = "aucs_profile";
 
