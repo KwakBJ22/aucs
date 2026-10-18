@@ -45,3 +45,10 @@ def test_worth_court_shift_and_schedule():
 def test_worth_new_item():
     d = build_detail(full(new_item=True), [], [], [], None, TODAY, [])
     assert d["questions"][2]["answer"].startswith("처음 나온 물건")
+
+
+def test_worth_with_market():
+    m = {"price_krw": 1_200_000_000, "level": 1, "n": 5, "recent": []}
+    d = build_detail(full(market=m, new_item=False), [], [], [], None, TODAY, [])
+    # 감정가 1,015,000,000 × 78~90% ÷ 시세 1,200,000,000 → 66~76%
+    assert d["questions"][2]["answer"] == "시세의 66~76%쯤에 낙찰될 것 같아요"

@@ -107,6 +107,8 @@ export const copy = {
     rounds: "매각기일",
     rangeLabel: "감정가 기준 예상 낙찰가",
     sample: (n: number) => `최근 1년 비슷한 물건 ${n}건 기준`,
+    market: (n: number) => `시세 (같은 단지 실거래 ${n}건)`,
+    recentTrades: "최근 거래",
     deposit: "입찰보증금(최저가의 10%)",
     calcSoon: "입찰가별 필요한 현금 계산은 곧 열려요",
     deadlines: "놓치면 안 되는 날",

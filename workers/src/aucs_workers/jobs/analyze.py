@@ -15,6 +15,7 @@ from typing import Any
 import psycopg
 from aucs_rules import ENGINE_VERSION
 from aucs_rules.costs import commercial_over_limit
+from aucs_rules.price import Trade, market_price
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import signals, top_signal
 from aucs_rules.sale_rate import Sale, court_cell, local_peers, new_item, rate_range
@@ -26,6 +27,41 @@ from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
 COMMERCIAL_WORDS = ("상가", "근린", "점포", "사무실", "공장")
+
+
+def trade_type(usage: str | None, building_desc: str | None) -> str | None:
+    """물건 용도 → 실거래 종류. 상가·근린이 섞인 용도는 시세를 내지 않습니다."""
+    u = usage or ""
+    if u == "아파트":
+        return "apt"
+    if u == "오피스텔" or (u == "상가,오피스텔,근린시설" and "오피스텔" in (building_desc or "")):
+        return "officetel"
+    if u in ("다세대", "연립주택,다세대,빌라"):
+        return "rowhouse"
+    return None
+
+
+def load_market(
+    conn: psycopg.Connection, item: dict[str, Any], today: date
+) -> dict[str, Any] | None:
+    """같은 법정동·같은 지번(같은 단지·건물)의 최근 24개월 매매로 시세. 전용 ±3㎡."""
+    kind = trade_type(item.get("usage_name"), item.get("building_desc"))
+    area = item.get("building_area_m2")
+    if not kind or not area or not item.get("region_code") or not item.get("lot_no"):
+        return None
+    rows = conn.execute(
+        """select deal_date, price_krw, area_m2, floor, build_year from core.trades
+           where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
+             and deal_date >= %s and price_krw > 0""",
+        (item["region_code"], kind, item["lot_no"], today - timedelta(days=730)),
+    ).fetchall()
+    lot = item["lot_no"]
+    trades = [Trade(r[0], int(r[1]), float(r[2]), r[3], lot, r[4]) for r in rows]
+    res = market_price(trades, as_of=today, complex_name=lot, area_m2=float(area))
+    if res.value is None:
+        return None
+    recent = sorted(res.evidence, key=lambda e: e["date"], reverse=True)[:5]
+    return {**res.value, "recent": recent}
 
 
 def commercial_over(
@@ -103,7 +139,12 @@ def analyze_item(
         ).fetchone()
     )
     over = commercial_over(item, tenants, commercial_table, today)
+    market = load_market(conn, item, today)
     facts = build_facts(item, events, tenants, has_sr, over)
+    if market:
+        facts.update(
+            market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today
+        )
     sig = signals(facts)
     rates = rate_range(
         sales, as_of=today, sido=item["sido"], sigungu=item["sigungu"], usage_name=item["usage_name"],
@@ -137,11 +178,14 @@ def analyze_item(
         "sale_rate": rates.value,
         "court_cell": court.value,
         "local_peers": peers.value,
-        "new_item": new_item(item["failed_count"], app, None).value,
+        "new_item": new_item(
+            item["failed_count"], app, market["price_krw"] if market else None
+        ).value,
+        "market": market,
         "tenant_count": len(tenants),
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
-               "tenants": tenants, "engine": ENGINE_VERSION})  # fmt: skip
+               "tenants": tenants, "market": market, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),

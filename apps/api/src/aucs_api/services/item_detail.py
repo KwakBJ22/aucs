@@ -15,7 +15,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
-       a.result -> 'new_item' as new_item,
+       a.result -> 'new_item' as new_item, a.result -> 'market' as market,
        a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
@@ -86,6 +86,10 @@ def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[s
     if any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
     ans = f"비슷한 물건은 감정가의 {round(lo)}~{round(hi)}%에 낙찰됐어요"
+    mkt, app = r.get("market"), r.get("appraisal_krw")
+    if mkt and app:
+        a, b = app * lo / mkt["price_krw"], app * hi / mkt["price_krw"]
+        ans = f"시세의 {round(a)}~{round(b)}%쯤에 낙찰될 것 같아요"
     return ans, notes, {**rate, "p25": lo, "p75": hi, "court_shift": shift}
 
 
@@ -130,7 +134,7 @@ def build_detail(
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals}),
         q("worth", "얼마짜리인가", rate_ans, "gray" if not rate else "blue",
-          {"appraisal_krw": app, "rate": rate, "notes": rate_notes,
+          {"appraisal_krw": app, "rate": rate, "notes": rate_notes, "market": r.get("market"),
            "range_krw": [int(app * rate["p25"] / 100), int(app * rate["p75"] / 100)] if rate and app else None}),
         q("cost", "얼마가 드나", f"입찰보증금 {won(c['deposit_krw'])}원부터", "gray",
           {"deposit_krw": c["deposit_krw"], "min_price_krw": mn, "schedule_line": sched["summary"]["line"],

@@ -163,6 +163,21 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
           }
         />
         <p className="sub">{t.sample(b.rate.n)}</p>
+        {b.market && (
+          <>
+            <Row label={t.market(b.market.n)} value={<b>{won(b.market.price_krw)}</b>} />
+            <div className="sub" style={{ margin: 0, fontSize: 12 }}>
+              {t.recentTrades}{" "}
+              {b.market.recent
+                .slice(0, 3)
+                .map(
+                  (x: { date: string; floor: number | null; price_krw: number }) =>
+                    `${x.date.slice(2, 7).replace("-", ".")} ${x.floor ?? "-"}층 ${won(x.price_krw)}`,
+                )
+                .join(" · ")}
+            </div>
+          </>
+        )}
         {b.notes.map((n: string) => (
           <div key={n} style={{ fontSize: 14, color: "var(--amber)", padding: "2px 0" }}>
             ◆ {n}
