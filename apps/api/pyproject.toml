@@ -10,10 +10,13 @@ dependencies = [
   "python-dotenv>=1.1",
   "httpx>=0.28",
   "aucs-rules",
+  "aucs-workers",
+  "python-multipart>=0.0.9",
 ]
 
 [tool.uv.sources]
 aucs-rules = { workspace = true }
+aucs-workers = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

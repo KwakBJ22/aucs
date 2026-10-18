@@ -143,6 +143,17 @@ export const copy = {
     bidTry: "입찰가 넣어 보기",
     resale: "재매각 물건 — 보증금 비율은 법원 공고로 확인",
     failureTypes: "비슷한 물건에서 실제로 손해 본 경우",
+    reg: {
+      needLogin: "로그인하고 등기부 PDF를 올리면 떠안는 권리를 읽어 드려요",
+      upload: "등기부 PDF 올리기",
+      reupload: "다시 올리기",
+      reading: "등기부를 읽고 있어요 (그림 PDF는 1분쯤 걸려요)",
+      failed: "등기부를 읽지 못했어요. 인터넷등기소에서 받은 PDF인지 확인해 주세요",
+      baseLine: (name: string, d: string) =>
+        `── 말소기준 ${name} ${d} ── 이 아래는 낙찰되면 지워져요`,
+      keep: (d: string) => `올린 등기부는 ${d}에 지워져요 · 나만 볼 수 있어요`,
+      tenants: "임차인",
+    },
     tenantsNone: "현황조사서에 임차인이 없거나 아직 못 받았어요",
     moveIn: "전입",
     fixed: "확정",

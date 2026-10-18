@@ -45,6 +45,55 @@ export type BidIn = {
   pay_date?: string | null;
 };
 
+export type LadderRow = {
+  section: string;
+  rank_no: string;
+  name: string;
+  date: string | null;
+  amount_krw: number | null;
+  holder: string;
+  judgment: string;
+  is_base: boolean;
+};
+export type Ladder = {
+  base: { name: string; date: string | null } | null;
+  rows: LadderRow[];
+  tenants: {
+    name: string | null;
+    move_in: string | null;
+    deposit_krw: number | null;
+    verdict: string;
+    power: boolean | null;
+  }[];
+  hold_krw: number;
+  line: string;
+  state: string;
+};
+export type RegistryUpload = {
+  upload_id: number;
+  file_name: string | null;
+  status: "processing" | "parsed" | "failed";
+  method: string | null;
+  error: string | null;
+  delete_after: string;
+  ladder: Ladder | null;
+};
+
+// 등기부 PDF 올리기 (multipart 라 공통 call 을 쓰지 않음)
+export async function uploadRegistry(token: string, itemId: string, file: File): Promise<void> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${apiBaseUrl}/me/registries/${encodeURIComponent(itemId)}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(j?.detail ?? `HTTP ${res.status}`);
+  }
+}
+
 // 로그인한 사람의 자료. 토큰은 Supabase 세션에서.
 async function call<T>(token: string, path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBaseUrl}/me${path}`, {
@@ -73,6 +122,8 @@ export const meApi = {
   saveProfile: (t: string, p: { regions: string[]; cash: number | null; purpose: string | null }) =>
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),
   bids: (t: string) => call<Bids>(t, "/bids"),
+  registry: (t: string, id: string) =>
+    call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}`),
   saveBid: (t: string, b: BidIn) => call(t, "/bids", { method: "PUT", body: JSON.stringify(b) }),
   addPush: (t: string, sub: { endpoint: string; p256dh: string; auth: string }) =>
     call(t, "/push", { method: "POST", body: JSON.stringify(sub) }),

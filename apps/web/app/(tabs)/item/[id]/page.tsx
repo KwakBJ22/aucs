@@ -13,6 +13,8 @@ import {
   type Question,
 } from "@/lib/api/items";
 import { loadProfile, saveProfile } from "@/lib/profile";
+import { meApi, uploadRegistry, type RegistryUpload } from "@/lib/api/me";
+import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 
@@ -40,6 +42,127 @@ function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode 
         {label}
       </span>
       <span style={{ textAlign: "right" }}>{value}</span>
+    </div>
+  );
+}
+
+const JUDGE_COLOR: Record<string, string> = {
+  인수: "var(--red)",
+  말소기준: "var(--blue)",
+  "확인 필요": "var(--amber)",
+};
+
+// 등기부 올리기 + 권리 사다리(ITEM-03). 올린 사람만 봄.
+function RegistryBox({ id }: { id: string }) {
+  const r = t.reg;
+  const { session, ready } = useSession();
+  const [u, setU] = useState<RegistryUpload | null | undefined>(undefined);
+  const [err, setErr] = useState<string | null>(null);
+  const token = session?.access_token;
+
+  useEffect(() => {
+    if (!token) return;
+    let stop = false;
+    const load = () =>
+      meApi
+        .registry(token, id)
+        .then((x) => {
+          if (stop) return;
+          setU(x);
+          if (x?.status === "processing") setTimeout(load, 3000);
+        })
+        .catch(() => setU(null));
+    load();
+    return () => {
+      stop = true;
+    };
+  }, [token, id]);
+
+  if (!ready) return null;
+  if (!token)
+    return (
+      <p className="sub" style={{ marginTop: 10 }}>
+        {r.needLogin}
+      </p>
+    );
+  const pick = (f: File | undefined) => {
+    if (!f) return;
+    setErr(null);
+    uploadRegistry(token, id, f)
+      .then(() => setU({ ...(u ?? ({} as RegistryUpload)), status: "processing", ladder: null }))
+      .then(() => meApi.registry(token, id).then(setU))
+      .catch((e: Error) => setErr(e.message));
+  };
+  const lad = u?.ladder;
+  return (
+    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+      {u?.status === "processing" && <p className="sub">{r.reading}</p>}
+      {u?.status === "failed" && <p style={{ color: "var(--amber)", fontSize: 14 }}>{r.failed}</p>}
+      {lad && (
+        <>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{lad.line}</div>
+          <div style={{ marginTop: 6 }}>
+            {lad.rows.map((x) => (
+              <div key={`${x.section}${x.rank_no}`}>
+                {x.is_base && lad.base && (
+                  <div style={{ fontSize: 12, color: "var(--blue)", padding: "6px 0" }}>
+                    {r.baseLine(lad.base.name, lad.base.date ?? "")}
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    fontSize: 13,
+                    padding: "4px 0",
+                    color: x.judgment === "소멸" ? "var(--muted)" : "inherit",
+                  }}
+                >
+                  <span>
+                    {x.date ?? "-"} · {x.name}
+                    {x.holder ? ` · ${x.holder}` : ""}
+                  </span>
+                  <span style={{ whiteSpace: "nowrap", color: JUDGE_COLOR[x.judgment] }}>
+                    {x.amount_krw ? `${won(x.amount_krw)} · ` : ""}
+                    {x.judgment}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {lad.tenants.length > 0 && (
+            <>
+              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{r.tenants}</div>
+              {lad.tenants.map((x, i) => (
+                <div key={i} style={{ fontSize: 13, padding: "3px 0" }}>
+                  {x.name ?? "임차인"} · 전입 {x.move_in ?? "-"}
+                  {x.deposit_krw ? ` · ${won(x.deposit_krw)}` : ""} —{" "}
+                  <b style={{ color: x.power ? "var(--red)" : "inherit" }}>{x.verdict}</b>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+      <label
+        className="btn"
+        style={{ display: "block", textAlign: "center", marginTop: 10, cursor: "pointer" }}
+      >
+        {u ? r.reupload : r.upload}
+        <input
+          type="file"
+          accept="application/pdf"
+          style={{ display: "none" }}
+          onChange={(e) => pick(e.target.files?.[0])}
+        />
+      </label>
+      {err && <p style={{ color: "var(--red)", fontSize: 13 }}>{err}</p>}
+      {u && (
+        <p className="sub" style={{ fontSize: 12 }}>
+          {r.keep(u.delete_after)}
+        </p>
+      )}
     </div>
   );
 }
@@ -360,6 +483,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
               ◆ {s.title}
             </div>
           ))}
+        <RegistryBox id={d.item_id} />
       </>
     );
   if (q.key === "worth")

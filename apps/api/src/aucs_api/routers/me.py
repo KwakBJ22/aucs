@@ -3,12 +3,12 @@
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from aucs_api import settings
 from aucs_api.auth.user import current_user_id
-from aucs_api.services import me
+from aucs_api.services import me, registry
 
 router = APIRouter(prefix="/me")
 Uid = Annotated[str, Depends(current_user_id)]
@@ -119,3 +119,22 @@ def put_bid(body: BidIn, uid: Uid) -> dict[str, bool]:
 def delete_bid(bid_id: int, uid: Uid) -> dict[str, bool]:
     me.bid_remove(uid, bid_id)
     return {"ok": True}
+
+
+@router.get("/registries/{item_id}")
+def get_registry(item_id: str, uid: Uid) -> dict[str, Any] | None:
+    return registry.latest(uid, item_id)
+
+
+@router.post("/registries/{item_id}")
+async def post_registry(
+    item_id: str, uid: Uid, tasks: BackgroundTasks, file: Annotated[UploadFile, File()]
+) -> dict[str, Any]:
+    data = await file.read()
+    if len(data) > registry.MAX_BYTES:
+        raise HTTPException(413, "10MB보다 큰 파일은 올릴 수 없어요")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(415, "PDF 파일만 올릴 수 있어요")
+    upload_id = registry.save_upload(uid, item_id, file.filename or "registry.pdf", data)
+    tasks.add_task(registry.parse_upload, upload_id)
+    return {"upload_id": upload_id, "status": "processing"}

@@ -18,6 +18,7 @@ STEPS = [
     ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"]),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
     ("알림", ["aucs_workers.jobs.notify"]),
+    ("올린 등기부 원본 지우기", ["aucs_workers.jobs.purge"]),
 ]
 
 
