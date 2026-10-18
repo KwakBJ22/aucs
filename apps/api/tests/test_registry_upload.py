@@ -73,3 +73,24 @@ def test_guess_marks_unreadable_line():
     )
     assert row["9"]["mark"] == "내가 고침"
     assert "추정한 줄 1개" in lad["line"]
+
+
+def test_ladder_payout_senior_tenant_claimed():
+    from datetime import date as D
+
+    from aucs_api.services.registry import apply_guesses, build_ladder
+
+    raw = [
+        {"section": "을", "rank_no": "1", "purpose": "근저당권설정", "receipt_date": "2023-06-01",
+         "amount_krw": 300000000, "holder": "은행"},
+    ]  # fmt: skip
+    rights, marks = apply_guesses(raw)
+    tenants = [{"name": "김○○", "move_in": "2023-01-01", "fixed": "2023-01-01", "claim": "2025-02-01",
+                "deposit_krw": 400000000}]  # fmt: skip
+    table = [{"valid_from": D(2023, 2, 21), "valid_to": None, "region_class": "seoul",
+              "deposit_limit_krw": 165000000, "amount_krw": 55000000}]  # fmt: skip
+    lad = build_ladder(rights, tenants, D(2025, 3, 1), marks, price_krw=300000000,
+                       region_cls="seoul", small_table=table)  # fmt: skip
+    assert lad["tenants"][0]["verdict"] == "배당에서 2억 9,800만 받고 1억 200만을 떠안아요"
+    assert lad["hold_krw"] == 102000000 and lad["line"] == "떠안는 돈 약 1억 200만"
+    assert lad["payout"]["rows"][0]["name"] == "경매비용(대략)"

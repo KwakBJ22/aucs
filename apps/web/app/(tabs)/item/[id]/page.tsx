@@ -177,6 +177,75 @@ function ReadingBar({ sending, startedAt }: { sending: boolean; startedAt: numbe
   );
 }
 
+function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["payout"] & object }) {
+  const [open, setOpen] = useState(false);
+  const r = t.reg;
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          border: 0,
+          background: "none",
+          padding: "8px 0",
+          minHeight: 44,
+          fontSize: 14,
+          fontWeight: 600,
+          color: "inherit",
+        }}
+      >
+        {r.payTitle(won(p.price_krw))} {open ? "⌃" : "›"}
+      </button>
+      {open && (
+        <>
+          {p.rows.map((x, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+                fontSize: 13,
+                padding: "3px 0",
+                color: x.paid_krw ? "inherit" : "var(--muted)",
+              }}
+            >
+              <span>
+                {i + 1}. {x.name}
+              </span>
+              <span style={{ whiteSpace: "nowrap" }}>
+                {won(x.paid_krw)}
+                {x.claim_krw && x.claim_krw > x.paid_krw ? ` / ${won(x.claim_krw)}` : ""}
+              </span>
+            </div>
+          ))}
+          {p.surplus_krw > 0 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 13,
+                padding: "3px 0",
+              }}
+            >
+              <span>{r.payLeft}</span>
+              <span>{won(p.surplus_krw)}</span>
+            </div>
+          )}
+          {p.unknown.length > 0 && (
+            <p style={{ fontSize: 12, color: "var(--amber)", margin: "6px 0 0" }}>
+              {r.payUnknown(p.unknown.join(", "))}
+            </p>
+          )}
+          <p className="sub" style={{ fontSize: 12, margin: "4px 0 0" }}>
+            {r.payNote}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
@@ -262,6 +331,7 @@ function RegistryBox() {
               ))}
             </>
           )}
+          {lad.payout && <PayoutBox p={lad.payout} />}
         </>
       )}
       {u?.status !== "processing" && (

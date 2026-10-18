@@ -13,8 +13,15 @@ from pathlib import Path
 from typing import Any
 
 from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
+from aucs_rules.payout import NamedTenant, payout
 from aucs_rules.rights import Right, analyze
-from aucs_rules.tenants import Tenant, claimed_in_time, opposing_power
+from aucs_rules.small_lease_region import region_class
+from aucs_rules.tenants import (
+    Tenant,
+    claimed_in_time,
+    flatten_small_lease_table,
+    opposing_power,
+)
 from psycopg.types.json import Jsonb
 
 from aucs_api.db import connect
@@ -82,6 +89,9 @@ def build_ladder(
     tenants: list[dict[str, Any]],
     claim_deadline: date | None,
     marks: dict[tuple[str, str], str] | None = None,
+    price_krw: int | None = None,
+    region_cls: str | None = None,
+    small_table: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """권리 사다리(말소기준 선) + 대항력 임차인 + 떠안는 돈 (순수 함수, 결과는 추정)."""
     marks = marks or {}
@@ -101,20 +111,46 @@ def build_ladder(
     hold = sum(x["amount_krw"] or 0 for x in assumed)
     t_rows = []
     partial = False
-    for t in tenants:
-        tn = Tenant(
-            move_in_date=_d(t.get("move_in")), fixed_date=_d(t.get("fixed")),
-            claim_date=_d(t.get("claim")), deposit_krw=t.get("deposit_krw"),
+    tns = [
+        Tenant(
+            move_in_date=_d(t.get("move_in")),
+            fixed_date=_d(t.get("fixed")),
+            claim_date=_d(t.get("claim")),
+            deposit_krw=t.get("deposit_krw"),
         )  # fmt: skip
+        for t in tenants
+    ]
+    # 예상 배당: 보증금을 아는 임차인이 배당요구했을 때만 (최저가에 낙찰된다고 보고)
+    pay = None
+    if price_krw and any(
+        tn.deposit_krw and claimed_in_time(tn, claim_deadline).value for tn in tns
+    ):
+        pay = payout(
+            price_krw, rights,
+            [NamedTenant(t.get("name") or "임차인", tn) for t, tn in zip(tenants, tns, strict=True)],
+            base.receipt_date if base else None, claim_deadline, region_cls, small_table or [],
+        )  # fmt: skip
+    for idx, (t, tn) in enumerate(zip(tenants, tns, strict=True)):
         power = opposing_power(tn, base.receipt_date if base else None).value
         claimed = claimed_in_time(tn, claim_deadline).value
-        if power is True and claimed is False:
+        got = pay["tenants"][idx] if pay else None
+        if got and power is True and claimed and got["assume_krw"] is not None:
+            a, rcv = got["assume_krw"], got["received_krw"]
+            verdict = (
+                f"배당에서 {won(rcv)} 받고 {won(a)}을 떠안아요"
+                if a
+                else "배당으로 보증금을 다 받아요"
+            )
+            add = a
+        elif power is True and claimed is False:
             verdict, add = "보증금 전액을 떠안아요", tn.deposit_krw or 0
             unknown_amount = unknown_amount or tn.deposit_krw is None
         elif power is True:
             verdict, add, partial = "배당에서 못 받은 만큼 떠안을 수 있어요", 0, True
         elif power is False:
             verdict, add = "낙찰되면 대항력이 없어요", 0
+            if got and got["received_krw"]:
+                verdict += f" · 배당 {won(got['received_krw'])} 예상"
         else:
             verdict, add = "전입일을 몰라 판단할 수 없어요", 0
         hold += add
@@ -137,11 +173,22 @@ def build_ladder(
     elif unknown_amount:
         line, state = "떠안는 권리가 있는데 금액을 몰라요", "확인 필요"
     else:
-        line, state = f"떠안는 돈 약 {hold:,}원" + (" + 배당 부족분" if partial else ""), "추정"
+        line, state = f"떠안는 돈 약 {won(hold)}" + (" + 배당 부족분" if partial else ""), "추정"
     return {
         "base": {"name": normalize_purpose(base.purpose) or base.purpose, "date": _iso(base.receipt_date)} if base else None,
-        "rows": rows, "tenants": t_rows, "hold_krw": hold, "line": line, "state": state,
+        "rows": rows, "tenants": t_rows, "hold_krw": hold, "line": line, "state": state, "payout": pay,
     }  # fmt: skip
+
+
+def won(n: int) -> str:
+    """1억 200만 꼴 (만 원 아래 버림)."""
+    man = n // 10_000
+    eok, rest = divmod(man, 10_000)
+    if eok and rest:
+        return f"{eok}억 {rest:,}만"
+    if eok:
+        return f"{eok}억"
+    return f"{rest:,}만" if rest else f"{n:,}원"
 
 
 def _d(s: Any) -> date | None:
@@ -218,9 +265,13 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
         if not u:
             return None
         meta = c.execute(
-            "select c.claim_deadline, i.case_id from core.items i join core.cases c using (case_id) where i.item_id = %s",
+            """select c.claim_deadline, i.case_id, i.min_price_krw, i.sido, i.sigungu
+               from core.items i join core.cases c using (case_id) where i.item_id = %s""",
             (item_id,),
         ).fetchone()
+        small_rows = c.execute(
+            "select valid_from, valid_to, value from ref.rule_tables where rule_key = 'small_lease_limit'"
+        ).fetchall()
         tenants = c.execute(
             """select name_masked as name, move_in_date::text as move_in, fixed_date::text as fixed,
                       claim_date::text as claim, deposit_krw from core.tenants where case_id = %s""",
@@ -234,9 +285,19 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
     if u["status"] == "parsed" and u["rights"]:
         rights, marks = apply_guesses(u["rights"])
         out["ladder"] = build_ladder(
-            rights, tenants, meta["claim_deadline"] if meta else None, marks
-        )
+            rights, tenants, meta["claim_deadline"] if meta else None, marks,
+            price_krw=meta["min_price_krw"] if meta else None,
+            region_cls=_region(meta, rights) if meta else None,
+            small_table=flatten_small_lease_table([dict(r) for r in small_rows]),
+        )  # fmt: skip
     return out
+
+
+def _region(meta: dict[str, Any], rights: list[Right]) -> str | None:
+    """소액임차 지역 구분: 최초 담보물권 설정일 기준."""
+    ds = [r.receipt_date for r in rights if r.section == "을" and r.receipt_date]
+    base = min(ds) if ds else date.today()
+    return region_class(meta.get("sido"), meta.get("sigungu"), None, base).value
 
 
 def fix_right(

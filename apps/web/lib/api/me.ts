@@ -69,6 +69,12 @@ export type Ladder = {
   hold_krw: number;
   line: string;
   state: string;
+  payout: {
+    price_krw: number;
+    rows: { name: string; claim_krw: number | null; paid_krw: number }[];
+    surplus_krw: number;
+    unknown: string[];
+  } | null;
 };
 export type RegistryUpload = {
   upload_id: number;
