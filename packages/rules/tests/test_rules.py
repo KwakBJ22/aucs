@@ -1,7 +1,7 @@
 from datetime import date
 
 from aucs_rules.distribution import Claim, distribute
-from aucs_rules.fix_dictionary import normalize_purpose
+from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
 from aucs_rules.price import Trade, market_price
 from aucs_rules.result import Status
 from aucs_rules.risk import signals, top_signal
@@ -15,6 +15,17 @@ def test_fix_dictionary() -> None:
     assert normalize_purpose("가암큐") == "가압류"
     assert normalize_purpose("근저당권설정") == "근저당권설정"
     assert normalize_purpose("알수없음") is None
+
+
+def test_guess_purpose() -> None:
+    # 2025타경55580 갑구 13번: 「ㅇㅇ르갑류」 · 용인시 → 압류(추정)
+    assert guess_purpose("ㅇㅇ르갑류", "갑", "용인시") == "압류"
+    assert guess_purpose("근저당권섣정", "을") == "근저당권설정"
+    assert guess_purpose("근저당귄설정", "을") == "근저당권설정"
+    assert guess_purpose("ㅁㄴㅇㄹ", "갑") is None
+    assert guess_purpose("알수없음", "을") is None
+    assert "압류" in names_for("갑") and "근저당권설정" not in names_for("갑")
+    assert "근저당권설정" in names_for("을")
 
 
 def test_opposing_power_same_day_is_none() -> None:

@@ -54,6 +54,7 @@ export type LadderRow = {
   holder: string;
   judgment: string;
   is_base: boolean;
+  mark: "추정" | "내가 고침" | null;
 };
 export type Ladder = {
   base: { name: string; date: string | null } | null;
@@ -77,6 +78,8 @@ export type RegistryUpload = {
   error: string | null;
   delete_after: string;
   ladder: Ladder | null;
+  created_at?: string;
+  choices?: Record<string, string[]>;
 };
 
 // 등기부 PDF 올리기 (multipart 라 공통 call 을 쓰지 않음)
@@ -124,6 +127,11 @@ export const meApi = {
   bids: (t: string) => call<Bids>(t, "/bids"),
   registry: (t: string, id: string) =>
     call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}`),
+  fixRight: (t: string, id: string, b: { section: string; rank_no: string; purpose: string }) =>
+    call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}/rights`, {
+      method: "PATCH",
+      body: JSON.stringify(b),
+    }),
   saveBid: (t: string, b: BidIn) => call(t, "/bids", { method: "PUT", body: JSON.stringify(b) }),
   addPush: (t: string, sub: { endpoint: string; p256dh: string; auth: string }) =>
     call(t, "/push", { method: "POST", body: JSON.stringify(sub) }),

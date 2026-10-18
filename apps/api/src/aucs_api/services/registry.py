@@ -7,12 +7,12 @@
 import hashlib
 import re
 import tempfile
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from aucs_rules.fix_dictionary import normalize_purpose
+from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
 from aucs_rules.rights import Right, analyze
 from aucs_rules.tenants import Tenant, claimed_in_time, opposing_power
 from psycopg.types.json import Jsonb
@@ -58,10 +58,33 @@ def right_from_json(d: dict[str, Any]) -> Right:
     )  # fmt: skip
 
 
+def apply_guesses(raw: list[dict[str, Any]]) -> tuple[list[Right], dict[tuple[str, str], str]]:
+    """저장된 권리 → Right 목록 + 줄 표시(「추정」·「내가 고침」).
+
+    손님이 고친 줄(fixed)은 그대로, 못 읽은 줄은 규칙으로 추정(guess_purpose)해서 판정에 씁니다."""
+    rights, marks = [], {}
+    for d in raw:
+        r = right_from_json(d)
+        key = (r.section, r.rank_no)
+        if d.get("fixed"):
+            marks[key] = "내가 고침"
+        elif not normalize_purpose(r.purpose):
+            g = guess_purpose(r.purpose, r.section, r.holder)
+            if g:
+                r = replace(r, purpose=g)
+                marks[key] = "추정"
+        rights.append(r)
+    return rights, marks
+
+
 def build_ladder(
-    rights: list[Right], tenants: list[dict[str, Any]], claim_deadline: date | None
+    rights: list[Right],
+    tenants: list[dict[str, Any]],
+    claim_deadline: date | None,
+    marks: dict[tuple[str, str], str] | None = None,
 ) -> dict[str, Any]:
     """권리 사다리(말소기준 선) + 대항력 임차인 + 떠안는 돈 (순수 함수, 결과는 추정)."""
+    marks = marks or {}
     res = analyze(rights)
     base: Right | None = res["base"].value
     rows = []
@@ -71,7 +94,7 @@ def build_ladder(
         rows.append({
             "section": r.section, "rank_no": r.rank_no, "name": normalize_purpose(r.purpose) or r.purpose,
             "date": _iso(r.receipt_date), "amount_krw": r.amount_krw, "holder": r.holder,
-            "judgment": j.value, "is_base": r is base,
+            "judgment": j.value, "is_base": r is base, "mark": marks.get((r.section, r.rank_no)),
         })  # fmt: skip
     assumed = [x for x in rows if x["judgment"] == "인수"]
     unknown_amount = any(x["amount_krw"] is None for x in assumed)
@@ -101,9 +124,12 @@ def build_ladder(
         line, state = "말소기준이 되는 권리를 찾지 못했어요", "확인 필요"
     elif hold == 0 and not unknown_amount and not partial:
         unsure = sum(1 for x in rows if x["judgment"] == "확인 필요")
+        guessed = sum(1 for x in rows if x["mark"] == "추정")
         line, state = (
             (f"떠안는 돈은 없어 보여요 · 읽기 어려운 줄 {unsure}개는 원문 확인", "확인 필요")
             if unsure
+            else (f"떠안는 돈은 없어 보여요 · 추정한 줄 {guessed}개는 원문 확인", "추정")
+            if guessed
             else ("떠안는 돈이 없어요", "추정")
         )
     elif hold == 0 and partial:
@@ -203,8 +229,40 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
     out = {
         "upload_id": u["upload_id"], "file_name": u["file_name"], "status": u["status"], "method": u["method"],
         "error": u["error"], "delete_after": u["delete_after"].isoformat(), "ladder": None,
+        "created_at": u["created_at"].isoformat(), "choices": {"갑": names_for("갑"), "을": names_for("을")},
     }  # fmt: skip
     if u["status"] == "parsed" and u["rights"]:
-        rights = [right_from_json(x) for x in u["rights"]]
-        out["ladder"] = build_ladder(rights, tenants, meta["claim_deadline"] if meta else None)
+        rights, marks = apply_guesses(u["rights"])
+        out["ladder"] = build_ladder(
+            rights, tenants, meta["claim_deadline"] if meta else None, marks
+        )
     return out
+
+
+def fix_right(
+    uid: str, item_id: str, section: str, rank_no: str, purpose: str
+) -> dict[str, Any] | None:
+    """손님이 고른 등기목적으로 그 줄을 고침(원래 읽은 글자는 read_as 로 남김)."""
+    if purpose not in names_for(section):
+        raise ValueError("고를 수 없는 이름이에요")
+    with connect() as c:
+        u = c.execute(
+            """select upload_id, rights from app.uploaded_registries
+               where user_id = %s and item_id = %s and status = 'parsed' order by upload_id desc limit 1""",
+            (uid, item_id),
+        ).fetchone()
+        if not u:
+            return None
+        rights = list(u["rights"])
+        hit = False
+        for d in rights:
+            if d["section"] == section and str(d["rank_no"]) == str(rank_no):
+                d.setdefault("read_as", d["purpose"])
+                d["purpose"], d["fixed"], hit = purpose, True, True
+        if not hit:
+            raise ValueError("그 줄을 찾지 못했어요")
+        c.execute(
+            "update app.uploaded_registries set rights = %s where upload_id = %s",
+            (Jsonb(rights), u["upload_id"]),
+        )
+    return latest(uid, item_id)

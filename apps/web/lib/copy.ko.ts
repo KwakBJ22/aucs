@@ -157,7 +157,11 @@ export const copy = {
       needLogin: "로그인하고 등기부 PDF를 올리면 떠안는 권리를 읽어 드려요",
       upload: "등기부 PDF 올리기",
       reupload: "다시 올리기",
-      reading: "등기부를 읽고 있어요 (그림 PDF는 1분쯤 걸려요)",
+      reading: "등기부를 읽고 있어요",
+      left: (n: number) => (n > 3 ? `약 ${n}초 남음` : "거의 다 됐어요"),
+      steps: ["올리기", "글자 읽기", "권리 정리"],
+      hint: "인터넷등기소에서 받은 PDF 그대로 올리면 더 빠르고 정확해요",
+      fixTitle: "이 줄 고치기",
       failed: "등기부를 읽지 못했어요. 인터넷등기소에서 받은 PDF인지 확인해 주세요",
       baseLine: (name: string, d: string) =>
         `── 말소기준 ${name} ${d} ── 이 아래는 낙찰되면 지워져요`,

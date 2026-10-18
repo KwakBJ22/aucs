@@ -126,6 +126,20 @@ def get_registry(item_id: str, uid: Uid) -> dict[str, Any] | None:
     return registry.latest(uid, item_id)
 
 
+class RightFixIn(BaseModel):
+    section: str = Field(pattern="^(갑|을)$")
+    rank_no: str = Field(max_length=20)
+    purpose: str = Field(max_length=40)
+
+
+@router.patch("/registries/{item_id}/rights")
+def patch_registry_right(item_id: str, body: RightFixIn, uid: Uid) -> dict[str, Any] | None:
+    try:
+        return registry.fix_right(uid, item_id, body.section, body.rank_no, body.purpose)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
 @router.post("/registries/{item_id}")
 async def post_registry(
     item_id: str, uid: Uid, tasks: BackgroundTasks, file: Annotated[UploadFile, File()]

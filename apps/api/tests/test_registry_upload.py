@@ -51,3 +51,25 @@ def test_ladder_senior_tenant_unclaimed():
     )
     claimed = [{**ten[0], "claim": "2025-07-01"}]
     assert build_ladder(_rights(), claimed, D(2025, 9, 1))["line"].startswith("배당에서 못 받는")
+
+
+def test_guess_marks_unreadable_line():
+    from aucs_api.services.registry import apply_guesses, build_ladder
+
+    raw = [
+        {"section": "을", "rank_no": "1", "purpose": "근저당권설정", "receipt_date": "2021-03-31",
+         "amount_krw": 462000000, "holder": "농협은행주식회사"},
+        {"section": "갑", "rank_no": "13", "purpose": "ㅇㅇ르갑류", "receipt_date": "2026-02-11", "holder": "용인시"},
+        {"section": "갑", "rank_no": "9", "purpose": "가압류", "receipt_date": "2023-07-26", "holder": "x",
+         "fixed": True},
+    ]  # fmt: skip
+    rights, marks = apply_guesses(raw)
+    lad = build_ladder(rights, [], None, marks)
+    row = {r["rank_no"]: r for r in lad["rows"]}
+    assert (
+        row["13"]["name"] == "압류"
+        and row["13"]["mark"] == "추정"
+        and row["13"]["judgment"] == "소멸"
+    )
+    assert row["9"]["mark"] == "내가 고침"
+    assert "추정한 줄 1개" in lad["line"]

@@ -7,6 +7,7 @@
 """
 
 import re
+from difflib import SequenceMatcher
 
 _FIX = {
     "가암큐": "가압류",
@@ -96,3 +97,64 @@ def kind_of(text: str) -> str | None:
     if name == "변경·말소":
         return "change"
     return STANDARD.get(name) if name else None
+
+
+# ── 규칙으로 추정 (AI 없이) ──────────────────────────────
+# 보정 사전에도 없는 오타를, 글자 모양(자모)이 비슷한 표준 이름과 권리자 종류로 추정합니다.
+# 결과는 늘 「추정」으로 표시하고, 손님이 직접 고칠 수 있게 합니다. (10/18 대표님: AI 없이, 나중에 유료 글자 인식으로)
+
+# 을구에만 오는 종류 (나머지는 갑구)
+_EUL_KINDS = {
+    "mortgage",
+    "jeonse",
+    "lease_right",
+    "superficies",
+    "servitude",
+    "pledge",
+    "mortgage_transfer",
+}
+# 지자체·세무서·공단 → 갑구라면 세금·보험료 압류가 거의 전부
+_GOV = re.compile(
+    r"(시|군|구|도|세무서|국민건강보험공단|국민연금공단|근로복지공단|대한민국|관리공단)$"
+)
+_CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+_JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
+_JONG = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"
+GUESS_MIN = 0.75
+
+
+def _jamo(text: str) -> str:
+    out = []
+    for ch in text:
+        code = ord(ch) - 0xAC00
+        if 0 <= code < 11172:
+            out += [_CHO[code // 588], _JUNG[code % 588 // 28], _JONG[code % 28].strip()]
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def names_for(section: str) -> list[str]:
+    """그 구(갑·을)에 올 수 있는 표준 이름 (손님이 고를 목록)."""
+    eul = section == "을"
+    return [n for n, k in STANDARD.items() if (k in _EUL_KINDS) == eul]
+
+
+def guess_purpose(text: str, section: str, holder: str = "") -> str | None:
+    """보정 사전으로도 모르는 등기목적을 추정. 자신 없으면 None (→ 확인 필요)."""
+    if normalize_purpose(text):
+        return normalize_purpose(text)
+    t = _jamo(re.sub(r"[^가-힣]", "", clean_purpose(text)))
+    if not t:
+        return None
+    gov = bool(_GOV.search((holder or "").strip()))
+    best, score = None, 0.0
+    for name in names_for(section):
+        j = _jamo(name)
+        tail = t[-len(j) :]
+        r = SequenceMatcher(None, tail, j).ratio()
+        if gov and section == "갑" and name == "압류":
+            r += 0.1
+        if r > score:
+            best, score = name, r
+    return best if score >= GUESS_MIN else None

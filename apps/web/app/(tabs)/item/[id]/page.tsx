@@ -59,7 +59,10 @@ type MyReg = {
   token?: string;
   u: RegistryUpload | null | undefined;
   err: string | null;
+  sending: boolean;
+  startedAt: number | null;
   pick: (f: File | undefined) => void;
+  fix: (section: string, rank_no: string, purpose: string) => void;
 };
 const RegCtx = createContext<MyReg | null>(null);
 
@@ -69,6 +72,8 @@ function useMyRegistry(id: string): MyReg {
   const [u, setU] = useState<RegistryUpload | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
   const [round, setRound] = useState(0); // 올릴 때마다 다시 확인 시작
+  const [sending, setSending] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -80,7 +85,11 @@ function useMyRegistry(id: string): MyReg {
         .then((x) => {
           if (stop) return;
           setU(x);
-          if (x?.status === "processing") timer = setTimeout(load, 3000);
+          if (x?.status === "processing") {
+            // 이 화면을 떠났다 돌아와도 올린 시각부터 막대를 이어 감
+            setStartedAt((v) => v ?? (x.created_at ? Date.parse(x.created_at) : Date.now()));
+            timer = setTimeout(load, 3000);
+          } else setStartedAt(null);
         })
         .catch(() => !stop && setU(null));
     load();
@@ -94,21 +103,85 @@ function useMyRegistry(id: string): MyReg {
     (f: File | undefined) => {
       if (!f || !token) return;
       setErr(null);
+      setSending(true);
+      setStartedAt(Date.now());
       setU((v) => ({ ...(v ?? ({} as RegistryUpload)), status: "processing", ladder: null }));
       uploadRegistry(token, id, f)
         .then(() => setRound((n) => n + 1))
+        .catch((e: Error) => {
+          setErr(e.message);
+          setStartedAt(null);
+          setRound((n) => n + 1);
+        })
+        .finally(() => setSending(false));
+    },
+    [token, id],
+  );
+  const fix = useCallback(
+    (section: string, rank_no: string, purpose: string) => {
+      if (!token) return;
+      meApi
+        .fixRight(token, id, { section, rank_no, purpose })
+        .then(setU)
         .catch((e: Error) => setErr(e.message));
     },
     [token, id],
   );
-  return { ready, token, u, err, pick };
+  return { ready, token, u, err, sending, startedAt, pick, fix };
+}
+
+// 읽는 동안 진행 막대: 서버가 페이지별 진행을 알려 주지 않아 시간 기준(그림 PDF 약 40초).
+// 결과가 오기 전엔 90%에서 기다리고, 오면 막대가 사라지고 결과가 나옴.
+const EXPECT_SEC = 40;
+function ReadingBar({ sending, startedAt }: { sending: boolean; startedAt: number | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(iv);
+  }, []);
+  const sec = startedAt ? Math.max(0, (now - startedAt) / 1000) : 0;
+  const pct = sending ? Math.min(15, 5 + sec * 3) : Math.min(90, 15 + (75 * sec) / EXPECT_SEC);
+  const step = sending ? 0 : pct < 75 ? 1 : 2;
+  const r = t.reg;
+  return (
+    <div role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+        <b>{r.reading}</b>
+        <span className="sub" style={{ margin: 0 }}>
+          {r.left(Math.round(EXPECT_SEC - sec))}
+        </span>
+      </div>
+      <div style={{ height: 8, borderRadius: 4, background: "var(--line)", marginTop: 8 }}>
+        <div
+          style={{
+            width: `${pct}%`,
+            height: 8,
+            borderRadius: 4,
+            background: "var(--blue)",
+            transition: "width .5s linear",
+          }}
+        />
+      </div>
+      <div style={{ display: "flex", gap: 12, fontSize: 12, marginTop: 6 }}>
+        {r.steps.map((s, i) => (
+          <span
+            key={s}
+            style={{ color: i < step ? "var(--blue)" : i === step ? "inherit" : "var(--faint)" }}
+          >
+            {i + 1} {s}
+            {i < step ? " ✓" : i === step ? " …" : ""}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
   if (!reg || !reg.ready) return null;
-  const { token, u, err, pick } = reg;
+  const { token, u, err, pick, fix, sending, startedAt } = reg;
   if (!token)
     return (
       <p className="sub" style={{ marginTop: 10 }}>
@@ -118,7 +191,7 @@ function RegistryBox() {
   const lad = u?.ladder;
   return (
     <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-      {u?.status === "processing" && <p className="sub">{r.reading}</p>}
+      {u?.status === "processing" && <ReadingBar sending={sending} startedAt={startedAt} />}
       {u?.status === "failed" && <p style={{ color: "var(--amber)", fontSize: 14 }}>{r.failed}</p>}
       {lad && (
         <>
@@ -143,6 +216,7 @@ function RegistryBox() {
                 >
                   <span>
                     {x.date ?? "-"} · {x.name}
+                    {x.mark ? <span style={{ color: "var(--muted)" }}> ({x.mark})</span> : null}
                     {x.holder ? ` · ${x.holder}` : ""}
                   </span>
                   <span style={{ whiteSpace: "nowrap", color: JUDGE_COLOR[x.judgment] }}>
@@ -150,6 +224,29 @@ function RegistryBox() {
                     {x.judgment}
                   </span>
                 </div>
+                {(x.judgment === "확인 필요" || x.mark) && u?.choices?.[x.section] && (
+                  <select
+                    aria-label={r.fixTitle}
+                    value=""
+                    onChange={(e) => e.target.value && fix(x.section, x.rank_no, e.target.value)}
+                    style={{
+                      fontSize: 13,
+                      margin: "0 0 6px",
+                      padding: "6px 8px",
+                      borderRadius: 8,
+                      border: "1px solid var(--line)",
+                      background: "none",
+                      color: "var(--blue)",
+                    }}
+                  >
+                    <option value="">{r.fixTitle}</option>
+                    {(u.choices?.[x.section] ?? []).map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             ))}
           </div>
@@ -167,18 +264,28 @@ function RegistryBox() {
           )}
         </>
       )}
-      <label
-        className="btn"
-        style={{ display: "block", textAlign: "center", marginTop: 10, cursor: "pointer" }}
-      >
-        {u ? r.reupload : r.upload}
-        <input
-          type="file"
-          accept="application/pdf"
-          style={{ display: "none" }}
-          onChange={(e) => pick(e.target.files?.[0])}
-        />
-      </label>
+      {u?.status !== "processing" && (
+        <>
+          <label
+            className="btn"
+            style={{ display: "block", textAlign: "center", marginTop: 10, cursor: "pointer" }}
+          >
+            {u ? r.reupload : r.upload}
+            <input
+              type="file"
+              accept="application/pdf"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                pick(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <p className="sub" style={{ fontSize: 12, marginBottom: 0 }}>
+            {r.hint}
+          </p>
+        </>
+      )}
       {err && <p style={{ color: "var(--red)", fontSize: 13 }}>{err}</p>}
       {u && (
         <p className="sub" style={{ fontSize: 12 }}>
