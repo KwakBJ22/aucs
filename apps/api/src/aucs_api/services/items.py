@@ -119,8 +119,10 @@ def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int
         where += " and s.result = any(%(kinds)s)"
         params["kinds"] = list(kinds)
     if sigungu and pq is None:
-        where += " and i.sigungu = any(%(sigungu)s)"
+        # 매각결과는 물건 표에 없는 사건이 많아 주소 글자로도 지역을 맞춤
+        where += " and (i.sigungu = any(%(sigungu)s) or s.address ilike any(%(sg_like)s))"
         params["sigungu"] = sigungu
+        params["sg_like"] = [f"%{x}%" for x in sigungu]
     where += _q_where(pq, "s.case_no", ["i.building_desc", "s.address"], params)
     sql = f"""
       select distinct on (s.court_code, s.case_no, s.item_no)
