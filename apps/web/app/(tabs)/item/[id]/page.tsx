@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { HeartButton } from "@/components/heart-button";
 import {
@@ -53,46 +53,68 @@ const JUDGE_COLOR: Record<string, string> = {
 };
 
 // 등기부 올리기 + 권리 사다리(ITEM-03). 올린 사람만 봄.
-function RegistryBox({ id }: { id: string }) {
-  const r = t.reg;
+// 내가 올린 등기부: 상세 화면 전체가 같이 씀(「무엇을 떠안나」 요약 줄도 이걸로 바뀜)
+type MyReg = {
+  ready: boolean;
+  token?: string;
+  u: RegistryUpload | null | undefined;
+  err: string | null;
+  pick: (f: File | undefined) => void;
+};
+const RegCtx = createContext<MyReg | null>(null);
+
+function useMyRegistry(id: string): MyReg {
   const { session, ready } = useSession();
+  const token = session?.access_token;
   const [u, setU] = useState<RegistryUpload | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
-  const token = session?.access_token;
+  const [round, setRound] = useState(0); // 올릴 때마다 다시 확인 시작
 
   useEffect(() => {
     if (!token) return;
     let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const load = () =>
       meApi
         .registry(token, id)
         .then((x) => {
           if (stop) return;
           setU(x);
-          if (x?.status === "processing") setTimeout(load, 3000);
+          if (x?.status === "processing") timer = setTimeout(load, 3000);
         })
-        .catch(() => setU(null));
+        .catch(() => !stop && setU(null));
     load();
     return () => {
       stop = true;
+      if (timer) clearTimeout(timer);
     };
-  }, [token, id]);
+  }, [token, id, round]);
 
-  if (!ready) return null;
+  const pick = useCallback(
+    (f: File | undefined) => {
+      if (!f || !token) return;
+      setErr(null);
+      setU((v) => ({ ...(v ?? ({} as RegistryUpload)), status: "processing", ladder: null }));
+      uploadRegistry(token, id, f)
+        .then(() => setRound((n) => n + 1))
+        .catch((e: Error) => setErr(e.message));
+    },
+    [token, id],
+  );
+  return { ready, token, u, err, pick };
+}
+
+function RegistryBox() {
+  const r = t.reg;
+  const reg = useContext(RegCtx);
+  if (!reg || !reg.ready) return null;
+  const { token, u, err, pick } = reg;
   if (!token)
     return (
       <p className="sub" style={{ marginTop: 10 }}>
         {r.needLogin}
       </p>
     );
-  const pick = (f: File | undefined) => {
-    if (!f) return;
-    setErr(null);
-    uploadRegistry(token, id, f)
-      .then(() => setU({ ...(u ?? ({} as RegistryUpload)), status: "processing", ladder: null }))
-      .then(() => meApi.registry(token, id).then(setU))
-      .catch((e: Error) => setErr(e.message));
-  };
   const lad = u?.ladder;
   return (
     <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
@@ -483,7 +505,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
               ◆ {s.title}
             </div>
           ))}
-        <RegistryBox id={d.item_id} />
+        <RegistryBox />
       </>
     );
   if (q.key === "worth")
@@ -666,11 +688,20 @@ function CheckBody({ b }: { b: Record<string, any> }) {
   );
 }
 
+// 「무엇을 떠안나」 줄: 내가 올린 등기부가 있으면 그 결과로
+function answerOf(q: Question, u: RegistryUpload | null | undefined): string {
+  if (q.key !== "hold" || !u) return q.answer;
+  if (u.status === "processing") return t.reg.summaryReading;
+  if (u.status === "parsed" && u.ladder) return t.reg.summaryMine(u.ladder.line);
+  return q.answer;
+}
+
 export default function Item() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [d, setD] = useState<ItemDetail | null | undefined>(undefined);
   const [open, setOpen] = useState<string | null>(null);
+  const reg = useMyRegistry(decodeURIComponent(id));
 
   useEffect(() => {
     fetchItem(decodeURIComponent(id))
@@ -697,116 +728,118 @@ export default function Item() {
     );
   const urgent = d.d_day != null && d.d_day <= 7;
   return (
-    <main className="page">
-      <div className="topbar">
-        <button
-          aria-label={t.back}
-          onClick={() => router.back()}
-          style={{
-            border: 0,
-            background: "none",
-            fontSize: 20,
-            minWidth: 44,
-            minHeight: 44,
-            textAlign: "left",
-          }}
-        >
-          ←
-        </button>
-        <HeartButton id={d.item_id} />
-      </div>
-      {d.fatal && <div className="fatal">{d.fatal}</div>}
-      <section className="section">
-        <div className="sub">
-          <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
-          {d.sale_date} · {d.court} {d.case_no}
+    <RegCtx.Provider value={reg}>
+      <main className="page">
+        <div className="topbar">
+          <button
+            aria-label={t.back}
+            onClick={() => router.back()}
+            style={{
+              border: 0,
+              background: "none",
+              fontSize: 20,
+              minWidth: 44,
+              minHeight: 44,
+              textAlign: "left",
+            }}
+          >
+            ←
+          </button>
+          <HeartButton id={d.item_id} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
-          {d.place} {d.building ?? d.usage}
-        </div>
-        <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
-          {won(d.min_price_krw)}{" "}
-          <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
-            {copy.card.ofAppraisal} {d.min_rate}%
-            {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
-          </span>
-        </div>
-        <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
-        {d.questions.map((q) => (
-          <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
-            <button
-              onClick={() => setOpen(open === q.key ? null : q.key)}
-              style={{
-                width: "100%",
-                border: 0,
-                background: "none",
-                textAlign: "left",
-                padding: "14px 0",
-                minHeight: 44,
-                display: "flex",
-                gap: 10,
-                alignItems: "flex-start",
-                color: "inherit",
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: DOT[q.tone],
-                  marginTop: 7,
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ flexGrow: 1 }}>
-                <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
-                  {q.title}
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{q.answer}</span>
-              </span>
-              <span aria-hidden="true" style={{ color: "var(--faint)" }}>
-                {open === q.key ? "⌃" : "›"}
-              </span>
-            </button>
-            {open === q.key && (
-              <div style={{ padding: "0 0 14px 18px" }}>
-                <Body q={q} d={d} />
-              </div>
-            )}
+        {d.fatal && <div className="fatal">{d.fatal}</div>}
+        <section className="section">
+          <div className="sub">
+            <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
+            {d.sale_date} · {d.court} {d.case_no}
           </div>
-        ))}
-      </section>
+          <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+            {d.place} {d.building ?? d.usage}
+          </div>
+          <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
+            {won(d.min_price_krw)}{" "}
+            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
+              {copy.card.ofAppraisal} {d.min_rate}%
+              {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
+            </span>
+          </div>
+          <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+        </section>
 
-      <section className="section">
-        {d.next_round.min_price_krw && (
-          <Row
-            label={t.nextRound}
-            value={
-              <b>
-                {won(d.next_round.min_price_krw)}
-                {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
-              </b>
-            }
-          />
-        )}
-        {d.rounds.length > 0 && (
-          <div style={{ fontSize: 14, fontWeight: 600, margin: "10px 0 2px" }}>{t.rounds}</div>
-        )}
-        {d.rounds.map((r) => (
-          <Row
-            key={r.sale_date}
-            label={r.sale_date}
-            value={`${won(r.min_price_krw)} · ${r.result}`}
-          />
-        ))}
-      </section>
-      <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
-        {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
-      </p>
-    </main>
+        <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          {d.questions.map((q) => (
+            <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
+              <button
+                onClick={() => setOpen(open === q.key ? null : q.key)}
+                style={{
+                  width: "100%",
+                  border: 0,
+                  background: "none",
+                  textAlign: "left",
+                  padding: "14px 0",
+                  minHeight: 44,
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  color: "inherit",
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    background: DOT[q.tone],
+                    marginTop: 7,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ flexGrow: 1 }}>
+                  <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
+                    {q.title}
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 600 }}>{answerOf(q, reg.u)}</span>
+                </span>
+                <span aria-hidden="true" style={{ color: "var(--faint)" }}>
+                  {open === q.key ? "⌃" : "›"}
+                </span>
+              </button>
+              {open === q.key && (
+                <div style={{ padding: "0 0 14px 18px" }}>
+                  <Body q={q} d={d} />
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+
+        <section className="section">
+          {d.next_round.min_price_krw && (
+            <Row
+              label={t.nextRound}
+              value={
+                <b>
+                  {won(d.next_round.min_price_krw)}
+                  {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
+                </b>
+              }
+            />
+          )}
+          {d.rounds.length > 0 && (
+            <div style={{ fontSize: 14, fontWeight: 600, margin: "10px 0 2px" }}>{t.rounds}</div>
+          )}
+          {d.rounds.map((r) => (
+            <Row
+              key={r.sale_date}
+              label={r.sale_date}
+              value={`${won(r.min_price_krw)} · ${r.result}`}
+            />
+          ))}
+        </section>
+        <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
+          {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
+        </p>
+      </main>
+    </RegCtx.Provider>
   );
 }

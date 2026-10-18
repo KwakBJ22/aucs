@@ -163,6 +163,8 @@ export const copy = {
         `── 말소기준 ${name} ${d} ── 이 아래는 낙찰되면 지워져요`,
       keep: (d: string) => `올린 등기부는 ${d}에 지워져요 · 나만 볼 수 있어요`,
       tenants: "임차인",
+      summaryReading: "올린 등기부를 읽고 있어요",
+      summaryMine: (line: string) => `${line} · 내 등기부 기준`,
     },
     tenantsNone: "현황조사서에 임차인이 없거나 아직 못 받았어요",
     moveIn: "전입",
