@@ -72,7 +72,8 @@
 | ref | courts | 법원 |
 | ref | stations | 철도역 |
 | ref | redev_zones | 정비사업 구역 |
-| ref | rule_tables | 기준표 (소액임차·세율·LTV, 적용 시작일·끝날·근거) |
+| ref | rule_tables | 기준표 (소액임차·상가 환산보증금 한도·세율·LTV, 적용 시작일·끝날·근거) |
+| ref | holidays | 공휴일 (법원 기한 계산, checked=확인된 날만 씀) |
 | core | cases / items / item_parts / rounds | 사건 / 물건 / 물건 구성 / 회차 |
 | core | documents / extracted_fields | 문서 / 문서에서 뽑은 값 |
 | core | rights / tenants / case_events | 권리 / 임차인 / 문건·송달 |

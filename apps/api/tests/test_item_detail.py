@@ -29,3 +29,19 @@ def test_verdict_order():
 
 def test_won():
     assert won(497_350_000) == "4억 9,735만" and won(71_050_000) == "7,105만"
+
+
+def test_worth_court_shift_and_schedule():
+    d = build_detail(full(court_cell={"p50": 92.0, "diff": 8.0, "use_as_base": True, "n": 120},
+                          local_peers=None, new_item=False),
+                     [], [], [], None, TODAY, [])  # fmt: skip
+    w = d["questions"][2]
+    assert w["answer"] == "비슷한 물건은 감정가의 86~98%에 낙찰됐어요"
+    assert w["body"]["notes"] == ["이 법원은 같은 조건에서 8%p 높게 팔려요"]
+    assert d["questions"][3]["body"]["schedule_line"].startswith("낙찰되면 잔금")
+    assert {x["key"] for x in d["schedule"]["rows"] if x["deadline"]} >= {"tax", "order_deadline"}
+
+
+def test_worth_new_item():
+    d = build_detail(full(new_item=True), [], [], [], None, TODAY, [])
+    assert d["questions"][2]["answer"].startswith("처음 나온 물건")

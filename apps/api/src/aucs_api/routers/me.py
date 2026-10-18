@@ -26,6 +26,18 @@ class PushIn(BaseModel):
     auth: str
 
 
+class BidIn(BaseModel):
+    item_id: str
+    sale_date: date
+    outcome: str = Field(pattern="^(won|lost|not_bid|cancelled)$")
+    my_bid_krw: int | None = Field(default=None, gt=0)
+    winning_bid_krw: int | None = Field(default=None, gt=0)
+    second_bid_krw: int | None = Field(default=None, gt=0)
+    bidder_count: int | None = Field(default=None, ge=0)
+    pay_date: date | None = None
+    memo: str | None = Field(default=None, max_length=200)
+
+
 class ProfileIn(BaseModel):
     regions: list[str] = []
     cash: int | None = None
@@ -89,4 +101,21 @@ def get_notifications(uid: Uid) -> list[dict[str, Any]]:
 @router.put("/profile")
 def put_profile(body: ProfileIn, uid: Uid) -> dict[str, bool]:
     me.save_profile(uid, body.regions, body.cash, body.purpose)
+    return {"ok": True}
+
+
+@router.get("/bids")
+def get_bids(uid: Uid) -> dict[str, Any]:
+    return me.bids(uid, date.today())
+
+
+@router.put("/bids")
+def put_bid(body: BidIn, uid: Uid) -> dict[str, bool]:
+    me.bid_save(uid, body.model_dump())
+    return {"ok": True}
+
+
+@router.delete("/bids/{bid_id}")
+def delete_bid(bid_id: int, uid: Uid) -> dict[str, bool]:
+    me.bid_remove(uid, bid_id)
     return {"ok": True}

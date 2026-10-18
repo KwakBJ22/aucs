@@ -102,3 +102,70 @@ def save_profile(uid: str, regions: list[str], cash: int | None, purpose: str | 
             " cash_krw = excluded.cash_krw, purpose = excluded.purpose, updated_at = now()",
             (uid, regions, cash, db_purpose),
         )
+
+
+_BIDS_SQL = """
+select b.bid_id, b.item_id, b.sale_date, b.outcome, b.my_bid_krw, b.winning_bid_krw, b.second_bid_krw,
+       b.bidder_count, b.pay_date, b.memo,
+       coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place,
+       c.court_code, c.case_no
+from app.bid_results b
+left join core.items i on i.item_id = b.item_id
+left join core.cases c on c.case_id = i.case_id
+where b.user_id = %s
+order by b.sale_date desc
+"""
+
+
+def bids(uid: str, today: Any) -> dict[str, Any]:
+    """내 경매: 낙찰 받은 물건(일정 포함)·지난 기록·기록할 입찰(지난 관심 물건)."""
+    from aucs_rules.schedule import after_sale
+
+    with connect() as c:
+        rows = c.execute(_BIDS_SQL, (uid,)).fetchall()
+        hol = [
+            r["holiday_date"]
+            for r in c.execute("select holiday_date from ref.holidays where checked").fetchall()
+        ]
+        todo = c.execute(
+            """select i.item_id, i.sale_date,
+                      coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
+               from app.watch_items w join core.items i using (item_id)
+               where w.user_id = %s and i.sale_date <= %s and i.sale_date >= %s - 60
+                 and not exists (select 1 from app.bid_results b where b.user_id = w.user_id
+                                 and b.item_id = i.item_id and b.sale_date = i.sale_date)
+               order by i.sale_date desc""",
+            (uid, today, today),
+        ).fetchall()
+    won = []
+    for r in rows:
+        if r["outcome"] == "won":
+            won.append(
+                {**r, "schedule": after_sale(r["sale_date"], hol, pay_date=r["pay_date"]).value}
+            )
+    return {"won": won, "history": [r for r in rows if r["outcome"] != "won"], "todo": todo}
+
+
+def bid_save(uid: str, body: dict[str, Any]) -> None:
+    cols = [
+        "outcome",
+        "my_bid_krw",
+        "winning_bid_krw",
+        "second_bid_krw",
+        "bidder_count",
+        "pay_date",
+        "memo",
+    ]
+    with connect() as c:
+        c.execute(
+            f"""insert into app.bid_results (user_id, item_id, sale_date, {", ".join(cols)})
+                values (%s, %s, %s, {", ".join(["%s"] * len(cols))})
+                on conflict (user_id, item_id, sale_date) do update set
+                {", ".join(f"{k} = excluded.{k}" for k in cols)}, updated_at = now()""",
+            (uid, body["item_id"], body["sale_date"], *[body.get(k) for k in cols]),
+        )
+
+
+def bid_remove(uid: str, bid_id: int) -> None:
+    with connect() as c:
+        c.execute("delete from app.bid_results where user_id = %s and bid_id = %s", (uid, bid_id))

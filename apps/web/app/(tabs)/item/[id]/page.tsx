@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { HeartButton } from "@/components/heart-button";
-import { fetchItem, type ItemDetail, type Question } from "@/lib/api/items";
+import {
+  fetchBidCheck,
+  fetchItem,
+  type BidCheck,
+  type ItemDetail,
+  type Question,
+} from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 
@@ -31,6 +37,53 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
         {label}
       </span>
       <span style={{ textAlign: "right" }}>{value}</span>
+    </div>
+  );
+}
+
+// 입찰표 점검: 금액을 한글로 읽어 주고, 최저가 미만·2배 초과를 막습니다.
+function BidTry({ id }: { id: string }) {
+  const [v, setV] = useState("");
+  const [r, setR] = useState<BidCheck | null>(null);
+  useEffect(() => {
+    const n = Number(v.replace(/[^0-9]/g, ""));
+    if (!n) return setR(null);
+    const h = setTimeout(() => {
+      fetchBidCheck(id, n)
+        .then(setR)
+        .catch(() => setR(null));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [v, id]);
+  const color =
+    r?.level === "block" ? "var(--red)" : r?.level === "stop" ? "var(--amber)" : "var(--muted)";
+  return (
+    <div style={{ marginTop: 12 }}>
+      <label className="sub" style={{ display: "block", margin: "0 0 4px" }}>
+        {t.bidTry}
+      </label>
+      <input
+        inputMode="numeric"
+        value={v}
+        placeholder={t.bidPlaceholder}
+        onChange={(e) => setV(e.target.value)}
+        style={{
+          width: "100%",
+          fontSize: 16,
+          padding: "10px 12px",
+          border: "1px solid var(--line)",
+          borderRadius: 8,
+        }}
+      />
+      {r && (
+        <div style={{ fontSize: 14, marginTop: 6 }}>
+          <b>{r.korean}</b>
+          <div style={{ color }}>
+            {r.message} · {t.bidDeposit(won(r.deposit_krw))}
+          </div>
+          {r.resale && <div className="sub">{t.resale}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -77,6 +130,11 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
             </div>
           </div>
         ))}
+        {d.failure_types.length > 0 && (
+          <div className="sub" style={{ marginTop: 8 }}>
+            {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
+          </div>
+        )}
         {b.signals
           .filter((s: { status: string }) => s.status !== "모름")
           .map((s: { rule_id: string; title: string; level: string }) => (
@@ -105,12 +163,25 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
           }
         />
         <p className="sub">{t.sample(b.rate.n)}</p>
+        {b.notes.map((n: string) => (
+          <div key={n} style={{ fontSize: 14, color: "var(--amber)", padding: "2px 0" }}>
+            ◆ {n}
+          </div>
+        ))}
       </>
     ) : null;
   if (q.key === "cost")
     return (
       <>
         <Row label={t.deposit} value={<b>{won(b.deposit_krw)}</b>} />
+        <p style={{ fontSize: 14, margin: "8px 0 4px" }}>{b.schedule_line}</p>
+        <div className="sub" style={{ margin: "8px 0 2px" }}>
+          {t.deadlines}
+        </div>
+        {b.deadlines.map((x: { key: string; label: string; short: string }) => (
+          <Row key={x.key} label={x.label} value={x.short} />
+        ))}
+        <BidTry id={d.item_id} />
         <p className="sub">{t.calcSoon}</p>
       </>
     );

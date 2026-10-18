@@ -33,3 +33,11 @@ def get_item(item_id: str) -> dict[str, Any]:
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
     return d
+
+
+@router.get("/items/{item_id}/bid-check")
+def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, Any]:
+    d = item_detail.bid_check(item_id, bid)
+    if d is None:
+        raise HTTPException(404, "물건을 찾을 수 없어요")
+    return d

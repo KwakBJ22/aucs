@@ -1,6 +1,38 @@
 import { getJson } from "./client";
 
-export type Signal = { rule_id: string; level: string; title: string; status: string };
+export type Signal = {
+  rule_id: string;
+  level: string;
+  title: string;
+  status: string;
+  ftype?: string | null;
+};
+export type SchedRow = {
+  key: string;
+  label: string;
+  todo: string;
+  basis: string;
+  start: string;
+  end: string;
+  text: string;
+  short: string;
+  status: string;
+  deadline: boolean;
+};
+export type Schedule = {
+  rows: SchedRow[];
+  summary: { pay: string; move_out: [string, string]; forced: [string, string]; line: string };
+  pay_estimated: boolean;
+};
+export type BidCheck = {
+  level: "ok" | "stop" | "block";
+  message: string;
+  ratio: number;
+  korean: string;
+  deposit_krw: number;
+  resale: boolean;
+  tips: string[];
+};
 export type ItemCard = {
   item_id: string;
   court: string;
@@ -59,7 +91,12 @@ export type ItemDetail = ItemCard & {
   rounds: { sale_date: string; min_price_krw: number | null; result: string }[];
   tags: { label: string; ok: boolean }[];
   questions: Question[];
+  failure_types: { code: string; title: string }[];
+  schedule: Schedule;
   computed_at: string | null;
 };
 
 export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
+
+export const fetchBidCheck = (id: string, bid: number) =>
+  getJson<BidCheck>(`/items/${encodeURIComponent(id)}/bid-check?bid=${bid}`);

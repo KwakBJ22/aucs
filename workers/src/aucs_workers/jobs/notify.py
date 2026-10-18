@@ -2,6 +2,8 @@
 
 1) 저장한 조건: 조건을 저장한 뒤 처음 들어온 물건만 '새 물건'으로 모아 한 통.
 2) 관심 물건: 매각기일·최저가·결과가 바뀌면 한 통씩. 처음 본 값은 기준으로만 적고 알리지 않음.
+3) 입찰 전 확인(실패 예방 3단계): 기일 7일 전 「명세서가 나왔어요」, 입찰일 아침(--morning) 「오늘 다시 볼 것」.
+4) 낙찰 받은 물건: 대금기한·취득세·인도명령 마감 3일 전에 한 통씩(일정은 aucs_rules.schedule).
 같은 (사람, 물건, 종류, 새 값)은 app.alert_events 의 unique 로 한 번만.
 """
 
@@ -9,9 +11,11 @@ import argparse
 import json
 import os
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import psycopg
+from aucs_rules.schedule import after_sale, short
 
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
@@ -145,6 +149,65 @@ def make_watch_alerts(conn: psycopg.Connection) -> int:
     return n
 
 
+MORNING_BODY = "등기부·매각물건명세서가 어제와 같은지, 입찰표 금액을 한글로 읽어 보세요"
+DEADLINE_KEYS = {"pay": "잔금", "tax": "취득세 신고", "order_deadline": "인도명령 신청"}
+
+
+def make_bid_prep_alerts(conn: psycopg.Connection, *, morning: bool) -> int:
+    """관심 물건 입찰 준비 알림. 아침: 오늘 입찰 / 저녁: 7일 뒤 입찰(명세서 공개)."""
+    days, kind = (0, "bid_morning") if morning else (7, "spec_open")
+    n = 0
+    for uid, item_id, place, sale_date in conn.execute(
+        """select w.user_id, i.item_id, coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, ''),
+                  i.sale_date::text
+           from app.watch_items w join core.items i using (item_id)
+           where i.sale_date = current_date + %s""",
+        (days,),
+    ).fetchall():
+        eid = _event(conn, uid, item_id, kind, None, sale_date)
+        if not eid:
+            continue
+        if morning:
+            title, body = f"오늘 입찰일 · {place.strip()}", MORNING_BODY
+        else:
+            title, body = (
+                f"{place.strip()} 명세서가 나왔어요",
+                "입찰 전에 떠안는 권리가 바뀌지 않았는지 다시 보세요",
+            )
+        _noti(conn, uid, eid, title, body, f"/item/{item_id}")
+        n += 1
+    return n
+
+
+def make_deadline_alerts(conn: psycopg.Connection) -> int:
+    """낙찰 받은 물건의 마감 3일 전 알림."""
+    hol = [
+        r[0] for r in conn.execute("select holiday_date from ref.holidays where checked").fetchall()
+    ]
+    today = conn.execute("select current_date").fetchone()[0]  # type: ignore[index]
+    n = 0
+    for uid, item_id, sale_date, pay_date in conn.execute(
+        "select user_id, item_id, sale_date, pay_date from app.bid_results where outcome = 'won'"
+    ).fetchall():
+        rows = after_sale(sale_date, hol, pay_date=pay_date).value["rows"]
+        for r in rows:
+            if r["key"] not in DEADLINE_KEYS or (r["key"] == "pay" and pay_date):
+                continue
+            end = r["end"]
+            if (date_from(end) - today).days != 3:
+                continue
+            eid = _event(conn, uid, item_id, f"deadline_{r['key']}", None, end)
+            if eid:
+                _noti(conn, uid, eid, f"{DEADLINE_KEYS[r['key']]} 마감이 3일 남았어요",
+                      f"{short(date_from(end))}까지", "/me")  # fmt: skip
+                n += 1
+    return n
+
+
+def date_from(s: str) -> date:
+    return date.fromisoformat(s)
+
+
 def send_pushes(conn: psycopg.Connection) -> int:
     key, subject = (
         os.getenv("VAPID_PRIVATE_KEY", "").strip(),
@@ -181,13 +244,23 @@ def send_pushes(conn: psycopg.Connection) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-push", action="store_true")
+    ap.add_argument("--morning", action="store_true", help="입찰일 아침 알림만")
     a = ap.parse_args()
+    if a.morning:
+        with connect() as conn, run(conn, "notify_morning", "입찰일 아침 알림") as job:
+            m = make_bid_prep_alerts(conn, morning=True)
+            conn.commit()
+            p = 0 if a.no_push else send_pushes(conn)
+            job.count = m
+            print(f"입찰일 아침 {m} · 푸시 {p}")
+        return
     with connect() as conn, run(conn, "notify", "알림") as job:
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
+        b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
         conn.commit()
         p = 0 if a.no_push else send_pushes(conn)
-        job.count = s + w
-        print(f"조건 알림 {s} · 관심 알림 {w} · 푸시 {p}")
+        job.count = s + w + b + d
+        print(f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 푸시 {p}")
 
 
 if __name__ == "__main__":

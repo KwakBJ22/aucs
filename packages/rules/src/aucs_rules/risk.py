@@ -20,6 +20,33 @@ class Signal:
     title: str
     status: Status
     evidence: list[dict[str, Any]] = field(default_factory=list)
+    ftype: str | None = None  # 실패 유형 T1~T11 (아래 FAILURE_TYPES)
+
+
+# 낙찰자가 실제로 손해를 본 길을 11가지로 묶은 것. 화면에는 걸린 유형만, PC 전문가 보기는 전체.
+FAILURE_TYPES = {
+    "T1": "선순위 임차인·전세권을 떠안음",
+    "T2": "배당요구 기한을 넘긴 임차인",
+    "T3": "상가 임차인 보증금 한도 초과",
+    "T4": "세금이 먼저 배당됨",
+    "T5": "낙찰 뒤 권리가 바뀜",
+    "T6": "입찰표 금액 실수",
+    "T7": "재개발·재건축 조합원 자격",
+    "T8": "토지·건물 따로 · 대지권",
+    "T9": "허가·자격이 필요한 물건",
+    "T10": "숨은 비용(관리비·위반건축물 등)",
+    "T11": "값어치·대출·자금",
+}
+RULE_TYPE = {
+    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1",
+    "risk.tenants_unknown": "T1", "risk.family": "T1",
+    "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
+    "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
+    "risk.redev_member": "T7", "risk.partial": "T8", "risk.land_right": "T8",
+    "risk.superficies": "T8", "risk.share": "T8", "risk.farmland": "T9", "risk.special_corp": "T9",
+    "risk.illegal": "T10", "risk.neighborhood_villa": "T10", "risk.old": "T10", "risk.lien": "T10",
+    "risk.over_cost": "T11", "risk.no_loan": "T11",
+}  # fmt: skip
 
 
 _HOUSING_WORDS = re.compile(r"(다세대|연립|다가구|단독|주택|빌라|아파트)")
@@ -33,7 +60,9 @@ def signals(f: dict[str, Any]) -> list[Signal]:
     def add(
         rule_id: str, level: str, title: str, status: Status = Status.ESTIMATED, **ev: Any
     ) -> None:
-        out.append(Signal(rule_id, level, title, status, [ev] if ev else []))
+        out.append(
+            Signal(rule_id, level, title, status, [ev] if ev else [], RULE_TYPE.get(rule_id))
+        )
 
     if f.get("senior_tenant_assumed"):
         add("risk.senior_tenant", "fatal", "선순위 임차인 보증금 인수")
@@ -92,8 +121,44 @@ def signals(f: dict[str, Any]) -> list[Signal]:
     if (approved := f.get("use_approval_date")) and (as_of := f.get("as_of")):
         if isinstance(approved, date) and (as_of - approved).days >= 365 * 30:
             add("risk.old", "mid", "사용승인 30년 이상 — 수선비·재건축 확인")
-    if (app := f.get("appraisal_krw")) and (mkt := f.get("market_price_krw")) and app < mkt * 0.9:
-        add("risk.low_appraisal", "info", "감정가가 추정 시세보다 낮음 — 교차 확인")
+    # 감정가 저평가: 감정 1년 이상 지났고 감정가 < 실거래 시세 95% (경쟁이 붙어 낙찰가율이 높게 나옴)
+    if (app := f.get("appraisal_krw")) and (mkt := f.get("market_price_krw")) and app < mkt * 0.95:
+        ad, as_of0 = f.get("appraisal_date"), f.get("as_of")
+        old = isinstance(ad, date) and isinstance(as_of0, date) and (as_of0 - ad).days >= 365
+        if old or ad is None:
+            add(
+                "risk.low_appraisal", "info", "감정가가 시세보다 낮아요 — 더 높게 팔릴 수 있어요",
+                Status.ESTIMATED if old else Status.NEEDS_CHECK, ratio=round(app / mkt, 3),
+            )  # fmt: skip
+    if f.get("commercial_over_limit"):
+        add(
+            "risk.commercial_over",
+            "high",
+            "상가 임차인 보증금이 보호 한도를 넘어요 — 떠안을 수 있어요",
+        )
+    if f.get("tax_before_tenant"):
+        add(
+            "risk.tax_first",
+            "high",
+            "세금이 임차인보다 먼저 배당돼요 — 모자란 보증금을 떠안을 수 있어요",
+        )
+    if f.get("small_base_mortgage") and f.get("junior_tenant"):
+        add(
+            "risk.small_base_mortgage", "high",
+            "말소기준 근저당이 작아요 — 낙찰 뒤 갚아 없어지면 임차인을 떠안을 수 있어요",
+            Status.NEEDS_CHECK,
+        )  # fmt: skip
+    if f.get("in_redev_zone"):
+        add(
+            "risk.redev_member",
+            "mid",
+            "정비사업 구역 — 조합원 자격·현금청산 확인",
+            Status.NEEDS_CHECK,
+        )
+    if f.get("special_corp_owner"):
+        add("risk.special_corp", "high", "학교·복지·의료법인 소유 — 허가서 없으면 보증금 몰수")
+    if f.get("assumed_krw"):
+        add("risk.no_loan", "mid", "떠안는 돈이 있어 대출이 어려워요 — 전액 현금 확인")
     if (cost := f.get("total_cost_krw")) and (mkt := f.get("market_price_krw")) and cost > mkt:
         add("risk.over_cost", "high", "총투입이 추정 시세보다 큼", gap_krw=cost - mkt)
 
