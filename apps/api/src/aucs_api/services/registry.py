@@ -100,7 +100,12 @@ def build_ladder(
     if base is None:
         line, state = "말소기준이 되는 권리를 찾지 못했어요", "확인 필요"
     elif hold == 0 and not unknown_amount and not partial:
-        line, state = "떠안는 돈이 없어요", "추정"
+        unsure = sum(1 for x in rows if x["judgment"] == "확인 필요")
+        line, state = (
+            (f"떠안는 돈은 없어 보여요 · 읽기 어려운 줄 {unsure}개는 원문 확인", "확인 필요")
+            if unsure
+            else ("떠안는 돈이 없어요", "추정")
+        )
     elif hold == 0 and partial:
         line, state = "배당에서 못 받는 보증금만큼 떠안을 수 있어요", "확인 필요"
     elif unknown_amount:
