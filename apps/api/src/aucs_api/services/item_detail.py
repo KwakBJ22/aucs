@@ -8,6 +8,7 @@ from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
 
 from aucs_api.db import connect
+from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.items import card
 
 _ITEM_SQL = """
@@ -104,6 +105,7 @@ def build_detail(
     reduction: dict[str, Any] | None,
     today: date,
     holidays: list[date] | None = None,
+    doc_times: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     c = card(r, today)
     signals = r["signals"] or []
@@ -114,7 +116,6 @@ def build_detail(
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     nxt = next_round_min_price(mn, reduction["pct"] if reduction else None) if mn else None
     ds = r["data_status"] or {}
-    unknown = [s for s in signals if s.get("status") == "모름"]
     warn = [
         s
         for s in signals
@@ -128,6 +129,16 @@ def build_detail(
     flags = ["farmland"] if any(s.get("rule_id") == "risk.farmland" for s in signals) else []
     sched = after_sale(r["sale_date"] or today, holidays or [], flags=flags).value
     types = sorted({s["ftype"] for s in warn if s.get("ftype")})
+    checklist = build_checklist(ds, doc_times or {}, signals)
+    todo = [x for x in checklist if x["state"] != DONE]
+    check_ans = f"확인할 것 {len(todo)}가지 · {todo[0]['label']}부터" if todo else "다 확인했어요"
+    check_tone = (
+        "orange" if any(x["state"] in ("자료 충돌", "전문가 확인 필요") for x in todo) else "gray"
+    )
+    flow = build_flow(
+        events=events, claim_deadline=r["claim_deadline"], rounds=rounds, sale_date=r["sale_date"],
+        schedule_rows=sched["rows"], today=today,
+    )  # fmt: skip
     hold_ans = (
         warn[0]["title"] if warn
         else f"임차인 {len(tenants)}명 · 등기부는 아직 안 봤어요" if tenants
@@ -145,9 +156,8 @@ def build_detail(
         q("cost", "얼마가 드나", f"입찰보증금 {won(c['deposit_krw'])}원부터", "gray",
           {"deposit_krw": c["deposit_krw"], "min_price_krw": mn, "schedule_line": sched["summary"]["line"],
            "deadlines": [x for x in sched["rows"] if x["deadline"]]}),
-        q("check", "무엇을 확인하나", (unknown[0]["title"].split(" — ")[0] + (f" 외 {len(unknown) - 1}가지" if len(unknown) > 1 else "")) if unknown else "자료는 다 모였어요",
-          "gray" if unknown else "green",
-          {"unknown": unknown, "events": events,
+        q("check", "무엇을 확인하나", check_ans, check_tone,
+          {"checklist": checklist, "flow": flow, "events": events,
            "claim_deadline": r["claim_deadline"].isoformat() if r["claim_deadline"] else None}),
     ]  # fmt: skip
     return {
@@ -208,6 +218,13 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             "and valid_from <= %s order by valid_from desc limit 1",
             (r["court_code"], today),
         ).fetchone()
+        doc_times = {
+            x["doc_kind"]: x["t"]
+            for x in c.execute(
+                "select doc_kind, max(fetched_at) as t from raw.court_doc_raw where case_id = %s group by 1",
+                (r["case_id"],),
+            ).fetchall()
+        }
         hol = [
             x["holiday_date"]
             for x in c.execute(
@@ -215,7 +232,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                 (today,),
             ).fetchall()
         ]
-    return build_detail(r, rounds, events, tenants, red["v"] if red else None, today, hol)
+    return build_detail(
+        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times
+    )
 
 
 def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:

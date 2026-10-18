@@ -80,3 +80,36 @@ def test_not_analyzed_says_pending():
     d = build_detail(full(computed_at=None), [], [], [], None, TODAY, [])
     assert d["analyzed"] is False and d["verdict"] == "오늘 오후 분석이 끝나면 보여요"
     assert d["questions"][2]["answer"] == "오늘 오후 분석이 끝나면 보여요"
+
+
+def test_checklist_states_and_flow():
+    from aucs_api.services.checklist import build_checklist
+
+    sig = [
+        {
+            "rule_id": "risk.special_condition",
+            "title": "비고의 매각 조건 — 원문 확인",
+            "status": "확인 필요",
+        }
+    ]
+    cl = build_checklist(
+        {"status_report": "extracted"}, {"status_report": datetime(2026, 10, 17, 16, 37)}, sig
+    )
+    assert cl[0]["state"] == "전문가 확인 필요" and cl[-1]["state"] == "확인 완료"
+    done = next(x for x in cl if x["key"] == "status_report")
+    assert done["evidence"] == {"doc": "현황조사서", "fetched_at": "2026-10-17 16:37"}
+    d = build_detail(
+        full(),
+        [{"sale_date": date(2026, 9, 1), "min_price_krw": 1, "result": "failed"}],
+        [],
+        [],
+        None,
+        TODAY,
+        [],
+    )
+    q = d["questions"][4]
+    assert q["answer"].startswith("확인할 것")
+    flow = {f["key"]: f for f in q["body"]["flow"]}
+    assert (
+        flow["first"]["date"] == "2026-09-01" and flow["first"]["done"] and flow["pay"]["estimated"]
+    )

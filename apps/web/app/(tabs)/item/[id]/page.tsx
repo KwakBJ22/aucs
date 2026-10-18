@@ -410,22 +410,121 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
         <CalcBox id={d.item_id} />
       </>
     );
+  return <CheckBody b={b} />;
+}
+
+type CheckItem = {
+  key: string;
+  label: string;
+  what: string;
+  state: string;
+  hint: string | null;
+  evidence: { doc: string; fetched_at: string | null } | null;
+};
+type FlowStep = {
+  key: string;
+  label: string;
+  date: string | null;
+  estimated: boolean;
+  done: boolean;
+};
+const STATE_CHIP: Record<string, string> = {
+  "확인 완료": "green",
+  미확인: "gray",
+  "자료 충돌": "orange",
+  "전문가 확인 필요": "orange",
+};
+
+// ITEM-06: 사건 흐름 막대 + 체크리스트(끝난 것은 접음) + 사건 문건
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CheckBody({ b }: { b: Record<string, any> }) {
+  const [showDone, setShowDone] = useState(false);
+  const list = b.checklist as CheckItem[];
+  const todo = list.filter((x) => x.state !== "확인 완료");
+  const done = list.filter((x) => x.state === "확인 완료");
+  const flow = b.flow as FlowStep[];
   return (
     <>
-      {b.unknown.map((s: { rule_id: string; title: string }) => (
-        <div key={s.rule_id} style={{ fontSize: 14, padding: "6px 0" }}>
-          ● {s.title}
+      <div style={{ display: "flex", overflowX: "auto", gap: 0, padding: "4px 0 12px" }}>
+        {flow.map((f, i) => (
+          <div
+            key={f.key}
+            style={{ flex: "0 0 auto", minWidth: 64, textAlign: "center", fontSize: 11 }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span style={{ flex: 1, height: 2, background: i ? "var(--line)" : "transparent" }} />
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  background: f.done
+                    ? "var(--green)"
+                    : f.key === "now"
+                      ? "var(--blue)"
+                      : "var(--line)",
+                }}
+              />
+              <span
+                style={{
+                  flex: 1,
+                  height: 2,
+                  background: i < flow.length - 1 ? "var(--line)" : "transparent",
+                }}
+              />
+            </div>
+            <div style={{ marginTop: 4, fontWeight: f.key === "now" ? 700 : 400 }}>{f.label}</div>
+            <div className="sub" style={{ margin: 0, fontSize: 11 }}>
+              {f.date ? `${Number(f.date.slice(5, 7))}/${Number(f.date.slice(8, 10))}` : "-"}
+              {f.estimated && f.date ? ` ${t.flowGuess}` : ""}
+            </div>
+          </div>
+        ))}
+      </div>
+      {todo.map((x) => (
+        <div key={x.key} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
+            <b style={{ fontSize: 14 }}>{x.label}</b>
+          </div>
+          <div className="sub" style={{ margin: "2px 0 0", fontSize: 12 }}>
+            {x.what}
+            {x.hint ? ` · ${x.hint}` : ""}
+          </div>
         </div>
       ))}
+      {done.length > 0 && (
+        <button
+          onClick={() => setShowDone(!showDone)}
+          style={{
+            border: 0,
+            background: "none",
+            color: "var(--muted)",
+            fontSize: 13,
+            padding: "10px 0",
+            minHeight: 44,
+          }}
+        >
+          ✓ {t.doneFold(done.length)} {showDone ? "⌃" : "›"}
+        </button>
+      )}
+      {showDone &&
+        done.map((x) => (
+          <div key={x.key} style={{ fontSize: 13, padding: "4px 0" }}>
+            <span style={{ color: "var(--green)" }}>✓</span> {x.label}
+            <span className="sub" style={{ margin: 0 }}>
+              {" "}
+              · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
+            </span>
+          </div>
+        ))}
       {b.claim_deadline && <Row label={t.claimDeadline} value={b.claim_deadline} />}
       {b.events.length > 0 && (
         <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10 }}>{t.events}</div>
       )}
-      {b.events.map(
-        (
-          e: { date: string; category: string; text: string; after_deadline: boolean },
-          i: number,
-        ) => (
+      {b.events
+        .slice(0, 6)
+        .map((e: { date: string; category: string; after_deadline: boolean }, i: number) => (
           <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>
             <span className="sub" style={{ margin: 0 }}>
               {e.date}
@@ -433,16 +532,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
             {e.category}
             {e.after_deadline && <b style={{ color: "var(--amber)" }}> · {t.afterDeadline}</b>}
           </div>
-        ),
-      )}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-        {d.tags.map((g) => (
-          <span key={g.label} className={`chip ${g.ok ? "green" : "gray"}`}>
-            {g.label}
-            {g.ok ? "" : " 미확인"}
-          </span>
         ))}
-      </div>
     </>
   );
 }
