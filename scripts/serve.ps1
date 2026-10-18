@@ -1,5 +1,5 @@
 ﻿# 서버 하나를 계속 켜 둡니다(꺼지면 5초 뒤 다시 켬). 작업 스케줄러가 로그인할 때 숨김으로 부릅니다.
-# 코드가 바뀌면 API는 이 스크립트가 껐다 켜고(2초마다 확인), 웹은 next dev 가 스스로 다시 읽습니다.
+# 코드가 바뀌면 API는 이 스크립트가 껐다 켜고(2초마다 확인), 웹은 next dev 가 스스로 다시 읽습니다. 웹 실행 기록은 logs\server_web_run.log.
 param([Parameter(Mandatory = $true)][ValidateSet('api', 'web')][string]$Name)
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -38,7 +38,15 @@ while ($true) {
     if (-not (Test-Path $mark) -or (Get-Item "$root\pnpm-lock.yaml").LastWriteTime -gt (Get-Item $mark).LastWriteTime) {
       & $pnpm install 2>&1 | Out-File -Append -Encoding utf8 $log
     }
-    & $pnpm dev:web 2>&1 | Out-File -Append -Encoding utf8 $log
+    # 10/18 저녁: `pnpm dev:web | Out-File` 로 켜면 창 없이 돌 때 next 가 오류 글 없이 40초쯤 뒤 꺼지기를 되풀이함
+    # → API처럼 node 로 next 를 직접 켜고 출력은 파일로 바로 남김 (실행 기록 logs\server_web_run.log, 오류 logs\server_web_err.log)
+    $node = (Get-Command node -ErrorAction SilentlyContinue).Source
+    if (-not $node) { $node = "$env:ProgramFiles\nodejs\node.exe" }
+    $p = Start-Process -FilePath $node -ArgumentList 'node_modules\next\dist\bin\next', 'dev', '-p', '3000' `
+      -WorkingDirectory "$root\apps\web" -NoNewWindow -PassThru `
+      -RedirectStandardOutput "$root\logs\server_web_run.log" -RedirectStandardError "$root\logs\server_web_err.log"
+    $p.WaitForExit()
+    "[$(Get-Date -Format 'MM-dd HH:mm:ss')] next 끝남(코드 $($p.ExitCode)) — 오류는 server_web_err.log" | Out-File -Append -Encoding utf8 $log
   }
   "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 꺼짐 — 다시 켬" | Out-File -Append -Encoding utf8 $log
   Start-Sleep -Seconds $(if ($Name -eq 'api') { 1 } else { 5 })
