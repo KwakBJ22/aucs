@@ -93,6 +93,12 @@ def _q_where(
     return f" and ({ors})"
 
 
+def short_address(a: str | None) -> str:
+    """「경기도 용인시 수지구 성복동 …」 → 「용인시 수지구 성복동」 (시도는 뺌)."""
+    w = (a or "").replace(",", " ").split()
+    return " ".join(w[1:4]) if len(w) > 1 else (a or "")
+
+
 RESULT_GROUPS = {"sold": ("sold",), "withdrawn": ("withdrawn", "dismissed", "changed")}
 RESULT_KO = {
     "sold": "매각",
@@ -119,7 +125,8 @@ def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int
     sql = f"""
       select distinct on (s.court_code, s.case_no, s.item_no)
              s.result_id, s.item_id, s.court_code, s.case_no, s.sale_date, s.result, s.usage_name,
-             s.appraisal_krw, s.winning_bid_krw, s.sale_rate, i.sigungu, i.gu, i.building_desc
+             s.appraisal_krw, s.winning_bid_krw, s.sale_rate, i.sigungu, i.gu, i.building_desc,
+             s.address, i.item_id as live_item_id
       from core.sale_results s left join core.items i on i.item_id = s.item_id
       where {where}
       order by s.court_code, s.case_no, s.item_no, s.sale_date desc"""
@@ -129,10 +136,11 @@ def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int
         ).fetchall()
     return {"results": [
         {
-            "result_id": r["result_id"], "item_id": r["item_id"],
+            "result_id": r["result_id"], "item_id": r["live_item_id"],
             "court": COURT_NAME.get(r["court_code"], r["court_code"]), "case_no": r["case_no"],
             "sale_date": r["sale_date"].isoformat(), "result": RESULT_KO.get(r["result"], r["result"]),
-            "usage": r["usage_name"], "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
+            "usage": r["usage_name"],
+            "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x) or short_address(r["address"]),
             "building": r["building_desc"], "appraisal_krw": r["appraisal_krw"],
             "winning_bid_krw": r["winning_bid_krw"],
             "sale_rate": round(float(r["sale_rate"])) if r["sale_rate"] is not None else None,
