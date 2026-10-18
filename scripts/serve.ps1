@@ -15,8 +15,10 @@ while ($true) {
   if ($Name -eq 'api') {
     & $uv sync --all-packages 2>&1 | Out-File -Append -Encoding utf8 $log
     # uvicorn --reload 가 윈도우에서 「Reloading...」에 자주 멈춰서(10/18), 코드가 바뀌면 이 창이 직접 끄고 다시 켬
-    $cmd = "`"$uv`" run uvicorn aucs_api.main:app --host 0.0.0.0 --port 8100 >> `"$log`" 2>&1"
-    $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $cmd -WorkingDirectory $root -WindowStyle Hidden -PassThru
+    # 실행 기록은 logs\server_api_run.log (다시 켤 때마다 새로 씀), 켜기·끄기 기록은 server_api.log
+    $p = Start-Process -FilePath $uv -ArgumentList 'run', 'uvicorn', 'aucs_api.main:app', '--host', '0.0.0.0', '--port', '8100' `
+      -WorkingDirectory $root -NoNewWindow -PassThru `
+      -RedirectStandardOutput "$root\logs\server_api_out.log" -RedirectStandardError "$root\logs\server_api_run.log"
     $watch = @("$root\apps\api\src", "$root\packages\rules\src")
     function Get-Stamp { (Get-ChildItem $watch -Recurse -Filter *.py -ErrorAction SilentlyContinue | Measure-Object LastWriteTime -Maximum).Maximum }
     $stamp = Get-Stamp
@@ -25,7 +27,7 @@ while ($true) {
       $now = Get-Stamp
       if ($now -gt $stamp) {
         Start-Sleep -Seconds 1  # 여러 파일을 한꺼번에 고칠 때 잠깐 기다림
-        "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 코드 바뀜 — API 다시 켬" | Out-File -Append -Encoding utf8 $log -ErrorAction SilentlyContinue
+        "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 코드 바뀜 — API 다시 켬" | Out-File -Append -Encoding utf8 $log
         taskkill /PID $p.Id /T /F 2>&1 | Out-Null
         break
       }
