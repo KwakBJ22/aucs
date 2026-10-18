@@ -1,6 +1,6 @@
 """사건 서류 데이터 수집: 사건내역·기일·문건송달·현황조사·물건상세 (화면과 같은 요청, 로그인 없음).
 
-    uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트)
+    uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트·다세대·오피스텔)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
@@ -25,6 +25,8 @@ from aucs_workers.jobs.runlog import run
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
 ARCHIVE_MAX = 150
+# 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
+ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
 
 JS_POST = r"""
 async ([path, body]) => {
@@ -62,10 +64,10 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
         """select c.court_code, c.case_no, min(i.sale_date),
                   (select max(fetched_at)::date from raw.court_doc_raw r where r.case_id = c.case_id)
            from core.items i join core.cases c using (case_id)
-           where i.usage_name = '아파트' and i.sido in ('서울특별시', '경기도')
+           where i.usage_name = any(%s) and i.sido in ('서울특별시', '경기도')
              and i.sale_date between %s and %s
            group by c.case_id, c.court_code, c.case_no""",
-        (today - timedelta(days=7), today + timedelta(days=14)),
+        (list(ARCHIVE_USAGES), today - timedelta(days=7), today + timedelta(days=14)),
     ).fetchall()
     todo = []
     for court, case_no, sale_date, last in rows:

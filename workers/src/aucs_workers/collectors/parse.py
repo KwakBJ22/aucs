@@ -66,6 +66,57 @@ def split_sigungu(text: str | None) -> tuple[str | None, str | None]:
     return parts[0], None
 
 
+SIDO_ALIAS = {
+    "서울": "서울특별시", "서울시": "서울특별시", "서울특별시": "서울특별시",
+    "경기": "경기도", "경기도": "경기도", "인천": "인천광역시", "인천시": "인천광역시", "인천광역시": "인천광역시",
+    "부산": "부산광역시", "부산광역시": "부산광역시", "대구": "대구광역시", "대구광역시": "대구광역시",
+    "광주": "광주광역시", "광주광역시": "광주광역시", "대전": "대전광역시", "대전광역시": "대전광역시",
+    "울산": "울산광역시", "울산광역시": "울산광역시", "세종": "세종특별자치시", "세종특별자치시": "세종특별자치시",
+    "강원": "강원특별자치도", "강원도": "강원특별자치도", "강원특별자치도": "강원특별자치도",
+    "충북": "충청북도", "충청북도": "충청북도", "충남": "충청남도", "충청남도": "충청남도",
+    "전북": "전북특별자치도", "전라북도": "전북특별자치도", "전북특별자치도": "전북특별자치도",
+    "전남": "전라남도", "전라남도": "전라남도", "경북": "경상북도", "경상북도": "경상북도",
+    "경남": "경상남도", "경상남도": "경상남도", "제주": "제주특별자치도", "제주특별자치도": "제주특별자치도",
+}  # fmt: skip
+GYEONGGI_CITIES = {
+    "수원시", "성남시", "의정부시", "안양시", "부천시", "광명시", "평택시", "동두천시", "안산시", "고양시",
+    "과천시", "구리시", "남양주시", "오산시", "시흥시", "군포시", "의왕시", "하남시", "용인시", "파주시",
+    "이천시", "안성시", "김포시", "화성시", "광주시", "양주시", "포천시", "여주시", "연천군", "가평군", "양평군",
+}  # fmt: skip
+
+
+def region_from(
+    sido: str | None, sigungu_text: str | None, address: str | None
+) -> tuple[str | None, str | None, str | None]:
+    """(시도, 시군구, 구). 법원 칸(hjgu)을 우선 쓰고, 그 칸이 망가졌을 때만 주소로 바로잡습니다.
+
+    법원 칸 시도가 「서울」처럼 줄임말이면 정식 이름으로. 시도 칸에 「용인시」 같은 시 이름이 들어왔거나
+    시군구 칸이 길 이름(…로·…길)이면 망가진 것으로 보고 주소(printSt)로 끊습니다.
+    자동차 등은 주소가 사용본거지라 법원 칸이 멀쩡하면 주소를 쓰지 않습니다.
+    """
+    sg_text = (sigungu_text or "").strip()
+    broken = (
+        sido not in SIDO_ALIAS
+        or not sg_text
+        or sg_text.split()[0].endswith(("로", "길", "읍", "면"))
+    )
+    if not broken:
+        sg, gu = split_sigungu(sg_text)
+        return SIDO_ALIAS[sido or ""], sg, gu
+    words = (address or "").replace(",", " ").split()
+    if words and words[0] in SIDO_ALIAS:
+        sg, gu = split_sigungu(" ".join(words[1:3]))
+        return SIDO_ALIAS[words[0]], sg, gu
+    if words and words[0] in GYEONGGI_CITIES:
+        sg, gu = split_sigungu(" ".join(words[0:2]))
+        return "경기도", sg, gu
+    if sido in GYEONGGI_CITIES:
+        gu = sg_text if sg_text.endswith("구") else None
+        return "경기도", sido, gu
+    sg, gu = split_sigungu(sg_text)
+    return SIDO_ALIAS.get(sido or "", sido), sg, gu
+
+
 def min_price(r: dict[str, Any]) -> int | None:
     """이번 기일 최저가 = 공고 최저가. minmaePrice 는 직전 회차 값일 때가 있음(10/7 확인)."""
     notified = to_int(r.get("notifyMinmaePrice1"))
@@ -83,10 +134,10 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
     """물건상세검색 한 줄 → 사건·물건·회차."""
     case_id, item_id, item_no = ids(r)
     sale_date = to_date(r.get("maeGiil"))
-    sigungu, gu = split_sigungu(r.get("hjguSigu"))
     latlon = katec_to_wgs84(r.get("xCordi"), r.get("yCordi"))
     note = mask_names(r.get("mulBigo"))
     address = re.sub(r"^\s*(사용본거지|소재지)\s*:\s*", "", str(r.get("printSt") or "")).strip()
+    sido, sigungu, gu = region_from(r.get("hjguSido") or None, r.get("hjguSigu"), address)
     item = {
         "item_id": item_id,
         "case_id": case_id,
@@ -96,7 +147,7 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
         "usage_code": r.get("sclsUtilCd"),
         "address": address or None,
         "region_code": r.get("srchHjguRdCd") or None,
-        "sido": r.get("hjguSido") or None,
+        "sido": sido,
         "sigungu": sigungu,
         "gu": gu,
         "lot_no": r.get("srchHjguLotno") or None,
@@ -143,7 +194,9 @@ def parse_result(r: dict[str, Any]) -> dict[str, Any] | None:
     appraisal = to_int(r.get("gamevalAmt"))
     win = to_int(r.get("maeAmt")) or None
     sold = code != "03"
-    sigungu, _ = split_sigungu(r.get("hjguSigu"))
+    sido, sigungu, _ = region_from(
+        r.get("hjguSido") or None, r.get("hjguSigu"), str(r.get("printSt") or "")
+    )
     return {
         "court_code": r["boCd"],
         "case_no": r["srnSaNo"],
@@ -152,7 +205,7 @@ def parse_result(r: dict[str, Any]) -> dict[str, Any] | None:
         "item_id": item_id,
         "usage_name": r.get("dspslUsgNm"),
         "address": str(r.get("printSt") or "").strip() or None,
-        "sido": r.get("hjguSido") or None,
+        "sido": sido,
         "region_code": r.get("srchHjguRdCd") or None,
         "building_area_m2": area_sum(r.get("pjbBuldList")),
         "appraisal_krw": appraisal,

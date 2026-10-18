@@ -50,6 +50,9 @@ def won(v: int | None) -> str:
     return f"{eok}억" if eok else f"{man:,}만"
 
 
+PENDING = "오늘 오후 분석이 끝나면 보여요"
+
+
 def verdict(signals: list[dict[str, Any]]) -> str:
     """맨 위 한 줄 판정. 치명 > 주의 > 모름 > 문제 없음."""
     fatal = [s for s in signals if s.get("level") == "fatal"]
@@ -105,6 +108,9 @@ def build_detail(
     c = card(r, today)
     signals = r["signals"] or []
     rate_ans, rate_notes, rate = worth(r, signals)
+    analyzed = r.get("computed_at") is not None
+    if not analyzed:
+        rate_ans = PENDING
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     nxt = next_round_min_price(mn, reduction["pct"] if reduction else None) if mn else None
     ds = r["data_status"] or {}
@@ -146,7 +152,8 @@ def build_detail(
     ]  # fmt: skip
     return {
         **c,
-        "verdict": verdict(signals),
+        "verdict": verdict(signals) if analyzed else PENDING,
+        "analyzed": analyzed,
         "fatal": next((s["title"] for s in signals if s.get("level") == "fatal"), None),
         "address": r["address"],
         "sale_place": r["sale_place"],

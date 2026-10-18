@@ -44,3 +44,36 @@ def test_results_sold_and_failed() -> None:
 def test_mask_and_split() -> None:
     assert mask_names("임차인 홍길동 배당요구") == "임차인 홍○○ 배당요구"
     assert split_sigungu("강남구") == ("강남구", None)
+
+
+def test_region_from_messy_court_fields():
+    from aucs_workers.collectors.parse import region_from
+
+    assert region_from("서울", "구로구", "서울 구로구 경인로 390") == ("서울특별시", "구로구", None)
+    assert region_from("남양주시", "천마산로", "남양주시 천마산로 25 104동") == (
+        "경기도",
+        "남양주시",
+        None,
+    )
+    assert region_from("용인시", "처인구", "용인시 처인구 경안천로 40-1") == (
+        "경기도",
+        "용인시",
+        "처인구",
+    )
+    assert region_from("경기도", "용인시 수지구", "경기도 용인시 수지구 동천동") == (
+        "경기도",
+        "용인시",
+        "수지구",
+    )
+    assert region_from("평택시", "지산1로", "") == ("경기도", "평택시", None)
+
+
+def test_region_keeps_good_court_fields_for_vehicles():
+    from aucs_workers.collectors.parse import region_from
+
+    # 자동차: 주소는 사용본거지라 법원 칸(강남구)을 그대로
+    assert region_from("서울특별시", "강남구", "서울특별시 서초구 신흥말길 1-593") == (
+        "서울특별시",
+        "강남구",
+        None,
+    )

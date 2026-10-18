@@ -1,12 +1,13 @@
-from datetime import date
+from datetime import date, datetime
 
 from aucs_api.services.item_detail import build_detail, verdict, won
 from test_items import TODAY, row
 
 
 def full(**kw):
+    kw.setdefault("computed_at", datetime(2026, 10, 17, 15, 30))
     return row(note_masked=None, sale_place="입찰법정", dept_name="경매5계", claim_deadline=date(2025, 12, 1),
-               sale_rate={"p25": 78.0, "p50": 84.0, "p75": 90.0, "n": 40}, computed_at=None,
+               sale_rate={"p25": 78.0, "p50": 84.0, "p75": 90.0, "n": 40},
                case_id="B000250-2025타경55580", **kw)  # fmt: skip
 
 
@@ -73,3 +74,9 @@ def test_build_calc_cases_and_cap():
     assert (
         d["cap_krw"] == 1_200_000_000 - d["selected"]["tax"]["tax_krw"] * 0 - 39_600_000 - 2_400_000
     )
+
+
+def test_not_analyzed_says_pending():
+    d = build_detail(full(computed_at=None), [], [], [], None, TODAY, [])
+    assert d["analyzed"] is False and d["verdict"] == "오늘 오후 분석이 끝나면 보여요"
+    assert d["questions"][2]["answer"] == "오늘 오후 분석이 끝나면 보여요"
