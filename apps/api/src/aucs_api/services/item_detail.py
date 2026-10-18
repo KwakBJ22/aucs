@@ -310,5 +310,6 @@ def calc(
             for k in _TABLE_KEYS
         }
     return build_calc(
-        r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw
-    )
+        r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
+        selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
+    )  # fmt: skip

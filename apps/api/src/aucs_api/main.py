@@ -10,6 +10,7 @@ app = FastAPI(title="옥스 API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.WEB_ORIGINS,
+    allow_origin_regex=settings.WEB_ORIGIN_REGEX,
     allow_methods=["GET", "PUT", "POST", "DELETE"],
     allow_headers=["*"],
 )

@@ -14,7 +14,7 @@ while ($true) {
   "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 켜기" | Out-File -Append -Encoding utf8 $log
   if ($Name -eq 'api') {
     & $uv sync --all-packages 2>&1 | Out-File -Append -Encoding utf8 $log
-    & $uv run uvicorn aucs_api.main:app --port 8100 --reload --reload-dir apps/api/src --reload-dir packages/rules/src --timeout-graceful-shutdown 2 2>&1 | Out-File -Append -Encoding utf8 $log
+    & $uv run uvicorn aucs_api.main:app --host 0.0.0.0 --port 8100 --reload --reload-dir apps/api/src --reload-dir packages/rules/src --timeout-graceful-shutdown 2 2>&1 | Out-File -Append -Encoding utf8 $log
   } else {
     # 새 꾸러미가 생기면(pnpm-lock.yaml 이 더 새로우면) 먼저 설치
     $mark = "$root\node_modules\.modules.yaml"
