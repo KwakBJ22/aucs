@@ -31,10 +31,17 @@ def loan_limit(
     homes: int,
     first_time: bool,
     table: dict[str, Any],
+    selling: bool = False,
 ) -> RuleResult:
-    """규정상 최대 대출. 기준 가격 = min(낙찰가, 감정가, 시세) × 비율, 지역별 한도 적용."""
+    """규정상 최대 대출. 기준 가격 = min(낙찰가, 감정가, 시세) × 비율, 지역별 한도 적용.
+
+    selling: 1주택자가 기존 집을 처분하는 조건(처분 조건부) — 표에 owner_sell 이 있으면 그 비율.
+    """
     basis = min(x for x in (bid_krw, appraisal_krw, market_krw) if x)
-    who = "owner" if homes >= 1 else "first_time" if first_time else "none"
+    if homes >= 1:
+        who = "owner_sell" if selling and homes == 1 and "owner_sell" in table[cls] else "owner"
+    else:
+        who = "first_time" if first_time else "none"
     pct = float(table[cls][who])
     amount = int(basis * pct / 100)
     cap = None
@@ -61,12 +68,24 @@ def loan_limit(
 
 
 def acquisition_tax(
-    price_krw: int, *, homes_after: int, cls: str, area_m2: float | None, table: dict[str, Any]
+    price_krw: int,
+    *,
+    homes_after: int,
+    cls: str,
+    area_m2: float | None,
+    table: dict[str, Any],
+    temporary_two: bool = False,
+    relief: dict[str, Any] | None = None,
 ) -> RuleResult:
-    """주택 취득세 + 지방교육세 + 농특세(85㎡ 초과). homes_after = 이번 집을 포함한 주택 수."""
+    """주택 취득세 + 지방교육세 + 농특세(85㎡ 초과). homes_after = 이번 집을 포함한 주택 수.
+
+    temporary_two: 일시적 2주택(새 집을 사고 3년 안에 기존 집 처분) → 중과 대신 기본 세율 (지방세법 시행령 §28의5).
+    relief: 생애최초 감면 표(지방세특례제한법 §36의3) — 넣으면 취득세 본세에서 한도까지 뺍니다.
+    """
     heavy_tbl = table["heavy"]["regulated" if cls == "regulated" else "other"]
     heavy = None
-    for n in sorted((int(k) for k in heavy_tbl), reverse=True):
+    skip_heavy = temporary_two and homes_after == 2
+    for n in [] if skip_heavy else sorted((int(k) for k in heavy_tbl), reverse=True):
         if homes_after >= n:
             heavy = float(heavy_tbl[str(n)])
             break
@@ -86,13 +105,38 @@ def acquisition_tax(
         farm_key = "basic"
     farm = float(table["farm_over85"][farm_key]) if area_m2 and area_m2 > 85 else 0.0
     total_pct = rate + edu + farm
+    gross = int(price_krw * total_pct / 100)
+    cut = 0
+    if relief and price_krw <= int(relief["price_max_krw"]):
+        cut = min(int(relief["max_krw"]), int(price_krw * rate / 100))
     value = {
-        "tax_krw": int(price_krw * total_pct / 100),
+        "tax_krw": gross - cut,
+        "relief_krw": cut,
         "rate": rate,
         "total_pct": round(total_pct, 3),
         "heavy": heavy is not None,
+        "temporary_two": skip_heavy,
     }
     return RuleResult(value, Status.ESTIMATED, "calc.acq_tax", [{"homes_after": homes_after}])
+
+
+def dsr_limit(
+    income_krw: int, *, other_monthly_krw: int = 0, cls: str, table: dict[str, Any]
+) -> RuleResult:
+    """소득으로 받을 수 있는 최대 주담대(차주 DSR). 원리금균등, 금리 = 기준 + 스트레스 가산(한도 계산용).
+
+    연 원리금 합계 ≤ 연 소득 × limit_pct. 다른 대출 월 상환액을 먼저 뺍니다.
+    """
+    r = (float(table["base_rate_pct"]) + float(table["stress_pp"][cls])) / 100 / 12
+    n = int(table["years"]) * 12
+    monthly_cap = income_krw * float(table["limit_pct"]) / 100 / 12 - other_monthly_krw
+    if monthly_cap <= 0:
+        return RuleResult(
+            {"loan_krw": 0, "rate_pct": round(r * 1200, 2)}, Status.ESTIMATED, "calc.dsr.none", []
+        )
+    loan = int(monthly_cap * (1 - (1 + r) ** -n) / r)
+    value = {"loan_krw": loan, "rate_pct": round(r * 1200, 2), "monthly_cap_krw": int(monthly_cap)}
+    return RuleResult(value, Status.ESTIMATED, "calc.dsr", [])
 
 
 def registration_cost(price_krw: int) -> int:
@@ -113,19 +157,33 @@ def cash_needed(
     assumed_krw: int = 0,
     loan_override_krw: int | None = None,
     deposit_rate_pct: float = 10.0,
+    selling: bool = False,
+    income_krw: int | None = None,
+    other_monthly_krw: int = 0,
     tables: dict[str, Any],
 ) -> RuleResult:
-    """입찰가 하나에 대한 필요한 현금. 떠안는 돈이 있으면 대출이 어렵다고 보고 0으로."""
+    """입찰가 하나에 대한 필요한 현금. 떠안는 돈이 있으면 대출이 어렵다고 보고 0으로.
+
+    소득을 넣으면 대출 = min(규정 최대, 소득 기준 최대). 1주택 + selling 이면 일시적 2주택·처분 조건부.
+    """
     loan = loan_limit(
         bid_krw, appraisal_krw=appraisal_krw, market_krw=market_krw, cls=cls,
-        homes=homes, first_time=first_time, table=tables["loan_ltv"],
+        homes=homes, first_time=first_time, table=tables["loan_ltv"], selling=selling,
     ).value  # fmt: skip
+    dsr = None
+    if income_krw and "dsr" in tables:
+        dsr = dsr_limit(
+            income_krw, other_monthly_krw=other_monthly_krw, cls=cls, table=tables["dsr"]
+        ).value
+        if dsr["loan_krw"] < loan["loan_krw"]:
+            loan = {**loan, "loan_krw": dsr["loan_krw"], "by_dsr": True}
     loan_krw = loan["loan_krw"] if loan_override_krw is None else min(loan_override_krw, bid_krw)
     if assumed_krw > 0 and loan_override_krw is None:
         loan_krw = 0
+    relief = tables.get("first_home_relief") if first_time and homes == 0 else None
     tax = acquisition_tax(
         bid_krw + assumed_krw, homes_after=homes + 1, cls=cls, area_m2=area_m2,
-        table=tables["acquisition_tax"],
+        table=tables["acquisition_tax"], temporary_two=selling, relief=relief,
     ).value  # fmt: skip
     reg = registration_cost(bid_krw)
     deposit = -(-min_price_krw * int(deposit_rate_pct * 100) // 10_000)
@@ -135,6 +193,7 @@ def cash_needed(
         "deposit_krw": deposit,
         "loan_krw": loan_krw,
         "loan": loan,
+        "dsr": dsr,
         "tax": tax,
         "registration_krw": reg,
         "assumed_krw": assumed_krw,

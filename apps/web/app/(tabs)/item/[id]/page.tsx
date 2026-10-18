@@ -50,6 +50,10 @@ function CalcBox({ id }: { id: string }) {
   const prof = typeof window === "undefined" ? null : loadProfile();
   const [homes, setHomes] = useState<number | null>(prof?.homes ?? null);
   const [first, setFirst] = useState(Boolean(prof?.firstTime));
+  const [selling, setSelling] = useState(Boolean(prof?.selling));
+  const [dsrOpen, setDsrOpen] = useState(false);
+  const [income, setIncome] = useState<number | null>(null);
+  const [otherMonthly, setOtherMonthly] = useState<number | null>(null);
   const [bid, setBid] = useState<number | null>(null);
   const [loan, setLoan] = useState<number | null>(null);
   const [editLoan, setEditLoan] = useState(false);
@@ -59,7 +63,15 @@ function CalcBox({ id }: { id: string }) {
   useEffect(() => {
     if (homes == null) return;
     const h = setTimeout(() => {
-      fetchCalc(id, { bid, homes, first, loan })
+      fetchCalc(id, {
+        bid,
+        homes,
+        first,
+        loan,
+        selling: homes === 1 && selling,
+        income,
+        otherMonthly,
+      })
         .then((r) => {
           setD(r);
           if (bid == null) setBid(r.selected.bid_krw);
@@ -71,13 +83,40 @@ function CalcBox({ id }: { id: string }) {
           .catch(() => setChk(null));
     }, 250);
     return () => clearTimeout(h);
-  }, [id, bid, homes, first, loan]);
+  }, [id, bid, homes, first, loan, selling, income, otherMonthly]);
 
   const pickHomes = (n: number) => {
     setHomes(n);
     const p = loadProfile() ?? { regions: [], cash: null, purpose: null };
     saveProfile({ ...p, homes: n, firstTime: n === 0 ? first : false });
   };
+  const toggle = (k: "firstTime" | "selling", v: boolean) => {
+    if (k === "firstTime") setFirst(v);
+    else setSelling(v);
+    const p = loadProfile() ?? { regions: [], cash: null, purpose: null };
+    saveProfile({ ...p, [k]: v });
+  };
+  const manInput = (label: string, set: (n: number | null) => void) => (
+    <label style={{ display: "block", fontSize: 13, marginTop: 6 }}>
+      <span className="sub" style={{ margin: 0 }}>
+        {label}
+      </span>
+      <input
+        inputMode="numeric"
+        onChange={(e) => {
+          const n = Number(e.target.value.replace(/[^0-9]/g, ""));
+          set(n ? n * 10_000 : null);
+        }}
+        style={{
+          width: "100%",
+          fontSize: 16,
+          padding: "8px 10px",
+          border: "1px solid var(--line)",
+          borderRadius: 8,
+        }}
+      />
+    </label>
+  );
   const s = d?.selected;
   const over = d?.cap_krw != null && s != null && s.bid_krw > d.cap_krw;
   const myCash = prof?.cash ?? null;
@@ -97,11 +136,30 @@ function CalcBox({ id }: { id: string }) {
         ))}
         {homes === 0 && (
           <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
-            <input type="checkbox" checked={first} onChange={(e) => setFirst(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={first}
+              onChange={(e) => toggle("firstTime", e.target.checked)}
+            />
             {c.firstTime}
           </label>
         )}
+        {homes === 1 && (
+          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
+            <input
+              type="checkbox"
+              checked={selling}
+              onChange={(e) => toggle("selling", e.target.checked)}
+            />
+            {c.selling}
+          </label>
+        )}
       </div>
+      {homes === 1 && selling && (
+        <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
+          {c.sellingHint}
+        </div>
+      )}
       {d && s && (
         <>
           {d.cases.length > 0 && (
@@ -183,9 +241,28 @@ function CalcBox({ id }: { id: string }) {
               />
             )}
             <div className="sub" style={{ margin: 0, fontSize: 12 }}>
-              {s.loan.note ?? c.loanHint}
+              {s.loan.by_dsr && s.dsr ? c.byDsr(s.dsr.rate_pct) : (s.loan.note ?? c.loanHint)}{" "}
+              <button
+                onClick={() => setDsrOpen(!dsrOpen)}
+                style={{ border: 0, background: "none", color: "var(--blue)", fontSize: 12 }}
+              >
+                {c.dsrOpen}
+              </button>
             </div>
-            <Row label={c.tax(s.tax.total_pct)} value={`+ ${won(s.tax.tax_krw)}`} />
+            {dsrOpen && (
+              <>
+                {manInput(c.income, setIncome)}
+                {manInput(c.otherMonthly, setOtherMonthly)}
+              </>
+            )}
+            <Row
+              label={
+                s.tax.relief_krw > 0
+                  ? `${c.tax(s.tax.total_pct)} · ${c.relief(won(s.tax.relief_krw))}`
+                  : c.tax(s.tax.total_pct)
+              }
+              value={`+ ${won(s.tax.tax_krw)}`}
+            />
             <Row label={c.reg} value={`+ ${won(s.registration_krw)}`} />
             {s.assumed_krw > 0 && <Row label={c.assumed} value={`+ ${won(s.assumed_krw)}`} />}
             <Row

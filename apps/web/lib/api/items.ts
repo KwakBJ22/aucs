@@ -105,8 +105,22 @@ export type CashBreakdown = {
   bid_krw: number;
   deposit_krw: number;
   loan_krw: number;
-  loan: { pct: number; cap_krw: number | null; who: string; note: string | null };
-  tax: { tax_krw: number; rate: number; total_pct: number; heavy: boolean };
+  loan: {
+    pct: number;
+    cap_krw: number | null;
+    who: string;
+    note: string | null;
+    by_dsr?: boolean;
+  };
+  dsr: { loan_krw: number; rate_pct: number } | null;
+  tax: {
+    tax_krw: number;
+    relief_krw: number;
+    rate: number;
+    total_pct: number;
+    heavy: boolean;
+    temporary_two: boolean;
+  };
   registration_krw: number;
   assumed_krw: number;
   cash_krw: number;
@@ -122,9 +136,23 @@ export type Calc = {
 };
 export function fetchCalc(
   id: string,
-  o: { bid?: number | null; homes: number; first: boolean; loan?: number | null },
+  o: {
+    bid?: number | null;
+    homes: number;
+    first: boolean;
+    loan?: number | null;
+    selling?: boolean;
+    income?: number | null;
+    otherMonthly?: number | null;
+  },
 ): Promise<Calc> {
-  const q = new URLSearchParams({ homes: String(o.homes), first: String(o.first) });
+  const q = new URLSearchParams({
+    homes: String(o.homes),
+    first: String(o.first),
+    selling: String(Boolean(o.selling)),
+  });
+  if (o.income) q.set("income", String(o.income));
+  if (o.otherMonthly) q.set("other_monthly", String(o.otherMonthly));
   if (o.bid) q.set("bid", String(o.bid));
   if (o.loan != null) q.set("loan", String(o.loan));
   return getJson<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);

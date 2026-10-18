@@ -236,7 +236,7 @@ from core.items i
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.item_id = %s and i.display_policy = 'public'
 """
-_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax")
+_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax", "dsr", "first_home_relief")
 
 
 def build_calc(
@@ -247,6 +247,9 @@ def build_calc(
     homes: int,
     first_time: bool,
     loan_krw: int | None,
+    selling: bool = False,
+    income_krw: int | None = None,
+    other_monthly_krw: int = 0,
 ) -> dict[str, Any]:
     """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
     from aucs_rules.calc import area_class, bid_cases, cash_needed
@@ -259,6 +262,7 @@ def build_calc(
     common = {
         "min_price_krw": mn, "appraisal_krw": app, "market_krw": mkt, "area_m2": area, "cls": cls,
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
+        "selling": selling, "income_krw": income_krw, "other_monthly_krw": other_monthly_krw,
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
     cases = []
@@ -283,7 +287,15 @@ def build_calc(
 
 
 def calc(
-    item_id: str, *, bid_krw: int | None, homes: int, first_time: bool, loan_krw: int | None
+    item_id: str,
+    *,
+    bid_krw: int | None,
+    homes: int,
+    first_time: bool,
+    loan_krw: int | None,
+    selling: bool = False,
+    income_krw: int | None = None,
+    other_monthly_krw: int = 0,
 ) -> dict[str, Any] | None:
     with connect() as c:
         r = c.execute(_CALC_SQL, (item_id,)).fetchone()

@@ -6,6 +6,7 @@ export type Profile = {
   purpose: Purpose | null;
   homes?: number | null; // 지금 가진 집 수(계산 화면에서 한 번 물음)
   firstTime?: boolean;
+  selling?: boolean; // 1채일 때 기존 집 팔 계획
 };
 
 const KEY = "aucs_profile";

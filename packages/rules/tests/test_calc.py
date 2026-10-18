@@ -50,3 +50,41 @@ def test_cash_and_cases() -> None:
     assert v["cash_krw"] == 800_000_000 - 320_000_000 + v["tax"]["tax_krw"] + 1_600_000
     c = bid_cases(1_000_000_000, 800_000_000, 78.4, 84.0, 90.0)
     assert [x["bid_krw"] for x in c] == [800_000_000, 840_000_000, 900_000_000]
+
+
+def test_temporary_two_and_selling_loan() -> None:
+    h = acquisition_tax(
+        500_000_000, homes_after=2, cls="regulated", area_m2=84, table=TAX, temporary_two=True
+    ).value
+    assert not h["heavy"] and h["tax_krw"] == 5_500_000
+    v = loan_limit(500_000_000, appraisal_krw=None, market_krw=None, cls="regulated", homes=1,
+                   first_time=False, table={**LTV, "regulated": {**LTV["regulated"], "owner_sell": 40}},
+                   selling=True).value  # fmt: skip
+    assert v["loan_krw"] == 200_000_000 and v["who"] == "owner_sell"
+
+
+def test_first_home_relief() -> None:
+    rel = {"price_max_krw": 1_200_000_000, "max_krw": 2_000_000}
+    v = acquisition_tax(
+        500_000_000, homes_after=1, cls="regulated", area_m2=84, table=TAX, relief=rel
+    ).value
+    assert v["relief_krw"] == 2_000_000 and v["tax_krw"] == 3_500_000
+    big = acquisition_tax(
+        1_300_000_000, homes_after=1, cls="regulated", area_m2=84, table=TAX, relief=rel
+    ).value
+    assert big["relief_krw"] == 0
+
+
+def test_dsr_limits_loan() -> None:
+    from aucs_rules.calc import dsr_limit
+
+    d = {"limit_pct": 40, "base_rate_pct": 4.5, "stress_pp": {"regulated": 3.0}, "years": 30}
+    v = dsr_limit(60_000_000, cls="regulated", table=d).value
+    # 월 200만 원, 금리 7.5%, 30년 → 약 2억 8,600만
+    assert 285_000_000 < v["loan_krw"] < 287_000_000
+    assert (
+        dsr_limit(60_000_000, other_monthly_krw=2_000_000, cls="regulated", table=d).value[
+            "loan_krw"
+        ]
+        == 0
+    )
