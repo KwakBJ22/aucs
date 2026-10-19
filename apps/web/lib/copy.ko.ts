@@ -9,6 +9,17 @@ export const copy = {
     fail: "안 됨",
   },
   tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "전체" },
+  side: {
+    pro: "전문가",
+    soon: "준비 중",
+    proItems: [
+      { name: "전체 물건", href: "/pro/items", ready: false },
+      { name: "지도 분석", href: "/pro/map", ready: false },
+      { name: "비교함", href: "/pro/compare", ready: false },
+      { name: "사건·문건 분석", href: "/pro/cases", ready: false },
+      { name: "낙찰 사례와 시장 분석", href: "/pro/market", ready: false },
+    ],
+  },
   start: {
     step: (n: number) => `${n} / 3`,
     back: "←",

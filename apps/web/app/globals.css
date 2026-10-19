@@ -203,3 +203,74 @@ button {
     display: block;
   }
 }
+
+/* PC 틀: 넓은 화면은 왼쪽 메뉴, 휴대폰은 하단 탭 */
+.sidenav {
+  display: none;
+}
+@media (min-width: 900px) {
+  .tabbar {
+    display: none;
+  }
+  .sidenav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 220px;
+    padding: 20px 12px;
+    gap: 2px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    z-index: 10;
+    overflow-y: auto;
+  }
+  .sidenav a,
+  .side-off {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .sidenav a:hover {
+    background: var(--bg);
+  }
+  .sidenav a.on {
+    background: var(--blue-soft);
+    color: var(--blue-text);
+    font-weight: 700;
+  }
+  .side-brand {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  .side-head {
+    margin: 16px 12px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--faint);
+  }
+  .side-off {
+    color: var(--faint);
+  }
+  .side-off small {
+    font-size: 11px;
+    white-space: nowrap;
+    margin-left: 6px;
+  }
+  .side-all {
+    margin-top: auto;
+  }
+  .shell {
+    padding-left: 220px;
+  }
+  .shell .page {
+    max-width: 720px;
+    padding-bottom: 48px;
+  }
+}
