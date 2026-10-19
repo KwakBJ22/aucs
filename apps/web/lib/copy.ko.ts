@@ -153,6 +153,8 @@ export const copy = {
     bidTry: "입찰가 넣어 보기",
     resale: "재매각 물건 — 보증금 비율은 법원 공고로 확인",
     failureTypes: "비슷한 물건에서 실제로 손해 본 경우",
+    failureTable: "손해 본 11가지 경우 전체",
+    failureTableNote: "신호 없음은 자료에서 못 찾았다는 뜻이에요 · 안전하다는 뜻은 아니에요",
     reg: {
       needLogin: "로그인하고 등기부 PDF를 올리면 떠안는 권리를 읽어 드려요",
       upload: "등기부 PDF 올리기",

@@ -43,6 +43,27 @@ TAGS = [
 ]
 
 
+def failure_table(signals: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """PC 전문가 보기: 실패 11유형 전체와 이 물건 상태(걸림·확인 필요·신호 없음). 신호 없음 ≠ 안전."""
+    out = []
+    for code, title in FAILURE_TYPES.items():
+        mine = [s for s in signals if s.get("ftype") == code]
+        hit = [
+            s
+            for s in mine
+            if s.get("level") in ("fatal", "high", "mid")
+            and s.get("status") not in ("모름", "확인 필요")
+        ]
+        if hit:
+            state, why = "걸림", hit[0]["title"]
+        elif mine:
+            state, why = "확인 필요", mine[0]["title"]
+        else:
+            state, why = "신호 없음", ""
+        out.append({"code": code, "title": title, "state": state, "why": why})
+    return out
+
+
 def won(v: int | None) -> str:
     if not v:
         return "-"
@@ -287,6 +308,7 @@ def build_detail(
         ],
         "questions": questions,
         "failure_types": [{"code": t, "title": FAILURE_TYPES[t]} for t in types],
+        "failure_table": failure_table(signals),
         "schedule": sched,
         "computed_at": r["computed_at"].isoformat() if r["computed_at"] else None,
     }

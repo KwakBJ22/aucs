@@ -193,3 +193,13 @@ button {
 .menu-row:last-child {
   border-bottom: 0;
 }
+
+/* PC 전문가 보기: 넓은 화면에서만 */
+.pc-only {
+  display: none;
+}
+@media (min-width: 900px) {
+  .pc-only {
+    display: block;
+  }
+}

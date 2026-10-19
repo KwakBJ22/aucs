@@ -935,6 +935,45 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
             {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
           </div>
         )}
+        {d.failure_table && (
+          <div className="pc-only" style={{ marginTop: 12 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{t.failureTable}</div>
+            <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+              <tbody>
+                {d.failure_table.map((r) => (
+                  <tr key={r.code} style={{ borderTop: "1px solid var(--line, #e5e5e5)" }}>
+                    <td style={{ padding: "4px 6px", whiteSpace: "nowrap", opacity: 0.6 }}>
+                      {r.code}
+                    </td>
+                    <td style={{ padding: "4px 6px" }}>{r.title}</td>
+                    <td
+                      style={{
+                        padding: "4px 6px",
+                        whiteSpace: "nowrap",
+                        fontWeight: r.state === "신호 없음" ? 400 : 600,
+                        color:
+                          r.state === "걸림"
+                            ? "var(--red, #d33)"
+                            : r.state === "확인 필요"
+                              ? "var(--orange, #d80)"
+                              : undefined,
+                        opacity: r.state === "신호 없음" ? 0.6 : 1,
+                      }}
+                    >
+                      {r.state}
+                    </td>
+                    <td className="sub" style={{ padding: "4px 6px" }}>
+                      {r.why}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="sub" style={{ marginTop: 4 }}>
+              {t.failureTableNote}
+            </div>
+          </div>
+        )}
         {b.signals
           .filter((s: { status: string }) => s.status !== "모름")
           .map((s: { rule_id: string; title: string; level: string }) => (

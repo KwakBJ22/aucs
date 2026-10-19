@@ -116,6 +116,12 @@ export type ItemDetail = ItemCard & {
   tags: { label: string; ok: boolean }[];
   questions: Question[];
   failure_types: { code: string; title: string }[];
+  failure_table?: {
+    code: string;
+    title: string;
+    state: "걸림" | "확인 필요" | "신호 없음";
+    why: string;
+  }[];
   schedule: Schedule;
   computed_at: string | null;
 };

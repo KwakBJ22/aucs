@@ -5,7 +5,9 @@ uv run python -m aucs_workers.collectors.court_items          # 전체
 """
 
 import argparse
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+
+import psycopg
 
 from aucs_workers.collectors.court_site import COURTS, fetch_pages
 from aucs_workers.collectors.polite import Polite
@@ -17,26 +19,31 @@ GONE = "gone"  # 법원 목록에서 빠짐(기일 변경·취하·정지 등). 
 GONE_MAX_SHARE = 0.2  # 한 법원에서 이보다 많이 빠지면 수집 이상으로 보고 표시하지 않음
 
 
-def mark_gone(conn, court: str, d_from: date, d_to: date, started) -> int:  # type: ignore[no-untyped-def]
+def mark_gone(
+    conn: psycopg.Connection, court: str, d_from: date, d_to: date, started: datetime
+) -> int:
     """이번 수집 기간(d_from~d_to)에 있어야 하는데 법원 목록에 안 나온 물건 표시."""
-    total, missing = conn.execute(
+    row = conn.execute(
         """select count(*), count(*) filter (where i.checked_at < %s)
            from core.items i join core.cases c using (case_id)
            where c.court_code = %s and i.sale_date between %s and %s""",
         (started, court, d_from, d_to),
     ).fetchone()
+    total, missing = row if row else (0, 0)
     if not missing:
         return 0
     if missing > total * GONE_MAX_SHARE:
         print(f"  {COURTS[court]} 빠진 물건 {missing}/{total} — 너무 많아 표시 안 함")
         return 0
-    return conn.execute(
-        """update core.items i set status_code = %s, updated_at = now()
+    return int(
+        conn.execute(
+            """update core.items i set status_code = %s, updated_at = now()
            from core.cases c
            where c.case_id = i.case_id and c.court_code = %s and i.sale_date between %s and %s
              and i.checked_at < %s and i.status_code is distinct from %s""",
-        (GONE, court, d_from, d_to, started, GONE),
-    ).rowcount
+            (GONE, court, d_from, d_to, started, GONE),
+        ).rowcount
+    )
 
 
 def main() -> None:
@@ -49,7 +56,8 @@ def main() -> None:
     d_from = date.today()
     d_to = d_from + timedelta(weeks=a.weeks)
     with connect() as conn, run(conn, "court_items", "법원 경매 물건") as job:
-        started = conn.execute("select now()").fetchone()[0]
+        now_row = conn.execute("select now()").fetchone()
+        started = now_row[0] if now_row else datetime.now().astimezone()
         seen: set[str] = set()
         for court, rows in fetch_pages(
             courts, Polite(), results=False,
