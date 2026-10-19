@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from aucs_api.services import pro
@@ -40,3 +40,22 @@ def get_pro_items(
             headers={"Content-Disposition": "attachment; filename=aucs_items.csv"},
         )
     return pro.search(f, date.today(), sort=sort, page=page, limit=limit)
+
+
+@router.get("/cases")
+def get_cases(
+    category: Annotated[str | None, Query(max_length=30)] = None,
+    q: Annotated[str | None, Query(max_length=40)] = None,
+) -> dict[str, Any]:
+    return {
+        "categories": [*pro.WATCH_CATS, "종기 뒤 신고"],
+        "cases": pro.cases(category, q, date.today()),
+    }
+
+
+@router.get("/cases/{case_id}")
+def get_case(case_id: str) -> dict[str, Any]:
+    d = pro.case_detail(case_id, date.today())
+    if d is None:
+        raise HTTPException(status_code=404, detail="없는 사건")
+    return d

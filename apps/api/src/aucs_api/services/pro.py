@@ -6,6 +6,8 @@ import io
 from datetime import date
 from typing import Any
 
+from aucs_rules.progress import judge_progress
+
 from aucs_api.db import connect
 from aucs_api.services.items import COURT_NAME
 
@@ -159,3 +161,102 @@ def to_csv(rows: list[dict[str, Any]]) -> str:
     for r in rows:
         w.writerow(["" if r.get(k) is None else r.get(k) for k, _ in CSV_COLS])
     return "﻿" + buf.getvalue()  # 엑셀에서 한글이 깨지지 않게
+
+
+# 사건·문건 분석: 문건에 주의할 것이 있는 진행 사건 목록과 사건별 문건 흐름
+# 목록에 올리는 분류(흔한 배당요구는 종기 뒤 신고일 때만), 속행 신청은 정지 뒤 맥락으로만 표시
+WATCH_CATS = (
+    "회생·파산", "정지·취하 시도", "매각조건 변경", "유치권 신고", "채권자 바뀜", "기일 연기·변경 신청",
+)  # fmt: skip
+SHOW_CATS = (*WATCH_CATS, "경매 속행 신청")
+
+
+def cases(category: str | None, q: str | None, today: date) -> list[dict[str, Any]]:
+    """진행 물건이 있는 사건 중 중요 문건(high·mid 중 WATCH_CATS 또는 종기 뒤 신고)이 있는 것."""
+    p: dict[str, Any] = {"today": today, "cats": list(WATCH_CATS), "show": list(SHOW_CATS)}
+    extra = ""
+    if category == "종기 뒤 신고":
+        extra += " and e.after_deadline"
+    elif category:
+        extra += " and e.category = %(cat)s"
+        p["cat"] = category
+    if q:
+        extra += " and (c.case_no ilike %(q)s or i.address ilike %(q)s)"
+        p["q"] = f"%{q.strip()}%"
+    sql = f"""
+    select c.case_id, c.court_code, c.case_no, min(i.sale_date) as sale_date,
+           (array_agg(i.item_id order by i.sale_date, i.item_no))[1] as item_id,
+           (array_agg(coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '')
+                      order by i.sale_date, i.item_no))[1] as place,
+           (select array_agg(distinct e2.category) from core.case_events e2 where e2.case_id = c.case_id
+              and e2.category = any(%(show)s)) as flags,
+           (select max(e3.event_date) from core.case_events e3 where e3.case_id = c.case_id
+              and (e3.category = any(%(cats)s) or e3.after_deadline)) as last_date,
+           (select count(*) from core.case_events e4 where e4.case_id = c.case_id and e4.after_deadline) as late
+    from core.cases c
+    join core.items i on i.case_id = c.case_id and i.sale_date >= %(today)s and i.status_code is distinct from 'gone'
+    where exists (select 1 from core.case_events e where e.case_id = c.case_id
+                  and (e.category = any(%(cats)s) and e.importance in ('high','mid') or e.after_deadline) {extra})
+    group by c.case_id, c.court_code, c.case_no
+    order by last_date desc nulls last limit 200"""
+    with connect() as c:
+        rows = c.execute(sql, p).fetchall()
+    return [
+        {
+            **r,
+            "court": COURT_NAME.get(r["court_code"], r["court_code"]),
+            "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
+            "d_day": (r["sale_date"] - today).days if r["sale_date"] else None,
+            "last_date": r["last_date"].isoformat() if r["last_date"] else None,
+            "flags": sorted(
+                r["flags"] or [], key=lambda x: WATCH_CATS.index(x) if x in WATCH_CATS else 99
+            ),
+        }
+        for r in rows
+    ]
+
+
+def case_detail(case_id: str, today: date) -> dict[str, Any] | None:
+    with connect() as c:
+        head = c.execute(
+            "select case_id, court_code, case_no, claim_deadline, dept_name from core.cases where case_id = %s",
+            (case_id,),
+        ).fetchone()
+        if not head:
+            return None
+        items = c.execute(
+            """select item_id, item_no, sale_date, usage_name, address, min_price_krw, appraisal_krw
+               from core.items where case_id = %s and status_code is distinct from 'gone'
+               order by item_no""",
+            (case_id,),
+        ).fetchall()
+        ev = c.execute(
+            """select event_date, kind, category, importance, after_deadline, text_masked
+               from core.case_events where case_id = %s order by event_date, event_id""",
+            (case_id,),
+        ).fetchall()
+    prog = judge_progress([(e["event_date"], e["category"]) for e in ev if e["event_date"]])
+    counts: dict[str, int] = {}
+    for e in ev:
+        counts[e["category"]] = counts.get(e["category"], 0) + 1
+    return {
+        "case_id": head["case_id"],
+        "court": COURT_NAME.get(head["court_code"], head["court_code"]),
+        "case_no": head["case_no"],
+        "dept": head["dept_name"],
+        "claim_deadline": head["claim_deadline"].isoformat() if head["claim_deadline"] else None,
+        "progress": prog.value,
+        "items": [
+            {
+                **i,
+                "sale_date": i["sale_date"].isoformat() if i["sale_date"] else None,
+                "d_day": (i["sale_date"] - today).days if i["sale_date"] else None,
+            }
+            for i in items
+        ],
+        "counts": sorted(counts.items(), key=lambda x: -x[1]),
+        "events": [
+            {**e, "event_date": e["event_date"].isoformat() if e["event_date"] else None}
+            for e in ev
+        ],
+    }

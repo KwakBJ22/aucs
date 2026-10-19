@@ -359,3 +359,19 @@ button {
     max-width: 1280px;
   }
 }
+
+/* PC 두 칸(왼쪽 목록·오른쪽 상세), 휴대폰은 위아래 */
+.two-pane {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .two-pane {
+    grid-template-columns: 380px minmax(0, 1fr);
+    align-items: start;
+  }
+  .two-pane > section:first-child {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+}

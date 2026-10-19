@@ -87,3 +87,53 @@ function apiQuery(f: ProFilter): URLSearchParams {
 }
 export const fetchPro = (f: ProFilter) => getJson<ProResult>(`/pro/items?${apiQuery(f)}`);
 export const proCsvUrl = (f: ProFilter) => `${apiBaseUrl}/pro/items?${apiQuery(f)}&fmt=csv`;
+
+// 사건·문건 분석
+export type CaseRow = {
+  case_id: string;
+  court: string;
+  case_no: string;
+  item_id: string;
+  place: string;
+  sale_date: string | null;
+  d_day: number | null;
+  flags: string[];
+  last_date: string | null;
+  late: number;
+};
+export type CaseEvent = {
+  event_date: string | null;
+  kind: string | null;
+  category: string;
+  importance: "high" | "mid" | "low";
+  after_deadline: boolean;
+  text_masked: string | null;
+};
+export type CaseDetail = {
+  case_id: string;
+  court: string;
+  case_no: string;
+  dept: string | null;
+  claim_deadline: string | null;
+  progress: string | null;
+  items: {
+    item_id: string;
+    item_no: number;
+    sale_date: string | null;
+    d_day: number | null;
+    usage_name: string | null;
+    address: string | null;
+    min_price_krw: number | null;
+    appraisal_krw: number | null;
+  }[];
+  counts: [string, number][];
+  events: CaseEvent[];
+};
+export const fetchCases = (category?: string, q?: string) => {
+  const p = new URLSearchParams();
+  if (category) p.set("category", category);
+  if (q) p.set("q", q);
+  return getJson<{ categories: string[]; cases: CaseRow[] }>(`/pro/cases?${p}`);
+};
+export const fetchCase = (id: string) =>
+  getJson<CaseDetail>(`/pro/cases/${encodeURIComponent(id)}`);
