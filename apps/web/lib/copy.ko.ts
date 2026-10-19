@@ -9,16 +9,23 @@ export const copy = {
     fail: "안 됨",
   },
   tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "전체" },
-  side: {
-    pro: "전문가",
-    soon: "준비 중",
-    proItems: [
-      { name: "전체 물건", href: "/pro/items", ready: true },
-      { name: "지도 분석", href: "/pro/map", ready: false },
-      { name: "비교함", href: "/compare", ready: true },
-      { name: "사건·문건 분석", href: "/pro/cases", ready: true },
-      { name: "낙찰 사례와 시장 분석", href: "/pro/market", ready: true },
+  footer: {
+    links: [
+      ["서비스 소개", "/guide"],
+      ["이용약관", null],
+      ["개인정보처리방침", null],
+      ["위치기반서비스 이용약관", null],
+    ] as [string, string | null][],
+    sourceHead: "자료 출처",
+    sources: [
+      "법원경매정보 · 매일 아침",
+      "국토교통부 실거래가",
+      "건축물대장 · 공시가격 · 정비사업 정보",
     ],
+    helpHead: "고객센터",
+    help: "평일 10:00~18:00",
+    biz: "사업자 정보는 사업자등록 뒤 채워요",
+    note: "옥스의 분석은 투자 권유가 아니에요. 입찰 전 최종 확인은 법원 자료로 해 주세요.",
   },
   start: {
     step: (n: number) => `${n} / 3`,

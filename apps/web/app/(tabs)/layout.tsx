@@ -1,13 +1,10 @@
-import { SideNav } from "@/components/side-nav";
-import { TabBar } from "@/components/tab-bar";
+import { AppShell } from "@/components/layout/app-shell";
 import { WatchProvider } from "@/components/watch-context";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
   return (
     <WatchProvider>
-      <SideNav />
-      <div className="shell">{children}</div>
-      <TabBar />
+      <AppShell>{children}</AppShell>
     </WatchProvider>
   );
 }

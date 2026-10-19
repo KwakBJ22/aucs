@@ -13,3 +13,4 @@ coverage/
 *.duckdb
 *.duckdb.wal
 .DS_Store
+.next_old*/
