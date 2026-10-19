@@ -42,6 +42,8 @@ def spec_facts(spec: dict[str, Any] | None) -> dict[str, Any]:
     if _has(keep):
         out["prior_assumed_rights"] = [re.sub(r"\s+", " ", keep or "")[:80]]
         # 「주택임차권등기는 배당에서 전액 변제받지 않으면 잔액을 매수인이 인수」 → 대항력 있는 임차권등기
-        if re.search(r"임차권\s*등기", keep or "") and re.search(r"인수|매수인|말소되지\s*않", keep or ""):
+        if re.search(r"임차권\s*등기", keep or "") and re.search(
+            r"인수|매수인|말소되지\s*않", keep or ""
+        ):
             out["lease_registration_with_power"] = True
     return out

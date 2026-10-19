@@ -2,7 +2,15 @@ from datetime import date, timedelta
 
 from aucs_rules.costs import bid_cap, commercial_over_limit, real_cost
 from aucs_rules.risk import signals
-from aucs_rules.sale_rate import Sale, court_cell, local_peers, new_item, rate_range
+from aucs_rules.sale_rate import (
+    Sale,
+    court_cell,
+    effective_failed,
+    local_peers,
+    new_item,
+    rate_range,
+    restarted,
+)
 
 D = date(2026, 10, 15)
 TBL = {"seoul": {"limit_krw": 900_000_000}, "overcrowded": {"limit_krw": 690_000_000, "also": ["부산"]},
@@ -76,3 +84,11 @@ def test_commercial_limit_region() -> None:
     v = commercial_over_limit(500_000_000, 1_000_000, sido="경기", sigungu="용인시",
                               region_class="overcrowded", table=TBL).value  # fmt: skip
     assert v["region"] == "metro" and v["converted_krw"] == 600_000_000 and v["over"] is True
+
+
+def test_effective_failed_restart() -> None:
+    # 2024타경57221: 유찰 12회 뒤 대항력 포기로 최저가=감정가 3.79억
+    assert effective_failed(12, 379_000_000, 379_000_000) == 0
+    assert restarted(12, 379_000_000, 379_000_000) is True
+    assert effective_failed(2, 100, 64) == 2
+    assert restarted(0, 100, 100) is False

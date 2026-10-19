@@ -44,8 +44,31 @@ def test_worth_court_shift_and_schedule():
 
 
 def test_worth_new_item():
-    d = build_detail(full(new_item=True, min_price_krw=1_015_000_000), [], [], [], None, TODAY, [])
+    d = build_detail(
+        full(new_item=True, failed_count=0, min_price_krw=1_015_000_000),
+        [],
+        [],
+        [],
+        None,
+        TODAY,
+        [],
+    )
     assert d["questions"][2]["answer"] == "처음 나온 물건이라 보통 감정가보다 비싸게 팔려요"
+
+
+def test_worth_restarted():
+    d = build_detail(
+        full(new_item=True, failed_count=12, min_price_krw=1_015_000_000),
+        [],
+        [],
+        [],
+        None,
+        TODAY,
+        [],
+    )
+    w = d["questions"][2]
+    assert w["answer"] == "감정가부터 다시 시작한 물건이라 처음 나온 물건처럼 보면 돼요"
+    assert w["body"]["notes"][0].startswith("유찰 12회 뒤 매각조건이 바뀌어")
 
 
 def test_worth_checks_from_100_sample():

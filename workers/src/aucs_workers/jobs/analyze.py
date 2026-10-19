@@ -20,7 +20,14 @@ from aucs_rules.costs import commercial_over_limit
 from aucs_rules.price import Trade, market_price
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import signals, top_signal
-from aucs_rules.sale_rate import Sale, court_cell, local_peers, new_item, rate_range
+from aucs_rules.sale_rate import (
+    Sale,
+    court_cell,
+    effective_failed,
+    local_peers,
+    new_item,
+    rate_range,
+)
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import spec_facts
 from psycopg.rows import dict_row
@@ -174,9 +181,12 @@ def analyze_item(
             market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today
         )
     sig = signals(facts)
+    eff_failed = effective_failed(
+        item["failed_count"], item["appraisal_krw"], item["min_price_krw"]
+    )
     rates = rate_range(
         sales, as_of=today, sido=item["sido"], sigungu=item["sigungu"], usage_name=item["usage_name"],
-        area_m2=float(item["building_area_m2"]) if item["building_area_m2"] else None, failed_count=item["failed_count"],
+        area_m2=float(item["building_area_m2"]) if item["building_area_m2"] else None, failed_count=eff_failed,
     )  # fmt: skip
     app, mn = item["appraisal_krw"], item["min_price_krw"]
     min_rate = round(mn * 100 / app, 1) if app and mn else None
@@ -206,9 +216,7 @@ def analyze_item(
         "sale_rate": rates.value,
         "court_cell": court.value,
         "local_peers": peers.value,
-        "new_item": new_item(
-            item["failed_count"], app, market["price_krw"] if market else None
-        ).value,
+        "new_item": new_item(eff_failed, app, market["price_krw"] if market else None).value,
         "market": market,
         "tenant_count": len(tenants),
     }

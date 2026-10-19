@@ -4,7 +4,7 @@ from datetime import date
 from typing import Any
 
 from aucs_rules.risk import FAILURE_TYPES
-from aucs_rules.sale_rate import next_round_min_price
+from aucs_rules.sale_rate import next_round_min_price, restarted
 from aucs_rules.schedule import after_sale
 
 from aucs_api.db import connect
@@ -133,6 +133,10 @@ def worth(
         notes.append(gap[1])
         mkt = None
     # 「처음 나온 물건」은 최저가가 감정가 그대로일 때만 (유찰 수 자료가 빠진 물건이 있음)
+    if restarted(r.get("failed_count"), app, mn):
+        notes.append(
+            f"유찰 {r['failed_count']}회 뒤 매각조건이 바뀌어 감정가부터 다시 시작해요(최저가=감정가)"
+        )
     if r.get("new_item") and (not app or not mn or mn >= app):
         if gap:  # 감정가를 그대로 믿기 어려운 신건 → 「비싸게 팔려요」라고 하지 않음
             return (
@@ -146,6 +150,8 @@ def worth(
                 notes,
                 None,
             )
+        if restarted(r.get("failed_count"), app, mn):
+            return "감정가부터 다시 시작한 물건이라 처음 나온 물건처럼 보면 돼요", notes, None
         return "처음 나온 물건이라 보통 감정가보다 비싸게 팔려요", notes, None
     if not rate:
         return "비교할 낙찰 사례가 부족해요", notes, None

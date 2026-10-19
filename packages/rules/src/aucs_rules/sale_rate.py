@@ -190,6 +190,26 @@ def local_peers(
     return RuleResult(value, Status.ESTIMATED, "sale_rate.local", [])
 
 
+def effective_failed(
+    failed_count: int | None, appraisal_krw: int | None, min_price_krw: int | None
+) -> int:
+    """낙찰가율 표본을 고를 때 쓰는 유찰 횟수.
+
+    유찰이 있었어도 최저가가 감정가 그대로면(임차인 대항력 포기 등 매각조건이 바뀌어
+    법원이 감정가부터 다시 시작) 처음 나온 물건과 같은 자리라 0으로 봅니다.
+    """
+    if appraisal_krw and min_price_krw and min_price_krw >= appraisal_krw:
+        return 0
+    return failed_count or 0
+
+
+def restarted(
+    failed_count: int | None, appraisal_krw: int | None, min_price_krw: int | None
+) -> bool:
+    """유찰이 있었는데 최저가가 감정가로 돌아온 물건."""
+    return bool(failed_count) and effective_failed(failed_count, appraisal_krw, min_price_krw) == 0
+
+
 def new_item(
     failed_count: int | None, appraisal_krw: int | None, market_krw: int | None
 ) -> RuleResult:
