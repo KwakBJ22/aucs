@@ -92,8 +92,8 @@ function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () =>
         </b>{" "}
         · {c.court}
       </span>
-      <span style={{ fontSize: 14, fontWeight: 600, display: "block", marginTop: 2 }}>
-        {c.place} {c.building ?? c.usage}
+      <span className="clamp2" style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+        {c.building?.split(" ")[0] ?? c.usage} <span className="sub">{c.place}</span>
       </span>
       <span style={{ fontSize: 15, fontWeight: 700, display: "block", marginTop: 4 }}>
         {won(c.min_price_krw)}
@@ -239,7 +239,7 @@ export default function Watch() {
               ) : (
                 <div className="board">
                   {WATCH_STEPS.map((s) => (
-                    <div key={s} className="board-col">
+                    <div key={s} className={`board-col${count(s) === 0 ? " empty" : ""}`}>
                       <div className="board-head">
                         {t.steps[s]} <span className="sub">{count(s)}</span>
                       </div>

@@ -7,6 +7,8 @@ describe("won", () => {
     expect(won(92_670_000)).toBe("9,267만");
     expect(won(300_000_000)).toBe("3억");
     expect(won(null)).toBe("-");
+    expect(won(4_762_475_800_000)).toBe("4조 7,624억");
+    expect(won(1_000_000_000_000)).toBe("1조");
   });
   it("D-day", () => expect(dday(0)).toBe("D-day"));
 });

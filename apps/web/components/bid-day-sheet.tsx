@@ -47,7 +47,7 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
         type="checkbox"
         checked={Boolean(done[k])}
         onChange={() => tick(k)}
-        style={{ width: 20, height: 20 }}
+        style={{ width: 20, height: 20, flexShrink: 0 }}
       />
       <span>
         <span style={{ fontWeight: 600, opacity: done[k] ? 0.5 : 1 }}>{label}</span>

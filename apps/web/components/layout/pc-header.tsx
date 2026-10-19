@@ -31,7 +31,7 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
   const [q, setQ] = useState("");
   const cur = admin ? undefined : activeNav(path);
   const guest = !session;
-  const subOn = Math.max(0, cur?.sub.findIndex((x) => x.href.split("#")[0] === path) ?? 0);
+  const subOn = cur?.sub.findIndex((x) => x.href.split("#")[0] === path) ?? -1;
 
   function search(e: React.FormEvent) {
     e.preventDefault();

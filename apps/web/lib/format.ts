@@ -2,6 +2,12 @@
 export function won(n: number | null | undefined): string {
   if (n == null) return "-";
   const man = Math.round(n / 10_000);
+  if (man >= 100_000_000) {
+    // 1조 이상: 「4조 7,624억」
+    const jo = Math.floor(man / 100_000_000);
+    const restEok = Math.floor((man % 100_000_000) / 10_000);
+    return restEok ? `${jo}조 ${restEok.toLocaleString("ko-KR")}억` : `${jo}조`;
+  }
   const eok = Math.floor(man / 10_000);
   const rest = man % 10_000;
   if (eok && rest) return `${eok}억 ${rest.toLocaleString("ko-KR")}만`;

@@ -283,7 +283,9 @@ export default function Find() {
         {query
           ? t.searching
           : list && status !== "sold" && status !== "withdrawn"
-            ? `${t.total(list.total)} · ${t.mapSoon}`
+            ? pc
+              ? t.total(list.total)
+              : `${t.total(list.total)} · ${t.mapSoon}`
             : ""}
       </p>
     </>
