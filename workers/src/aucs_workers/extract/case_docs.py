@@ -44,6 +44,31 @@ def case_events(deliveries: dict[str, Any], claim_deadline: date | None) -> list
     return out
 
 
+_CLAIM = re.compile(r"^\s*임차인\s*(\S)\S*\s.*배당요구")
+
+
+def tenant_claim_dates(deliveries: dict[str, Any], names: list[str | None]) -> list[date | None]:
+    """문건 접수 「임차인 임O 권리신고및배당요구신청 제출」 → 임차인별 배당요구일(가장 이른 날).
+
+    법원이 이름을 가려 첫 글자로만 맞춥니다. 임차인이 한 명이면 첫 글자가 안 맞아도 그 사람으로 봅니다.
+    같은 첫 글자 임차인이 둘 이상이면 누군지 몰라 비워 둡니다."""
+    found: list[tuple[str, date]] = []
+    for x in deliveries.get("dlt_ofdocDtsLst") or []:
+        m = _CLAIM.search(str(x.get("rcptDts") or ""))
+        d = _d(x.get("ofdocRcptYmd"))
+        if m and d:
+            found.append((m.group(1), d))
+    out: list[date | None] = []
+    for n in names:
+        first = (n or "")[:1]
+        same = [k for k in names if (k or "")[:1] == first]
+        hits = [d for c, d in found if c == first] if first and len(same) == 1 else []
+        if not hits and len(names) == 1:
+            hits = [d for _, d in found]
+        out.append(min(hits) if hits else None)
+    return out
+
+
 def apply_case_docs(
     conn: psycopg.Connection, case_id: str, docs: dict[str, dict[str, Any]]
 ) -> None:
@@ -60,6 +85,19 @@ def apply_case_docs(
     deliveries = docs.get("deliveries") or {}
     if not deliveries:
         return
+    # 임차인 배당요구일: 문건에서 (비어 있는 것만 채움)
+    names = conn.execute(
+        "select tenant_id, name_raw from core.tenants where case_id = %s order by tenant_id",
+        (case_id,),
+    ).fetchall()
+    for (tid, _), d in zip(
+        names, tenant_claim_dates(deliveries, [n for _, n in names]), strict=True
+    ):
+        if d:
+            conn.execute(
+                "update core.tenants set claim_date = %s where tenant_id = %s and claim_date is null",
+                (d, tid),
+            )
     events = case_events(deliveries, basics["claim_deadline"])
     conn.execute("delete from core.case_events where case_id = %s", (case_id,))
     with conn.cursor() as cur:

@@ -66,3 +66,20 @@ def test_status_report_tenants() -> None:
         t["name_masked"] == "홍○○" and t["deposit_krw"] == 200_000_000 and t["fixed_date"] is None
     )
     assert occupant_unknown(sr)
+
+
+def test_tenant_claim_dates_from_filings():
+    from datetime import date
+
+    from aucs_workers.extract.case_docs import tenant_claim_dates
+
+    dl = {"dlt_ofdocDtsLst": [
+        {"rcptDts": "임차인 임O 권리신고및배당요구신청 제출", "ofdocRcptYmd": "20250626"},
+        {"rcptDts": "임차인 임O 보정서 제출", "ofdocRcptYmd": "20260410"},
+        {"rcptDts": "임차인 박OO 배당요구신청서 제출", "ofdocRcptYmd": "20250701"},
+        {"rcptDts": "채권자 주OOO 배당요구신청 제출", "ofdocRcptYmd": "20250601"},
+    ]}  # fmt: skip
+    assert tenant_claim_dates(dl, ["임원"]) == [date(2025, 6, 26)]
+    assert tenant_claim_dates(dl, ["임원", "박철수"]) == [date(2025, 6, 26), date(2025, 7, 1)]
+    assert tenant_claim_dates(dl, ["김가", "김나"]) == [None, None]
+    assert tenant_claim_dates({"dlt_ofdocDtsLst": []}, ["임원"]) == [None]
