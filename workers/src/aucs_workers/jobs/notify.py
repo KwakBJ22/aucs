@@ -71,8 +71,30 @@ def won(v: int) -> str:
     return f"{eok}억원" if eok else f"{man:,}만원"
 
 
+USAGE_GROUPS = {
+    "apt": "아파트",
+    "villa": "다세대|연립|빌라",
+    "officetel": "오피스텔",
+    "house": "단독|다가구",
+    "shop": "상가|근린|점포|사무|공장|창고|숙박|업무",
+    "land": "대지|전답|임야|토지|잡종|^전$|^답$",
+}  # API pro.USAGE_GROUPS 와 같게
+EXCLUDE_RULES = {
+    "share": ["risk.share"],
+    "special": ["risk.special_condition"],
+    "villa": ["risk.neighborhood_villa"],
+    "stop": ["risk.stop", "risk.withdraw"],
+    "lien": ["risk.lien"],
+    "senior": ["risk.senior_tenant", "risk.prior_rights", "risk.lease_reg"],
+    "superficies": ["risk.superficies", "risk.land_right"],
+    "illegal": ["risk.illegal"],
+    "farmland": ["risk.farmland"],
+    "resale": ["risk.resale"],
+}  # API pro.EXCLUDE_RULES 와 같게
+
+
 def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """찾기 화면과 같은 기준(시군구, 최저가/10 ≤ 현금)."""
+    """찾기 화면과 같은 기준(시군구, 최저가/10 ≤ 현금, 찾기 조건 칸, 피하고 싶은 것)."""
     sql = "i.sale_date >= current_date and i.status_code is distinct from 'gone'"
     p: dict[str, Any] = {}
     if filters.get("sigungu"):
@@ -81,6 +103,33 @@ def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if filters.get("max_cash"):
         sql += " and i.min_price_krw / 10 <= %(max_cash)s"
         p["max_cash"] = int(filters["max_cash"])
+    groups = [USAGE_GROUPS[g] for g in filters.get("usage") or [] if g in USAGE_GROUPS]
+    if groups:
+        sql += " and i.usage_name ~ %(usage_re)s"
+        p["usage_re"] = "|".join(f"({g})" for g in groups)
+    for key, col, op in (
+        ("failed_min", "i.failed_count", ">="),
+        ("price_max", "i.min_price_krw", "<="),
+        ("area_min", "i.building_area_m2", ">="),
+        ("area_max", "i.building_area_m2", "<="),
+    ):
+        if filters.get(key) is not None:
+            sql += f" and coalesce({col}, 0) {op} %({key})s"
+            p[key] = filters[key]
+    if filters.get("rate_max") is not None:
+        sql += " and i.min_price_krw * 100 <= %(rate_max)s * i.appraisal_krw"
+        p["rate_max"] = filters["rate_max"]
+    if filters.get("days_max") is not None:
+        sql += " and i.sale_date <= current_date + %(days_max)s"
+        p["days_max"] = int(filters["days_max"])
+    rules = [r for k in filters.get("exclude") or [] for r in EXCLUDE_RULES.get(k, [])]
+    if rules:
+        sql += """ and not exists (select 1 from analysis.item_analysis a,
+                   jsonb_array_elements(coalesce(a.result -> 'signals', '[]'::jsonb)) s
+                   where a.item_id = i.item_id
+                     and a.version = (select max(version) from analysis.item_analysis x where x.item_id = i.item_id)
+                     and s ->> 'rule_id' = any(%(ex_rules)s) and s ->> 'status' <> '모름')"""
+        p["ex_rules"] = rules
     return sql, p
 
 
