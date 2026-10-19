@@ -170,6 +170,9 @@ export const copy = {
       summaryReading: "올린 등기부를 읽고 있어요",
       payTitle: (price: string) => `배당 예상 · 최저가 ${price}에 낙찰되면`,
       payLeft: "남는 돈(소유자에게)",
+      specSame: (spec: string) => `✓ 명세서 최선순위(${spec})와 같아요`,
+      specDiff: (spec: string, reg: string) =>
+        `명세서 최선순위는 「${spec}」예요 · 등기부 말소기준(${reg})과 달라요 — 원문을 확인하세요`,
       addrDiff: "올린 등기부가 이 물건과 달라요",
       addrUnit: (reg: string, item: string) => `호수가 달라요 (등기부 ${reg} · 이 물건 ${item})`,
       addrReg: "등기부",

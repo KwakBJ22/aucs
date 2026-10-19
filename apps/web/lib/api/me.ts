@@ -69,6 +69,7 @@ export type Ladder = {
   hold_krw: number;
   line: string;
   state: string;
+  spec_check?: { same: boolean; spec: string; spec_date: string; registry_date: string } | null;
   payout: {
     price_krw: number;
     rows: { name: string; claim_krw: number | null; paid_krw: number }[];

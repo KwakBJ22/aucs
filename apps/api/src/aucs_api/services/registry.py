@@ -26,6 +26,7 @@ from aucs_rules.tenants import (
 from psycopg.types.json import Jsonb
 
 from aucs_api.db import connect
+from aucs_api.services.docs import item_spec
 
 MAX_BYTES = 10 * 1024 * 1024
 KEEP_DAYS = 30  # 매각기일 뒤 원본 보관 날수 (10/18 대표님)
@@ -267,10 +268,11 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
         if not u:
             return None
         meta = c.execute(
-            """select c.claim_deadline, i.case_id, i.min_price_krw, i.sido, i.sigungu, i.address
+            """select c.claim_deadline, i.case_id, i.item_no, i.min_price_krw, i.sido, i.sigungu, i.address
                from core.items i join core.cases c using (case_id) where i.item_id = %s""",
             (item_id,),
         ).fetchone()
+        spec, _ = item_spec(c, meta["case_id"], meta["item_no"] or 1) if meta else (None, None)
         small_rows = c.execute(
             "select valid_from, valid_to, value from ref.rule_tables where rule_key = 'small_lease_limit'"
         ).fetchall()
@@ -298,7 +300,24 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
             region_cls=_region(meta, rights) if meta else None,
             small_table=flatten_small_lease_table([dict(r) for r in small_rows]),
         )  # fmt: skip
+        out["ladder"]["spec_check"] = spec_base_check(
+            out["ladder"]["base"], spec.get("base") if spec else None
+        )
     return out
+
+
+def spec_base_check(
+    ladder_base: dict[str, Any] | None, spec_base: str | None
+) -> dict[str, Any] | None:
+    """등기부 말소기준 ↔ 명세서 최선순위 설정(「2021.3.31.근저당권」) 맞춰 보기. 둘 중 하나라도 없으면 None."""
+    if not ladder_base or not ladder_base.get("date") or not spec_base:
+        return None
+    m = re.search(r"(\d{4})\s*\.\s*(\d{1,2})\s*\.\s*(\d{1,2})", spec_base)
+    if not m:
+        return None
+    sd = f"{m[1]}-{int(m[2]):02d}-{int(m[3]):02d}"
+    return {"same": sd == ladder_base["date"], "spec": spec_base.strip(), "spec_date": sd,
+            "registry_date": ladder_base["date"]}  # fmt: skip
 
 
 def accept_address(uid: str, item_id: str) -> dict[str, Any] | None:

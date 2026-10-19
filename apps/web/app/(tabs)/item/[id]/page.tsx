@@ -498,6 +498,20 @@ function RegistryBox() {
       {lad && (
         <>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{lad.line}</div>
+          {lad.spec_check && (
+            <div
+              style={{
+                fontSize: 12,
+                marginTop: 4,
+                color: lad.spec_check.same ? "var(--muted)" : "var(--amber)",
+                fontWeight: lad.spec_check.same ? 400 : 600,
+              }}
+            >
+              {lad.spec_check.same
+                ? r.specSame(lad.spec_check.spec)
+                : r.specDiff(lad.spec_check.spec, lad.spec_check.registry_date)}
+            </div>
+          )}
           <div style={{ marginTop: 6 }}>
             {lad.rows.map((x) => (
               <div key={`${x.section}${x.rank_no}`}>

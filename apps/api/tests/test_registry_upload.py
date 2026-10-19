@@ -94,3 +94,14 @@ def test_ladder_payout_senior_tenant_claimed():
     assert lad["tenants"][0]["verdict"] == "배당에서 2억 9,800만 받고 1억 200만을 떠안아요"
     assert lad["hold_krw"] == 102000000 and lad["line"] == "떠안는 돈 약 1억 200만"
     assert lad["payout"]["rows"][0]["name"] == "경매비용(대략)"
+
+
+def test_spec_base_check():
+    from aucs_api.services.registry import spec_base_check
+
+    base = {"name": "근저당권설정", "date": "2021-03-31"}
+    assert spec_base_check(base, "2021.3.31.근저당권")["same"] is True
+    r = spec_base_check(base, "2020.11.2. 가압류")
+    assert r["same"] is False and r["spec_date"] == "2020-11-02"
+    assert spec_base_check(None, "2021.3.31.근저당권") is None
+    assert spec_base_check(base, None) is None
