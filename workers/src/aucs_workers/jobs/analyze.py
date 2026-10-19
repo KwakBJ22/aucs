@@ -10,6 +10,7 @@
 import argparse
 import hashlib
 import json
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -21,6 +22,7 @@ from aucs_rules.progress import judge_progress
 from aucs_rules.risk import signals, top_signal
 from aucs_rules.sale_rate import Sale, court_cell, local_peers, new_item, rate_range
 from aucs_rules.small_lease_region import region_class
+from aucs_rules.spec_facts import spec_facts
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -83,6 +85,24 @@ def commercial_over(
     return False
 
 
+def load_spec(cur: Any, item: dict[str, Any]) -> dict[str, Any] | None:
+    """물건상세(item_detail_N)의 명세서 칸 (작성 전이면 None)."""
+    row = cur.execute(
+        "select payload from raw.court_doc_raw where case_id = %s and doc_kind = %s order by fetched_at desc limit 1",
+        (item["case_id"], f"item_detail_{item.get('item_no') or 1}"),
+    ).fetchone()
+    info = ((row or {}).get("payload") or {}).get("dma_result", {}).get("dspslGdsDxdyInfo") or {}
+    if not info.get("gdsSpcfcWrtYmd"):
+        return None
+
+    def clean(k: str) -> str | None:
+        v = re.sub(r"<br\s*/?>", " ", str(info.get(k) or "")).strip()
+        return v or None
+
+    return {"keep": clean("ndstrcRghCtt"), "superficies": clean("sprfcExstcDts"),
+            "remark": clean("gdsSpcfcRmk"), "item_remark": clean("dspslGdsRmk")}  # fmt: skip
+
+
 def build_facts(
     item: dict[str, Any],
     events: list[dict[str, Any]],
@@ -142,6 +162,13 @@ def analyze_item(
     over = commercial_over(item, tenants, commercial_table, today)
     market = load_market(conn, item, today)
     facts = build_facts(item, events, tenants, has_sr, over)
+    # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도
+    sf = spec_facts(load_spec(cur, item))
+    spec_note = sf.pop("spec_note", "")
+    if spec_note:
+        facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
+    for k, v in sf.items():
+        facts[k] = facts.get(k) or v
     if market:
         facts.update(
             market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today

@@ -2,6 +2,6 @@
 
 from aucs_rules.result import RuleResult, Status
 
-ENGINE_VERSION = "rules-0.3.0"
+ENGINE_VERSION = "rules-0.3.1"  # 0.3.1: 매각물건명세서 칸으로 위험 신호(10/19)
 
 __all__ = ["ENGINE_VERSION", "RuleResult", "Status"]
