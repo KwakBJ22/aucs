@@ -14,6 +14,8 @@ import {
   type ProRow,
 } from "@/lib/api/pro";
 import { copy } from "@/lib/copy.ko";
+import { PickPanel } from "@/components/pick-panel";
+import { useIsPc } from "@/lib/use-pc";
 import { dday, won } from "@/lib/format";
 
 const t = copy.pro;
@@ -84,6 +86,8 @@ function ProItems() {
   const [cols, setCols] = useState<ColKey[]>(DEFAULT_COLS);
   const [colOpen, setColOpen] = useState(false);
   const [qText, setQText] = useState(f.q ?? "");
+  const [pick, setPick] = useState<string | null>(null);
+  const pc = useIsPc();
 
   useEffect(() => {
     fetchRegions()
@@ -376,6 +380,7 @@ function ProItems() {
         </div>
       </div>
 
+      <div className={pc ? "pc-grid g-58-42" : ""}>
       <section className="section" style={{ padding: 0, overflowX: "auto" }}>
         <table className="pro-table">
           <thead>
@@ -401,7 +406,12 @@ function ProItems() {
               </tr>
             )}
             {data?.rows.map((r) => (
-              <tr key={r.item_id}>
+              <tr
+                key={r.item_id}
+                onClick={() => setPick(r.item_id)}
+                className={pick === r.item_id ? "row-on" : ""}
+                style={{ cursor: pc ? "pointer" : undefined }}
+              >
                 {cols.map((c) => (
                   <td key={c}>{cell(r, c)}</td>
                 ))}
@@ -410,6 +420,12 @@ function ProItems() {
           </tbody>
         </table>
       </section>
+      {pc && (
+        <div className="pc-sticky" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+          <PickPanel id={pick ?? data?.rows[0]?.item_id ?? null} />
+        </div>
+      )}
+      </div>
       <div className="sub">{t.note}</div>
     </main>
   );
