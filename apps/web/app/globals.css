@@ -988,3 +988,17 @@ button {
   justify-content: center;
   background: repeating-linear-gradient(45deg, var(--bg), var(--bg) 10px, var(--surface) 10px, var(--surface) 20px);
 }
+
+.compare-table td.best {
+  background: var(--green-soft);
+}
+@media (min-width: 1024px) {
+  .compare-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .compare-table th:first-child,
+  .compare-table td:first-child {
+    width: 14%;
+  }
+}
