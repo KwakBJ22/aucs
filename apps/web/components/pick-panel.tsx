@@ -26,15 +26,24 @@ export function PickPanel({ id }: { id: string | null }) {
   useEffect(() => {
     setD(null);
     setMsg("");
-    if (id) fetchItem(id).then(setD).catch(() => setD(null));
+    if (id)
+      fetchItem(id)
+        .then(setD)
+        .catch(() => setD(null));
   }, [id]);
-  if (!id) return <section className="section"><p className="sub">{t.pickEmpty}</p></section>;
+  if (!id)
+    return (
+      <section className="section">
+        <p className="sub">{t.pickEmpty}</p>
+      </section>
+    );
   if (!d) return <section className="section" style={{ height: 260, opacity: 0.5 }} />;
   const eid = encodeURIComponent(d.item_id);
   return (
     <section className="section">
       <div className="sub" style={{ margin: 0 }}>
-        <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.sale_date} · {d.court} {d.case_no}
+        <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.sale_date} · {d.court}{" "}
+        {d.case_no}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
         <h2 style={{ marginTop: 4 }}>
@@ -43,7 +52,10 @@ export function PickPanel({ id }: { id: string | null }) {
         <HeartButton id={d.item_id} />
       </div>
       <div style={{ fontSize: 24, fontWeight: 700 }}>
-        {won(d.min_price_krw)} <span className="sub">{d.min_rate}% · 감정가 {won(d.appraisal_krw)}</span>
+        {won(d.min_price_krw)}{" "}
+        <span className="sub">
+          {d.min_rate}% · 감정가 {won(d.appraisal_krw)}
+        </span>
       </div>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }}>{d.verdict}</p>
@@ -52,7 +64,9 @@ export function PickPanel({ id }: { id: string | null }) {
           <span style={{ display: "flex", gap: 8, alignItems: "baseline", minWidth: 0 }}>
             <span className="toc-dot" style={{ background: TONE[q.tone] ?? "var(--faint)" }} />
             <span>
-              <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>{q.title}</span>
+              <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
+                {q.title}
+              </span>
               {q.answer}
             </span>
           </span>
@@ -60,7 +74,11 @@ export function PickPanel({ id }: { id: string | null }) {
         </Link>
       ))}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Link href={`/item/${eid}`} className="btn primary" style={{ height: 44, fontSize: 15, flex: 2 }}>
+        <Link
+          href={`/item/${eid}`}
+          className="btn primary"
+          style={{ height: 44, fontSize: 15, flex: 2 }}
+        >
           {t.toDetail}
         </Link>
         {session && (
@@ -81,19 +99,3 @@ export function PickPanel({ id }: { id: string | null }) {
     </section>
   );
 }
-
-function load(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-function save(key: string, v: string): void {
-  try {
-    localStorage.setItem(key, v);
-  } catch {
-    /* 저장 못 해도 계속 */
-  }
-}
-

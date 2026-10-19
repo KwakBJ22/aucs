@@ -8,7 +8,15 @@ import { copy } from "@/lib/copy.ko";
 import { NAV, activeNav } from "@/lib/nav";
 
 const Lock = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <rect x="5" y="11" width="14" height="10" rx="2" />
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </svg>
@@ -78,7 +86,15 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
         <span style={{ flexGrow: 1 }} />
         {!admin && (
           <form onSubmit={search} className="ph-search" role="search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" />
             </svg>
@@ -92,7 +108,15 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
         )}
         {!admin && !guest && (
           <Link href="/notifications" aria-label={copy.noti.title} className="ph-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden="true"
+            >
               <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
               <path d="M10 20a2 2 0 0 0 4 0" />
             </svg>

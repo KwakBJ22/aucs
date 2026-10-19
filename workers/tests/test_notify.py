@@ -27,7 +27,11 @@ def test_match_sql():
     assert "any(%(sigungu)s)" in sql and p == {"sigungu": ["강남구"], "max_cash": 30_000_000}
     assert match_sql({})[1] == {}
     sql, p = match_sql({"usage": ["apt"], "exclude": ["share", "lien"], "rate_max": 80})
-    assert p["usage_re"] == "(아파트)" and p["ex_rules"] == ["risk.share", "risk.lien"] and p["rate_max"] == 80
+    assert (
+        p["usage_re"] == "(아파트)"
+        and p["ex_rules"] == ["risk.share", "risk.lien"]
+        and p["rate_max"] == 80
+    )
 
 
 def test_listing_gone_text():

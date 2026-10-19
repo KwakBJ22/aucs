@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { meApi, type Bid, type BidIn, type BidTodo, type Bids, type Mock, type WatchCard } from "@/lib/api/me";
+import {
+  meApi,
+  type Bid,
+  type BidIn,
+  type BidTodo,
+  type Bids,
+  type Mock,
+  type WatchCard,
+} from "@/lib/api/me";
 import { PageHeader } from "@/components/layout/page-header";
 import { useIsPc } from "@/lib/use-pc";
 import { dday } from "@/lib/format";
@@ -181,9 +189,20 @@ export default function Me() {
       <p className="sub">{t.upcomingEmpty}</p>
     ) : (
       upcoming.map((w) => (
-        <Link key={w.item_id} href={w.d_day != null && w.d_day <= 1 ? `/item/${encodeURIComponent(w.item_id)}/bid-day` : `/watch/${encodeURIComponent(w.item_id)}`} className="menu-row">
+        <Link
+          key={w.item_id}
+          href={
+            w.d_day != null && w.d_day <= 1
+              ? `/item/${encodeURIComponent(w.item_id)}/bid-day`
+              : `/watch/${encodeURIComponent(w.item_id)}`
+          }
+          className="menu-row"
+        >
           <span style={{ minWidth: 0 }}>
-            <b style={{ color: w.d_day != null && w.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>{dday(w.d_day)}</b> {w.sale_date?.slice(5).replace("-", "/")} · {w.place} {w.building ?? w.usage}
+            <b style={{ color: w.d_day != null && w.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
+              {dday(w.d_day)}
+            </b>{" "}
+            {w.sale_date?.slice(5).replace("-", "/")} · {w.place} {w.building ?? w.usage}
             <span className="sub" style={{ display: "block" }}>
               {copy.watch.steps[w.step]} · {w.court} {w.case_no}
             </span>
@@ -241,10 +260,17 @@ export default function Me() {
       {mocks.map((x) => (
         <div key={x.mock_id} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <Link href={`/item/${encodeURIComponent(x.item_id)}`} style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}>
+            <Link
+              href={`/item/${encodeURIComponent(x.item_id)}`}
+              style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}
+            >
               {x.place} <span className="sub">{md(x.sale_date)}</span>
             </Link>
-            <button className="chip gray" style={{ border: 0, minHeight: 28 }} onClick={() => dropMock(x.mock_id)}>
+            <button
+              className="chip gray"
+              style={{ border: 0, minHeight: 28 }}
+              onClick={() => dropMock(x.mock_id)}
+            >
               {copy.mock.remove}
             </button>
           </div>

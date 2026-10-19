@@ -19,7 +19,15 @@ export function MobileTabbar() {
     <nav className="tabbar" aria-label="하단 탭">
       {TABS.map((t) => (
         <Link key={t.key} href={t.href} className={on === t.key ? "on" : ""}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden="true"
+          >
             <path d={ICON[t.key]} />
           </svg>
           {t.label}

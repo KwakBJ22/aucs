@@ -20,7 +20,11 @@ export default function More() {
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   useEffect(() => setProfile(loadProfile()), []);
   useEffect(() => {
-    if (session) meApi.searches(session.access_token).then(setSearches).catch(() => {});
+    if (session)
+      meApi
+        .searches(session.access_token)
+        .then(setSearches)
+        .catch(() => {});
   }, [session]);
   if (!ready) return null;
 
@@ -30,12 +34,16 @@ export default function More() {
         <>
           <h2>{t.hello}</h2>
           <div className="sub">{session.user.email}</div>
-          <div className="chip gray" style={{ marginTop: 8 }}>{t.plan}</div>
+          <div className="chip gray" style={{ marginTop: 8 }}>
+            {t.plan}
+          </div>
         </>
       ) : (
         <>
           <h2>{t.title}</h2>
-          <div className="sub" style={{ fontSize: 14 }}>{t.sub}</div>
+          <div className="sub" style={{ fontSize: 14 }}>
+            {t.sub}
+          </div>
           <Link href="/login" className="btn kakao" style={{ marginTop: 14 }}>
             {copy.home.kakao}
           </Link>
@@ -48,15 +56,30 @@ export default function More() {
       <h2>{t.cond}</h2>
       {profile ? (
         <>
-          <div className="line-row"><span className="sub">{t.regions}</span><span>{profile.regions.join(" · ") || "-"}</span></div>
-          <div className="line-row"><span className="sub">{t.cash}</span><span>{profile.cash ? won(profile.cash) : "-"}</span></div>
-          <div className="line-row"><span className="sub">{t.purpose}</span><span>{profile.purpose ? copy.home.purposeName[profile.purpose] : "-"}</span></div>
-          <div className="line-row"><span className="sub">{t.homes}</span><span>{profile.homes != null ? t.homesN(profile.homes) : "-"}</span></div>
+          <div className="line-row">
+            <span className="sub">{t.regions}</span>
+            <span>{profile.regions.join(" · ") || "-"}</span>
+          </div>
+          <div className="line-row">
+            <span className="sub">{t.cash}</span>
+            <span>{profile.cash ? won(profile.cash) : "-"}</span>
+          </div>
+          <div className="line-row">
+            <span className="sub">{t.purpose}</span>
+            <span>{profile.purpose ? copy.home.purposeName[profile.purpose] : "-"}</span>
+          </div>
+          <div className="line-row">
+            <span className="sub">{t.homes}</span>
+            <span>{profile.homes != null ? t.homesN(profile.homes) : "-"}</span>
+          </div>
         </>
       ) : (
         <p className="sub">{t.condNone}</p>
       )}
-      <Link href="/start" className="menu-row"><span>{copy.home.changeAnswers}</span><span /></Link>
+      <Link href="/start" className="menu-row">
+        <span>{copy.home.changeAnswers}</span>
+        <span />
+      </Link>
     </section>
   );
   const alerts = session && (
@@ -69,7 +92,10 @@ export default function More() {
           <span className="sub">{x.delivery === "instant" ? t.instant : t.daily}</span>
         </div>
       ))}
-      <Link href="/find" className="menu-row"><span>{t.alertsAdd}</span><span className="sub">›</span></Link>
+      <Link href="/find" className="menu-row">
+        <span>{t.alertsAdd}</span>
+        <span className="sub">›</span>
+      </Link>
     </section>
   );
   const menu = (
@@ -88,7 +114,11 @@ export default function More() {
         ),
       )}
       {session && (
-        <button className="menu-row" style={{ width: "100%", border: 0, background: "none", textAlign: "left" }} onClick={() => void signOut()}>
+        <button
+          className="menu-row"
+          style={{ width: "100%", border: 0, background: "none", textAlign: "left" }}
+          onClick={() => void signOut()}
+        >
           <span>{t.logout}</span>
           <span />
         </button>
@@ -103,7 +133,9 @@ export default function More() {
         <div className="pc-grid g-20-80">
           <nav className="section toc pc-sticky" style={{ marginTop: 0 }}>
             {t.toc.map(([label, href]) => (
-              <a key={href} href={href}>{label}</a>
+              <a key={href} href={href}>
+                {label}
+              </a>
             ))}
           </nav>
           <div className="pc-grid g-2x2">

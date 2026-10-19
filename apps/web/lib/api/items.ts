@@ -102,7 +102,7 @@ export function fetchItems(opts: {
 }): Promise<ItemList> {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(opts.filter ?? {})) {
-    if (v == null || v === "") continue;
+    if (v == null) continue;
     if (Array.isArray(v)) v.forEach((x) => q.append(k, String(x)));
     else q.set(k, String(v));
   }

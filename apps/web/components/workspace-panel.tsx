@@ -94,7 +94,11 @@ export function WorkspacePanel({
   return (
     <>
       {d && (
-        <Link href={`/item/${eid}`} className="section" style={{ display: "block", color: "inherit" }}>
+        <Link
+          href={`/item/${eid}`}
+          className="section"
+          style={{ display: "block", color: "inherit" }}
+        >
           <div className="sub">
             <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.court} {d.case_no}
           </div>
@@ -132,7 +136,13 @@ export function WorkspacePanel({
       {!all && (
         <div className="seg" role="tablist">
           {(["memo", "checks", "calcs", "history"] as Tab[]).map((k) => (
-            <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+            <button
+              key={k}
+              role="tab"
+              aria-selected={tab === k}
+              className={tab === k ? "on" : ""}
+              onClick={() => setTab(k)}
+            >
               {t.tabs[k]}
             </button>
           ))}
@@ -194,7 +204,11 @@ export function WorkspacePanel({
                   {x.cash_krw ? t.cashNeed(won(x.cash_krw)) : ""} · {x.saved_at}
                 </span>
               </span>
-              <button className="chip gray" style={{ border: 0, minHeight: 32 }} onClick={() => removeCalc(x.bid_krw)}>
+              <button
+                className="chip gray"
+                style={{ border: 0, minHeight: 32 }}
+                onClick={() => removeCalc(x.bid_krw)}
+              >
                 {t.remove}
               </button>
             </div>

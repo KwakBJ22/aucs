@@ -122,180 +122,179 @@ export default function FieldPage() {
         </Link>
       </div>
       <div className="pc-grid g-55-45">
-      <div>
-      {d && (
-        <section className="section">
-          <div style={{ fontWeight: 600 }}>
-            {d.place} {d.building ?? d.usage}
-          </div>
-          <div className="sub">{d.address}</div>
-          {dist != null && (
-            <div
-              style={{
-                marginTop: 6,
-                fontWeight: 700,
-                color: dist < 300 ? "var(--green)" : "var(--muted)",
-              }}
+        <div>
+          {d && (
+            <section className="section">
+              <div style={{ fontWeight: 600 }}>
+                {d.place} {d.building ?? d.usage}
+              </div>
+              <div className="sub">{d.address}</div>
+              {dist != null && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontWeight: 700,
+                    color: dist < 300 ? "var(--green)" : "var(--muted)",
+                  }}
+                >
+                  {dist < 300
+                    ? t.near
+                    : t.far(dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${dist}m`)}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                {d.address && (
+                  <a
+                    href={mapQ(d.address)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="chip gray"
+                    style={{ minHeight: 36 }}
+                  >
+                    {t.route} ›
+                  </a>
+                )}
+                {name && (
+                  <a
+                    href={mapQ(`${name} 관리사무소`)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="chip gray"
+                    style={{ minHeight: 36 }}
+                  >
+                    {t.office} ›
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+          <section className="section">
+            <h2>{t.askTitle}</h2>
+            {t.ask.map((q) => (
+              <div
+                key={q}
+                style={{ fontSize: 14, padding: "6px 0", borderTop: "1px solid var(--line)" }}
+              >
+                {q}
+              </div>
+            ))}
+            <button
+              className="chip gray"
+              style={{ border: 0, minHeight: 36, marginTop: 8 }}
+              onClick={() =>
+                navigator.clipboard?.writeText(askText).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                })
+              }
             >
-              {dist < 300
-                ? t.near
-                : t.far(dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${dist}m`)}
+              {copied ? t.copied : t.copy}
+            </button>
+          </section>
+
+          <section className="section">
+            <h2>{t.lookTitle}</h2>
+            {t.look.map(([k, label, sub]) => {
+              const key = `field_${k}`;
+              const on = Boolean(w?.checks[key]);
+              return (
+                <label
+                  key={k}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    padding: "10px 0",
+                    borderTop: "1px solid var(--line)",
+                    minHeight: 44,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => toggle(key)}
+                    style={{ width: 20, height: 20 }}
+                  />
+                  <span>
+                    <span style={{ fontWeight: 600, opacity: on ? 0.5 : 1 }}>{label}</span>
+                    <span className="sub" style={{ display: "block" }}>
+                      {sub}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </section>
+        </div>
+        <div>
+          <section className="section">
+            <h2>{t.media}</h2>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                className="btn primary"
+                style={{ height: 48, flex: 1 }}
+                onClick={() => photoInput.current?.click()}
+              >
+                {t.photo}
+              </button>
+              <button
+                className="btn"
+                style={{
+                  height: 48,
+                  flex: 1,
+                  background: rec ? "var(--red)" : "var(--gray-chip)",
+                  color: rec ? "#fff" : "var(--text)",
+                }}
+                onClick={rec ? stopRec : startRec}
+              >
+                {rec ? t.stop : t.voice}
+              </button>
             </div>
-          )}
-          <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-            {d.address && (
-              <a
-                href={mapQ(d.address)}
-                target="_blank"
-                rel="noreferrer"
-                className="chip gray"
-                style={{ minHeight: 36 }}
-              >
-                {t.route} ›
-              </a>
-            )}
-            {name && (
-              <a
-                href={mapQ(`${name} 관리사무소`)}
-                target="_blank"
-                rel="noreferrer"
-                className="chip gray"
-                style={{ minHeight: 36 }}
-              >
-                {t.office} ›
-              </a>
-            )}
-          </div>
-        </section>
-      )}
-
-      <section className="section">
-        <h2>{t.askTitle}</h2>
-        {t.ask.map((q) => (
-          <div
-            key={q}
-            style={{ fontSize: 14, padding: "6px 0", borderTop: "1px solid var(--line)" }}
-          >
-            {q}
-          </div>
-        ))}
-        <button
-          className="chip gray"
-          style={{ border: 0, minHeight: 36, marginTop: 8 }}
-          onClick={() =>
-            navigator.clipboard?.writeText(askText).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            })
-          }
-        >
-          {copied ? t.copied : t.copy}
-        </button>
-      </section>
-
-      <section className="section">
-        <h2>{t.lookTitle}</h2>
-        {t.look.map(([k, label, sub]) => {
-          const key = `field_${k}`;
-          const on = Boolean(w?.checks[key]);
-          return (
-            <label
-              key={k}
-              style={{
-                display: "flex",
-                gap: 10,
-                padding: "10px 0",
-                borderTop: "1px solid var(--line)",
-                minHeight: 44,
+            <input
+              ref={photoInput}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              hidden
+              onChange={(e) => {
+                void onPhotos(e.target.files);
+                e.target.value = "";
               }}
-            >
-              <input
-                type="checkbox"
-                checked={on}
-                onChange={() => toggle(key)}
-                style={{ width: 20, height: 20 }}
-              />
-              <span>
-                <span style={{ fontWeight: 600, opacity: on ? 0.5 : 1 }}>{label}</span>
-                <span className="sub" style={{ display: "block" }}>
-                  {sub}
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </section>
-
-      </div>
-      <div>
-      <section className="section">
-        <h2>{t.media}</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            className="btn primary"
-            style={{ height: 48, flex: 1 }}
-            onClick={() => photoInput.current?.click()}
-          >
-            {t.photo}
-          </button>
-          <button
-            className="btn"
-            style={{
-              height: 48,
-              flex: 1,
-              background: rec ? "var(--red)" : "var(--gray-chip)",
-              color: rec ? "#fff" : "var(--text)",
-            }}
-            onClick={rec ? stopRec : startRec}
-          >
-            {rec ? t.stop : t.voice}
-          </button>
-        </div>
-        <input
-          ref={photoInput}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          multiple
-          hidden
-          onChange={(e) => {
-            void onPhotos(e.target.files);
-            e.target.value = "";
-          }}
-        />
-        {busy && (
-          <div className="sub" style={{ marginTop: 6 }}>
-            {busy}
-          </div>
-        )}
-        <div className="field-grid">
-          {files.map((f) =>
-            f.kind === "photo" ? (
-              <div key={f.path} className="field-item">
-                <a href={f.url} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f.url} alt={f.at} />
-                </a>
-                <button onClick={() => del(f)} aria-label={t.remove}>
-                  ×
-                </button>
+            />
+            {busy && (
+              <div className="sub" style={{ marginTop: 6 }}>
+                {busy}
               </div>
-            ) : (
-              <div key={f.path} className="field-voice">
-                <audio controls src={f.url} />
-                <span className="sub">{f.at}</span>
-                <button className="chip gray" style={{ border: 0 }} onClick={() => del(f)}>
-                  {t.remove}
-                </button>
-              </div>
-            ),
-          )}
+            )}
+            <div className="field-grid">
+              {files.map((f) =>
+                f.kind === "photo" ? (
+                  <div key={f.path} className="field-item">
+                    <a href={f.url} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={f.url} alt={f.at} />
+                    </a>
+                    <button onClick={() => del(f)} aria-label={t.remove}>
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <div key={f.path} className="field-voice">
+                    <audio controls src={f.url} />
+                    <span className="sub">{f.at}</span>
+                    <button className="chip gray" style={{ border: 0 }} onClick={() => del(f)}>
+                      {t.remove}
+                    </button>
+                  </div>
+                ),
+              )}
+            </div>
+            <div className="sub" style={{ marginTop: 6 }}>
+              {t.private}
+            </div>
+          </section>
         </div>
-        <div className="sub" style={{ marginTop: 6 }}>
-          {t.private}
-        </div>
-      </section>
-      </div>
       </div>
     </main>
   );

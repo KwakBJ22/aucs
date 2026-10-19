@@ -25,6 +25,21 @@ const t = copy.find;
 const KEY_STATUS = "aucs_find_status";
 const KEY_RECENT = "aucs_recent_q";
 const KEY_FILTER = "aucs_find_filter";
+function load(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function save(key: string, v: string): void {
+  try {
+    localStorage.setItem(key, v);
+  } catch {
+    /* 저장 못 해도 계속 */
+  }
+}
+
 // 끝난 사건 한 줄 (매각·취하·변경)
 function ResultRow({ r }: { r: ResultCard }) {
   const body = (
@@ -109,7 +124,9 @@ export default function Find() {
           return;
         }
         setList(r);
-        setPick((p) => (p && r.items.some((x) => x.item_id === p) ? p : (r.items[0]?.item_id ?? null)));
+        setPick((p) =>
+          p && r.items.some((x) => x.item_id === p) ? p : (r.items[0]?.item_id ?? null),
+        );
       })
       .catch(() => setList({ total: 0, items: [], results: [] }));
   }, [sort, status, query, filter]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -292,7 +309,10 @@ export default function Find() {
       <main className="page">
         <PageHeader title={t.title} sub={regions.join(" · ")} />
         <div className="pc-grid g-18-34-48">
-          <section className="section pc-sticky" style={{ marginTop: 0, maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+          <section
+            className="section pc-sticky"
+            style={{ marginTop: 0, maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+          >
             <h2>{t.cond}</h2>
             {filters}
           </section>
@@ -301,8 +321,12 @@ export default function Find() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               {countLine}
               <div className="pills">
-                <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>{t.viewCard}</button>
-                <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>{t.viewTable}</button>
+                <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>
+                  {t.viewCard}
+                </button>
+                <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>
+                  {t.viewTable}
+                </button>
               </div>
             </div>
             {empty && <p className="sub">{t.noResult}</p>}
@@ -320,9 +344,16 @@ export default function Find() {
                   </thead>
                   <tbody>
                     {list?.items.map((c) => (
-                      <tr key={c.item_id} onClick={() => setPick(c.item_id)} className={pick === c.item_id ? "row-on" : ""} style={{ cursor: "pointer" }}>
+                      <tr
+                        key={c.item_id}
+                        onClick={() => setPick(c.item_id)}
+                        className={pick === c.item_id ? "row-on" : ""}
+                        style={{ cursor: "pointer" }}
+                      >
                         <td>{dday(c.d_day)}</td>
-                        <td>{c.place} {c.building ?? c.usage}</td>
+                        <td>
+                          {c.place} {c.building ?? c.usage}
+                        </td>
                         <td>{won(c.min_price_krw)}</td>
                         <td>{c.min_rate}</td>
                         <td>{c.failed_count ?? 0}</td>
@@ -351,7 +382,10 @@ export default function Find() {
               <ResultRow key={r.result_id} r={r} />
             ))}
           </section>
-          <div className="pc-sticky" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+          <div
+            className="pc-sticky"
+            style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+          >
             <section className="section map-box" style={{ marginTop: 0 }}>
               <span className="sub">{t.mapSoon}</span>
             </section>

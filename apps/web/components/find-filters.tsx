@@ -52,7 +52,11 @@ export function FindFilters({
         <div className="f-label">{t.usage}</div>
         <div className="pills">
           {Object.entries(t.usages).map(([k, v]) => (
-            <button key={k} className={(f.usage ?? []).includes(k) ? "on" : ""} onClick={() => set({ usage: toggle(f.usage, k) })}>
+            <button
+              key={k}
+              className={(f.usage ?? []).includes(k) ? "on" : ""}
+              onClick={() => set({ usage: toggle(f.usage, k) })}
+            >
               {v}
             </button>
           ))}
@@ -69,29 +73,59 @@ export function FindFilters({
           min={0}
           step={0.5}
           value={f.price_max != null ? f.price_max / EOK : ""}
-          onChange={(e) => set({ price_max: e.target.value ? Math.round(Number(e.target.value) * EOK) : undefined })}
+          onChange={(e) =>
+            set({
+              price_max: e.target.value ? Math.round(Number(e.target.value) * EOK) : undefined,
+            })
+          }
           className="f-input"
         />
       </div>
       <div className="f-block">
         <div className="f-label">{t.area}</div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input aria-label="최소 면적" type="number" min={0} className="f-input" value={f.area_min ?? ""} onChange={(e) => set({ area_min: e.target.value ? Number(e.target.value) : undefined })} />
+          <input
+            aria-label="최소 면적"
+            type="number"
+            min={0}
+            className="f-input"
+            value={f.area_min ?? ""}
+            onChange={(e) => set({ area_min: e.target.value ? Number(e.target.value) : undefined })}
+          />
           ~
-          <input aria-label="최대 면적" type="number" min={0} className="f-input" value={f.area_max ?? ""} onChange={(e) => set({ area_max: e.target.value ? Number(e.target.value) : undefined })} />
+          <input
+            aria-label="최대 면적"
+            type="number"
+            min={0}
+            className="f-input"
+            value={f.area_max ?? ""}
+            onChange={(e) => set({ area_max: e.target.value ? Number(e.target.value) : undefined })}
+          />
         </div>
       </div>
       <div className="f-block">
         <div className="f-label">{t.days}</div>
-        <Pills opts={t.daysOpt} value={f.days_max ?? null} onPick={(v) => set({ days_max: v ?? undefined })} />
+        <Pills
+          opts={t.daysOpt}
+          value={f.days_max ?? null}
+          onPick={(v) => set({ days_max: v ?? undefined })}
+        />
       </div>
       <div className="f-block">
         <div className="f-label">{t.failed}</div>
-        <Pills opts={t.failedOpt} value={f.failed_min ?? null} onPick={(v) => set({ failed_min: v ?? undefined })} />
+        <Pills
+          opts={t.failedOpt}
+          value={f.failed_min ?? null}
+          onPick={(v) => set({ failed_min: v ?? undefined })}
+        />
       </div>
       <div className="f-block">
         <div className="f-label">{t.rate}</div>
-        <Pills opts={t.rateOpt} value={f.rate_max ?? null} onPick={(v) => set({ rate_max: v ?? undefined })} />
+        <Pills
+          opts={t.rateOpt}
+          value={f.rate_max ?? null}
+          onPick={(v) => set({ rate_max: v ?? undefined })}
+        />
       </div>
       <div className="f-block">
         <label className="switch-row">
@@ -107,7 +141,9 @@ export function FindFilters({
             checked={safe}
             onChange={() => {
               setOwn(false);
-              set({ exclude: safe ? [] : Array.from(new Set([...(f.exclude ?? []), ...SAFE_MODE])) });
+              set({
+                exclude: safe ? [] : Array.from(new Set([...(f.exclude ?? []), ...SAFE_MODE])),
+              });
             }}
           />
         </label>
@@ -117,7 +153,11 @@ export function FindFilters({
         {own && (
           <div className="pills" style={{ marginTop: 6 }}>
             {Object.entries(t.avoids).map(([k, v]) => (
-              <button key={k} className={ex.has(k) ? "on" : ""} onClick={() => set({ exclude: toggle(f.exclude, k) })}>
+              <button
+                key={k}
+                className={ex.has(k) ? "on" : ""}
+                onClick={() => set({ exclude: toggle(f.exclude, k) })}
+              >
                 {v} {ex.has(k) ? "빼기" : ""}
               </button>
             ))}
@@ -125,7 +165,11 @@ export function FindFilters({
         )}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className="chip gray" style={{ border: 0, minHeight: 36 }} onClick={() => onChange({})}>
+        <button
+          className="chip gray"
+          style={{ border: 0, minHeight: 36 }}
+          onClick={() => onChange({})}
+        >
           {t.condReset}
         </button>
         {onSave && (

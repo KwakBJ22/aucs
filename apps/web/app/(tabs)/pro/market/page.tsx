@@ -165,7 +165,11 @@ export default function ProMarketPage() {
           <>
             <div style={{ fontSize: 14, fontWeight: 700, marginTop: 12 }}>{t.misses}</div>
             {m.misses.map((r) => (
-              <div key={`${r.court}${r.case_no}${r.sale_date}`} className="line-row" style={{ fontSize: 14 }}>
+              <div
+                key={`${r.court}${r.case_no}${r.sale_date}`}
+                className="line-row"
+                style={{ fontSize: 14 }}
+              >
                 <span>
                   {r.item_id ? (
                     <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
@@ -191,7 +195,10 @@ export default function ProMarketPage() {
         <div className="pc-grid g-2x2 q-sec" id="region" style={{ rowGap: 12 }}>
           <StatTable
             title={t.byUsage}
-            rows={m.by_usage.map((r) => ({ ...r, label: copy.pro.usages[r.usage as keyof typeof copy.pro.usages] ?? t.etc }))}
+            rows={m.by_usage.map((r) => ({
+              ...r,
+              label: copy.pro.usages[r.usage as keyof typeof copy.pro.usages] ?? t.etc,
+            }))}
           />
           <StatTable title={t.byCourt} rows={m.by_court.map((r) => ({ ...r, label: r.court }))} />
           <StatTable
@@ -202,7 +209,11 @@ export default function ProMarketPage() {
         </div>
       )}
 
-      <section className="section q-sec" id="cases" style={{ padding: 0, overflowX: "auto", marginTop: 12 }}>
+      <section
+        className="section q-sec"
+        id="cases"
+        style={{ padding: 0, overflowX: "auto", marginTop: 12 }}
+      >
         <div style={{ padding: "14px 14px 0" }}>
           <h2 style={{ fontSize: 15 }}>{t.cases}</h2>
         </div>

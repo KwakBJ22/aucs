@@ -72,15 +72,19 @@ export default function ComparePage() {
   };
 
   const marketRatio = (c: Col): number | null => {
-    const m = c.d?.questions.find((q) => q.key === "worth")?.body?.market?.price_krw as number | undefined;
+    const m = c.d?.questions.find((q) => q.key === "worth")?.body?.market?.price_krw as
+      number | undefined;
     return m && c.d?.min_price_krw ? Math.round((c.d.min_price_krw * 100) / m) : null;
   };
   const failHit = (c: Col): number | null =>
     c.d?.failure_table ? c.d.failure_table.filter((r) => r.state !== "신호 없음").length : null;
   // 줄마다 가장 나은 값(작을수록 좋은 것)을 연하게 표시
   const best = (f: (c: Col) => number | null | undefined): string | null => {
-    const v = cols.map((c) => [c.id, f(c)] as const).filter(([, x]) => x != null) as [string, number][];
-    if (v.length < 2 || v.every(([, x]) => x === v[0][1])) return null;
+    const v = cols.map((c) => [c.id, f(c)] as const).filter(([, x]) => x != null) as [
+      string,
+      number,
+    ][];
+    if (v.length < 2 || v.every(([, x]) => x === v[0]![1])) return null;
     return v.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
   };
   const rows: {
@@ -161,7 +165,13 @@ export default function ComparePage() {
       <PageHeader
         title={t.title}
         back="/watch"
-        right={data ? <span className="sub">{cols.length}/{data.max}</span> : undefined}
+        right={
+          data ? (
+            <span className="sub">
+              {cols.length}/{data.max}
+            </span>
+          ) : undefined
+        }
       />
       {data && data.items.length === 0 && (
         <section className="section">

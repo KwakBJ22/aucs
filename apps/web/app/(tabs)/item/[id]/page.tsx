@@ -519,9 +519,18 @@ function RegistryBox() {
             </div>
           )}
           {!pc && (
-            <button className="cond-row" style={{ background: "var(--bg)" }} onClick={() => setLadOpen(!ladOpen)}>
+            <button
+              className="cond-row"
+              style={{ background: "var(--bg)" }}
+              onClick={() => setLadOpen(!ladOpen)}
+            >
               <span>
-                <b>{r.foldTitle(lad.rows.length, lad.rows.filter((x) => x.judgment !== "소멸").length)}</b>
+                <b>
+                  {r.foldTitle(
+                    lad.rows.length,
+                    lad.rows.filter((x) => x.judgment !== "소멸").length,
+                  )}
+                </b>
                 {lad.base && (
                   <span className="sub" style={{ display: "block" }}>
                     {r.foldBase(lad.base.name, lad.base.date ?? "")}
@@ -1041,10 +1050,16 @@ function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_table"]> }
       {hit.map((r) => (
         <div key={r.code} style={{ fontSize: 14, padding: "6px 0", color: "var(--red)" }}>
           ◆ {r.title}
-          <span className="sub" style={{ display: "block" }}>{r.why}</span>
+          <span className="sub" style={{ display: "block" }}>
+            {r.why}
+          </span>
         </div>
       ))}
-      <button className="cond-row" style={{ background: "var(--bg)", marginTop: 6 }} onClick={() => setOpen(!open)}>
+      <button
+        className="cond-row"
+        style={{ background: "var(--bg)", marginTop: 6 }}
+        onClick={() => setOpen(!open)}
+      >
         <span style={{ fontSize: 14 }}>{t.failFold(none, need)}</span>
         <span className="sub">{open ? "▴" : "›"}</span>
       </button>
@@ -1054,10 +1069,19 @@ function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_table"]> }
           .map((r) => (
             <div key={r.code} className="line-row" style={{ fontSize: 13 }}>
               <span>{r.title}</span>
-              <span style={{ color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)", whiteSpace: "nowrap" }}>{r.state}</span>
+              <span
+                style={{
+                  color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {r.state}
+              </span>
             </div>
           ))}
-      <div className="sub" style={{ fontSize: 12 }}>{t.failureTableNote}</div>
+      <div className="sub" style={{ fontSize: 12 }}>
+        {t.failureTableNote}
+      </div>
     </div>
   );
 }
@@ -1463,7 +1487,8 @@ function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
     [
       t.pc.sale,
       <>
-        <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> {d.sale_date ?? "-"}
+        <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b>{" "}
+        {d.sale_date ?? "-"}
       </>,
     ],
     [t.pc.appraisal, won(d.appraisal_krw)],
@@ -1523,7 +1548,9 @@ function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, margin: "14px 0 0" }}>{d.verdict}</p>
+        <p style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, margin: "14px 0 0" }}>
+          {d.verdict}
+        </p>
         {d.tags.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {d.tags.map((x) => (

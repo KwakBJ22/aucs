@@ -33,12 +33,21 @@ export default function Home() {
   // 내 물건 변화·오늘 할 일: 관심 물건과 알림함에서
   useEffect(() => {
     if (!token) return;
-    meApi.watch(token).then(setWatch).catch(() => {});
-    meApi.notifications(token).then(setNotis).catch(() => {});
+    meApi
+      .watch(token)
+      .then(setWatch)
+      .catch(() => {});
+    meApi
+      .notifications(token)
+      .then(setNotis)
+      .catch(() => {});
   }, [token]);
   // PC 오른쪽: 이번 석 달 법원별 낙찰가율
   useEffect(() => {
-    if (pc && !market) fetchMarket({ months: 3 }).then(setMarket).catch(() => {});
+    if (pc && !market)
+      fetchMarket({ months: 3 })
+        .then(setMarket)
+        .catch(() => {});
   }, [pc, market]);
 
   // 비교함에서 이유를 남기고 뺀 물건은 맞춤 목록에서 숨김
@@ -95,15 +104,41 @@ export default function Home() {
     .join(" · ");
 
   const todo = watch
-    .filter((w) => w.d_day != null && w.d_day >= 0 && w.d_day <= 7 && w.step !== "result" && w.step !== "after")
+    .filter(
+      (w) =>
+        w.d_day != null &&
+        w.d_day >= 0 &&
+        w.d_day <= 7 &&
+        w.step !== "result" &&
+        w.step !== "after",
+    )
     .sort((x, y) => (x.d_day ?? 99) - (y.d_day ?? 99));
   const toRecord = watch.filter((w) => w.step === "result");
   const changes = notis.slice(0, pc ? 6 : 3);
   const unread = notis.filter((n) => !n.read_at).length;
 
   const bell = token ? (
-    <Link href="/notifications" aria-label={copy.noti.title} className="m-only" style={{ minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <Link
+      href="/notifications"
+      aria-label={copy.noti.title}
+      className="m-only"
+      style={{
+        minWidth: 44,
+        minHeight: 44,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+      }}
+    >
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
         <path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" />
       </svg>
     </Link>
@@ -114,7 +149,19 @@ export default function Home() {
   );
 
   const loginBanner = !token && (
-    <Link href="/login" style={{ display: "flex", justifyContent: "space-between", background: "var(--blue-soft)", borderRadius: 14, padding: "12px 14px", color: "var(--blue-text)", fontSize: 14, fontWeight: 600 }}>
+    <Link
+      href="/login"
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        background: "var(--blue-soft)",
+        borderRadius: 14,
+        padding: "12px 14px",
+        color: "var(--blue-text)",
+        fontSize: 14,
+        fontWeight: 600,
+      }}
+    >
       <span>{t.loginBanner}</span>
       <span aria-hidden="true">›</span>
     </Link>
@@ -126,11 +173,20 @@ export default function Home() {
         {t.today} <span style={{ color: "var(--blue)" }}>{todo.length + toRecord.length}</span>
       </h2>
       {todo.map((w) => (
-        <Link key={w.item_id} href={w.d_day != null && w.d_day <= 1 ? `/item/${encodeURIComponent(w.item_id)}/bid-day` : `/watch/${encodeURIComponent(w.item_id)}`} className="menu-row">
+        <Link
+          key={w.item_id}
+          href={
+            w.d_day != null && w.d_day <= 1
+              ? `/item/${encodeURIComponent(w.item_id)}/bid-day`
+              : `/watch/${encodeURIComponent(w.item_id)}`
+          }
+          className="menu-row"
+        >
           <span style={{ minWidth: 0 }}>
-            <b style={{ color: "var(--red)" }}>{dday(w.d_day)}</b> · {w.place} {w.building ?? w.usage}
+            <b style={{ color: "var(--red)" }}>{dday(w.d_day)}</b> · {w.place}{" "}
+            {w.building ?? w.usage}
             <span className="sub" style={{ display: "block" }}>
-              {t.todoLine(copy.watch.steps[w.step], w.d_day ?? 9)}
+              {t.todoLine(copy.watch.steps[w.step] ?? "", w.d_day ?? 9)}
             </span>
           </span>
           <span className="sub">›</span>
@@ -140,7 +196,9 @@ export default function Home() {
         <Link key={w.item_id} href="/me" className="menu-row">
           <span style={{ minWidth: 0 }}>
             {w.place} {w.building ?? w.usage}
-            <span className="sub" style={{ display: "block" }}>{t.record}</span>
+            <span className="sub" style={{ display: "block" }}>
+              {t.record}
+            </span>
           </span>
           <span className="sub">›</span>
         </Link>
@@ -154,15 +212,23 @@ export default function Home() {
         <h2>
           {t.changes} <span style={{ color: "var(--blue)" }}>{unread || ""}</span>
         </h2>
-        <Link href="/notifications" className="sub">{t.allNoti} ›</Link>
+        <Link href="/notifications" className="sub">
+          {t.allNoti} ›
+        </Link>
       </div>
       {changes.map((n) => (
         <Link key={n.noti_id} href={n.link ?? "/notifications"} className="menu-row">
           <span style={{ minWidth: 0 }}>
             <span style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</span>
-            {n.body && <span className="sub" style={{ display: "block" }}>{n.body}</span>}
+            {n.body && (
+              <span className="sub" style={{ display: "block" }}>
+                {n.body}
+              </span>
+            )}
           </span>
-          <span className="sub" style={{ whiteSpace: "nowrap" }}>{n.created_at.slice(5, 10).replace("-", "/")}</span>
+          <span className="sub" style={{ whiteSpace: "nowrap" }}>
+            {n.created_at.slice(5, 10).replace("-", "/")}
+          </span>
         </Link>
       ))}
     </section>
@@ -173,15 +239,34 @@ export default function Home() {
       <h2 style={{ marginBottom: 12 }}>{t.closing}</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
         {closing.map((c) => (
-          <Link key={c.item_id} href={`/item/${encodeURIComponent(c.item_id)}`} style={{ border: "1px solid var(--line)", borderRadius: 14, padding: 12, color: "inherit" }}>
+          <Link
+            key={c.item_id}
+            href={`/item/${encodeURIComponent(c.item_id)}`}
+            style={{
+              border: "1px solid var(--line)",
+              borderRadius: 14,
+              padding: 12,
+              color: "inherit",
+            }}
+          >
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--red)" }}>
               {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
             </div>
             <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>{c.place}</div>
-            <div className="sub" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div
+              className="sub"
+              style={{
+                fontSize: 12,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {c.building ?? c.usage}
             </div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{won(c.min_price_krw)}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>
+              {won(c.min_price_krw)}
+            </div>
             <div className="sub" style={{ fontSize: 12 }}>
               {copy.card.ofAppraisal} {c.min_rate}%
             </div>
@@ -197,13 +282,31 @@ export default function Home() {
         <h2>
           {t.forMe} <span style={{ color: "var(--blue)" }}>{mine?.total ?? ""}</span>
         </h2>
-        <Link href="/start" className="sub">{t.changeAnswers}</Link>
+        <Link href="/start" className="sub">
+          {t.changeAnswers}
+        </Link>
       </div>
-      <div className="sub" style={{ marginBottom: 4 }}>{summary}</div>
-      <button className="btn" style={{ background: "var(--blue-soft)", color: "var(--blue-text)", margin: "8px 0 4px", height: 44, fontSize: 14 }} onClick={() => void turnOnAlert(profile)}>
+      <div className="sub" style={{ marginBottom: 4 }}>
+        {summary}
+      </div>
+      <button
+        className="btn"
+        style={{
+          background: "var(--blue-soft)",
+          color: "var(--blue-text)",
+          margin: "8px 0 4px",
+          height: 44,
+          fontSize: 14,
+        }}
+        onClick={() => void turnOnAlert(profile)}
+      >
         {copy.alert.button}
       </button>
-      {alertMsg && <p className="sub" style={{ margin: "0 0 4px" }}>{alertMsg}</p>}
+      {alertMsg && (
+        <p className="sub" style={{ margin: "0 0 4px" }}>
+          {alertMsg}
+        </p>
+      )}
       {shown && shown.items.length === 0 && <p className="sub">{t.empty}</p>}
       <div className={pc ? "card-grid" : ""}>
         {shown?.items.slice(0, pc ? 8 : 5).map((c) => (
@@ -211,7 +314,16 @@ export default function Home() {
         ))}
       </div>
       {mine && mine.total > 5 && (
-        <Link href="/find" style={{ display: "block", textAlign: "center", padding: "12px 0 0", fontSize: 14, fontWeight: 600 }}>
+        <Link
+          href="/find"
+          style={{
+            display: "block",
+            textAlign: "center",
+            padding: "12px 0 0",
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
           {copy.find.total(mine.total)} 모두 보기 ›
         </Link>
       )}
@@ -221,7 +333,15 @@ export default function Home() {
   const whyBlock = !token && (
     <section className="section">
       <h2 style={{ marginBottom: 8 }}>{t.whyTitle}</h2>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14, lineHeight: 1.45 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          fontSize: 14,
+          lineHeight: 1.45,
+        }}
+      >
         {t.why.map(([a, b]) => (
           <div key={a}>
             <b>{a}</b> · {b}
@@ -235,8 +355,12 @@ export default function Home() {
     // 이번 주·다음 주 입찰 일정: 관심 물건 + 마감 임박
     const days = new Map<string, { id: string; label: string; mine: boolean }[]>();
     const seen = new Set<string>();
-    for (const [c, mineFlag] of [...watch.map((w) => [w, true] as const), ...(shown?.items ?? []).map((c) => [c, false] as const)]) {
-      if (!c.sale_date || c.d_day == null || c.d_day < 0 || c.d_day > 13 || seen.has(c.item_id)) continue;
+    for (const [c, mineFlag] of [
+      ...watch.map((w) => [w, true] as const),
+      ...(shown?.items ?? []).map((c) => [c, false] as const),
+    ]) {
+      if (!c.sale_date || c.d_day == null || c.d_day < 0 || c.d_day > 13 || seen.has(c.item_id))
+        continue;
       seen.add(c.item_id);
       const l = days.get(c.sale_date) ?? [];
       l.push({ id: c.item_id, label: `${c.place} ${c.building ?? c.usage ?? ""}`, mine: mineFlag });
@@ -259,10 +383,20 @@ export default function Home() {
               {cal.length === 0 && <p className="sub">{t.calendarEmpty}</p>}
               {cal.map(([day, list]) => (
                 <div key={day} style={{ padding: "8px 0", borderTop: "1px solid var(--line)" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{day.slice(5).replace("-", "/")}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {day.slice(5).replace("-", "/")}
+                  </div>
                   {list.map((x) => (
-                    <Link key={x.id} href={`/item/${encodeURIComponent(x.id)}`} style={{ display: "block", fontSize: 14, color: "inherit", padding: "2px 0" }}>
-                      {x.mine && <span className="chip green" style={{ marginRight: 6 }}>{t.mine}</span>}
+                    <Link
+                      key={x.id}
+                      href={`/item/${encodeURIComponent(x.id)}`}
+                      style={{ display: "block", fontSize: 14, color: "inherit", padding: "2px 0" }}
+                    >
+                      {x.mine && (
+                        <span className="chip green" style={{ marginRight: 6 }}>
+                          {t.mine}
+                        </span>
+                      )}
                       {x.label}
                     </Link>
                   ))}
@@ -273,13 +407,19 @@ export default function Home() {
               <section className="section">
                 <h2>{copy.noti.title}</h2>
                 <div className="sub">{t.notiSummary(notis.length, unread)}</div>
-                <Link href="/notifications" className="menu-row"><span>{t.allNoti}</span><span className="sub">›</span></Link>
+                <Link href="/notifications" className="menu-row">
+                  <span>{t.allNoti}</span>
+                  <span className="sub">›</span>
+                </Link>
               </section>
             )}
             <section className="section">
               <h2>{t.myCond}</h2>
               <div className="sub">{summary}</div>
-              <Link href="/start" className="menu-row"><span>{t.changeAnswers}</span><span className="sub"></span></Link>
+              <Link href="/start" className="menu-row">
+                <span>{t.changeAnswers}</span>
+                <span className="sub"></span>
+              </Link>
             </section>
             {market && market.by_court.length > 0 && (
               <section className="section">
@@ -293,7 +433,10 @@ export default function Home() {
                     </span>
                   </div>
                 ))}
-                <Link href="/pro/market" className="menu-row"><span>{t.marketMore}</span><span className="sub">›</span></Link>
+                <Link href="/pro/market" className="menu-row">
+                  <span>{t.marketMore}</span>
+                  <span className="sub">›</span>
+                </Link>
               </section>
             )}
             {closingBlock}

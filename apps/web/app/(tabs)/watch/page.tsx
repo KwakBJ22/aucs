@@ -30,10 +30,18 @@ function StepRow({
     <div style={{ padding: "0 0 12px 84px", display: "flex", gap: 6, flexWrap: "wrap" }}>
       {!open ? (
         <>
-          <button className="chip green" style={{ border: 0, minHeight: 32 }} onClick={() => setOpen(true)}>
+          <button
+            className="chip green"
+            style={{ border: 0, minHeight: 32 }}
+            onClick={() => setOpen(true)}
+          >
             {t.steps[c.step]} ▾
           </button>
-          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray" style={{ minHeight: 32 }}>
+          <Link
+            href={`/watch/${encodeURIComponent(c.item_id)}`}
+            className="chip gray"
+            style={{ minHeight: 32 }}
+          >
             {copy.ws.open} ›
           </Link>
           {c.step === "result" ? (
@@ -79,13 +87,22 @@ function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () =>
   return (
     <button className={`board-card${on ? " on" : ""}`} onClick={onPick}>
       <span className="sub" style={{ margin: 0, fontSize: 12 }}>
-        <b style={{ color: c.d_day != null && c.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>{dday(c.d_day)}</b> · {c.court}
+        <b style={{ color: c.d_day != null && c.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
+          {dday(c.d_day)}
+        </b>{" "}
+        · {c.court}
       </span>
       <span style={{ fontSize: 14, fontWeight: 600, display: "block", marginTop: 2 }}>
         {c.place} {c.building ?? c.usage}
       </span>
-      <span style={{ fontSize: 15, fontWeight: 700, display: "block", marginTop: 4 }}>{won(c.min_price_krw)}</span>
-      {c.in_compare && <span className="chip green" style={{ marginTop: 6 }}>{copy.compare.added}</span>}
+      <span style={{ fontSize: 15, fontWeight: 700, display: "block", marginTop: 4 }}>
+        {won(c.min_price_krw)}
+      </span>
+      {c.in_compare && (
+        <span className="chip green" style={{ marginTop: 6 }}>
+          {copy.compare.added}
+        </span>
+      )}
     </button>
   );
 }
@@ -153,14 +170,24 @@ export default function Watch() {
     return (
       <main className="page">
         {header}
-        {msg && <div className="sub" style={{ color: "var(--amber)" }}>{msg}</div>}
+        {msg && (
+          <div className="sub" style={{ color: "var(--amber)" }}>
+            {msg}
+          </div>
+        )}
         {empty}
         {list && list.length > 0 && (
           <div className="pc-grid g-60-40">
             <section className="section" style={{ marginTop: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
                 <h2>{t.boardTitle}</h2>
-                <button className="chip gray" style={{ border: 0, minHeight: 32 }} onClick={() => setAsTable(!asTable)}>
+                <button
+                  className="chip gray"
+                  style={{ border: 0, minHeight: 32 }}
+                  onClick={() => setAsTable(!asTable)}
+                >
                   {asTable ? t.asBoard : t.asTable}
                 </button>
               </div>
@@ -178,7 +205,12 @@ export default function Watch() {
                     </thead>
                     <tbody>
                       {list.map((c) => (
-                        <tr key={c.item_id} onClick={() => setPick(c.item_id)} className={pick === c.item_id ? "row-on" : ""} style={{ cursor: "pointer" }}>
+                        <tr
+                          key={c.item_id}
+                          onClick={() => setPick(c.item_id)}
+                          className={pick === c.item_id ? "row-on" : ""}
+                          style={{ cursor: "pointer" }}
+                        >
                           <td>{t.steps[c.step]}</td>
                           <td>
                             {dday(c.d_day)} {c.sale_date}
@@ -188,7 +220,14 @@ export default function Watch() {
                           </td>
                           <td>{won(c.min_price_krw)}</td>
                           <td>
-                            <button className={`chip ${c.in_compare ? "green" : "gray"}`} style={{ border: 0 }} onClick={(e) => { e.stopPropagation(); toggleCompare(c); }}>
+                            <button
+                              className={`chip ${c.in_compare ? "green" : "gray"}`}
+                              style={{ border: 0 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCompare(c);
+                              }}
+                            >
                               {c.in_compare ? copy.compare.added : copy.compare.add}
                             </button>
                           </td>
@@ -207,15 +246,25 @@ export default function Watch() {
                       {list
                         .filter((x) => x.step === s)
                         .map((c) => (
-                          <BoardCard key={c.item_id} c={c} on={pick === c.item_id} onPick={() => setPick(c.item_id)} />
+                          <BoardCard
+                            key={c.item_id}
+                            c={c}
+                            on={pick === c.item_id}
+                            onPick={() => setPick(c.item_id)}
+                          />
                         ))}
                     </div>
                   ))}
                 </div>
               )}
-              <div className="sub" style={{ marginTop: 8 }}>{t.boardHint}</div>
+              <div className="sub" style={{ marginTop: 8 }}>
+                {t.boardHint}
+              </div>
             </section>
-            <div className="pc-sticky" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+            <div
+              className="pc-sticky"
+              style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+            >
               {pick && (
                 <WorkspacePanel
                   key={pick}
@@ -235,7 +284,11 @@ export default function Watch() {
   return (
     <main className="page">
       {header}
-      {msg && <div className="sub" style={{ color: "var(--amber)", marginBottom: 6 }}>{msg}</div>}
+      {msg && (
+        <div className="sub" style={{ color: "var(--amber)", marginBottom: 6 }}>
+          {msg}
+        </div>
+      )}
       {list && list.length > 0 && (
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
           <button
@@ -269,7 +322,11 @@ export default function Watch() {
               .map((c) => (
                 <div key={c.item_id}>
                   <ItemCard c={c} />
-                  <StepRow c={c} onMove={(st) => move(c.item_id, st)} onCompare={() => toggleCompare(c)} />
+                  <StepRow
+                    c={c}
+                    onMove={(st) => move(c.item_id, st)}
+                    onCompare={() => toggleCompare(c)}
+                  />
                 </div>
               ))}
           </section>

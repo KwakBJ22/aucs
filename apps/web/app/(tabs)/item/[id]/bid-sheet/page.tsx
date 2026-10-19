@@ -62,148 +62,148 @@ function Sheet() {
   return (
     <main className="page">
       <div className="pc-grid g-40-60">
-      <div className="no-print">
-        <div className="topbar">
-          <div className="brand">{t.title}</div>
-          <Link href={`/item/${encodeURIComponent(id)}`} className="sub">
-            {t.back} ›
-          </Link>
-        </div>
-        <section className="section">
-          <div className="sub">{t.hint}</div>
-          <label style={{ display: "block", marginTop: 10 }}>
-            <span className="sub">{t.amount}</span>
-            <input
-              inputMode="numeric"
-              value={text}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, "");
-                setText(v);
-                setBid(v ? Number(v) * 10_000 : null);
-              }}
-              style={{
-                width: "100%",
-                fontSize: 22,
-                padding: "10px 12px",
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                background: "var(--surface)",
-                color: "var(--text)",
-              }}
-            />
-          </label>
-          {chk && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontSize: 18, fontWeight: 700 }}>{chk.korean}</div>
-              <div
-                style={{
-                  fontSize: 14,
-                  marginTop: 4,
-                  color:
-                    chk.level === "block"
-                      ? "var(--red)"
-                      : chk.level === "stop"
-                        ? "var(--orange)"
-                        : "var(--muted)",
-                  fontWeight: chk.level === "ok" ? 400 : 700,
+        <div className="no-print">
+          <div className="topbar">
+            <div className="brand">{t.title}</div>
+            <Link href={`/item/${encodeURIComponent(id)}`} className="sub">
+              {t.back} ›
+            </Link>
+          </div>
+          <section className="section">
+            <div className="sub">{t.hint}</div>
+            <label style={{ display: "block", marginTop: 10 }}>
+              <span className="sub">{t.amount}</span>
+              <input
+                inputMode="numeric"
+                value={text}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9]/g, "");
+                  setText(v);
+                  setBid(v ? Number(v) * 10_000 : null);
                 }}
-              >
-                {chk.message}
+                style={{
+                  width: "100%",
+                  fontSize: 22,
+                  padding: "10px 12px",
+                  border: "1px solid var(--line)",
+                  borderRadius: 10,
+                  background: "var(--surface)",
+                  color: "var(--text)",
+                }}
+              />
+            </label>
+            {chk && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{chk.korean}</div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    marginTop: 4,
+                    color:
+                      chk.level === "block"
+                        ? "var(--red)"
+                        : chk.level === "stop"
+                          ? "var(--orange)"
+                          : "var(--muted)",
+                    fontWeight: chk.level === "ok" ? 400 : 700,
+                  }}
+                >
+                  {chk.message}
+                </div>
+                {chk.level === "stop" && (
+                  <label className="big-confirm">
+                    <input
+                      type="checkbox"
+                      checked={sure}
+                      onChange={(e) => setSure(e.target.checked)}
+                    />
+                    {t.sure(won(bid))}
+                  </label>
+                )}
+                <div className="sub" style={{ marginTop: 6 }}>
+                  {t.deposit(won(chk.deposit_krw), chk.resale)}
+                </div>
               </div>
-              {chk.level === "stop" && (
-                <label className="big-confirm">
-                  <input
-                    type="checkbox"
-                    checked={sure}
-                    onChange={(e) => setSure(e.target.checked)}
-                  />
-                  {t.sure(won(bid))}
-                </label>
-              )}
-              <div className="sub" style={{ marginTop: 6 }}>
-                {t.deposit(won(chk.deposit_krw), chk.resale)}
-              </div>
+            )}
+            <button
+              className="btn primary"
+              style={{ marginTop: 12 }}
+              disabled={!canPrint}
+              onClick={() => window.print()}
+            >
+              {t.print}
+            </button>
+            <div className="sub" style={{ marginTop: 6 }}>
+              {t.printHint}
             </div>
-          )}
-          <button
-            className="btn primary"
-            style={{ marginTop: 12 }}
-            disabled={!canPrint}
-            onClick={() => window.print()}
-          >
-            {t.print}
-          </button>
-          <div className="sub" style={{ marginTop: 6 }}>
-            {t.printHint}
+          </section>
+          <section className="section">
+            <h2>{t.checkTitle}</h2>
+            {[
+              [Boolean(chk), t.checks.korean],
+              [Boolean(chk) && (chk?.level === "ok" || sure), t.checks.double],
+              [Boolean(chk), chk?.resale ? t.checks.deposit20 : t.checks.deposit10],
+              [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
+              [true, t.checks.privacy],
+            ].map(([ok, label]) => (
+              <div key={String(label)} className="line-row" style={{ fontSize: 14 }}>
+                <span>{label as string}</span>
+                <b style={{ color: ok ? "var(--green)" : "var(--faint)" }}>{ok ? "✓" : "—"}</b>
+              </div>
+            ))}
+            <Link href={`/item/${encodeURIComponent(id)}/bid-day`} className="menu-row">
+              <span>{copy.bidDay.title}</span>
+              <span className="sub">›</span>
+            </Link>
+          </section>
+        </div>
+
+        <section className="section print-area">
+          <h2 style={{ textAlign: "center", fontSize: 20 }}>{t.formTitle}</h2>
+          <table className="bid-form">
+            <tbody>
+              <tr>
+                <th>{t.f.court}</th>
+                <td>
+                  {day?.court_full} {day?.dept}
+                </td>
+                <th>{t.f.date}</th>
+                <td>{day?.sale_date}</td>
+              </tr>
+              <tr>
+                <th>{t.f.caseNo}</th>
+                <td>{day?.case_no}</td>
+                <th>{t.f.itemNo}</th>
+                <td>{day?.item_no}</td>
+              </tr>
+              <tr>
+                <th>{t.f.bidder}</th>
+                <td colSpan={3} className="handwrite">
+                  {t.f.bidderHint}
+                </td>
+              </tr>
+              <tr>
+                <th>{t.f.agent}</th>
+                <td colSpan={3} className="handwrite">
+                  {t.f.agentHint}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="sub" style={{ marginTop: 10 }}>
+            {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
+          </div>
+          <Digits v={bid} />
+          <div className="sub" style={{ marginTop: 10 }}>
+            {t.f.deposit}
+          </div>
+          <Digits v={dep} />
+          <div style={{ fontSize: 14, marginTop: 10 }}>{t.f.method}</div>
+          <div style={{ fontSize: 14, marginTop: 16, textAlign: "right" }}>{t.f.sign}</div>
+          <div className="sub" style={{ marginTop: 12 }}>
+            {t.f.note}
           </div>
         </section>
-        <section className="section">
-          <h2>{t.checkTitle}</h2>
-          {[
-            [Boolean(chk), t.checks.korean],
-            [Boolean(chk) && (chk?.level === "ok" || sure), t.checks.double],
-            [Boolean(chk), chk?.resale ? t.checks.deposit20 : t.checks.deposit10],
-            [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
-            [true, t.checks.privacy],
-          ].map(([ok, label]) => (
-            <div key={String(label)} className="line-row" style={{ fontSize: 14 }}>
-              <span>{label as string}</span>
-              <b style={{ color: ok ? "var(--green)" : "var(--faint)" }}>{ok ? "✓" : "—"}</b>
-            </div>
-          ))}
-          <Link href={`/item/${encodeURIComponent(id)}/bid-day`} className="menu-row">
-            <span>{copy.bidDay.title}</span>
-            <span className="sub">›</span>
-          </Link>
-        </section>
-      </div>
-
-      <section className="section print-area">
-        <h2 style={{ textAlign: "center", fontSize: 20 }}>{t.formTitle}</h2>
-        <table className="bid-form">
-          <tbody>
-            <tr>
-              <th>{t.f.court}</th>
-              <td>
-                {day?.court_full} {day?.dept}
-              </td>
-              <th>{t.f.date}</th>
-              <td>{day?.sale_date}</td>
-            </tr>
-            <tr>
-              <th>{t.f.caseNo}</th>
-              <td>{day?.case_no}</td>
-              <th>{t.f.itemNo}</th>
-              <td>{day?.item_no}</td>
-            </tr>
-            <tr>
-              <th>{t.f.bidder}</th>
-              <td colSpan={3} className="handwrite">
-                {t.f.bidderHint}
-              </td>
-            </tr>
-            <tr>
-              <th>{t.f.agent}</th>
-              <td colSpan={3} className="handwrite">
-                {t.f.agentHint}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="sub" style={{ marginTop: 10 }}>
-          {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
-        </div>
-        <Digits v={bid} />
-        <div className="sub" style={{ marginTop: 10 }}>
-          {t.f.deposit}
-        </div>
-        <Digits v={dep} />
-        <div style={{ fontSize: 14, marginTop: 10 }}>{t.f.method}</div>
-        <div style={{ fontSize: 14, marginTop: 16, textAlign: "right" }}>{t.f.sign}</div>
-        <div className="sub" style={{ marginTop: 12 }}>
-          {t.f.note}
-        </div>
-      </section>
       </div>
     </main>
   );

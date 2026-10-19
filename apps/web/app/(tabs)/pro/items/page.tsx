@@ -381,50 +381,53 @@ function ProItems() {
       </div>
 
       <div className={pc ? "pc-grid g-58-42" : ""}>
-      <section className="section" style={{ padding: 0, overflowX: "auto" }}>
-        <table className="pro-table">
-          <thead>
-            <tr>
-              {cols.map((c) => (
-                <th key={c}>{t.cols[c]}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!data && (
+        <section className="section" style={{ padding: 0, overflowX: "auto" }}>
+          <table className="pro-table">
+            <thead>
               <tr>
-                <td colSpan={cols.length} className="sub">
-                  {t.loading}
-                </td>
-              </tr>
-            )}
-            {data?.rows.length === 0 && (
-              <tr>
-                <td colSpan={cols.length} className="sub">
-                  {t.empty}
-                </td>
-              </tr>
-            )}
-            {data?.rows.map((r) => (
-              <tr
-                key={r.item_id}
-                onClick={() => setPick(r.item_id)}
-                className={pick === r.item_id ? "row-on" : ""}
-                style={{ cursor: pc ? "pointer" : undefined }}
-              >
                 {cols.map((c) => (
-                  <td key={c}>{cell(r, c)}</td>
+                  <th key={c}>{t.cols[c]}</th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-      {pc && (
-        <div className="pc-sticky" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
-          <PickPanel id={pick ?? data?.rows[0]?.item_id ?? null} />
-        </div>
-      )}
+            </thead>
+            <tbody>
+              {!data && (
+                <tr>
+                  <td colSpan={cols.length} className="sub">
+                    {t.loading}
+                  </td>
+                </tr>
+              )}
+              {data?.rows.length === 0 && (
+                <tr>
+                  <td colSpan={cols.length} className="sub">
+                    {t.empty}
+                  </td>
+                </tr>
+              )}
+              {data?.rows.map((r) => (
+                <tr
+                  key={r.item_id}
+                  onClick={() => setPick(r.item_id)}
+                  className={pick === r.item_id ? "row-on" : ""}
+                  style={{ cursor: pc ? "pointer" : undefined }}
+                >
+                  {cols.map((c) => (
+                    <td key={c}>{cell(r, c)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        {pc && (
+          <div
+            className="pc-sticky"
+            style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+          >
+            <PickPanel id={pick ?? data?.rows[0]?.item_id ?? null} />
+          </div>
+        )}
       </div>
       <div className="sub">{t.note}</div>
     </main>

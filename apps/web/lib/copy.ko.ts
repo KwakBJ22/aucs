@@ -138,7 +138,8 @@ export const copy = {
       [51, "51% 이하"],
     ] as [number | null, string][],
     safe: "초보자 안전 모드",
-    safeSub: "지분·유치권·선순위 임차인·법정지상권·근생빌라 의심·특별매각조건·기일 변동 가능을 한 번에 빼요",
+    safeSub:
+      "지분·유치권·선순위 임차인·법정지상권·근생빌라 의심·특별매각조건·기일 변동 가능을 한 번에 빼요",
     avoid: "피하고 싶은 것",
     avoids: {
       share: "지분",
@@ -159,7 +160,14 @@ export const copy = {
     pickTitle: "고른 물건",
     pickEmpty: "목록에서 물건을 누르면 여기서 다섯 질문을 바로 봐요",
     toDetail: "상세 전체 보기",
-    cols: { date: "매각기일", place: "물건", min: "최저가", rate: "%", failed: "유찰", sig: "신호" },
+    cols: {
+      date: "매각기일",
+      place: "물건",
+      min: "최저가",
+      rate: "%",
+      failed: "유찰",
+      sig: "신호",
+    },
   },
   needLogin: {
     title: "로그인이 필요해요",
@@ -227,7 +235,8 @@ export const copy = {
     resultShort: "결과 남기기",
     summary: (n: number, c: number) => `담은 물건 ${n}개 · 비교 중 ${c}개`,
     boardTitle: "단계별 보드",
-    boardHint: "카드를 누르면 오른쪽에 작업 공간이 열려요 · 단계는 오른쪽에서 바꿔요 · 결과는 매각기일이 지나면 저절로",
+    boardHint:
+      "카드를 누르면 오른쪽에 작업 공간이 열려요 · 단계는 오른쪽에서 바꿔요 · 결과는 매각기일이 지나면 저절로",
     asTable: "표로 보기",
     asBoard: "보드로 보기",
     cols: { step: "단계", date: "매각기일", place: "물건", min: "최저가", compare: "비교" },
@@ -543,7 +552,13 @@ export const copy = {
   },
   proCases: {
     report: "보고서 PDF",
-    cards: { progress: "진행 판단", normal: "정상 진행", docs: "문건", high: "중요 문건", late: "종기 뒤 신고" },
+    cards: {
+      progress: "진행 판단",
+      normal: "정상 진행",
+      docs: "문건",
+      high: "중요 문건",
+      late: "종기 뒤 신고",
+    },
     title: "사건·문건 분석",
     sub: "문건에 주의할 것이 있는 진행 사건이에요 · 회생·정지 신청, 매각조건 변경, 유치권, 종기 뒤 신고 …",
     all: "전체",
@@ -594,7 +609,10 @@ export const copy = {
     bidSaved: "저장했어요",
     remove: "지우기",
     notWatched: "관심에 담은 물건만 작업 공간이 있어요",
-    tabs: { memo: "메모", checks: "내 확인", calcs: "계산", history: "이력" } as Record<string, string>,
+    tabs: { memo: "메모", checks: "내 확인", calcs: "계산", history: "이력" } as Record<
+      string,
+      string
+    >,
     fieldRow: "현장 사진·음성 메모",
     checksNone: "확인할 것이 다 끝났어요",
     bidsMax: "5개까지",
@@ -674,7 +692,9 @@ export const copy = {
     failureTableNote: "신호 없음은 자료에서 못 찾았다는 뜻이에요 · 안전하다는 뜻은 아니에요",
     reg: {
       foldTitle: (n: number, keep: number) =>
-        keep ? `등기 권리 ${n}건 · 남거나 확인할 권리 ${keep}건` : `등기 권리 ${n}건 · 모두 사라져요`,
+        keep
+          ? `등기 권리 ${n}건 · 남거나 확인할 권리 ${keep}건`
+          : `등기 권리 ${n}건 · 모두 사라져요`,
       foldBase: (name: string, d: string) => `말소기준 ${d} ${name} · 날짜 순으로 보기`,
       needLogin: "로그인하고 등기부 PDF를 올리면 떠안는 권리를 읽어 드려요",
       upload: "등기부 PDF 올리기",
@@ -758,7 +778,14 @@ export const copy = {
     recordEmpty: "매각기일이 지난 관심 물건이 생기면 결과를 남길 수 있어요",
     mockEmpty: "물건 상세 「얼마가 드나」에서 모의입찰을 남겨 보세요",
     wonEmpty: "낙찰을 기록하면 잔금·명도 일정이 여기 생겨요",
-    cols: { place: "물건", outcome: "결과", my: "내 금액", win: "낙찰가", second: "2위", n: "응찰" },
+    cols: {
+      place: "물건",
+      outcome: "결과",
+      my: "내 금액",
+      win: "낙찰가",
+      second: "2위",
+      n: "응찰",
+    },
     title: "내 경매",
     todo: "결과를 적어 주세요",
     todoHint: "적어 두면 이 법원 예측이 더 정확해져요 · 남에게는 통계로만 보여요",
