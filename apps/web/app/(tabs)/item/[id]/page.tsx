@@ -79,7 +79,8 @@ function DocSheet({ id, kind, onClose }: { id: string; kind: DocKind; onClose: (
   }, [id]);
   const sr = docs?.status_report;
   const dl = docs?.deliveries;
-  const cur = kind === "status_report" ? sr : dl;
+  const sp = docs?.spec_sheet;
+  const cur = kind === "status_report" ? sr : kind === "deliveries" ? dl : sp;
   return (
     <div
       role="dialog"
@@ -161,6 +162,26 @@ function DocSheet({ id, kind, onClose }: { id: string; kind: DocKind; onClose: (
               ))}
             </>
           )}
+        </>
+      )}
+      {kind === "spec_sheet" && sp && (
+        <>
+          {(
+            [
+              [c.written, sp.written],
+              [c.base, sp.base],
+              [c.keep, sp.keep],
+              [c.superficies, sp.superficies],
+              [c.remark, [sp.remark, sp.item_remark].filter(Boolean).join("\n")],
+            ] as [string, string | null][]
+          )
+            .filter(([, v]) => v)
+            .map(([h, v]) => (
+              <div key={h}>
+                <DocH>{h}</DocH>
+                <DocP>{v}</DocP>
+              </div>
+            ))}
         </>
       )}
       {kind === "deliveries" && dl && (
@@ -1116,7 +1137,7 @@ function CheckBody({ b }: { b: Record<string, any> }) {
               · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
               {x.note ? ` · ${x.note}` : ""}
             </span>
-            {(x.key === "status_report" || x.key === "deliveries") && (
+            {(x.key === "status_report" || x.key === "deliveries" || x.key === "spec_sheet") && (
               <button
                 onClick={() => openDoc(x.key as DocKind)}
                 style={{

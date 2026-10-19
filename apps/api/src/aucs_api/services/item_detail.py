@@ -9,6 +9,7 @@ from aucs_rules.schedule import after_sale
 
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
+from aucs_api.services.docs import item_spec, spec_text
 from aucs_api.services.items import card
 
 _ITEM_SQL = """
@@ -74,7 +75,23 @@ def verdict(signals: list[dict[str, Any]], n_check: int | None = None) -> str:
 APPRAISAL_SANE = (0.55, 1.6)
 
 
-def appraisal_gap(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, str] | None:
+# 명세서에 적히면 감정가가 낮게 잡히는 사정
+SPEC_WORDS = [
+    "위반건축",
+    "대지권",
+    "토지별도등기",
+    "별도등기",
+    "유치권",
+    "법정지상권",
+    "제시외",
+    "지분",
+    "맹지",
+]
+
+
+def appraisal_gap(
+    r: dict[str, Any], signals: list[dict[str, Any]], spec_txt: str = ""
+) -> tuple[str, str] | None:
     """감정가가 시세와 크게 다를 때 (이유 종류, 안내). 이유는 명세서 비고란·신호로 찾음.
 
     종류: share(지분) / special(특별조건) / note(비고란 있음) / none(이유 모름)."""
@@ -92,18 +109,26 @@ def appraisal_gap(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str
         )
     if ratio > 1 and "risk.special_condition" in ids:
         return "special", "전세 피해 주택이라 감정가가 실제 거래보다 높게 잡혔을 수 있어요"
+    found = next((w for w in SPEC_WORDS if w in spec_txt), None)
+    if ratio < 1 and found:
+        return (
+            "spec",
+            f"명세서에 「{found}」 내용이 있어요 · 감정가가 낮게 잡힌 이유일 수 있어요(명세서 원문 보기)",
+        )
     deal = f"감정가가 같은 단지 거래({won(mkt['price_krw'])})와 크게 달라요"
     if (r.get("note_masked") or "").strip():
         return "note", f"{deal} · 비고란 조건을 먼저 보세요(「무엇을 사나」)"
     return "none", f"{deal} · 다른 평형 거래일 수도 있어요"
 
 
-def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[str], Any]:
+def worth(
+    r: dict[str, Any], signals: list[dict[str, Any]], spec_txt: str = ""
+) -> tuple[str, list[str], Any]:
     """「얼마짜리인가」 한 줄과 경고 줄. 관할 법원 칸이 기준을 바꾸면 범위를 그만큼 옮깁니다(입찰가 산정 1C~1E)."""
     rate, court, peers = r.get("sale_rate"), r.get("court_cell"), r.get("local_peers")
     notes: list[str] = []
     mkt, app, mn = r.get("market"), r.get("appraisal_krw"), r.get("min_price_krw")
-    gap = appraisal_gap(r, signals)
+    gap = appraisal_gap(r, signals, spec_txt)
     if gap:
         notes.append(gap[1])
         mkt = None
@@ -160,16 +185,20 @@ def build_detail(
     today: date,
     holidays: list[date] | None = None,
     doc_times: dict[str, Any] | None = None,
+    spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     c = card(r, today)
     signals = r["signals"] or []
-    rate_ans, rate_notes, rate = worth(r, signals)
+    stxt = spec_text(spec)
+    rate_ans, rate_notes, rate = worth(r, signals, stxt)
     analyzed = r.get("computed_at") is not None
     if not analyzed:
         rate_ans = PENDING
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     nxt = next_round_min_price(mn, reduction["pct"] if reduction else None) if mn else None
-    ds = r["data_status"] or {}
+    ds = dict(r["data_status"] or {})
+    if spec:  # 물건상세에 명세서 내용이 들어와 있으면 받은 것으로
+        ds["spec_sheet"] = "extracted"
     warn = [
         s
         for s in signals
@@ -184,7 +213,7 @@ def build_detail(
     sched = after_sale(r["sale_date"] or today, holidays or [], flags=flags).value
     types = sorted({s["ftype"] for s in warn if s.get("ftype")})
     checklist = build_checklist(ds, doc_times or {}, signals)
-    gap = appraisal_gap(r, signals)
+    gap = appraisal_gap(r, signals, stxt)
     if gap and gap[0] in ("note", "none"):  # 지분·특별조건은 이미 위험 신호로 올라가 있음
         checklist = sorted(
             [*checklist, {"key": "appraisal_gap", "label": "감정가·시세 차이", "what": gap[1],
@@ -280,6 +309,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             "and valid_from <= %s order by valid_from desc limit 1",
             (r["court_code"], today),
         ).fetchone()
+        spec, spec_at = item_spec(c, r["case_id"], int(str(item_id).rsplit("-", 1)[-1] or 1))
         doc_times = {
             x["doc_kind"]: x["t"]
             for x in c.execute(
@@ -294,8 +324,10 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                 (today,),
             ).fetchall()
         ]
+    if spec_at:
+        doc_times["spec_sheet"] = spec_at
     return build_detail(
-        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times
+        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times, spec
     )
 
 

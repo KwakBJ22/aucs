@@ -123,8 +123,17 @@ export type ItemDetail = ItemCard & {
 export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
 
 // DOC-01 원문 보기
-export type DocKind = "status_report" | "deliveries";
+export type DocKind = "status_report" | "deliveries" | "spec_sheet";
 export type ItemDocs = {
+  spec_sheet: {
+    fetched_at: string | null;
+    written: string | null;
+    base: string | null;
+    keep: string | null;
+    superficies: string | null;
+    remark: string | null;
+    item_remark: string | null;
+  } | null;
   status_report: {
     fetched_at: string | null;
     exam_at: string | null;

@@ -76,6 +76,13 @@ def test_worth_checks_from_100_sample():
     )
     assert d3["questions"][2]["body"]["notes"][0].startswith("지분만 파는 물건이라")
     assert not any(x["key"] == "appraisal_gap" for x in d3["questions"][4]["body"]["checklist"])
+    # 명세서에 위반건축 → 그 이유로, 명세서는 받은 것으로
+    spec = {"written": "2026-09-18", "base": None, "keep": None, "superficies": None,
+            "remark": "위반건축물 등재", "item_remark": None}  # fmt: skip
+    d5 = build_detail(full(market=m2, new_item=False), [], [], [], None, TODAY, [], {}, spec)
+    assert d5["questions"][2]["body"]["notes"][0].startswith("명세서에 「위반건축」 내용이 있어요")
+    sp = next(x for x in d5["questions"][4]["body"]["checklist"] if x["key"] == "spec_sheet")
+    assert sp["state"] == "확인 완료"
     # 신건인데 감정가가 시세의 1.6배 넘음 → 「비싸게 팔려요」 아님
     m3 = {"price_krw": 500_000_000, "level": 1, "n": 3, "recent": []}
     d4 = build_detail(

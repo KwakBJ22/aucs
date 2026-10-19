@@ -1,4 +1,4 @@
-from aucs_api.services.docs import deliveries, status_report
+from aucs_api.services.docs import deliveries, spec_sheet, spec_text, status_report
 
 SR = {
     "dma_curstExmnMngInf": {"exmnDtDts": "2025년04월28일10시10분 ",
@@ -31,3 +31,32 @@ def test_deliveries_marks_key_and_hides_appraisal():
     assert r["filings"][1]["text"] == "감정인 서류 제출"
     assert r["filings"][0]["date"] == "2025-05-20"
     assert r["sends"][0]["result"] == "2025.04.24 도달"
+
+
+def test_spec_sheet_from_item_detail():
+    p = {"dma_result": {"dspslGdsDxdyInfo": {
+        "gdsSpcfcWrtYmd": "20260918", "tprtyRnkHypthcStngDts": "2021.3.31.근저당권",
+        "ndstrcRghCtt": "해당사항없음", "sprfcExstcDts": None,
+        "gdsSpcfcRmk": "위반건축물 등재되어 있음<br/>임차인 홍길동 대항력 포기"}}}  # fmt: skip
+    s = spec_sheet(p)
+    assert s["written"] == "2026-09-18" and s["base"] == "2021.3.31.근저당권"
+    assert s["remark"] == "위반건축물 등재되어 있음\n임차인 홍○○ 대항력 포기"
+    assert "위반건축" in spec_text(s)
+    assert spec_sheet({"dma_result": {"dspslGdsDxdyInfo": {"gdsSpcfcWrtYmd": None}}}) is None
+
+
+def test_mask_share_owner_and_dedupe():
+    from aucs_api.services.docs import mask_text
+
+    assert mask_text("구경화 지분은 B101호에 해당") == "구○○ 지분은 B101호에 해당"
+    assert mask_text("공유 지분 1/2 매각") == "공유 지분 1/2 매각"
+    p = {
+        "dma_result": {
+            "dspslGdsDxdyInfo": {
+                "gdsSpcfcWrtYmd": "20260423",
+                "gdsSpcfcRmk": "지분매각",
+                "dspslGdsRmk": "지분매각",
+            }
+        }
+    }
+    assert spec_sheet(p)["item_remark"] is None

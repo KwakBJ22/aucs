@@ -190,7 +190,16 @@ export const copy = {
       open: "원문 ›",
       openSr: "현황조사서 원문 보기 ›",
       close: "닫기",
-      names: { status_report: "현황조사서", deliveries: "문건·송달내역" } as Record<string, string>,
+      names: {
+        status_report: "현황조사서",
+        deliveries: "문건·송달내역",
+        spec_sheet: "매각물건명세서",
+      } as Record<string, string>,
+      written: "작성일",
+      base: "최선순위 설정 (말소기준)",
+      keep: "매각으로 없어지지 않는 권리",
+      superficies: "법정지상권",
+      remark: "비고",
       none: "아직 법원에서 받지 못했어요",
       from: (at: string | null) =>
         at ? `법원경매정보 · ${at} 받음 · 글은 원문 그대로예요` : "법원경매정보",
