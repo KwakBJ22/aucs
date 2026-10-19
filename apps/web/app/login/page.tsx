@@ -13,7 +13,7 @@ export default function Login() {
   const [msg, setMsg] = useState("");
 
   return (
-    <main className="page">
+    <main className="page narrow">
       <PageHeader title="" back="/home" />
       <section className="section" style={{ padding: "28px 18px" }}>
         <h2 style={{ fontSize: 22 }}>{t.title}</h2>
