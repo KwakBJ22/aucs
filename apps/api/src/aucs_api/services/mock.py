@@ -86,9 +86,12 @@ def listing(uid: str, today: date) -> list[dict[str, Any]]:
     out = []
     for r in rows:
         res = r["result"] if r["sale_date"] <= today else None
+        addr = r.pop("address", None) or ""
+        place = (r["place"] or "").strip() or " ".join(addr.split()[1:4])  # 지난 물건은 주소로
         out.append(
             {
                 **r,
+                "place": place,
                 "sale_date": r["sale_date"].isoformat(),
                 "review": review(r, res, r["winning_bid_krw"]),
             }
