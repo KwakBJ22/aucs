@@ -88,8 +88,13 @@ export default function ProMarketPage() {
   return (
     <main className="page pro-page">
       <div className="topbar">
-        <div className="brand">{t.title}</div>
+        <h1 className="brand">{t.title}</h1>
       </div>
+      <nav className="seg" style={{ marginBottom: 4 }}>
+        <a href="#region">{t.tabRegion}</a>
+        <a href="#cases">{t.cases}</a>
+        <a href="#score">{t.score}</a>
+      </nav>
       <section className="section pro-filters">
         <div className="pro-row">
           <select
@@ -136,7 +141,7 @@ export default function ProMarketPage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section q-sec" id="score">
         <h2 style={{ fontSize: 15 }}>{t.score}</h2>
         {!sc ? (
           <div className="sub">{copy.pro.loading}</div>
@@ -156,10 +161,38 @@ export default function ProMarketPage() {
         <div className="sub" style={{ marginTop: 4 }}>
           {t.scoreNote}
         </div>
+        {m && m.misses.length > 0 && (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 12 }}>{t.misses}</div>
+            {m.misses.map((r) => (
+              <div key={`${r.court}${r.case_no}${r.sale_date}`} className="line-row" style={{ fontSize: 14 }}>
+                <span>
+                  {r.item_id ? (
+                    <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
+                      {r.court} {r.case_no}
+                    </Link>
+                  ) : (
+                    `${r.court} ${r.case_no}`
+                  )}{" "}
+                  <span className="sub">
+                    {r.sale_date.slice(5)} · {r.address}
+                  </span>
+                </span>
+                <span>
+                  {t.missLine(Math.round(r.p25), Math.round(r.p75), Math.round(r.sale_rate))}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
       </section>
 
       {m && (
-        <div className="stat-grid">
+        <div className="pc-grid g-2x2 q-sec" id="region" style={{ rowGap: 12 }}>
+          <StatTable
+            title={t.byUsage}
+            rows={m.by_usage.map((r) => ({ ...r, label: copy.pro.usages[r.usage as keyof typeof copy.pro.usages] ?? t.etc }))}
+          />
           <StatTable title={t.byCourt} rows={m.by_court.map((r) => ({ ...r, label: r.court }))} />
           <StatTable
             title={t.byFailed}
@@ -169,7 +202,7 @@ export default function ProMarketPage() {
         </div>
       )}
 
-      <section className="section" style={{ padding: 0, overflowX: "auto", marginTop: 12 }}>
+      <section className="section q-sec" id="cases" style={{ padding: 0, overflowX: "auto", marginTop: 12 }}>
         <div style={{ padding: "14px 14px 0" }}>
           <h2 style={{ fontSize: 15 }}>{t.cases}</h2>
         </div>

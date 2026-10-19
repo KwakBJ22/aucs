@@ -317,6 +317,12 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
             f" from core.sale_results s {where} group by 1 order by 1",
             p,
         ).fetchall()
+        case = " ".join(f"when s.usage_name ~ '{v}' then '{k}'" for k, v in USAGE_GROUPS.items())
+        by_usage = c.execute(
+            f"select case {case} else 'etc' end as usage, count(*) as n, {_MED} as p50"
+            f" from core.sale_results s {where} group by 1 order by 2 desc",
+            p,
+        ).fetchall()
         rows = c.execute(
             f"""select s.sale_date, s.court_code, s.case_no, s.usage_name, s.address, s.building_area_m2,
                        s.appraisal_krw, s.winning_bid_krw, s.sale_rate, s.failed_count, s.item_id
@@ -338,7 +344,32 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                       count(*) filter (where sale_rate > p75) as above
                from pred""",
         ).fetchone()
+        misses = c.execute(
+            """select s.sale_date, s.court_code, s.case_no, s.address, s.sale_rate, s.item_id,
+                      (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
+                      (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
+               from core.sale_results s
+               join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
+                             and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
+               where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' is not null
+                 and not coalesce((a.result ->> 'new_item')::boolean, false)
+               order by greatest((a.result -> 'sale_rate' ->> 'p25')::numeric - s.sale_rate,
+                                 s.sale_rate - (a.result -> 'sale_rate' ->> 'p75')::numeric) desc
+               limit 5""",
+        ).fetchall()
     return {
+        "by_usage": by_usage,
+        "misses": [
+            {
+                **r,
+                "court": COURT_NAME.get(r["court_code"], r["court_code"]),
+                "sale_date": r["sale_date"].isoformat(),
+                "sale_rate": float(r["sale_rate"]),
+                "p25": float(r["p25"]),
+                "p75": float(r["p75"]),
+            }
+            for r in misses
+        ],
         "by_court": [
             {**r, "court": COURT_NAME.get(r["court_code"], r["court_code"])} for r in by_court
         ],

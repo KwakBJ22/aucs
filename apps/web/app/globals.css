@@ -833,6 +833,19 @@ button {
   font-size: 14px;
   font-weight: 600;
 }
+.seg a {
+  height: 38px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.seg a:hover {
+  background: var(--surface);
+}
 .seg button.on {
   background: var(--surface);
   color: var(--text);

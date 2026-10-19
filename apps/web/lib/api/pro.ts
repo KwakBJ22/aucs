@@ -144,6 +144,17 @@ export type Market = {
   by_court: (Stat & { court: string; court_code: string })[];
   by_failed: (Stat & { failed: number })[];
   by_month: (Stat & { month: string })[];
+  by_usage: (Stat & { usage: string })[];
+  misses: {
+    sale_date: string;
+    court: string;
+    case_no: string;
+    address: string | null;
+    sale_rate: number;
+    p25: number;
+    p75: number;
+    item_id: string | null;
+  }[];
   cases: {
     sale_date: string;
     court: string;
