@@ -771,6 +771,13 @@ export const copy = {
     afterDeadline: "종기 뒤",
     footer: (t: string) => `법원경매정보 기준 · ${t} 계산`,
   },
+  calcPage: {
+    title: "입찰가 계산",
+    numbers: "이 물건 숫자",
+    loginForSaved: "로그인하고 관심에 담으면 계산을 5개까지 저장해 비교할 수 있어요",
+    savedNone: "아직 저장한 계산이 없어요 · 왼쪽에서 「작업 공간에 저장」",
+    open: "계산 화면 크게 보기",
+  },
   plans: {
     title: "이용권",
     monthly: "매달",

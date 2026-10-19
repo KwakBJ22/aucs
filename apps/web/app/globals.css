@@ -508,6 +508,11 @@ button {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px 2%;
   }
+  .pc-grid.g-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px 1.5%;
+  }
+  .pc-grid.g-5 > .section,
   .pc-grid.g-4 > .section {
     margin: 0;
   }

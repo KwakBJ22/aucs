@@ -60,7 +60,7 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
     </label>
   );
   return (
-    <div className={wide ? "pc-grid g-4" : ""}>
+    <div className={wide ? "pc-grid g-5" : ""}>
       <section className="section">
         <div style={{ color, fontWeight: 700 }}>
           {d.state === "ok" || d.state === "soon" ? "● " : "◆ "}
