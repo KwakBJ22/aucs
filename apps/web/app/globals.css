@@ -461,3 +461,44 @@ button {
     margin: 0;
   }
 }
+
+/* 현장 체크 사진 */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.field-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--gray-chip);
+}
+.field-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.field-item button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+.field-voice {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.field-voice audio {
+  flex: 1;
+  min-width: 0;
+}

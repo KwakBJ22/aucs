@@ -112,6 +112,15 @@ export default function WorkspacePage() {
       )}
 
       {w.step !== "result" && (
+        <Link
+          href={`/watch/${encodeURIComponent(id)}/field`}
+          className="btn primary"
+          style={{ height: 48, marginBottom: 10 }}
+        >
+          {copy.field.title} ›
+        </Link>
+      )}
+      {w.step !== "result" && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {MOVABLE.map((s) => (
             <button
