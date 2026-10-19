@@ -864,9 +864,101 @@ function CalcBox({ id }: { id: string }) {
             )}
             {d.resale && <div className="sub">{t.resale}</div>}
             <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
+            <MockForm id={id} bid={s.bid_krw} />
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// 모의입찰(내 분석 노트): 들어간다면 얼마·내 상한·이유, 또는 안 들어감
+function MockForm({ id, bid }: { id: string; bid: number }) {
+  const m = copy.mock;
+  const { session } = useSession();
+  const [open, setOpen] = useState(false);
+  const [skip, setSkip] = useState(false);
+  const [max, setMax] = useState("");
+  const [reason, setReason] = useState("");
+  const [done, setDone] = useState(false);
+  if (!session) return null;
+  if (done)
+    return (
+      <div className="sub" style={{ marginTop: 8 }}>
+        {m.saved}
+      </div>
+    );
+  if (!open)
+    return (
+      <button
+        className="chip gray"
+        style={{ border: 0, minHeight: 36, marginTop: 10, marginLeft: 6 }}
+        onClick={() => setOpen(true)}
+      >
+        {m.open} ›
+      </button>
+    );
+  const field = {
+    width: "100%",
+    fontSize: 16,
+    padding: "8px 10px",
+    border: "1px solid var(--line)",
+    borderRadius: 8,
+    background: "var(--surface)",
+    color: "var(--text)",
+  };
+  const save = () =>
+    meApi
+      .saveMock(session.access_token, {
+        item_id: id,
+        decision: skip ? "skip" : "bid",
+        bid_krw: skip ? null : bid,
+        max_krw: Number(max.replace(/[^0-9]/g, "")) * 10_000 || null,
+        reason: reason.trim() || null,
+      })
+      .then(() => setDone(true))
+      .catch(() => {});
+  return (
+    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+      <div style={{ fontWeight: 600, fontSize: 14 }}>{m.title}</div>
+      <div className="sub">{m.hint}</div>
+      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+        <button
+          className={`chip ${!skip ? "green" : "gray"}`}
+          style={{ border: 0, minHeight: 36 }}
+          onClick={() => setSkip(false)}
+        >
+          {m.bid} · {won(bid)}
+        </button>
+        <button
+          className={`chip ${skip ? "green" : "gray"}`}
+          style={{ border: 0, minHeight: 36 }}
+          onClick={() => setSkip(true)}
+        >
+          {m.skip}
+        </button>
+      </div>
+      <label style={{ display: "block", fontSize: 13, marginTop: 8 }}>
+        <span className="sub">{m.max}</span>
+        <input
+          inputMode="numeric"
+          value={max}
+          onChange={(e) => setMax(e.target.value)}
+          style={field}
+        />
+      </label>
+      <label style={{ display: "block", fontSize: 13, marginTop: 8 }}>
+        <span className="sub">{m.reason}</span>
+        <input
+          value={reason}
+          maxLength={500}
+          onChange={(e) => setReason(e.target.value)}
+          style={field}
+        />
+      </label>
+      <button className="btn primary" style={{ height: 44, marginTop: 10 }} onClick={save}>
+        {m.save}
+      </button>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { meApi, type Bid, type BidIn, type BidTodo, type Bids } from "@/lib/api/me";
+import { meApi, type Bid, type BidIn, type BidTodo, type Bids, type Mock } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
@@ -128,18 +128,27 @@ function WonCard({ b }: { b: Bid }) {
 export default function Me() {
   const { session, ready } = useSession();
   const [d, setD] = useState<Bids | null>(null);
+  const [mocks, setMocks] = useState<Mock[]>([]);
   const load = useCallback(() => {
-    if (session)
-      meApi
-        .bids(session.access_token)
-        .then(setD)
-        .catch(() => setD({ won: [], history: [], todo: [] }));
+    if (!session) return;
+    meApi
+      .bids(session.access_token)
+      .then(setD)
+      .catch(() => setD({ won: [], history: [], todo: [] }));
+    meApi
+      .mocks(session.access_token)
+      .then(setMocks)
+      .catch(() => setMocks([]));
   }, [session]);
   useEffect(load, [load]);
 
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.tabs.me} />;
-  const empty = d && !d.won.length && !d.history.length && !d.todo.length;
+  const empty = d && !d.won.length && !d.history.length && !d.todo.length && !mocks.length;
+  const dropMock = (id: number) => {
+    setMocks((l) => l.filter((x) => x.mock_id !== id));
+    meApi.removeMock(session.access_token, id).catch(() => {});
+  };
   return (
     <main className="page">
       <div className="topbar">
@@ -166,6 +175,45 @@ export default function Me() {
           <h2 style={{ fontSize: 16, margin: 0 }}>{t.won}</h2>
           {d.won.map((b) => (
             <WonCard key={b.bid_id} b={b} />
+          ))}
+        </section>
+      )}
+      {mocks.length > 0 && (
+        <section className="section">
+          <h2 style={{ fontSize: 16, margin: 0 }}>{copy.mock.notes}</h2>
+          <p className="sub" style={{ margin: "4px 0 0" }}>
+            {copy.mock.notesHint}
+          </p>
+          {mocks.map((x) => (
+            <div key={x.mock_id} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <Link
+                  href={`/item/${encodeURIComponent(x.item_id)}`}
+                  style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}
+                >
+                  {x.place} <span className="sub">{md(x.sale_date)}</span>
+                </Link>
+                <button
+                  className="chip gray"
+                  style={{ border: 0, minHeight: 28 }}
+                  onClick={() => dropMock(x.mock_id)}
+                >
+                  {copy.mock.remove}
+                </button>
+              </div>
+              <div className="sub">
+                {x.decision === "skip"
+                  ? copy.mock.skip
+                  : `${copy.mock.amount} ${won(x.bid_krw ?? 0)}`}
+                {x.max_krw ? ` · 상한 ${won(x.max_krw)}` : ""}
+                {x.reason ? ` · ${x.reason}` : ""}
+              </div>
+              {x.review.map((line) => (
+                <div key={line} style={{ fontSize: 14, marginTop: 2 }}>
+                  {line}
+                </div>
+              ))}
+            </div>
           ))}
         </section>
       )}

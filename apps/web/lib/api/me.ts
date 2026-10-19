@@ -143,7 +143,25 @@ export type Workspace = {
   history: { at: string; what: string; change: string }[];
 };
 
+export type MockIn = {
+  item_id: string;
+  decision: "bid" | "skip";
+  bid_krw: number | null;
+  max_krw: number | null;
+  reason: string | null;
+};
+export type Mock = MockIn & {
+  mock_id: number;
+  sale_date: string;
+  place: string | null;
+  review: string[];
+};
+
 export const meApi = {
+  mocks: (t: string) => call<Mock[]>(t, "/mocks"),
+  saveMock: (t: string, m: MockIn) =>
+    call(t, "/mocks", { method: "POST", body: JSON.stringify(m) }),
+  removeMock: (t: string, id: number) => call(t, `/mocks/${id}`, { method: "DELETE" }),
   compare: (t: string) => call<Compare>(t, "/compare"),
   addCompare: (t: string, id: string) =>
     call(t, `/compare/${encodeURIComponent(id)}`, { method: "PUT" }),

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from aucs_api import settings
 from aucs_api.auth.user import current_user_id
-from aucs_api.services import me, registry
+from aucs_api.services import me, mock, registry
 
 router = APIRouter(prefix="/me")
 Uid = Annotated[str, Depends(current_user_id)]
@@ -151,6 +151,31 @@ def post_exclude(item_id: str, body: ExcludeIn, uid: Uid) -> dict[str, bool]:
 @router.delete("/compare/excluded/{item_id}")
 def delete_exclude(item_id: str, uid: Uid) -> dict[str, bool]:
     me.compare_unexclude(uid, item_id)
+    return {"ok": True}
+
+
+class MockIn(BaseModel):
+    item_id: str
+    decision: str = Field(pattern="^(bid|skip)$")
+    bid_krw: int | None = Field(default=None, gt=0)
+    max_krw: int | None = Field(default=None, gt=0)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.get("/mocks")
+def get_mocks(uid: Uid) -> list[dict[str, Any]]:
+    return mock.listing(uid, date.today())
+
+
+@router.post("/mocks")
+def post_mock(body: MockIn, uid: Uid) -> dict[str, bool]:
+    mock.save(uid, body.model_dump())
+    return {"ok": True}
+
+
+@router.delete("/mocks/{mock_id}")
+def delete_mock(mock_id: int, uid: Uid) -> dict[str, bool]:
+    mock.remove(uid, mock_id)
     return {"ok": True}
 
 
