@@ -6,6 +6,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { fetchBidCheck, fetchBidDay, type BidCheck, type BidDay } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
+import { BidDaySheet } from "@/components/bid-day-sheet";
+import { useIsPc } from "@/lib/use-pc";
 import { won } from "@/lib/format";
 
 const t = copy.bidSheet;
@@ -35,6 +37,7 @@ function Digits({ v }: { v: number | null }) {
 }
 
 function Sheet() {
+  const pc = useIsPc();
   const id = decodeURIComponent(String(useParams().id));
   const sp = useSearchParams();
   const [bid, setBid] = useState<number | null>(Number(sp.get("bid")) || null);
@@ -201,6 +204,13 @@ function Sheet() {
           </div>
         </section>
       </div>
+      {pc && (
+        <div className="no-print" style={{ marginTop: 20 }}>
+          <h2 style={{ fontSize: 20 }}>{copy.bidDay.title}</h2>
+          <div className="sub">{t.dayHint}</div>
+          <BidDaySheet id={id} wide />
+        </div>
+      )}
     </main>
   );
 }

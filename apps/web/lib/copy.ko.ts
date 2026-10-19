@@ -463,6 +463,7 @@ export const copy = {
     private: "나만 볼 수 있어요 · 남의 집 안이나 사람 얼굴은 찍지 마세요",
   },
   bidSheet: {
+    dayHint: "입찰일 아침에 볼 한 장이에요 · 휴대폰에서는 「입찰일 아침」 화면으로 따로 열려요",
     checkTitle: "실수 막기 검사",
     checks: {
       korean: "금액을 한글로 읽어 맞춰 봤어요",
