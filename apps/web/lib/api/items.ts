@@ -78,6 +78,19 @@ export type ItemList = {
 };
 export type RegionRow = { sido: string; sigungu: string; items: number };
 
+// 찾기 조건(FIND-03). 금액은 원, 면적은 ㎡.
+export type FindFilter = {
+  usage?: string[];
+  exclude?: string[];
+  failed_min?: number;
+  rate_max?: number;
+  days_max?: number;
+  area_min?: number;
+  area_max?: number;
+  price_max?: number;
+};
+export const SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"];
+
 export function fetchItems(opts: {
   sigungu?: string[];
   maxCash?: number | null;
@@ -85,8 +98,14 @@ export function fetchItems(opts: {
   limit?: number;
   q?: string;
   status?: FindStatus;
+  filter?: FindFilter;
 }): Promise<ItemList> {
   const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(opts.filter ?? {})) {
+    if (v == null || v === "") continue;
+    if (Array.isArray(v)) v.forEach((x) => q.append(k, String(x)));
+    else q.set(k, String(v));
+  }
   if (opts.q) q.set("q", opts.q);
   if (opts.status) q.set("status", opts.status);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));

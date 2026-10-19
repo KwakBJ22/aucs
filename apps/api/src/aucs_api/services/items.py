@@ -160,9 +160,16 @@ def list_items(
     limit: int,
     today: date,
     q: str | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    from aucs_api.services.pro import build_where  # 찾기 조건(FIND-03)은 전문가 표와 같은 규칙
+
     sql = _CARD_SQL
     params: dict[str, Any] = {"today": today, "limit": limit}
+    if extra and any(v not in (None, []) for v in extra.values()):
+        more, p2 = build_where({k: v for k, v in extra.items() if v not in (None, [])}, today)
+        sql += more
+        params.update(p2)
     pq = parse_query(q)
     if pq is not None:  # 검색할 때는 시작 질문의 지역·현금 조건을 빼고 찾음
         sigungu, max_cash = [], None

@@ -898,3 +898,93 @@ button {
 .row-on td {
   background: var(--blue-soft);
 }
+
+/* 찾기 조건 */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.f-label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: block;
+}
+.f-input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pills button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+.pills button.on {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-weight: 700;
+}
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.switch-row input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 8px 0 0;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+}
+.cond-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  font-size: 15px;
+}
+.pick-on {
+  background: var(--blue-soft);
+  border-radius: 12px;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+.map-box {
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(45deg, var(--bg), var(--bg) 10px, var(--surface) 10px, var(--surface) 20px);
+}

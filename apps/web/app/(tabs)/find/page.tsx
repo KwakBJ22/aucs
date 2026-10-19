@@ -4,14 +4,100 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ItemCard } from "@/components/item-card";
-import { fetchItems, type FindStatus, type ItemList, type ResultCard } from "@/lib/api/items";
+import { HeartButton } from "@/components/heart-button";
+import { FindFilters, filterSummary } from "@/components/find-filters";
+import { PageHeader } from "@/components/layout/page-header";
+import {
+  fetchItem,
+  fetchItems,
+  type FindFilter,
+  type FindStatus,
+  type ItemDetail,
+  type ItemList,
+  type ResultCard,
+} from "@/lib/api/items";
+import { meApi } from "@/lib/api/me";
+import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
-import { won } from "@/lib/format";
+import { dday, won } from "@/lib/format";
 import { loadProfile } from "@/lib/profile";
+import { useIsPc } from "@/lib/use-pc";
 
 const t = copy.find;
 const KEY_STATUS = "aucs_find_status";
 const KEY_RECENT = "aucs_recent_q";
+const KEY_FILTER = "aucs_find_filter";
+const TONE: Record<string, string> = {
+  green: "var(--green)",
+  gray: "var(--faint)",
+  orange: "var(--amber)",
+  red: "var(--red)",
+  blue: "var(--blue)",
+};
+
+// PC 오른쪽: 고른 물건의 다섯 질문 한 줄씩 + 담기·비교·상세
+function PickPanel({ id }: { id: string | null }) {
+  const [d, setD] = useState<ItemDetail | null>(null);
+  const { session } = useSession();
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    setD(null);
+    setMsg("");
+    if (id) fetchItem(id).then(setD).catch(() => setD(null));
+  }, [id]);
+  if (!id) return <section className="section"><p className="sub">{t.pickEmpty}</p></section>;
+  if (!d) return <section className="section" style={{ height: 260, opacity: 0.5 }} />;
+  const eid = encodeURIComponent(d.item_id);
+  return (
+    <section className="section">
+      <div className="sub" style={{ margin: 0 }}>
+        <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.sale_date} · {d.court} {d.case_no}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <h2 style={{ marginTop: 4 }}>
+          {d.place} {d.building ?? d.usage}
+        </h2>
+        <HeartButton id={d.item_id} />
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700 }}>
+        {won(d.min_price_krw)} <span className="sub">{d.min_rate}% · 감정가 {won(d.appraisal_krw)}</span>
+      </div>
+      {d.fatal && <div className="fatal">{d.fatal}</div>}
+      <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }}>{d.verdict}</p>
+      {d.questions.map((q) => (
+        <Link key={q.key} href={`/item/${eid}#q-${q.key}`} className="menu-row">
+          <span style={{ display: "flex", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+            <span className="toc-dot" style={{ background: TONE[q.tone] ?? "var(--faint)" }} />
+            <span>
+              <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>{q.title}</span>
+              {q.answer}
+            </span>
+          </span>
+          <span className="sub">›</span>
+        </Link>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <Link href={`/item/${eid}`} className="btn primary" style={{ height: 44, fontSize: 15, flex: 2 }}>
+          {t.toDetail}
+        </Link>
+        {session && (
+          <button
+            className="pc-act"
+            style={{ flex: 1 }}
+            onClick={() =>
+              meApi
+                .addCompare(session.access_token, d.item_id)
+                .then(() => setMsg(copy.compare.added))
+                .catch(() => setMsg(copy.compare.full(5)))
+            }
+          >
+            {msg || copy.compare.add}
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function load(key: string): string | null {
   try {
@@ -65,10 +151,22 @@ export default function Find() {
   const [recent, setRecent] = useState<string[]>([]);
   const [list, setList] = useState<ItemList | null>(null);
   const [regions, setRegions] = useState<string[]>([]);
+  const [filter, setFilter] = useState<FindFilter>({});
+  const [condOpen, setCondOpen] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [pick, setPick] = useState<string | null>(null);
+  const [asTable, setAsTable] = useState(false);
+  const pc = useIsPc();
+  const { session } = useSession();
 
   useEffect(() => {
     const s = load(KEY_STATUS);
     if (s === "active" || s === "sold" || s === "withdrawn" || s === "all") setStatus(s);
+    try {
+      setFilter(JSON.parse(load(KEY_FILTER) ?? "{}") as FindFilter);
+    } catch {
+      setFilter({});
+    }
     try {
       setRecent(JSON.parse(load(KEY_RECENT) ?? "[]") as string[]);
     } catch {
@@ -91,6 +189,7 @@ export default function Find() {
       limit: 100,
       q: query || undefined,
       status,
+      filter,
     })
       .then((r) => {
         if (r.exact_item_id) {
@@ -99,9 +198,26 @@ export default function Find() {
           return;
         }
         setList(r);
+        setPick((p) => (p && r.items.some((x) => x.item_id === p) ? p : (r.items[0]?.item_id ?? null)));
       })
       .catch(() => setList({ total: 0, items: [], results: [] }));
-  }, [sort, status, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sort, status, query, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const changeFilter = (f: FindFilter) => {
+    setFilter(f);
+    setSaveMsg("");
+    save(KEY_FILTER, JSON.stringify(f));
+  };
+  const saveCond = () => {
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    meApi
+      .addSearch(session.access_token, copy.alert.name, { sigungu: regions, ...filter })
+      .then(() => setSaveMsg(t.saved))
+      .catch(() => setSaveMsg(""));
+  };
 
   const remember = (word: string) => {
     if (!word) return;
@@ -115,11 +231,8 @@ export default function Find() {
   };
   const empty = list && list.items.length === 0 && !(list.results ?? []).length;
 
-  return (
-    <main className="page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-      </div>
+  const searchBox = (
+    <>
       <div style={{ display: "flex", gap: 8, position: "relative" }}>
         <input
           type="search"
@@ -234,6 +347,10 @@ export default function Find() {
             ))}
         </div>
       )}
+    </>
+  );
+  const countLine = (
+    <>
       <p className="sub">
         {query
           ? t.searching
@@ -241,14 +358,112 @@ export default function Find() {
             ? `${t.total(list.total)} · ${t.mapSoon}`
             : ""}
       </p>
+    </>
+  );
+  const condSummary = filterSummary(filter);
+  const filters = (
+    <FindFilters f={filter} onChange={changeFilter} onSave={saveCond} saveMsg={saveMsg} />
+  );
+  const results = (
+    <>
+      {empty && <p className="sub">{t.noResult}</p>}
+      {list?.items.map((c) => (
+        <ItemCard key={c.item_id} c={c} />
+      ))}
+      {(list?.results ?? []).map((r) => (
+        <ResultRow key={r.result_id} r={r} />
+      ))}
+    </>
+  );
+
+  if (pc)
+    return (
+      <main className="page">
+        <PageHeader title={t.title} sub={regions.join(" · ")} />
+        <div className="pc-grid g-18-34-48">
+          <section className="section pc-sticky" style={{ marginTop: 0, maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+            <h2>{t.cond}</h2>
+            {filters}
+          </section>
+          <section className="section" style={{ marginTop: 0 }}>
+            {searchBox}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {countLine}
+              <div className="pills">
+                <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>{t.viewCard}</button>
+                <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>{t.viewTable}</button>
+              </div>
+            </div>
+            {empty && <p className="sub">{t.noResult}</p>}
+            {asTable ? (
+              <div style={{ overflowX: "auto" }}>
+                <table className="pro-table">
+                  <thead>
+                    <tr>
+                      <th>{t.cols.date}</th>
+                      <th>{t.cols.place}</th>
+                      <th>{t.cols.min}</th>
+                      <th>{t.cols.rate}</th>
+                      <th>{t.cols.failed}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {list?.items.map((c) => (
+                      <tr key={c.item_id} onClick={() => setPick(c.item_id)} className={pick === c.item_id ? "row-on" : ""} style={{ cursor: "pointer" }}>
+                        <td>{dday(c.d_day)}</td>
+                        <td>{c.place} {c.building ?? c.usage}</td>
+                        <td>{won(c.min_price_krw)}</td>
+                        <td>{c.min_rate}</td>
+                        <td>{c.failed_count ?? 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              list?.items.map((c) => (
+                <div
+                  key={c.item_id}
+                  className={pick === c.item_id ? "pick-on" : ""}
+                  onClickCapture={(e) => {
+                    if (pick !== c.item_id) {
+                      e.preventDefault();
+                      setPick(c.item_id);
+                    }
+                  }}
+                >
+                  <ItemCard c={c} />
+                </div>
+              ))
+            )}
+            {(list?.results ?? []).map((r) => (
+              <ResultRow key={r.result_id} r={r} />
+            ))}
+          </section>
+          <div className="pc-sticky" style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}>
+            <section className="section map-box" style={{ marginTop: 0 }}>
+              <span className="sub">{t.mapSoon}</span>
+            </section>
+            <PickPanel id={pick} />
+          </div>
+        </div>
+      </main>
+    );
+
+  return (
+    <main className="page">
+      <PageHeader title={t.title} />
+      {searchBox}
+      <button className="cond-row" onClick={() => setCondOpen(!condOpen)}>
+        <span>
+          <b>{t.cond}</b> <span className="sub">{condSummary || t.condOpen}</span>
+        </span>
+        <span className="sub">{condOpen ? "▴" : "›"}</span>
+      </button>
+      {condOpen && <section className="section">{filters}</section>}
+      {countLine}
       <section className="section" style={{ paddingTop: 6, paddingBottom: 6 }}>
-        {empty && <p className="sub">{t.noResult}</p>}
-        {list?.items.map((c) => (
-          <ItemCard key={c.item_id} c={c} />
-        ))}
-        {(list?.results ?? []).map((r) => (
-          <ResultRow key={r.result_id} r={r} />
-        ))}
+        {results}
       </section>
     </main>
   );

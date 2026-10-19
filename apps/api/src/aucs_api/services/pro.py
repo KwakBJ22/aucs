@@ -23,8 +23,16 @@ EXCLUDE_RULES = {
     "share": ["risk.share"],
     "special": ["risk.special_condition"],
     "villa": ["risk.neighborhood_villa"],
-    "stop": ["risk.stop"],
+    "stop": ["risk.stop", "risk.withdraw"],
+    "lien": ["risk.lien"],
+    "senior": ["risk.senior_tenant", "risk.prior_rights", "risk.lease_reg"],
+    "superficies": ["risk.superficies", "risk.land_right"],
+    "illegal": ["risk.illegal"],
+    "farmland": ["risk.farmland"],
+    "resale": ["risk.resale"],
 }
+# 초보자 안전 모드: 한 번에 빼는 7가지(05 화면 설계)
+SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"]
 SORTS = {
     "deadline": "i.sale_date, i.item_id",
     "rate": "i.min_price_krw::float / nullif(i.appraisal_krw, 0), i.sale_date",
@@ -64,6 +72,8 @@ def build_where(f: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
         ("app_min", "i.appraisal_krw", ">="),
         ("app_max", "i.appraisal_krw", "<="),
         ("price_max", "i.min_price_krw", "<="),
+        ("area_min", "i.building_area_m2", ">="),
+        ("area_max", "i.building_area_m2", "<="),
     ):
         if f.get(key) is not None:
             sql += f" and coalesce({col}, 0) {op} %({key})s"

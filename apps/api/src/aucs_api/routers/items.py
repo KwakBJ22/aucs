@@ -18,12 +18,22 @@ def get_items(
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
     q: Annotated[str | None, Query(max_length=40)] = None,
     status: Annotated[str, Query(pattern="^(active|sold|withdrawn|all)$")] = "active",
+    usage: Annotated[list[str] | None, Query()] = None,
+    exclude: Annotated[list[str] | None, Query()] = None,
+    failed_min: Annotated[int | None, Query(ge=0, le=30)] = None,
+    rate_max: Annotated[int | None, Query(ge=1, le=100)] = None,
+    days_max: Annotated[int | None, Query(ge=0, le=365)] = None,
+    area_min: Annotated[float | None, Query(ge=0)] = None,
+    area_max: Annotated[float | None, Query(ge=0)] = None,
+    price_max: Annotated[int | None, Query(ge=0)] = None,
 ) -> dict[str, Any]:
     """진행 중 물건(items)과 끝난 사건(results). status 에 따라 한쪽 또는 둘 다."""
     out: dict[str, Any] = {"total": 0, "items": [], "results": [], "exact_item_id": None}
     if status in ("active", "all"):
         out.update(items.list_items(
             sigungu=sigungu or [], max_cash=max_cash, sort=sort, limit=limit, today=date.today(), q=q,
+            extra={"usage": usage, "exclude": exclude, "failed_min": failed_min, "rate_max": rate_max,
+                   "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max},
         ))  # fmt: skip
     if status != "active":
         out.update(items.search_results(q=q, status=status, sigungu=sigungu or [], limit=limit))
