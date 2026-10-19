@@ -20,7 +20,7 @@
   --kakao: #fee500;
   --kakao-text: #191600;
 }
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (max-width: 1023px) {
   :root {
     --bg: #0f1115;
     --surface: #1a1d23;
