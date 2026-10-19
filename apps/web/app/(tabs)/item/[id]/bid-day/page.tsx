@@ -62,7 +62,7 @@ export default function BidDayPage() {
     </label>
   );
   return (
-    <main className="page">
+    <main className="page narrow">
       <div className="topbar">
         <div className="brand">{t.title}</div>
         <Link href={`/item/${encodeURIComponent(id)}`} className="sub">

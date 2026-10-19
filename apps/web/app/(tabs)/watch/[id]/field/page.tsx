@@ -121,6 +121,8 @@ export default function FieldPage() {
           {copy.ws.title} ›
         </Link>
       </div>
+      <div className="pc-grid g-55-45">
+      <div>
       {d && (
         <section className="section">
           <div style={{ fontWeight: 600 }}>
@@ -224,6 +226,8 @@ export default function FieldPage() {
         })}
       </section>
 
+      </div>
+      <div>
       <section className="section">
         <h2>{t.media}</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -291,6 +295,8 @@ export default function FieldPage() {
           {t.private}
         </div>
       </section>
+      </div>
+      </div>
     </main>
   );
 }

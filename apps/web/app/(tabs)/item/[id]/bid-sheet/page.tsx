@@ -61,6 +61,7 @@ function Sheet() {
   const dep = chk?.deposit_krw ?? day?.deposit_krw ?? null;
   return (
     <main className="page">
+      <div className="pc-grid g-40-60">
       <div className="no-print">
         <div className="topbar">
           <div className="brand">{t.title}</div>
@@ -136,6 +137,25 @@ function Sheet() {
             {t.printHint}
           </div>
         </section>
+        <section className="section">
+          <h2>{t.checkTitle}</h2>
+          {[
+            [Boolean(chk), t.checks.korean],
+            [Boolean(chk) && (chk?.level === "ok" || sure), t.checks.double],
+            [Boolean(chk), chk?.resale ? t.checks.deposit20 : t.checks.deposit10],
+            [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
+            [true, t.checks.privacy],
+          ].map(([ok, label]) => (
+            <div key={String(label)} className="line-row" style={{ fontSize: 14 }}>
+              <span>{label as string}</span>
+              <b style={{ color: ok ? "var(--green)" : "var(--faint)" }}>{ok ? "✓" : "—"}</b>
+            </div>
+          ))}
+          <Link href={`/item/${encodeURIComponent(id)}/bid-day`} className="menu-row">
+            <span>{copy.bidDay.title}</span>
+            <span className="sub">›</span>
+          </Link>
+        </section>
       </div>
 
       <section className="section print-area">
@@ -184,6 +204,7 @@ function Sheet() {
           {t.f.note}
         </div>
       </section>
+      </div>
     </main>
   );
 }

@@ -476,6 +476,9 @@ button {
   .pc-grid.g-58-42 {
     grid-template-columns: 58fr 42fr;
   }
+  .pc-grid.g-55-45 {
+    grid-template-columns: 55fr 45fr;
+  }
   .pc-grid.g-40-60 {
     grid-template-columns: 40fr 60fr;
   }
@@ -702,6 +705,9 @@ button {
   }
   .print-area {
     margin: 0;
+  }
+  .pc-grid {
+    display: block !important;
   }
 }
 
