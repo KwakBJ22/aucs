@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from aucs_api.services import item_detail, items
+from aucs_api.services import docs, item_detail, items
 
 router = APIRouter()
 
@@ -40,6 +40,15 @@ def get_item(item_id: str) -> dict[str, Any]:
     d = item_detail.detail(item_id, date.today())
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
+    return d
+
+
+@router.get("/items/{item_id}/docs")
+def get_item_docs(item_id: str) -> dict[str, Any]:
+    """DOC-01 원문 보기 (현황조사서·문건송달내역)."""
+    d = docs.item_docs(item_id)
+    if d is None:
+        raise HTTPException(404, "물건을 찾지 못했어요")
     return d
 
 

@@ -6,8 +6,11 @@ import { HeartButton } from "@/components/heart-button";
 import {
   fetchBidCheck,
   fetchCalc,
+  fetchDocs,
   fetchItem,
   type BidCheck,
+  type DocKind,
+  type ItemDocs,
   type Calc,
   type ItemDetail,
   type Question,
@@ -53,6 +56,165 @@ const JUDGE_COLOR: Record<string, string> = {
 };
 
 // 등기부 올리기 + 권리 사다리(ITEM-03). 올린 사람만 봄.
+// DOC-01 원문 보기: 화면 전체로 올라오는 창 (처음 열 때 한 번 불러옴)
+const DocCtx = createContext<(k: DocKind) => void>(() => {});
+
+function DocH({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 14, fontWeight: 700, margin: "16px 0 6px" }}>{children}</div>;
+}
+function DocP({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{children}</p>
+  );
+}
+
+function DocSheet({ id, kind, onClose }: { id: string; kind: DocKind; onClose: () => void }) {
+  const c = t.doc;
+  const [docs, setDocs] = useState<ItemDocs | null | undefined>(undefined);
+  const [all, setAll] = useState(false);
+  useEffect(() => {
+    fetchDocs(id)
+      .then(setDocs)
+      .catch(() => setDocs(null));
+  }, [id]);
+  const sr = docs?.status_report;
+  const dl = docs?.deliveries;
+  const cur = kind === "status_report" ? sr : dl;
+  return (
+    <div
+      role="dialog"
+      aria-label={c.names[kind]}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        background: "var(--bg, #fff)",
+        overflowY: "auto",
+        padding: "0 16px 32px",
+      }}
+    >
+      <div className="topbar" style={{ position: "sticky", top: 0, background: "var(--bg, #fff)" }}>
+        <b style={{ fontSize: 17 }}>{c.names[kind]}</b>
+        <button
+          onClick={onClose}
+          style={{ border: 0, background: "none", fontSize: 15, minWidth: 44, minHeight: 44 }}
+        >
+          {c.close}
+        </button>
+      </div>
+      {docs === undefined && <p className="sub">{c.loading}</p>}
+      {docs !== undefined && !cur && <p className="sub">{c.none}</p>}
+      {cur && (
+        <p className="sub" style={{ fontSize: 12, marginTop: 0 }}>
+          {c.from(cur.fetched_at)}
+        </p>
+      )}
+      {kind === "status_report" && sr && (
+        <>
+          {sr.exam_at && (
+            <>
+              <DocH>{c.examAt}</DocH>
+              <DocP>{sr.exam_at}</DocP>
+            </>
+          )}
+          {sr.summary && (
+            <>
+              <DocH>{c.summary}</DocH>
+              <DocP>{sr.summary}</DocP>
+            </>
+          )}
+          {sr.possession.length > 0 && (
+            <>
+              <DocH>{c.possession}</DocH>
+              {sr.possession.map((x, i) => (
+                <DocP key={i}>{x}</DocP>
+              ))}
+            </>
+          )}
+          {sr.lease_note && (
+            <>
+              <DocH>{c.leaseNote}</DocH>
+              <DocP>{sr.lease_note}</DocP>
+            </>
+          )}
+          {sr.tenants.length > 0 && (
+            <>
+              <DocH>{c.tenants}</DocH>
+              {sr.tenants.map((x, i) => (
+                <div
+                  key={i}
+                  style={{ fontSize: 14, padding: "6px 0", borderBottom: "1px solid var(--line)" }}
+                >
+                  <b>{x.name ?? "임차인"}</b> {x.part ?? ""} {x.use ?? ""}
+                  <div className="sub" style={{ margin: 0 }}>
+                    {[
+                      x.move_in && `전입 ${x.move_in}`,
+                      x.fixed && `확정 ${x.fixed}`,
+                      x.deposit && `보증금 ${x.deposit}`,
+                      x.rent && `차임 ${x.rent}`,
+                      x.note,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "-"}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+      {kind === "deliveries" && dl && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <DocH>{c.filings}</DocH>
+            <button
+              onClick={() => setAll(!all)}
+              style={{
+                border: 0,
+                background: "none",
+                color: "var(--blue)",
+                fontSize: 13,
+                minHeight: 44,
+              }}
+            >
+              {all ? c.keyOnly : c.all}
+            </button>
+          </div>
+          {dl.filings
+            .filter((x) => all || x.key)
+            .map((x, i) => (
+              <div
+                key={i}
+                style={{ fontSize: 13, padding: "4px 0", fontWeight: x.key ? 600 : 400 }}
+              >
+                <span className="sub" style={{ margin: 0 }}>
+                  {x.date ?? "-"}
+                </span>{" "}
+                {x.text}
+                {x.result ? ` · ${x.result}` : ""}
+              </div>
+            ))}
+          {!all && !dl.filings.some((x) => x.key) && <p className="sub">-</p>}
+          {all && (
+            <>
+              <DocH>{c.sends}</DocH>
+              {dl.sends.map((x, i) => (
+                <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>
+                  <span className="sub" style={{ margin: 0 }}>
+                    {x.date ?? "-"}
+                  </span>{" "}
+                  {x.text}
+                  {x.result ? ` · ${x.result}` : ""}
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // 내가 올린 등기부: 상세 화면 전체가 같이 씀(「무엇을 떠안나」 요약 줄도 이걸로 바뀜)
 type MyReg = {
   ready: boolean;
@@ -671,6 +833,25 @@ function CalcBox({ id }: { id: string }) {
   );
 }
 
+function HoldDocLink() {
+  const openDoc = useContext(DocCtx);
+  return (
+    <button
+      onClick={() => openDoc("status_report")}
+      style={{
+        border: 0,
+        background: "none",
+        color: "var(--blue)",
+        fontSize: 13,
+        padding: "8px 0",
+        minHeight: 44,
+      }}
+    >
+      {t.doc.openSr}
+    </button>
+  );
+}
+
 function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
   if (q.key === "buy")
@@ -713,6 +894,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
             </div>
           </div>
         ))}
+        <HoldDocLink />
         {d.failure_types.length > 0 && (
           <div className="sub" style={{ marginTop: 8 }}>
             {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
@@ -855,6 +1037,7 @@ function flowDate(d: string): string {
 function CheckBody({ b }: { b: Record<string, any> }) {
   const [showDone, setShowDone] = useState(false);
   const reg = useContext(RegCtx);
+  const openDoc = useContext(DocCtx);
   const list = withMyRegistry(b.checklist as CheckItem[], reg?.u);
   const todo = list.filter((x) => x.state !== "확인 완료");
   const done = list.filter((x) => x.state === "확인 완료");
@@ -933,6 +1116,20 @@ function CheckBody({ b }: { b: Record<string, any> }) {
               · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
               {x.note ? ` · ${x.note}` : ""}
             </span>
+            {(x.key === "status_report" || x.key === "deliveries") && (
+              <button
+                onClick={() => openDoc(x.key as DocKind)}
+                style={{
+                  border: 0,
+                  background: "none",
+                  color: "var(--blue)",
+                  fontSize: 13,
+                  padding: "0 0 0 6px",
+                }}
+              >
+                {t.doc.open}
+              </button>
+            )}
           </div>
         ))}
       {b.events.length > 0 && (
@@ -975,6 +1172,7 @@ export default function Item() {
   const [d, setD] = useState<ItemDetail | null | undefined>(undefined);
   const [open, setOpen] = useState<string | null>(null);
   const reg = useMyRegistry(decodeURIComponent(id));
+  const [doc, setDoc] = useState<DocKind | null>(null);
 
   useEffect(() => {
     fetchItem(decodeURIComponent(id))
@@ -1002,117 +1200,120 @@ export default function Item() {
   const urgent = d.d_day != null && d.d_day <= 7;
   return (
     <RegCtx.Provider value={reg}>
-      <main className="page">
-        <div className="topbar">
-          <button
-            aria-label={t.back}
-            onClick={() => router.back()}
-            style={{
-              border: 0,
-              background: "none",
-              fontSize: 20,
-              minWidth: 44,
-              minHeight: 44,
-              textAlign: "left",
-            }}
-          >
-            ←
-          </button>
-          <HeartButton id={d.item_id} />
-        </div>
-        {d.fatal && <div className="fatal">{d.fatal}</div>}
-        <section className="section">
-          <div className="sub">
-            <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
-            {d.sale_date} · {d.court} {d.case_no}
+      <DocCtx.Provider value={setDoc}>
+        <main className="page">
+          <div className="topbar">
+            <button
+              aria-label={t.back}
+              onClick={() => router.back()}
+              style={{
+                border: 0,
+                background: "none",
+                fontSize: 20,
+                minWidth: 44,
+                minHeight: 44,
+                textAlign: "left",
+              }}
+            >
+              ←
+            </button>
+            <HeartButton id={d.item_id} />
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
-            {d.place} {d.building ?? d.usage}
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
-            {won(d.min_price_krw)}{" "}
-            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
-              {copy.card.ofAppraisal} {d.min_rate}%
-              {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
-            </span>
-          </div>
-          <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
-        </section>
-
-        <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
-          {d.questions.map((q) => (
-            <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
-              <button
-                onClick={() => setOpen(open === q.key ? null : q.key)}
-                style={{
-                  width: "100%",
-                  border: 0,
-                  background: "none",
-                  textAlign: "left",
-                  padding: "14px 0",
-                  minHeight: 44,
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "flex-start",
-                  color: "inherit",
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    background: DOT[q.tone],
-                    marginTop: 7,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ flexGrow: 1 }}>
-                  <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
-                    {q.title}
-                  </span>
-                  <span style={{ fontSize: 15, fontWeight: 600 }}>{answerOf(q, reg.u)}</span>
-                </span>
-                <span aria-hidden="true" style={{ color: "var(--faint)" }}>
-                  {open === q.key ? "⌃" : "›"}
-                </span>
-              </button>
-              {open === q.key && (
-                <div style={{ padding: "0 0 14px 18px" }}>
-                  <Body q={q} d={d} />
-                </div>
-              )}
+          {d.fatal && <div className="fatal">{d.fatal}</div>}
+          <section className="section">
+            <div className="sub">
+              <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
+              {d.sale_date} · {d.court} {d.case_no}
             </div>
-          ))}
-        </section>
+            <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+              {d.place} {d.building ?? d.usage}
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
+              {won(d.min_price_krw)}{" "}
+              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
+                {copy.card.ofAppraisal} {d.min_rate}%
+                {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
+              </span>
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+          </section>
 
-        <section className="section">
-          {d.next_round.min_price_krw && (
-            <Row
-              label={t.nextRound}
-              value={
-                <b>
-                  {won(d.next_round.min_price_krw)}
-                  {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
-                </b>
-              }
-            />
-          )}
-          {d.rounds.length > 0 && (
-            <div style={{ fontSize: 14, fontWeight: 600, margin: "10px 0 2px" }}>{t.rounds}</div>
-          )}
-          {d.rounds.map((r) => (
-            <Row
-              key={r.sale_date}
-              label={r.sale_date}
-              value={`${won(r.min_price_krw)} · ${r.result}`}
-            />
-          ))}
-        </section>
-        <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
-          {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
-        </p>
-      </main>
+          <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+            {d.questions.map((q) => (
+              <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
+                <button
+                  onClick={() => setOpen(open === q.key ? null : q.key)}
+                  style={{
+                    width: "100%",
+                    border: 0,
+                    background: "none",
+                    textAlign: "left",
+                    padding: "14px 0",
+                    minHeight: 44,
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    color: "inherit",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      background: DOT[q.tone],
+                      marginTop: 7,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ flexGrow: 1 }}>
+                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
+                      {q.title}
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 600 }}>{answerOf(q, reg.u)}</span>
+                  </span>
+                  <span aria-hidden="true" style={{ color: "var(--faint)" }}>
+                    {open === q.key ? "⌃" : "›"}
+                  </span>
+                </button>
+                {open === q.key && (
+                  <div style={{ padding: "0 0 14px 18px" }}>
+                    <Body q={q} d={d} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+
+          <section className="section">
+            {d.next_round.min_price_krw && (
+              <Row
+                label={t.nextRound}
+                value={
+                  <b>
+                    {won(d.next_round.min_price_krw)}
+                    {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
+                  </b>
+                }
+              />
+            )}
+            {d.rounds.length > 0 && (
+              <div style={{ fontSize: 14, fontWeight: 600, margin: "10px 0 2px" }}>{t.rounds}</div>
+            )}
+            {d.rounds.map((r) => (
+              <Row
+                key={r.sale_date}
+                label={r.sale_date}
+                value={`${won(r.min_price_krw)} · ${r.result}`}
+              />
+            ))}
+          </section>
+          <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
+            {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
+          </p>
+          {doc && <DocSheet id={d.item_id} kind={doc} onClose={() => setDoc(null)} />}
+        </main>
+      </DocCtx.Provider>
     </RegCtx.Provider>
   );
 }

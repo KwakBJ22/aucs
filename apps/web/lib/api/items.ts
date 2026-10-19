@@ -122,6 +122,34 @@ export type ItemDetail = ItemCard & {
 
 export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
 
+// DOC-01 원문 보기
+export type DocKind = "status_report" | "deliveries";
+export type ItemDocs = {
+  status_report: {
+    fetched_at: string | null;
+    exam_at: string | null;
+    summary: string | null;
+    lease_note: string | null;
+    possession: string[];
+    tenants: {
+      name: string | null;
+      part: string | null;
+      use: string | null;
+      move_in: string | null;
+      fixed: string | null;
+      deposit: string | null;
+      rent: string | null;
+      note: string | null;
+    }[];
+  } | null;
+  deliveries: {
+    fetched_at: string | null;
+    filings: { date: string | null; text: string | null; result: string | null; key: boolean }[];
+    sends: { date: string | null; text: string | null; result: string | null }[];
+  } | null;
+};
+export const fetchDocs = (id: string) => getJson<ItemDocs>(`/items/${encodeURIComponent(id)}/docs`);
+
 export const fetchBidCheck = (id: string, bid: number) =>
   getJson<BidCheck>(`/items/${encodeURIComponent(id)}/bid-check?bid=${bid}`);
 
