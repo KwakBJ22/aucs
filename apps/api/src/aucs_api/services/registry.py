@@ -224,6 +224,7 @@ def save_upload(uid: str, item_id: str, file_name: str, data: bytes) -> int:
                 sale + timedelta(days=KEEP_DAYS),
             ),
         ).fetchone()
+    assert r is not None
     return int(r["upload_id"])
 
 
@@ -235,6 +236,8 @@ def parse_upload(upload_id: int) -> None:
         r = c.execute(
             "select pdf from app.uploaded_registries where upload_id = %s", (upload_id,)
         ).fetchone()
+    if r is None:
+        return
     try:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "registry.pdf"
@@ -336,7 +339,8 @@ def _region(meta: dict[str, Any], rights: list[Right]) -> str | None:
     """소액임차 지역 구분: 최초 담보물권 설정일 기준."""
     ds = [r.receipt_date for r in rights if r.section == "을" and r.receipt_date]
     base = min(ds) if ds else date.today()
-    return region_class(meta.get("sido"), meta.get("sigungu"), None, base).value
+    v = region_class(meta.get("sido"), meta.get("sigungu"), None, base).value
+    return str(v) if v is not None else None
 
 
 def fix_right(

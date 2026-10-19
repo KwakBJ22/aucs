@@ -60,7 +60,7 @@ def area_sum(text: str | None) -> float | None:
     return round(sum(vals), 3) if vals else None
 
 
-def building_area(r: dict) -> float | None:
+def building_area(r: dict[str, Any]) -> float | None:
     """건물 면적: 건물 목록 → 비었으면 집합건물·건물일 때만 면적 목록(땅만 있는 물건은 비워 둠)."""
     area = area_sum(r.get("pjbBuldList"))
     if area is None and re.match(r"\[(집합건물|건물)", str(r.get("convAddr") or "")):

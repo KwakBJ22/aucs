@@ -66,7 +66,7 @@ def status_report(p: dict[str, Any]) -> dict[str, Any]:
 
 def deliveries(p: dict[str, Any]) -> dict[str, Any]:
     """문건·송달내역 → 접수 문건(중요 표시)과 송달."""
-    filings = [
+    filings: list[dict[str, Any]] = [
         {"date": _ymd(x.get("ofdocRcptYmd")), "text": _clean(x.get("rcptDts")), "result": _clean(x.get("rcptRslt"))}
         for x in p.get("dlt_ofdocDtsLst") or []
         if x.get("rcptDts")
@@ -119,7 +119,10 @@ def spec_sheet(p: dict[str, Any]) -> dict[str, Any] | None:
     info = (p.get("dma_result") or {}).get("dspslGdsDxdyInfo") or {}
     if not info.get("gdsSpcfcWrtYmd"):
         return None
-    t = lambda k: mask_text(_clean(info.get(k)))  # noqa: E731
+
+    def t(k: str) -> str | None:
+        return mask_text(_clean(info.get(k)))
+
     remark, item_remark = t("gdsSpcfcRmk"), t("dspslGdsRmk")
     if item_remark and remark and item_remark.strip() == remark.strip():
         item_remark = None  # 두 칸에 같은 글이 오는 일이 많음

@@ -43,6 +43,13 @@ TAGS = [
 ]
 
 
+def _one(r: dict[str, Any] | None) -> dict[str, Any]:
+    """꼭 있어야 하는 한 줄(기준표 등). 없으면 설정 오류라 바로 알림."""
+    if r is None:
+        raise LookupError("기준표가 비어 있어요")
+    return r
+
+
 def failure_table(signals: list[dict[str, Any]]) -> list[dict[str, str]]:
     """PC 전문가 보기: 실패 11유형 전체와 이 물건 상태(걸림·확인 필요·신호 없음). 신호 없음 ≠ 안전."""
     out = []
@@ -453,11 +460,13 @@ def calc(
         if not r or not r["min_price_krw"]:
             return None
         tables = {
-            k: c.execute(
-                "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
-                "order by valid_from desc limit 1",
-                (k,),
-            ).fetchone()["value"]
+            k: _one(
+                c.execute(
+                    "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
+                    "order by valid_from desc limit 1",
+                    (k,),
+                ).fetchone()
+            )["value"]
             for k in _TABLE_KEYS
         }
     return build_calc(
