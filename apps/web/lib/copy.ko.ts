@@ -669,8 +669,13 @@ export const copy = {
     resale: "재매각 물건 — 보증금 비율은 법원 공고로 확인",
     failureTypes: "비슷한 물건에서 실제로 손해 본 경우",
     failureTable: "손해 본 11가지 경우 전체",
+    failHead: (n: number, hit: number) => `실패 사례 점검 · ${n}가지 중 ${hit}가지 걸림`,
+    failFold: (none: number, need: number) => `신호 없음 ${none}가지 · 확인 필요 ${need}가지`,
     failureTableNote: "신호 없음은 자료에서 못 찾았다는 뜻이에요 · 안전하다는 뜻은 아니에요",
     reg: {
+      foldTitle: (n: number, keep: number) =>
+        keep ? `등기 권리 ${n}건 · 남거나 확인할 권리 ${keep}건` : `등기 권리 ${n}건 · 모두 사라져요`,
+      foldBase: (name: string, d: string) => `말소기준 ${d} ${name} · 날짜 순으로 보기`,
       needLogin: "로그인하고 등기부 PDF를 올리면 떠안는 권리를 읽어 드려요",
       upload: "등기부 PDF 올리기",
       reupload: "다시 올리기",

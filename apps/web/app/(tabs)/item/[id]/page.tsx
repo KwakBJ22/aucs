@@ -444,6 +444,8 @@ function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["payout"] &
 function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
+  const pc = useIsPc();
+  const [ladOpen, setLadOpen] = useState(false);
   if (!reg || !reg.ready) return null;
   const { token, u, err, pick, fix, accept, sending, startedAt } = reg;
   const addr = u?.status === "parsed" ? u.address : undefined;
@@ -516,7 +518,20 @@ function RegistryBox() {
                 : r.specDiff(lad.spec_check.spec, lad.spec_check.registry_date)}
             </div>
           )}
-          <div style={{ marginTop: 6 }}>
+          {!pc && (
+            <button className="cond-row" style={{ background: "var(--bg)" }} onClick={() => setLadOpen(!ladOpen)}>
+              <span>
+                <b>{r.foldTitle(lad.rows.length, lad.rows.filter((x) => x.judgment !== "소멸").length)}</b>
+                {lad.base && (
+                  <span className="sub" style={{ display: "block" }}>
+                    {r.foldBase(lad.base.name, lad.base.date ?? "")}
+                  </span>
+                )}
+              </span>
+              <span className="sub">{ladOpen ? "▴" : "›"}</span>
+            </button>
+          )}
+          <div style={{ marginTop: 6, display: pc || ladOpen ? "block" : "none" }}>
             {lad.rows.map((x) => (
               <div key={`${x.section}${x.rank_no}`}>
                 {x.is_base && lad.base && (
@@ -1014,6 +1029,39 @@ function HoldDocLink() {
   );
 }
 
+// 휴대폰: 실패 사례 11가지 중 걸린 것만, 나머지는 한 줄로 접음
+function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_table"]> }) {
+  const [open, setOpen] = useState(false);
+  const hit = rows.filter((r) => r.state === "걸림");
+  const need = rows.filter((r) => r.state === "확인 필요").length;
+  const none = rows.filter((r) => r.state === "신호 없음").length;
+  return (
+    <div className="m-block" style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.failHead(rows.length, hit.length)}</div>
+      {hit.map((r) => (
+        <div key={r.code} style={{ fontSize: 14, padding: "6px 0", color: "var(--red)" }}>
+          ◆ {r.title}
+          <span className="sub" style={{ display: "block" }}>{r.why}</span>
+        </div>
+      ))}
+      <button className="cond-row" style={{ background: "var(--bg)", marginTop: 6 }} onClick={() => setOpen(!open)}>
+        <span style={{ fontSize: 14 }}>{t.failFold(none, need)}</span>
+        <span className="sub">{open ? "▴" : "›"}</span>
+      </button>
+      {open &&
+        rows
+          .filter((r) => r.state !== "걸림")
+          .map((r) => (
+            <div key={r.code} className="line-row" style={{ fontSize: 13 }}>
+              <span>{r.title}</span>
+              <span style={{ color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)", whiteSpace: "nowrap" }}>{r.state}</span>
+            </div>
+          ))}
+      <div className="sub" style={{ fontSize: 12 }}>{t.failureTableNote}</div>
+    </div>
+  );
+}
+
 function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
   if (q.key === "buy")
@@ -1063,10 +1111,14 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
           </div>
         ))}
         <HoldDocLink />
-        {d.failure_types.length > 0 && (
-          <div className="sub" style={{ marginTop: 8 }}>
-            {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
-          </div>
+        {d.failure_table ? (
+          <FailMobile rows={d.failure_table} />
+        ) : (
+          d.failure_types.length > 0 && (
+            <div className="sub" style={{ marginTop: 8 }}>
+              {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
+            </div>
+          )
         )}
         {d.failure_table && (
           <div className="pc-only" style={{ marginTop: 12 }}>

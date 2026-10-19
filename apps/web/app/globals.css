@@ -224,8 +224,12 @@ button {
 .m-only {
   display: initial;
 }
+.m-block {
+  display: block;
+}
 @media (min-width: 1024px) {
   .m-only,
+  .m-block,
   .tabbar {
     display: none !important;
   }
