@@ -16,12 +16,19 @@ export default function More() {
         </Link>
       </div>
       <section className="section" style={{ padding: "4px 18px" }}>
-        {t.items.map((name) => (
-          <div key={name} className="menu-row">
-            <span>{name}</span>
-            <span className="sub">{t.soon}</span>
-          </div>
-        ))}
+        {t.items.map(([name, href]) =>
+          href ? (
+            <Link key={name} href={href} className="menu-row">
+              <span>{name}</span>
+              <span className="sub">›</span>
+            </Link>
+          ) : (
+            <div key={name} className="menu-row">
+              <span>{name}</span>
+              <span className="sub">{t.soon}</span>
+            </div>
+          ),
+        )}
       </section>
     </main>
   );
