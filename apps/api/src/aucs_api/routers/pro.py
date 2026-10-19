@@ -1,6 +1,6 @@
 """PC 전문가 보기 (전체 물건 표)."""
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -59,3 +59,17 @@ def get_case(case_id: str) -> dict[str, Any]:
     if d is None:
         raise HTTPException(status_code=404, detail="없는 사건")
     return d
+
+
+@router.get("/market")
+def get_market(
+    sido: Annotated[str | None, Query(max_length=20)] = None,
+    sigungu: Annotated[str | None, Query(max_length=20)] = None,
+    court: Annotated[str | None, Query(max_length=10)] = None,
+    usage: Annotated[list[str] | None, Query()] = None,
+    months: Annotated[int, Query(ge=1, le=12)] = 3,
+) -> dict[str, Any]:
+    today = date.today()
+    f = {"sido": sido, "sigungu": sigungu, "court": court, "usage": usage,
+         "since": today - timedelta(days=months * 31)}  # fmt: skip
+    return pro.market(f, today)

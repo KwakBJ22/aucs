@@ -375,3 +375,14 @@ button {
     overflow-y: auto;
   }
 }
+
+.stat-grid {
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+}

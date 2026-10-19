@@ -137,3 +137,31 @@ export const fetchCases = (category?: string, q?: string) => {
 };
 export const fetchCase = (id: string) =>
   getJson<CaseDetail>(`/pro/cases/${encodeURIComponent(id)}`);
+
+// 낙찰 사례와 시장 분석
+export type Stat = { n: number; p50: number };
+export type Market = {
+  by_court: (Stat & { court: string; court_code: string })[];
+  by_failed: (Stat & { failed: number })[];
+  by_month: (Stat & { month: string })[];
+  cases: {
+    sale_date: string;
+    court: string;
+    case_no: string;
+    usage_name: string | null;
+    address: string | null;
+    building_area_m2: number | null;
+    appraisal_krw: number | null;
+    winning_bid_krw: number | null;
+    sale_rate: number;
+    failed_count: number | null;
+    item_id: string | null;
+  }[];
+  scorecard: { n: number; inside: number; below: number; above: number };
+};
+export const fetchMarket = (f: {
+  sido?: string;
+  sigungu?: string;
+  usage?: string[];
+  months?: number;
+}) => getJson<Market>(`/pro/market?${toQuery(f)}`);

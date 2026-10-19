@@ -260,3 +260,89 @@ def case_detail(case_id: str, today: date) -> dict[str, Any] | None:
             for e in ev
         ],
     }
+
+
+# 낙찰 사례와 시장 분석 + 낙찰가 성적표 (특수 사건·지분은 통계에서 뺌)
+def _market_where(f: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    sql = (
+        " where s.result = 'sold' and s.sale_rate is not null and s.sale_date >= %(since)s"
+        " and not coalesce(s.is_special_case, false) and not coalesce(s.is_share, false)"
+        " and coalesce(s.usage_name, '') !~ '자동차|중기|선박|항공기'"  # 부동산만
+    )
+    p: dict[str, Any] = {"since": f["since"]}
+    if f.get("sido"):
+        sql += " and s.sido = %(sido)s"
+        p["sido"] = f["sido"]
+    if f.get("sigungu"):
+        sql += " and s.address like %(sgg)s"
+        p["sgg"] = f"% {f['sigungu']} %"
+    if f.get("court"):
+        sql += " and s.court_code = %(court)s"
+        p["court"] = f["court"]
+    groups = [USAGE_GROUPS[g] for g in f.get("usage") or [] if g in USAGE_GROUPS]
+    if groups:
+        sql += " and s.usage_name ~ %(usage_re)s"
+        p["usage_re"] = "|".join(f"({g})" for g in groups)
+    return sql, p
+
+
+_MED = "round(percentile_cont(0.5) within group (order by s.sale_rate)::numeric, 1)"
+
+
+def market(f: dict[str, Any], today: date) -> dict[str, Any]:
+    where, p = _market_where(f)
+    with connect() as c:
+        by_court = c.execute(
+            f"select s.court_code, count(*) as n, {_MED} as p50 from core.sale_results s {where}"
+            " group by 1 order by 2 desc",
+            p,
+        ).fetchall()
+        by_failed = c.execute(
+            f"select least(s.failed_count, 4) as failed, count(*) as n, {_MED} as p50"
+            f" from core.sale_results s {where} and s.failed_count is not null group by 1 order by 1",
+            p,
+        ).fetchall()
+        by_month = c.execute(
+            f"select to_char(s.sale_date, 'YYYY-MM') as month, count(*) as n, {_MED} as p50"
+            f" from core.sale_results s {where} group by 1 order by 1",
+            p,
+        ).fetchall()
+        rows = c.execute(
+            f"""select s.sale_date, s.court_code, s.case_no, s.usage_name, s.address, s.building_area_m2,
+                       s.appraisal_krw, s.winning_bid_krw, s.sale_rate, s.failed_count, s.item_id
+                from core.sale_results s {where} order by s.sale_date desc, s.result_id desc limit 100""",
+            p,
+        ).fetchall()
+        score = c.execute(
+            """with pred as (
+                 select s.item_id, s.sale_rate, (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
+                        (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
+                 from core.sale_results s
+                 join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
+                               and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
+                 where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' is not null
+                   and not coalesce((a.result ->> 'new_item')::boolean, false))
+               select count(*) as n,
+                      count(*) filter (where sale_rate between p25 and p75) as inside,
+                      count(*) filter (where sale_rate < p25) as below,
+                      count(*) filter (where sale_rate > p75) as above
+               from pred""",
+        ).fetchone()
+    return {
+        "by_court": [
+            {**r, "court": COURT_NAME.get(r["court_code"], r["court_code"])} for r in by_court
+        ],
+        "by_failed": by_failed,
+        "by_month": by_month,
+        "cases": [
+            {
+                **r,
+                "court": COURT_NAME.get(r["court_code"], r["court_code"]),
+                "sale_date": r["sale_date"].isoformat(),
+                "building_area_m2": float(r["building_area_m2"]) if r["building_area_m2"] else None,
+                "sale_rate": float(r["sale_rate"]),
+            }
+            for r in rows
+        ],
+        "scorecard": dict(score or {}),
+    }

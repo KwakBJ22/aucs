@@ -17,7 +17,7 @@ export const copy = {
       { name: "지도 분석", href: "/pro/map", ready: false },
       { name: "비교함", href: "/compare", ready: true },
       { name: "사건·문건 분석", href: "/pro/cases", ready: true },
-      { name: "낙찰 사례와 시장 분석", href: "/pro/market", ready: false },
+      { name: "낙찰 사례와 시장 분석", href: "/pro/market", ready: true },
     ],
   },
   start: {
@@ -206,6 +206,25 @@ export const copy = {
     loading: "불러오는 중",
     empty: "조건에 맞는 물건이 없어요",
     note: "분석이 끝난 진행 물건만 · 법원 목록에서 빠진 물건 제외 · 시세는 같은 지번 최근 24개월 거래",
+  },
+  proMarket: {
+    title: "낙찰 사례와 시장 분석",
+    months: (x: number) => `최근 ${x}개월`,
+    score: "낙찰가 성적표",
+    scoreWait: (n: number, min: number) =>
+      `아직 모으는 중이에요 · 옥스가 미리 예상한 물건의 매각 결과가 ${n}건 모였어요(${min}건부터 보여 드려요)`,
+    scoreLine: (pct: number, n: number) => `실제 낙찰가가 예상 범위 안에 든 비율 ${pct}% (${n}건)`,
+    scoreSplit: (below: number, above: number) => `· 범위보다 낮게 ${below}% · 높게 ${above}%`,
+    scoreNote:
+      "매각기일 전에 낸 예상 범위(낙찰가율 25~75%)와 실제 낙찰가를 비교해요 · 처음 나온 물건은 빼요",
+    byCourt: "법원별 낙찰가율(가운데 값)",
+    byFailed: "유찰 횟수별",
+    byMonth: "달마다",
+    failed: (n: number) => (n === 0 ? "처음" : n >= 4 ? "4번 이상" : `${n}번 유찰`),
+    none: "자료가 없어요",
+    cases: "최근 낙찰 사례",
+    cols: ["매각일", "사건", "용도", "소재지", "면적", "감정가", "낙찰가", "낙찰가율", "유찰"],
+    note: "지분·특수 사건은 통계에서 뺐어요 · 숫자 옆 작은 수는 건수",
   },
   proCases: {
     title: "사건·문건 분석",
