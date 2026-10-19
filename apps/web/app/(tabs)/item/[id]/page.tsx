@@ -864,6 +864,13 @@ function CalcBox({ id }: { id: string }) {
             )}
             {d.resale && <div className="sub">{t.resale}</div>}
             <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
+            <Link
+              href={`/item/${encodeURIComponent(id)}/bid-sheet?bid=${s.bid_krw}`}
+              className="chip gray"
+              style={{ minHeight: 36, marginTop: 10, marginLeft: 6, display: "inline-flex" }}
+            >
+              {copy.bidDay.toSheet} ›
+            </Link>
             <MockForm id={id} bid={s.bid_krw} />
           </div>
         </>
@@ -1425,6 +1432,15 @@ export default function Item() {
             </div>
           </div>
           {d.fatal && <div className="fatal">{d.fatal}</div>}
+          {d.d_day != null && d.d_day <= 1 && d.d_day >= 0 && (
+            <Link
+              href={`/item/${encodeURIComponent(d.item_id)}/bid-day`}
+              className="chip orange"
+              style={{ minHeight: 36, marginTop: 8, display: "inline-flex" }}
+            >
+              {copy.bidDay.title} ›
+            </Link>
+          )}
           <section className="section">
             <div className="sub">
               <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}

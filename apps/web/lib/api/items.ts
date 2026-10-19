@@ -224,3 +224,26 @@ export function fetchCalc(
   if (o.loan != null) q.set("loan", String(o.loan));
   return getJson<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);
 }
+
+// 입찰일 아침(BID-02)
+export type BidDay = {
+  item_id: string;
+  court: string;
+  court_full: string;
+  dept: string | null;
+  tel: string | null;
+  case_no: string;
+  item_no: number;
+  sale_date: string | null;
+  time: string | null;
+  place: string | null;
+  min_price_krw: number;
+  deposit_krw: number;
+  deposit_rate_pct: number;
+  resale: boolean;
+  state: "ok" | "soon" | "moved" | "gone";
+  state_line: string;
+  checked_at: string | null;
+};
+export const fetchBidDay = (id: string) =>
+  getJson<BidDay>(`/items/${encodeURIComponent(id)}/bid-day`);

@@ -10,7 +10,7 @@ from aucs_rules.schedule import after_sale
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.docs import item_spec, spec_text
-from aucs_api.services.items import card
+from aucs_api.services.items import COURT_NAME, card
 
 _ITEM_SQL = """
 select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
@@ -464,3 +464,64 @@ def calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
         selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
     )  # fmt: skip
+
+
+def bid_day(item_id: str, today: date) -> dict[str, Any] | None:
+    """입찰일 아침(BID-02): 법원·시각·장소·보증금·당일 바뀐 것. 시각·전화는 법원 목록 원본에서."""
+    with connect() as c:
+        r = c.execute(
+            """select i.item_id, i.item_no, i.sale_date, i.sale_place, i.min_price_krw, i.note_masked,
+                      i.status_code, i.checked_at, i.doc_key, c.court_code, c.case_no, c.dept_name
+               from core.items i join core.cases c using (case_id)
+               where i.item_id = %s and i.display_policy = 'public'""",
+            (item_id,),
+        ).fetchone()
+        if not r:
+            return None
+        raw = c.execute(
+            """select payload ->> 'maeHh1' as hh, payload ->> 'tel' as tel, payload ->> 'jiwonNm' as court_full
+               from raw.court_item_raw where court_code = %s and payload ->> 'docid' = %s
+               order by fetched_at desc limit 1""",
+            (r["court_code"], r["doc_key"]),
+        ).fetchone()
+    hh = (raw or {}).get("hh") or ""
+    resale = "재매각" in (r["note_masked"] or "")
+    mn = r["min_price_krw"] or 0
+    rate = 20 if resale else 10
+    gone = r["status_code"] == "gone"
+    sd = r["sale_date"]
+    if gone:
+        state, line = (
+            "gone",
+            "법원 목록에서 빠졌어요 · 오늘 진행하지 않을 수 있어요 · 법원에 확인하세요",
+        )
+    elif sd and sd > today:
+        when = "내일" if (sd - today).days == 1 else f"{(sd - today).days}일 뒤"
+        state, line = (
+            "soon",
+            f"입찰일은 {sd.month}/{sd.day}({when})이에요 · 법원 목록 기준 예정대로",
+        )
+    elif sd and sd < today:
+        state, line = "moved", f"매각기일({sd.isoformat()})이 지났어요"
+    else:
+        state, line = "ok", "법원 목록 기준 오늘 진행 예정이에요"
+    return {
+        "item_id": r["item_id"],
+        "court": COURT_NAME.get(r["court_code"], r["court_code"]),
+        "court_full": (raw or {}).get("court_full")
+        or COURT_NAME.get(r["court_code"], r["court_code"]),
+        "dept": r["dept_name"],
+        "tel": (raw or {}).get("tel"),
+        "case_no": r["case_no"],
+        "item_no": r["item_no"],
+        "sale_date": sd.isoformat() if sd else None,
+        "time": f"{hh[:2]}:{hh[2:]}" if len(hh) == 4 else None,
+        "place": r["sale_place"],
+        "min_price_krw": mn,
+        "deposit_krw": -(-mn * rate // 100),
+        "deposit_rate_pct": rate,
+        "resale": resale,
+        "state": state,
+        "state_line": line,
+        "checked_at": r["checked_at"].strftime("%m/%d %H:%M") if r["checked_at"] else None,
+    }

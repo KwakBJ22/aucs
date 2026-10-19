@@ -60,6 +60,14 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
     return d
 
 
+@router.get("/items/{item_id}/bid-day")
+def get_bid_day(item_id: str) -> dict[str, Any]:
+    d = item_detail.bid_day(item_id, date.today())
+    if d is None:
+        raise HTTPException(status_code=404, detail="없는 물건")
+    return d
+
+
 @router.get("/items/{item_id}/calc")
 def get_calc(
     item_id: str,

@@ -187,7 +187,8 @@ def make_bid_prep_alerts(conn: psycopg.Connection, *, morning: bool) -> int:
                 f"{place.strip()} 명세서가 나왔어요",
                 "입찰 전에 떠안는 권리가 바뀌지 않았는지 다시 보세요",
             )
-        _noti(conn, uid, eid, title, body, f"/item/{item_id}")
+        link = f"/item/{item_id}/bid-day" if morning else f"/item/{item_id}"
+        _noti(conn, uid, eid, title, body, link)
         n += 1
     return n
 

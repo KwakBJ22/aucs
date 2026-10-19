@@ -386,3 +386,78 @@ button {
     align-items: start;
   }
 }
+
+/* 입찰표 작성 도우미 */
+.bid-digits {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  margin-top: 4px;
+}
+.bid-digits th,
+.bid-digits td {
+  border: 1px solid var(--muted);
+  text-align: center;
+  font-size: 11px;
+  padding: 2px 0;
+}
+.bid-digits td {
+  font-size: 20px;
+  font-weight: 700;
+  height: 36px;
+}
+.bid-form {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+.bid-form th,
+.bid-form td {
+  border: 1px solid var(--muted);
+  padding: 8px;
+  text-align: left;
+}
+.bid-form th {
+  width: 84px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.bid-form .handwrite {
+  color: var(--faint);
+  font-size: 12px;
+  height: 48px;
+}
+.big-confirm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-weight: 700;
+}
+.big-confirm input {
+  width: 22px;
+  height: 22px;
+}
+@media print {
+  .no-print,
+  .sidenav,
+  .tabbar {
+    display: none !important;
+  }
+  .shell {
+    padding-left: 0 !important;
+  }
+  html,
+  body,
+  .section {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-area {
+    margin: 0;
+  }
+}

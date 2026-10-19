@@ -1,0 +1,197 @@
+"use client";
+
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { fetchBidCheck, fetchBidDay, type BidCheck, type BidDay } from "@/lib/api/items";
+import { copy } from "@/lib/copy.ko";
+import { won } from "@/lib/format";
+
+const t = copy.bidSheet;
+const PLACES = ["천억", "백억", "십억", "억", "천만", "백만", "십만", "만", "천", "백", "십", "일"];
+
+// 금액을 입찰표 칸(천억~일)에 맞춰 한 글자씩. 앞자리 빈칸은 비워 둠.
+function Digits({ v }: { v: number | null }) {
+  const s = v ? String(v).padStart(12, " ").slice(-12) : " ".repeat(12);
+  return (
+    <table className="bid-digits">
+      <thead>
+        <tr>
+          {PLACES.map((p) => (
+            <th key={p}>{p}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          {s.split("").map((ch, i) => (
+            <td key={i}>{ch.trim()}</td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function Sheet() {
+  const id = decodeURIComponent(String(useParams().id));
+  const sp = useSearchParams();
+  const [bid, setBid] = useState<number | null>(Number(sp.get("bid")) || null);
+  const [text, setText] = useState(
+    sp.get("bid") ? String(Math.round(Number(sp.get("bid")) / 10_000)) : "",
+  );
+  const [day, setDay] = useState<BidDay | null>(null);
+  const [chk, setChk] = useState<BidCheck | null>(null);
+  const [sure, setSure] = useState(false);
+
+  useEffect(() => {
+    fetchBidDay(id)
+      .then(setDay)
+      .catch(() => setDay(null));
+  }, [id]);
+  useEffect(() => {
+    setSure(false);
+    if (!bid) return setChk(null);
+    fetchBidCheck(id, bid)
+      .then(setChk)
+      .catch(() => setChk(null));
+  }, [id, bid]);
+
+  const canPrint = chk && chk.level !== "block" && (chk.level === "ok" || sure);
+  const dep = chk?.deposit_krw ?? day?.deposit_krw ?? null;
+  return (
+    <main className="page">
+      <div className="no-print">
+        <div className="topbar">
+          <div className="brand">{t.title}</div>
+          <Link href={`/item/${encodeURIComponent(id)}`} className="sub">
+            {t.back} ›
+          </Link>
+        </div>
+        <section className="section">
+          <div className="sub">{t.hint}</div>
+          <label style={{ display: "block", marginTop: 10 }}>
+            <span className="sub">{t.amount}</span>
+            <input
+              inputMode="numeric"
+              value={text}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, "");
+                setText(v);
+                setBid(v ? Number(v) * 10_000 : null);
+              }}
+              style={{
+                width: "100%",
+                fontSize: 22,
+                padding: "10px 12px",
+                border: "1px solid var(--line)",
+                borderRadius: 10,
+                background: "var(--surface)",
+                color: "var(--text)",
+              }}
+            />
+          </label>
+          {chk && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{chk.korean}</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  marginTop: 4,
+                  color:
+                    chk.level === "block"
+                      ? "var(--red)"
+                      : chk.level === "stop"
+                        ? "var(--orange)"
+                        : "var(--muted)",
+                  fontWeight: chk.level === "ok" ? 400 : 700,
+                }}
+              >
+                {chk.message}
+              </div>
+              {chk.level === "stop" && (
+                <label className="big-confirm">
+                  <input
+                    type="checkbox"
+                    checked={sure}
+                    onChange={(e) => setSure(e.target.checked)}
+                  />
+                  {t.sure(won(bid))}
+                </label>
+              )}
+              <div className="sub" style={{ marginTop: 6 }}>
+                {t.deposit(won(chk.deposit_krw), chk.resale)}
+              </div>
+            </div>
+          )}
+          <button
+            className="btn primary"
+            style={{ marginTop: 12 }}
+            disabled={!canPrint}
+            onClick={() => window.print()}
+          >
+            {t.print}
+          </button>
+          <div className="sub" style={{ marginTop: 6 }}>
+            {t.printHint}
+          </div>
+        </section>
+      </div>
+
+      <section className="section print-area">
+        <h2 style={{ textAlign: "center", fontSize: 20 }}>{t.formTitle}</h2>
+        <table className="bid-form">
+          <tbody>
+            <tr>
+              <th>{t.f.court}</th>
+              <td>
+                {day?.court_full} {day?.dept}
+              </td>
+              <th>{t.f.date}</th>
+              <td>{day?.sale_date}</td>
+            </tr>
+            <tr>
+              <th>{t.f.caseNo}</th>
+              <td>{day?.case_no}</td>
+              <th>{t.f.itemNo}</th>
+              <td>{day?.item_no}</td>
+            </tr>
+            <tr>
+              <th>{t.f.bidder}</th>
+              <td colSpan={3} className="handwrite">
+                {t.f.bidderHint}
+              </td>
+            </tr>
+            <tr>
+              <th>{t.f.agent}</th>
+              <td colSpan={3} className="handwrite">
+                {t.f.agentHint}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="sub" style={{ marginTop: 10 }}>
+          {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
+        </div>
+        <Digits v={bid} />
+        <div className="sub" style={{ marginTop: 10 }}>
+          {t.f.deposit}
+        </div>
+        <Digits v={dep} />
+        <div style={{ fontSize: 14, marginTop: 10 }}>{t.f.method}</div>
+        <div style={{ fontSize: 14, marginTop: 16, textAlign: "right" }}>{t.f.sign}</div>
+        <div className="sub" style={{ marginTop: 12 }}>
+          {t.f.note}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function BidSheetPage() {
+  return (
+    <Suspense>
+      <Sheet />
+    </Suspense>
+  );
+}
