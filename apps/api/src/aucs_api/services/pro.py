@@ -52,7 +52,8 @@ where i.display_policy = 'public' and i.sale_date >= %(today)s
 
 def build_where(f: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
     """조건 → SQL 조각과 값 (순수 함수, 값은 모두 바인딩)."""
-    sql, p = "", {"today": today}
+    sql = ""
+    p: dict[str, Any] = {"today": today}
     if f.get("sido"):
         sql += " and i.sido = %(sido)s"
         p["sido"] = f["sido"]
