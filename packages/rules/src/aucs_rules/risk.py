@@ -148,12 +148,16 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             "말소기준 근저당이 작아요 — 낙찰 뒤 갚아 없어지면 임차인을 떠안을 수 있어요",
             Status.NEEDS_CHECK,
         )  # fmt: skip
-    if f.get("in_redev_zone"):
+    if z := f.get("in_redev_zone"):
+        kind = ""
+        if isinstance(z, dict):
+            kind = "(" + " · ".join(x for x in (z.get("biz_type"), z.get("stage")) if x) + ")"
         add(
             "risk.redev_member",
             "mid",
-            "정비사업 구역 — 조합원 자격·현금청산 확인",
+            f"정비사업 구역{kind} — 조합원 자격·현금청산 확인",
             Status.NEEDS_CHECK,
+            **({"zone": z} if isinstance(z, dict) else {}),
         )
     if f.get("special_corp_owner"):
         add("risk.special_corp", "high", "학교·복지·의료법인 소유 — 허가서 없으면 보증금 몰수")

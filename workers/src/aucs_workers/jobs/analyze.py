@@ -34,6 +34,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from aucs_workers.db import connect
+from aucs_workers.jobs.redev_match import find_zone
 from aucs_workers.jobs.runlog import run
 
 COMMERCIAL_WORDS = ("상가", "근린", "점포", "사무실", "공장")
@@ -176,6 +177,9 @@ def analyze_item(
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
     for k, v in sf.items():
         facts[k] = facts.get(k) or v
+    redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
+    if redev:
+        facts["in_redev_zone"] = redev
     if market:
         facts.update(
             market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today
@@ -219,6 +223,7 @@ def analyze_item(
         "new_item": new_item(eff_failed, app, market["price_krw"] if market else None).value,
         "market": market,
         "tenant_count": len(tenants),
+        "redev": redev,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
                "tenants": tenants, "market": market, "engine": ENGINE_VERSION})  # fmt: skip
