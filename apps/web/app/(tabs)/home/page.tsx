@@ -21,6 +21,16 @@ export default function Home() {
   const { session } = useSession();
   const token = session?.access_token ?? null;
   const [alertMsg, setAlertMsg] = useState("");
+  const [dropped, setDropped] = useState<Set<string>>(new Set());
+
+  // 비교함에서 이유를 남기고 뺀 물건은 맞춤 목록에서 숨김
+  useEffect(() => {
+    if (token)
+      meApi
+        .compare(token)
+        .then((c) => setDropped(new Set(c.excluded.map((e) => e.item_id))))
+        .catch(() => {});
+  }, [token]);
 
   // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
   useEffect(() => {
@@ -56,7 +66,8 @@ export default function Home() {
   }, [router]);
 
   if (!profile) return null;
-  const closing = (mine?.items ?? []).filter((c) => c.d_day != null && c.d_day <= 7).slice(0, 2);
+  const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
+  const closing = (shown?.items ?? []).filter((c) => c.d_day != null && c.d_day <= 7).slice(0, 2);
   const summary = [
     profile.regions.join("·"),
     profile.cash ? `현금 ${won(profile.cash)}` : null,
@@ -186,8 +197,8 @@ export default function Home() {
             {alertMsg}
           </p>
         )}
-        {mine && mine.items.length === 0 && <p className="sub">{t.empty}</p>}
-        {mine?.items.slice(0, 5).map((c) => (
+        {shown && shown.items.length === 0 && <p className="sub">{t.empty}</p>}
+        {shown?.items.slice(0, 5).map((c) => (
           <ItemCard key={c.item_id} c={c} />
         ))}
         {mine && mine.total > 5 && (

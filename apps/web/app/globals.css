@@ -274,3 +274,30 @@ button {
     padding-bottom: 48px;
   }
 }
+
+/* 비교함 표: 휴대폰은 옆으로 밀어 보기, PC는 넓게 */
+.compare-table {
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 100%;
+}
+.compare-table th,
+.compare-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  min-width: 180px;
+}
+.compare-table th:first-child,
+.compare-table td:first-child {
+  min-width: 84px;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+@media (min-width: 900px) {
+  .shell .page.compare-page {
+    max-width: 1100px;
+  }
+}

@@ -2,7 +2,18 @@ import { apiBaseUrl } from "./client";
 import type { ItemCard, Schedule } from "./items";
 
 export type WatchStep = "review" | "field" | "money" | "bid" | "result";
-export type WatchCard = ItemCard & { step: WatchStep };
+export type WatchCard = ItemCard & { step: WatchStep; in_compare: boolean };
+export type Compare = {
+  items: string[];
+  excluded: {
+    item_id: string;
+    reason: string;
+    at: string;
+    case_no: string | null;
+    place: string | null;
+  }[];
+  max: number;
+};
 export type SavedSearch = {
   search_id: number;
   name: string;
@@ -133,6 +144,18 @@ export type Workspace = {
 };
 
 export const meApi = {
+  compare: (t: string) => call<Compare>(t, "/compare"),
+  addCompare: (t: string, id: string) =>
+    call(t, `/compare/${encodeURIComponent(id)}`, { method: "PUT" }),
+  removeCompare: (t: string, id: string) =>
+    call(t, `/compare/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  exclude: (t: string, id: string, reason: string) =>
+    call(t, `/compare/${encodeURIComponent(id)}/exclude`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  unexclude: (t: string, id: string) =>
+    call(t, `/compare/excluded/${encodeURIComponent(id)}`, { method: "DELETE" }),
   workspace: (t: string, id: string) =>
     call<Workspace>(t, `/watch/${encodeURIComponent(id)}/workspace`),
   saveMemo: (t: string, id: string, memo: string) =>

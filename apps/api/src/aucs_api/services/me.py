@@ -11,7 +11,7 @@ _WATCH_SQL = """
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
-       a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step
+       a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step, w.in_compare
 from app.watch_items w
 join core.items i on i.item_id = w.item_id
 join core.cases c using (case_id)
@@ -34,7 +34,14 @@ def watch_step(step: str | None, sale_date: Any, today: Any) -> str:
 def watch_list(uid: str, today: Any) -> list[dict[str, Any]]:
     with connect() as c:
         rows = c.execute(_WATCH_SQL, (uid,)).fetchall()
-    return [{**card(r, today), "step": watch_step(r["step"], r["sale_date"], today)} for r in rows]
+    return [
+        {
+            **card(r, today),
+            "step": watch_step(r["step"], r["sale_date"], today),
+            "in_compare": r["in_compare"],
+        }
+        for r in rows
+    ]
 
 
 def watch_set_step(uid: str, item_id: str, step: str) -> bool:
@@ -291,3 +298,74 @@ def ws_calc_remove(uid: str, item_id: str, bid_krw: int) -> bool:
                    where (y->>'bid_krw')::bigint <> %s), '[]'::jsonb)""",
         (bid_krw,),
     )
+
+
+# 비교함: 관심 물건 중 3~5개를 같은 기준으로. 뺄 때 이유를 남겨 다음 추천에서 덜 보여 줌
+COMPARE_MAX = 5
+EXCLUDE_REASONS = ("budget", "assumed_unclear", "field_bad", "other")
+
+
+def compare_get(uid: str) -> dict[str, Any]:
+    with connect() as c:
+        ids = [
+            r["item_id"]
+            for r in c.execute(
+                """select w.item_id from app.watch_items w join core.items i using (item_id)
+                   where w.user_id = %s and w.in_compare order by i.sale_date nulls last""",
+                (uid,),
+            ).fetchall()
+        ]
+        excluded = c.execute(
+            """select e.item_id, e.reason, e.created_at::date::text as at, c2.case_no,
+                      coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
+               from app.compare_exclusions e
+               left join core.items i using (item_id) left join core.cases c2 on c2.case_id = i.case_id
+               where e.user_id = %s order by e.created_at desc limit 50""",
+            (uid,),
+        ).fetchall()
+    return {"items": ids, "excluded": excluded, "max": COMPARE_MAX}
+
+
+def compare_set(uid: str, item_id: str, on: bool) -> str | None:
+    """None이면 성공, 아니면 안 된 이유."""
+    with connect() as c:
+        if on:
+            n = c.execute(
+                "select count(*) as n from app.watch_items where user_id = %s and in_compare",
+                (uid,),
+            ).fetchone()
+            if n and n["n"] >= COMPARE_MAX:
+                return "full"
+            c.execute(
+                "delete from app.compare_exclusions where user_id = %s and item_id = %s",
+                (uid, item_id),
+            )
+        done = c.execute(
+            "update app.watch_items set in_compare = %s where user_id = %s and item_id = %s",
+            (on, uid, item_id),
+        ).rowcount
+    return None if done else "not_watched"
+
+
+def compare_exclude(uid: str, item_id: str, reason: str) -> bool:
+    if reason not in EXCLUDE_REASONS:
+        return False
+    with connect() as c:
+        c.execute(
+            "update app.watch_items set in_compare = false where user_id = %s and item_id = %s",
+            (uid, item_id),
+        )
+        c.execute(
+            """insert into app.compare_exclusions (user_id, item_id, reason) values (%s, %s, %s)
+               on conflict (user_id, item_id) do update set reason = excluded.reason, created_at = now()""",
+            (uid, item_id, reason),
+        )
+    return True
+
+
+def compare_unexclude(uid: str, item_id: str) -> None:
+    with connect() as c:
+        c.execute(
+            "delete from app.compare_exclusions where user_id = %s and item_id = %s",
+            (uid, item_id),
+        )

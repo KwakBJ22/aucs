@@ -13,7 +13,15 @@ const t = copy.watch;
 const ORDER: WatchStep[] = ["review", "field", "money", "bid", "result"];
 const MOVABLE: WatchStep[] = ["review", "field", "money", "bid"];
 
-function StepRow({ c, onMove }: { c: WatchCard; onMove: (s: WatchStep) => void }) {
+function StepRow({
+  c,
+  onMove,
+  onCompare,
+}: {
+  c: WatchCard;
+  onMove: (s: WatchStep) => void;
+  onCompare: () => void;
+}) {
   const [open, setOpen] = useState(false);
   if (c.step === "result")
     return (
@@ -31,6 +39,13 @@ function StepRow({ c, onMove }: { c: WatchCard; onMove: (s: WatchStep) => void }
           <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray">
             {copy.ws.open} ›
           </Link>
+          <button
+            className={`chip ${c.in_compare ? "green" : "gray"}`}
+            style={{ border: 0 }}
+            onClick={onCompare}
+          >
+            {c.in_compare ? copy.compare.added : copy.compare.add}
+          </button>
         </>
       ) : (
         MOVABLE.map((s) => (
@@ -55,6 +70,7 @@ export default function Watch() {
   const { session, ready } = useSession();
   const [list, setList] = useState<WatchCard[] | null>(null);
   const [only, setOnly] = useState<WatchStep | null>(null);
+  const [msg, setMsg] = useState("");
 
   useEffect(() => {
     if (session)
@@ -71,6 +87,17 @@ export default function Watch() {
     setList((l) => l?.map((x) => (x.item_id === id ? { ...x, step } : x)) ?? l);
     meApi.setStep(session.access_token, id, step).catch(() => {});
   };
+  const toggleCompare = (c: WatchCard) => {
+    const on = !c.in_compare;
+    if (on && (list?.filter((x) => x.in_compare).length ?? 0) >= 5) {
+      setMsg(copy.compare.full(5));
+      return;
+    }
+    setMsg("");
+    setList((l) => l?.map((x) => (x.item_id === c.item_id ? { ...x, in_compare: on } : x)) ?? l);
+    (on ? meApi.addCompare : meApi.removeCompare)(session.access_token, c.item_id).catch(() => {});
+  };
+  const inCompare = list?.filter((x) => x.in_compare).length ?? 0;
   const count = (s: WatchStep) => list?.filter((x) => x.step === s).length ?? 0;
   const groups = ORDER.filter((s) => (only ? s === only : count(s) > 0));
 
@@ -78,7 +105,15 @@ export default function Watch() {
     <main className="page">
       <div className="topbar">
         <div className="brand">{t.title}</div>
+        <Link href="/compare" className="chip gray" style={{ minHeight: 32 }}>
+          {copy.compare.title} {inCompare} ›
+        </Link>
       </div>
+      {msg && (
+        <div className="sub" style={{ color: "var(--amber)", marginBottom: 6 }}>
+          {msg}
+        </div>
+      )}
       {list && list.length > 0 && (
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
           <button
@@ -116,7 +151,11 @@ export default function Watch() {
               .map((c) => (
                 <div key={c.item_id}>
                   <ItemCard c={c} />
-                  <StepRow c={c} onMove={(st) => move(c.item_id, st)} />
+                  <StepRow
+                    c={c}
+                    onMove={(st) => move(c.item_id, st)}
+                    onCompare={() => toggleCompare(c)}
+                  />
                 </div>
               ))}
           </section>

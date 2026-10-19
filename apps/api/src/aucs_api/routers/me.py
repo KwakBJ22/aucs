@@ -119,6 +119,41 @@ def delete_calc(item_id: str, bid_krw: int, uid: Uid) -> dict[str, bool]:
     return _ok(me.ws_calc_remove(uid, item_id, bid_krw))
 
 
+class ExcludeIn(BaseModel):
+    reason: str
+
+
+@router.get("/compare")
+def get_compare(uid: Uid) -> dict[str, Any]:
+    return me.compare_get(uid)
+
+
+@router.put("/compare/{item_id}")
+def put_compare(item_id: str, uid: Uid) -> dict[str, bool]:
+    why = me.compare_set(uid, item_id, True)
+    if why == "full":
+        raise HTTPException(status_code=409, detail=f"비교함은 {me.COMPARE_MAX}개까지예요")
+    return _ok(why is None)
+
+
+@router.delete("/compare/{item_id}")
+def delete_compare(item_id: str, uid: Uid) -> dict[str, bool]:
+    return _ok(me.compare_set(uid, item_id, False) is None)
+
+
+@router.post("/compare/{item_id}/exclude")
+def post_exclude(item_id: str, body: ExcludeIn, uid: Uid) -> dict[str, bool]:
+    if not me.compare_exclude(uid, item_id, body.reason):
+        raise HTTPException(status_code=400, detail="없는 이유예요")
+    return {"ok": True}
+
+
+@router.delete("/compare/excluded/{item_id}")
+def delete_exclude(item_id: str, uid: Uid) -> dict[str, bool]:
+    me.compare_unexclude(uid, item_id)
+    return {"ok": True}
+
+
 @router.delete("/watch/{item_id}")
 def delete_watch(item_id: str, uid: Uid) -> dict[str, bool]:
     me.watch_remove(uid, item_id)
