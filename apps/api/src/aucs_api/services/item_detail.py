@@ -70,8 +70,32 @@ def verdict(signals: list[dict[str, Any]], n_check: int | None = None) -> str:
     return "큰 문제 신호는 없어요"
 
 
-# 시세가 감정가와 이만큼 벌어지면 다른 물건 거래가 섞인 것으로 보고 시세를 쓰지 않음 (10/19 점검: 2배 차이 사례)
-MARKET_SANE = (0.55, 1.6)
+# 감정가가 같은 단지 시세의 이 범위 밖이면 시세 비교를 빼고 이유를 한 줄로 (10/19 대표님)
+APPRAISAL_SANE = (0.55, 1.6)
+
+
+def appraisal_gap(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, str] | None:
+    """감정가가 시세와 크게 다를 때 (이유 종류, 안내). 이유는 명세서 비고란·신호로 찾음.
+
+    종류: share(지분) / special(특별조건) / note(비고란 있음) / none(이유 모름)."""
+    mkt, app = r.get("market"), r.get("appraisal_krw")
+    if not mkt or not app or not mkt.get("price_krw"):
+        return None
+    ratio = app / mkt["price_krw"]
+    if APPRAISAL_SANE[0] <= ratio <= APPRAISAL_SANE[1]:
+        return None
+    ids = {s.get("rule_id") for s in signals if s.get("status") != "모름"}
+    if ratio < 1 and (r.get("is_share") or "risk.share" in ids):
+        return (
+            "share",
+            "지분만 파는 물건이라 감정가도 지분 몫이에요 · 단지 시세와 바로 비교하면 안 돼요",
+        )
+    if ratio > 1 and "risk.special_condition" in ids:
+        return "special", "전세 피해 주택이라 감정가가 실제 거래보다 높게 잡혔을 수 있어요"
+    deal = f"감정가가 같은 단지 거래({won(mkt['price_krw'])})와 크게 달라요"
+    if (r.get("note_masked") or "").strip():
+        return "note", f"{deal} · 비고란 조건을 먼저 보세요(「무엇을 사나」)"
+    return "none", f"{deal} · 다른 평형 거래일 수도 있어요"
 
 
 def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[str], Any]:
@@ -79,11 +103,18 @@ def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[s
     rate, court, peers = r.get("sale_rate"), r.get("court_cell"), r.get("local_peers")
     notes: list[str] = []
     mkt, app, mn = r.get("market"), r.get("appraisal_krw"), r.get("min_price_krw")
-    if mkt and app and not (MARKET_SANE[0] <= mkt["price_krw"] / app <= MARKET_SANE[1]):
-        notes.append("시세 자료가 이 물건과 맞지 않아 보여 빼고 봤어요")
+    gap = appraisal_gap(r, signals)
+    if gap:
+        notes.append(gap[1])
         mkt = None
     # 「처음 나온 물건」은 최저가가 감정가 그대로일 때만 (유찰 수 자료가 빠진 물건이 있음)
     if r.get("new_item") and (not app or not mn or mn >= app):
+        if gap:  # 감정가를 그대로 믿기 어려운 신건 → 「비싸게 팔려요」라고 하지 않음
+            return (
+                "처음 나온 물건이에요 · 감정가가 시세와 크게 달라 아래 안내를 먼저 보세요",
+                notes,
+                None,
+            )
         if mkt and mkt["price_krw"] < app:
             return (
                 f"처음 나온 물건이지만 시세({won(mkt['price_krw'])})가 감정가보다 낮아요",
@@ -104,7 +135,7 @@ def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[s
         notes.append(
             f"같은 구 최근 {peers['n']}건은 {round(peers['lo'])}~{round(peers['hi'])}%에 팔렸어요"
         )
-    if any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
+    if not gap and any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
     # 최저가보다 낮게는 낙찰될 수 없음 → 범위 아래쪽을 최저가에 맞춤
     floor = mn / app * 100 if mn and app else None
@@ -153,6 +184,13 @@ def build_detail(
     sched = after_sale(r["sale_date"] or today, holidays or [], flags=flags).value
     types = sorted({s["ftype"] for s in warn if s.get("ftype")})
     checklist = build_checklist(ds, doc_times or {}, signals)
+    gap = appraisal_gap(r, signals)
+    if gap and gap[0] in ("note", "none"):  # 지분·특별조건은 이미 위험 신호로 올라가 있음
+        checklist = sorted(
+            [*checklist, {"key": "appraisal_gap", "label": "감정가·시세 차이", "what": gap[1],
+                          "state": "미확인", "hint": None, "evidence": None}],
+            key=lambda x: {"자료 충돌": 0, "전문가 확인 필요": 1, "미확인": 2}.get(x["state"], 3),
+        )  # fmt: skip
     todo = [x for x in checklist if x["state"] != DONE]
     check_ans = f"확인할 것 {len(todo)}가지 · {todo[0]['label']}부터" if todo else "다 확인했어요"
     check_tone = (

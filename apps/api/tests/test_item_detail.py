@@ -60,11 +60,29 @@ def test_worth_checks_from_100_sample():
     # 유찰 수가 0으로 와도 최저가가 70%면 신건으로 보지 않음
     d = build_detail(full(new_item=True), [], [], [], None, TODAY, [])
     assert not d["questions"][2]["answer"].startswith("처음 나온")
-    # 감정가의 2배 시세는 안 씀
+    # 감정가가 시세의 절반 아래 → 시세 비교 빼고 이유 한 줄 (이유 모르면 체크리스트에도)
     m2 = {"price_krw": 2_100_000_000, "level": 1, "n": 3, "recent": []}
-    w = build_detail(full(market=m2, new_item=False), [], [], [], None, TODAY, [])["questions"][2]
-    assert (
-        w["answer"].startswith("비슷한 물건은 감정가의") and "시세 자료가" in w["body"]["notes"][0]
+    d2 = build_detail(full(market=m2, new_item=False), [], [], [], None, TODAY, [])
+    w = d2["questions"][2]
+    assert w["answer"].startswith("비슷한 물건은 감정가의")
+    assert w["body"]["notes"] == [
+        "감정가가 같은 단지 거래(21억)와 크게 달라요 · 다른 평형 거래일 수도 있어요"
+    ]
+    assert any(x["key"] == "appraisal_gap" for x in d2["questions"][4]["body"]["checklist"])
+    # 지분 매각이면 그 이유로, 체크리스트에는 안 올림
+    sh = [{"rule_id": "risk.share", "level": "fatal", "status": "추정", "title": "지분 매각"}]
+    d3 = build_detail(
+        full(market=m2, new_item=False, is_share=True, signals=sh), [], [], [], None, TODAY, []
+    )
+    assert d3["questions"][2]["body"]["notes"][0].startswith("지분만 파는 물건이라")
+    assert not any(x["key"] == "appraisal_gap" for x in d3["questions"][4]["body"]["checklist"])
+    # 신건인데 감정가가 시세의 1.6배 넘음 → 「비싸게 팔려요」 아님
+    m3 = {"price_krw": 500_000_000, "level": 1, "n": 3, "recent": []}
+    d4 = build_detail(
+        full(market=m3, new_item=True, min_price_krw=1_015_000_000), [], [], [], None, TODAY, []
+    )
+    assert d4["questions"][2]["answer"].startswith(
+        "처음 나온 물건이에요 · 감정가가 시세와 크게 달라"
     )
     # 법원 보정이 p50에도 들어감
     d = build_detail(full(court_cell={"p50": 92.0, "diff": 8.0, "use_as_base": True, "n": 120}, new_item=False),
