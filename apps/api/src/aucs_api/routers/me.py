@@ -60,6 +60,17 @@ def put_watch(item_id: str, uid: Uid) -> dict[str, bool]:
     return {"ok": True}
 
 
+class StepIn(BaseModel):
+    step: str
+
+
+@router.put("/watch/{item_id}/step")
+def put_watch_step(item_id: str, body: StepIn, uid: Uid) -> dict[str, bool]:
+    if not me.watch_set_step(uid, item_id, body.step):
+        raise HTTPException(status_code=400, detail="없는 단계이거나 관심 물건이 아니에요")
+    return {"ok": True}
+
+
 @router.delete("/watch/{item_id}")
 def delete_watch(item_id: str, uid: Uid) -> dict[str, bool]:
     me.watch_remove(uid, item_id)

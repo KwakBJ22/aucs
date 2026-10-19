@@ -1,7 +1,8 @@
 import { apiBaseUrl } from "./client";
 import type { ItemCard, Schedule } from "./items";
 
-export type WatchCard = ItemCard & { step: string };
+export type WatchStep = "review" | "field" | "money" | "bid" | "result";
+export type WatchCard = ItemCard & { step: WatchStep };
 export type SavedSearch = {
   search_id: number;
   name: string;
@@ -128,6 +129,11 @@ export const meApi = {
   watchIds: (t: string) => call<string[]>(t, "/watch/ids"),
   addWatch: (t: string, id: string) =>
     call(t, `/watch/${encodeURIComponent(id)}`, { method: "PUT" }),
+  setStep: (t: string, id: string, step: WatchStep) =>
+    call(t, `/watch/${encodeURIComponent(id)}/step`, {
+      method: "PUT",
+      body: JSON.stringify({ step }),
+    }),
   removeWatch: (t: string, id: string) =>
     call(t, `/watch/${encodeURIComponent(id)}`, { method: "DELETE" }),
   searches: (t: string) => call<SavedSearch[]>(t, "/searches"),

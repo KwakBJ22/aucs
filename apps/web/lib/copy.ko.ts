@@ -110,6 +110,10 @@ export const copy = {
   watch: {
     title: "관심",
     empty: "하트를 누른 물건이 여기 모여요",
+    all: "전체",
+    steps: { review: "서류 검토", field: "임장", money: "자금", bid: "입찰", result: "결과" },
+    stepNow: "단계",
+    resultHint: "매각기일이 지났어요 · 내 경매에서 결과를 남겨 보세요",
     add: "관심 담기",
     remove: "관심 빼기",
   },

@@ -21,10 +21,31 @@ order by i.sale_date nulls last
 """
 
 
+# 관심 단계(WATCH-01): 서류 검토 → 임장 → 자금 → 입찰 → 결과. 결과는 매각기일이 지나면 저절로.
+STEPS = ("review", "field", "money", "bid")
+
+
+def watch_step(step: str | None, sale_date: Any, today: Any) -> str:
+    if sale_date and sale_date < today:
+        return "result"
+    return step if step in STEPS else "review"
+
+
 def watch_list(uid: str, today: Any) -> list[dict[str, Any]]:
     with connect() as c:
         rows = c.execute(_WATCH_SQL, (uid,)).fetchall()
-    return [{**card(r, today), "step": r["step"]} for r in rows]
+    return [{**card(r, today), "step": watch_step(r["step"], r["sale_date"], today)} for r in rows]
+
+
+def watch_set_step(uid: str, item_id: str, step: str) -> bool:
+    if step not in STEPS:
+        return False
+    with connect() as c:
+        n = c.execute(
+            "update app.watch_items set step = %s where user_id = %s and item_id = %s",
+            (step, uid, item_id),
+        ).rowcount
+    return n > 0
 
 
 def watch_ids(uid: str) -> list[str]:

@@ -23,3 +23,15 @@ def test_me_with_fake_user() -> None:
     finally:
         me.watch_add = orig  # type: ignore[assignment]
         app.dependency_overrides.clear()
+
+
+def test_watch_step():
+    from datetime import date
+
+    from aucs_api.services.me import watch_step
+
+    today = date(2026, 10, 19)
+    assert watch_step(None, date(2026, 10, 25), today) == "review"
+    assert watch_step("money", date(2026, 10, 25), today) == "money"
+    assert watch_step("money", date(2026, 10, 18), today) == "result"
+    assert watch_step("odd", None, today) == "review"
