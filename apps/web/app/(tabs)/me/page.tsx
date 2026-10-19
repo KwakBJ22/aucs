@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { meApi, type Bid, type BidIn, type BidTodo, type Bids, type Mock } from "@/lib/api/me";
+import { meApi, type Bid, type BidIn, type BidTodo, type Bids, type Mock, type WatchCard } from "@/lib/api/me";
+import { PageHeader } from "@/components/layout/page-header";
+import { useIsPc } from "@/lib/use-pc";
+import { dday } from "@/lib/format";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
@@ -129,8 +132,14 @@ export default function Me() {
   const { session, ready } = useSession();
   const [d, setD] = useState<Bids | null>(null);
   const [mocks, setMocks] = useState<Mock[]>([]);
+  const [watch, setWatch] = useState<WatchCard[]>([]);
+  const pc = useIsPc();
   const load = useCallback(() => {
     if (!session) return;
+    meApi
+      .watch(session.access_token)
+      .then(setWatch)
+      .catch(() => setWatch([]));
     meApi
       .bids(session.access_token)
       .then(setD)
@@ -149,85 +158,146 @@ export default function Me() {
     setMocks((l) => l.filter((x) => x.mock_id !== id));
     meApi.removeMock(session.access_token, id).catch(() => {});
   };
+  const upcoming = watch
+    .filter((w) => w.d_day != null && w.d_day >= 0 && w.step !== "result" && w.step !== "after")
+    .sort((x, y) => (x.d_day ?? 99) - (y.d_day ?? 99));
+  const box = (title: string, hint: string | null, children: React.ReactNode, show: boolean) =>
+    show || pc ? (
+      <section className="section">
+        <h2 style={{ fontSize: 16, margin: 0 }}>{title}</h2>
+        {hint && (
+          <p className="sub" style={{ margin: "4px 0 0" }}>
+            {hint}
+          </p>
+        )}
+        {children}
+      </section>
+    ) : null;
+
+  const upcomingBox = box(
+    t.upcoming,
+    null,
+    upcoming.length === 0 ? (
+      <p className="sub">{t.upcomingEmpty}</p>
+    ) : (
+      upcoming.map((w) => (
+        <Link key={w.item_id} href={w.d_day != null && w.d_day <= 1 ? `/item/${encodeURIComponent(w.item_id)}/bid-day` : `/watch/${encodeURIComponent(w.item_id)}`} className="menu-row">
+          <span style={{ minWidth: 0 }}>
+            <b style={{ color: w.d_day != null && w.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>{dday(w.d_day)}</b> {w.sale_date?.slice(5).replace("-", "/")} · {w.place} {w.building ?? w.usage}
+            <span className="sub" style={{ display: "block" }}>
+              {copy.watch.steps[w.step]} · {w.court} {w.case_no}
+            </span>
+          </span>
+          <span className="sub">›</span>
+        </Link>
+      ))
+    ),
+    upcoming.length > 0,
+  );
+
+  const recordBox = box(
+    t.recordTitle,
+    d && d.todo.length > 0 ? t.todoHint : null,
+    <>
+      {d?.todo.map((x) => (
+        <RecordForm key={x.item_id} x={x} token={session.access_token} onSaved={load} />
+      ))}
+      {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
+      {d && d.history.length > 0 && (
+        <table className="pro-table" style={{ marginTop: 8 }}>
+          <thead>
+            <tr>
+              <th>{t.cols.place}</th>
+              <th>{t.cols.outcome}</th>
+              <th>{t.cols.my}</th>
+              <th>{t.cols.win}</th>
+              <th>{t.cols.second}</th>
+              <th>{t.cols.n}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.history.map((b) => (
+              <tr key={b.bid_id}>
+                <td>{b.place}</td>
+                <td>{t.outcome[b.outcome]}</td>
+                <td>{won(b.my_bid_krw)}</td>
+                <td>{won(b.winning_bid_krw)}</td>
+                <td>{won(b.second_bid_krw)}</td>
+                <td>{b.bidder_count != null ? `${b.bidder_count}명` : "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>,
+    Boolean(d && (d.todo.length > 0 || d.history.length > 0)),
+  );
+
+  const mockBox = box(
+    copy.mock.notes,
+    copy.mock.notesHint,
+    <>
+      {mocks.length === 0 && <p className="sub">{t.mockEmpty}</p>}
+      {mocks.map((x) => (
+        <div key={x.mock_id} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+            <Link href={`/item/${encodeURIComponent(x.item_id)}`} style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}>
+              {x.place} <span className="sub">{md(x.sale_date)}</span>
+            </Link>
+            <button className="chip gray" style={{ border: 0, minHeight: 28 }} onClick={() => dropMock(x.mock_id)}>
+              {copy.mock.remove}
+            </button>
+          </div>
+          <div className="sub">
+            {x.decision === "skip" ? copy.mock.skip : `${copy.mock.amount} ${won(x.bid_krw ?? 0)}`}
+            {x.max_krw ? ` · 상한 ${won(x.max_krw)}` : ""}
+            {x.reason ? ` · ${x.reason}` : ""}
+          </div>
+          {x.review.map((line) => (
+            <div key={line} style={{ fontSize: 14, marginTop: 2 }}>
+              {line}
+            </div>
+          ))}
+        </div>
+      ))}
+    </>,
+    mocks.length > 0,
+  );
+
+  const wonBox = box(
+    t.won,
+    null,
+    <>
+      {d && d.won.length === 0 && <p className="sub">{t.wonEmpty}</p>}
+      {d?.won.map((b) => (
+        <WonCard key={b.bid_id} b={b} />
+      ))}
+    </>,
+    Boolean(d && d.won.length > 0),
+  );
+
   return (
     <main className="page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-      </div>
-      {empty && (
+      <PageHeader title={t.title} />
+      {empty && !pc && (
         <section className="section">
           <p className="sub">{t.empty}</p>
         </section>
       )}
-      {d && d.todo.length > 0 && (
-        <section className="section">
-          <h2 style={{ fontSize: 16, margin: 0 }}>{t.todo}</h2>
-          <p className="sub" style={{ margin: "4px 0 0" }}>
-            {t.todoHint}
-          </p>
-          {d.todo.map((x) => (
-            <RecordForm key={x.item_id} x={x} token={session.access_token} onSaved={load} />
-          ))}
-        </section>
-      )}
-      {d && d.won.length > 0 && (
-        <section className="section">
-          <h2 style={{ fontSize: 16, margin: 0 }}>{t.won}</h2>
-          {d.won.map((b) => (
-            <WonCard key={b.bid_id} b={b} />
-          ))}
-        </section>
-      )}
-      {mocks.length > 0 && (
-        <section className="section">
-          <h2 style={{ fontSize: 16, margin: 0 }}>{copy.mock.notes}</h2>
-          <p className="sub" style={{ margin: "4px 0 0" }}>
-            {copy.mock.notesHint}
-          </p>
-          {mocks.map((x) => (
-            <div key={x.mock_id} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                <Link
-                  href={`/item/${encodeURIComponent(x.item_id)}`}
-                  style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}
-                >
-                  {x.place} <span className="sub">{md(x.sale_date)}</span>
-                </Link>
-                <button
-                  className="chip gray"
-                  style={{ border: 0, minHeight: 28 }}
-                  onClick={() => dropMock(x.mock_id)}
-                >
-                  {copy.mock.remove}
-                </button>
-              </div>
-              <div className="sub">
-                {x.decision === "skip"
-                  ? copy.mock.skip
-                  : `${copy.mock.amount} ${won(x.bid_krw ?? 0)}`}
-                {x.max_krw ? ` · 상한 ${won(x.max_krw)}` : ""}
-                {x.reason ? ` · ${x.reason}` : ""}
-              </div>
-              {x.review.map((line) => (
-                <div key={line} style={{ fontSize: 14, marginTop: 2 }}>
-                  {line}
-                </div>
-              ))}
-            </div>
-          ))}
-        </section>
-      )}
-      {d && d.history.length > 0 && (
-        <section className="section">
-          <h2 style={{ fontSize: 16, margin: 0 }}>{t.history}</h2>
-          {d.history.map((b) => (
-            <div key={b.bid_id} style={{ fontSize: 14, padding: "6px 0" }}>
-              {b.place} · {t.outcome[b.outcome]}
-              {b.bidder_count != null && ` · ${b.bidder_count}명`}
-              {b.winning_bid_krw && ` · 낙찰 ${won(b.winning_bid_krw)}`}
-            </div>
-          ))}
-        </section>
+      {pc ? (
+        <div className="pc-grid g-2x2">
+          {upcomingBox}
+          {recordBox}
+          {mockBox}
+          {wonBox}
+        </div>
+      ) : (
+        <>
+          {upcomingBox}
+          {recordBox}
+          {wonBox}
+          {mockBox}
+        </>
       )}
     </main>
   );

@@ -709,6 +709,13 @@ export const copy = {
   },
   noti: { title: "알림함", empty: "아직 알림이 없어요" },
   me: {
+    upcoming: "입찰 예정",
+    upcomingEmpty: "관심 물건 중 앞으로 입찰할 물건이 여기 모여요",
+    recordTitle: "입찰 기록과 결과",
+    recordEmpty: "매각기일이 지난 관심 물건이 생기면 결과를 남길 수 있어요",
+    mockEmpty: "물건 상세 「얼마가 드나」에서 모의입찰을 남겨 보세요",
+    wonEmpty: "낙찰을 기록하면 잔금·명도 일정이 여기 생겨요",
+    cols: { place: "물건", outcome: "결과", my: "내 금액", win: "낙찰가", second: "2위", n: "응찰" },
     title: "내 경매",
     todo: "결과를 적어 주세요",
     todoHint: "적어 두면 이 법원 예측이 더 정확해져요 · 남에게는 통계로만 보여요",
