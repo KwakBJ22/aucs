@@ -52,8 +52,20 @@ def katec_to_wgs84(x: Any, y: Any) -> tuple[float, float] | None:
 
 
 def area_sum(text: str | None) -> float | None:
-    vals = [float(x) for x in re.findall(r"([0-9]+(?:\.[0-9]+)?)㎡", text or "")]
+    # 법원 자료는 「147.8405 ㎡」처럼 띄어 쓰거나 줄을 바꿔 오는 일이 많음 (10/19: 건물 290건 면적이 비었던 원인)
+    vals = [
+        float(x.replace(",", ""))
+        for x in re.findall(r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*㎡", text or "")
+    ]
     return round(sum(vals), 3) if vals else None
+
+
+def building_area(r: dict) -> float | None:
+    """건물 면적: 건물 목록 → 비었으면 집합건물·건물일 때만 면적 목록(땅만 있는 물건은 비워 둠)."""
+    area = area_sum(r.get("pjbBuldList"))
+    if area is None and re.match(r"\[(집합건물|건물)", str(r.get("convAddr") or "")):
+        area = area_sum(r.get("areaList"))
+    return area
 
 
 def split_sigungu(text: str | None) -> tuple[str | None, str | None]:
@@ -152,7 +164,7 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
         "gu": gu,
         "lot_no": r.get("srchHjguLotno") or None,
         "building_desc": " ".join(x for x in [r.get("buldNm"), r.get("buldList")] if x) or None,
-        "building_area_m2": area_sum(r.get("pjbBuldList")),
+        "building_area_m2": building_area(r),
         "appraisal_krw": to_int(r.get("gamevalAmt")),
         "min_price_krw": min_price(r),
         "failed_count": to_int(r.get("yuchalCnt")),
@@ -207,7 +219,7 @@ def parse_result(r: dict[str, Any]) -> dict[str, Any] | None:
         "address": str(r.get("printSt") or "").strip() or None,
         "sido": sido,
         "region_code": r.get("srchHjguRdCd") or None,
-        "building_area_m2": area_sum(r.get("pjbBuldList")),
+        "building_area_m2": building_area(r),
         "appraisal_krw": appraisal,
         "min_price_krw": min_price(r),
         "winning_bid_krw": win if sold else None,

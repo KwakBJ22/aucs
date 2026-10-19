@@ -77,3 +77,27 @@ def test_region_keeps_good_court_fields_for_vehicles():
         "강남구",
         None,
     )
+
+
+def test_area_sum_allows_space_and_newline():
+    from aucs_workers.collectors.parse import area_sum
+
+    assert abs(area_sum("철근콘크리트구조 147.8405 ㎡") - 147.84) < 0.01
+    assert abs(area_sum("철근콘크리트구조\n84.9743 ㎡") - 84.974) < 0.01
+    assert area_sum("1층 50.5㎡, 2층 1,050 ㎡") == 1100.5
+    assert area_sum("철근콘크리트구조") is None
+
+
+def test_building_area_falls_back_to_area_list_for_buildings_only():
+    from aucs_workers.collectors.parse import building_area
+
+    assert (
+        building_area(
+            {"pjbBuldList": "", "areaList": "철근콘크리트구조 30.69㎡", "convAddr": "[집합건물 ]"}
+        )
+        == 30.69
+    )
+    assert (
+        building_area({"pjbBuldList": "", "areaList": "36.7㎡", "convAddr": "[토지 대 36.7㎡]"})
+        is None
+    )
