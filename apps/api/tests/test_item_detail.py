@@ -6,8 +6,8 @@ from test_items import TODAY, row
 
 def full(**kw):
     kw.setdefault("computed_at", datetime(2026, 10, 17, 15, 30))
+    kw.setdefault("sale_rate", {"p25": 78.0, "p50": 84.0, "p75": 90.0, "n": 40})
     return row(note_masked=None, sale_place="입찰법정", dept_name="경매5계", claim_deadline=date(2025, 12, 1),
-               sale_rate={"p25": 78.0, "p50": 84.0, "p75": 90.0, "n": 40},
                case_id="B000250-2025타경55580", **kw)  # fmt: skip
 
 
@@ -44,8 +44,55 @@ def test_worth_court_shift_and_schedule():
 
 
 def test_worth_new_item():
+    d = build_detail(full(new_item=True, min_price_krw=1_015_000_000), [], [], [], None, TODAY, [])
+    assert d["questions"][2]["answer"] == "처음 나온 물건이라 보통 감정가보다 비싸게 팔려요"
+
+
+def test_worth_checks_from_100_sample():
+    # 시세가 감정가보다 낮은 신건 → 「비싸게 팔려요」라고 하지 않음
+    m = {"price_krw": 850_000_000, "level": 1, "n": 3, "recent": []}
+    d = build_detail(
+        full(new_item=True, min_price_krw=1_015_000_000, market=m), [], [], [], None, TODAY, []
+    )
+    assert (
+        d["questions"][2]["answer"] == "처음 나온 물건이지만 시세(8억 5,000만)가 감정가보다 낮아요"
+    )
+    # 유찰 수가 0으로 와도 최저가가 70%면 신건으로 보지 않음
     d = build_detail(full(new_item=True), [], [], [], None, TODAY, [])
-    assert d["questions"][2]["answer"].startswith("처음 나온 물건")
+    assert not d["questions"][2]["answer"].startswith("처음 나온")
+    # 감정가의 2배 시세는 안 씀
+    m2 = {"price_krw": 2_100_000_000, "level": 1, "n": 3, "recent": []}
+    w = build_detail(full(market=m2, new_item=False), [], [], [], None, TODAY, [])["questions"][2]
+    assert (
+        w["answer"].startswith("비슷한 물건은 감정가의") and "시세 자료가" in w["body"]["notes"][0]
+    )
+    # 법원 보정이 p50에도 들어감
+    d = build_detail(full(court_cell={"p50": 92.0, "diff": 8.0, "use_as_base": True, "n": 120}, new_item=False),
+                     [], [], [], None, TODAY, [])  # fmt: skip
+    r = d["questions"][2]["body"]["rate"]
+    assert r["p25"] <= r["p50"] <= r["p75"] and r["p50"] == 92.0
+    # 맨 위 「확인할 것 N가지」와 체크리스트 수가 같음
+    unk = [
+        {
+            "level": "info",
+            "status": "모름",
+            "title": "임차인 자료 미확인",
+            "rule_id": "risk.tenants_unknown",
+        }
+    ]
+    d = build_detail(full(signals=unk), [], [], [], None, TODAY, [])
+    n = sum(1 for x in d["questions"][4]["body"]["checklist"] if x["state"] != "확인 완료")
+    assert f"확인할 것 {n}가지" in d["verdict"] and d["questions"][4]["answer"].startswith(
+        f"확인할 것 {n}가지"
+    )
+
+
+def test_worth_range_not_below_min():
+    low = {"p25": 50.0, "p50": 55.0, "p75": 60.0, "n": 30}
+    d = build_detail(full(sale_rate=low, new_item=False), [], [], [], None, TODAY, [])
+    lo, hi = d["questions"][2]["body"]["range_krw"]
+    assert lo >= 710_500_000 and hi >= lo
+    assert d["questions"][2]["answer"].endswith("최저가 근처에서 낙찰될 것 같아요")
 
 
 def test_worth_with_market():

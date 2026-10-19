@@ -54,32 +54,49 @@ def won(v: int | None) -> str:
 PENDING = "오늘 오후 분석이 끝나면 보여요"
 
 
-def verdict(signals: list[dict[str, Any]]) -> str:
-    """맨 위 한 줄 판정. 치명 > 주의 > 모름 > 문제 없음."""
+def verdict(signals: list[dict[str, Any]], n_check: int | None = None) -> str:
+    """맨 위 한 줄 판정. 치명 > 주의 > 모름 > 문제 없음.
+
+    n_check: 「무엇을 확인하나」의 남은 확인 수 — 주면 그 수를 씀(두 곳 숫자가 어긋나지 않게, 10/19 점검)."""
     fatal = [s for s in signals if s.get("level") == "fatal"]
     if fatal:
         return f"{fatal[0]['title']} — 초보자는 피하는 게 좋아요"
     warn = [s for s in signals if s.get("level") in ("high", "mid") and s.get("status") != "모름"]
-    unknown = [s for s in signals if s.get("status") == "모름"]
+    n = len([s for s in signals if s.get("status") == "모름"]) if n_check is None else n_check
     if warn:
-        return f"{warn[0]['title']}" + (f" · 확인할 것 {len(unknown)}가지" if unknown else "")
-    if unknown:
-        return f"큰 문제 신호는 없어요. 확인할 것 {len(unknown)}가지만 보면 돼요"
+        return f"{warn[0]['title']}" + (f" · 확인할 것 {n}가지" if n else "")
+    if n:
+        return f"큰 문제 신호는 없어요. 확인할 것 {n}가지만 보면 돼요"
     return "큰 문제 신호는 없어요"
+
+
+# 시세가 감정가와 이만큼 벌어지면 다른 물건 거래가 섞인 것으로 보고 시세를 쓰지 않음 (10/19 점검: 2배 차이 사례)
+MARKET_SANE = (0.55, 1.6)
 
 
 def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[str], Any]:
     """「얼마짜리인가」 한 줄과 경고 줄. 관할 법원 칸이 기준을 바꾸면 범위를 그만큼 옮깁니다(입찰가 산정 1C~1E)."""
     rate, court, peers = r.get("sale_rate"), r.get("court_cell"), r.get("local_peers")
     notes: list[str] = []
-    if r.get("new_item"):
+    mkt, app, mn = r.get("market"), r.get("appraisal_krw"), r.get("min_price_krw")
+    if mkt and app and not (MARKET_SANE[0] <= mkt["price_krw"] / app <= MARKET_SANE[1]):
+        notes.append("시세 자료가 이 물건과 맞지 않아 보여 빼고 봤어요")
+        mkt = None
+    # 「처음 나온 물건」은 최저가가 감정가 그대로일 때만 (유찰 수 자료가 빠진 물건이 있음)
+    if r.get("new_item") and (not app or not mn or mn >= app):
+        if mkt and mkt["price_krw"] < app:
+            return (
+                f"처음 나온 물건이지만 시세({won(mkt['price_krw'])})가 감정가보다 낮아요",
+                notes,
+                None,
+            )
         return "처음 나온 물건이라 보통 감정가보다 비싸게 팔려요", notes, None
     if not rate:
         return "비교할 낙찰 사례가 부족해요", notes, None
-    lo, hi, shift = rate["p25"], rate["p75"], 0.0
+    lo, mid, hi, shift = rate["p25"], rate["p50"], rate["p75"], 0.0
     if court and court.get("use_as_base"):
         shift = court["diff"]
-        lo, hi = lo + shift, hi + shift
+        lo, mid, hi = lo + shift, mid + shift, hi + shift
         notes.append(
             f"이 법원은 같은 조건에서 {abs(round(shift))}%p {'높게' if shift > 0 else '낮게'} 팔려요"
         )
@@ -89,12 +106,18 @@ def worth(r: dict[str, Any], signals: list[dict[str, Any]]) -> tuple[str, list[s
         )
     if any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
+    # 최저가보다 낮게는 낙찰될 수 없음 → 범위 아래쪽을 최저가에 맞춤
+    floor = mn / app * 100 if mn and app else None
+    below = bool(floor and hi < floor)
+    if floor:
+        lo, mid, hi = max(lo, floor), max(mid, floor), max(hi, floor)
     ans = f"비슷한 물건은 감정가의 {round(lo)}~{round(hi)}%에 낙찰됐어요"
-    mkt, app = r.get("market"), r.get("appraisal_krw")
-    if mkt and app:
+    if below:
+        ans = "비슷한 물건이 이번 최저가보다 싸게 팔려서 최저가 근처에서 낙찰될 것 같아요"
+    elif mkt and app:
         a, b = app * lo / mkt["price_krw"], app * hi / mkt["price_krw"]
         ans = f"시세의 {round(a)}~{round(b)}%쯤에 낙찰될 것 같아요"
-    return ans, notes, {**rate, "p25": lo, "p75": hi, "court_shift": shift}
+    return ans, notes, {**rate, "p25": lo, "p50": mid, "p75": hi, "court_shift": shift}
 
 
 def build_detail(
@@ -142,6 +165,7 @@ def build_detail(
     hold_ans = (
         warn[0]["title"] if warn
         else f"임차인 {len(tenants)}명 · 등기부는 아직 안 봤어요" if tenants
+        else "현황조사서에 임차인이 없어요 · 등기부는 아직 안 봤어요" if ds.get("status_report") in ("extracted", "verified")
         else "임차인 자료가 없어요 · 등기부는 아직 안 봤어요"
     )  # fmt: skip
     questions = [
@@ -162,7 +186,7 @@ def build_detail(
     ]  # fmt: skip
     return {
         **c,
-        "verdict": verdict(signals) if analyzed else PENDING,
+        "verdict": verdict(signals, len(todo)) if analyzed else PENDING,
         "analyzed": analyzed,
         "fatal": next((s["title"] for s in signals if s.get("level") == "fatal"), None),
         "address": r["address"],
