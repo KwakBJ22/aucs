@@ -18,7 +18,25 @@ function Detail({ d }: { d: CaseDetail }) {
       <div className="sub">
         {d.court} {d.dept}
       </div>
-      <h2 style={{ margin: "2px 0 6px" }}>{d.case_no}</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <h2 style={{ margin: "2px 0 6px" }}>{d.case_no}</h2>
+        <button className="btn primary no-print" style={{ width: "auto", height: 36, padding: "0 14px", fontSize: 14 }} onClick={() => window.print()}>
+          {t.report}
+        </button>
+      </div>
+      <div className="band-grid four" style={{ margin: "6px 0 12px" }}>
+        {[
+          [t.cards.progress, d.progress ?? t.cards.normal],
+          [t.cards.docs, `${d.events.length}건`],
+          [t.cards.high, `${d.events.filter((e) => e.importance === "high").length}건`],
+          [t.cards.late, `${d.events.filter((e) => e.after_deadline).length}건`],
+        ].map(([k, v]) => (
+          <div key={k} style={{ background: "var(--bg)", borderRadius: 12, padding: "10px 12px" }}>
+            <div className="sub" style={{ margin: 0 }}>{k}</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{v}</div>
+          </div>
+        ))}
+      </div>
       {d.progress && (
         <div className="chip orange" style={{ marginBottom: 8 }}>
           ◆ {t.progress}: {d.progress}
@@ -171,7 +189,7 @@ function Cases() {
           }}
         />
       </div>
-      <div className="two-pane">
+      <div className="pc-grid g-26-74">
         <section className="section" style={{ margin: 0 }}>
           {list === null && <div className="sub">{copy.pro.loading}</div>}
           {list?.length === 0 && <div className="sub">{t.empty}</div>}

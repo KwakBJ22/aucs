@@ -763,6 +763,9 @@ button {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0 2%;
   }
+  .band-grid.four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .toc {
   display: flex;

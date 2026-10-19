@@ -542,6 +542,8 @@ export const copy = {
     note: "지분·특수 사건은 통계에서 뺐어요 · 숫자 옆 작은 수는 건수",
   },
   proCases: {
+    report: "보고서 PDF",
+    cards: { progress: "진행 판단", normal: "정상 진행", docs: "문건", high: "중요 문건", late: "종기 뒤 신고" },
     title: "사건·문건 분석",
     sub: "문건에 주의할 것이 있는 진행 사건이에요 · 회생·정지 신청, 매각조건 변경, 유치권, 종기 뒤 신고 …",
     all: "전체",
