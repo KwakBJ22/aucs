@@ -17,7 +17,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
-       a.result -> 'new_item' as new_item, a.result -> 'market' as market,
+       a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'redev' as redev,
        a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
@@ -266,7 +266,7 @@ def build_detail(
     questions = [
         q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''}".strip(" ·"), "gray",
           {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"], "building": r["building_desc"],
-           "is_share": r["is_share"], "note": r["note_masked"]}),
+           "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev")}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals}),
         q("worth", "얼마짜리인가", rate_ans, "gray" if not rate else "blue",

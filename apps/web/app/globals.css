@@ -806,3 +806,95 @@ button {
 .pc-act:hover {
   background: var(--bg);
 }
+
+/* 작업 공간 */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 12px 0 0;
+  border-radius: 12px;
+  background: var(--gray-chip);
+}
+.seg button {
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gray-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.seg button.on {
+  background: var(--surface);
+  color: var(--text);
+}
+.memo-box {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 16px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+.check-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  min-height: 44px;
+}
+.check-row input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+.line-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+/* PC 관심 보드 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.board-col {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-head {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 4px 4px;
+}
+.board-card {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 8px;
+  color: var(--text);
+}
+.board-card.on {
+  outline: 2px solid var(--blue);
+}
+.row-on td {
+  background: var(--blue-soft);
+}

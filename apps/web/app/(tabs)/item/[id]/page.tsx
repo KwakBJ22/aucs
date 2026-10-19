@@ -1027,6 +1027,12 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
           />
         )}
         {b.is_share && <Row label="" value={<b style={{ color: "var(--red)" }}>{t.share}</b>} />}
+        {b.redev && (
+          <Row
+            label={t.redev}
+            value={[b.redev.name, b.redev.biz_type, b.redev.stage].filter(Boolean).join(" · ")}
+          />
+        )}
         {b.note && (
           <p className="sub" style={{ whiteSpace: "pre-wrap" }}>
             {b.note}

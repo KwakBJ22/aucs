@@ -1,7 +1,8 @@
 import { apiBaseUrl } from "./client";
 import type { ItemCard, Schedule } from "./items";
 
-export type WatchStep = "review" | "field" | "money" | "bid" | "result";
+export type WatchStep = "found" | "review" | "field" | "money" | "bid" | "result" | "after";
+export const WATCH_STEPS: WatchStep[] = ["found", "review", "field", "money", "bid", "result", "after"];
 export type WatchCard = ItemCard & { step: WatchStep; in_compare: boolean };
 export type Compare = {
   items: string[];

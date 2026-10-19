@@ -31,10 +31,11 @@ def test_watch_step():
     from aucs_api.services.me import watch_step
 
     today = date(2026, 10, 19)
-    assert watch_step(None, date(2026, 10, 25), today) == "review"
+    assert watch_step(None, date(2026, 10, 25), today) == "found"
+    assert watch_step("after", date(2026, 10, 18), today) == "after"
     assert watch_step("money", date(2026, 10, 25), today) == "money"
     assert watch_step("money", date(2026, 10, 18), today) == "result"
-    assert watch_step("odd", None, today) == "review"
+    assert watch_step("odd", None, today) == "found"
 
 
 def test_history_rows():

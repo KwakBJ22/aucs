@@ -21,14 +21,17 @@ order by i.sale_date nulls last
 """
 
 
-# 관심 단계(WATCH-01): 서류 검토 → 임장 → 자금 → 입찰 → 결과. 결과는 매각기일이 지나면 저절로.
-STEPS = ("review", "field", "money", "bid")
+# 관심 단계(WATCH-01, 10/19 7단계): 발견 → 서류 → 현장 → 자금 → 입찰 준비 → 결과 → 잔금·명도.
+# 결과는 매각기일이 지나면 저절로, 낙찰 뒤 「잔금·명도」는 회원이 옮김.
+STEPS = ("found", "review", "field", "money", "bid", "after")
 
 
 def watch_step(step: str | None, sale_date: Any, today: Any) -> str:
+    if step == "after":
+        return "after"
     if sale_date and sale_date < today:
         return "result"
-    return step if step in STEPS else "review"
+    return step if step in STEPS else "found"
 
 
 def watch_list(uid: str, today: Any) -> list[dict[str, Any]]:
