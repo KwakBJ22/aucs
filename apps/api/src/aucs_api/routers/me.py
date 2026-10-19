@@ -71,6 +71,54 @@ def put_watch_step(item_id: str, body: StepIn, uid: Uid) -> dict[str, bool]:
     return {"ok": True}
 
 
+class MemoIn(BaseModel):
+    memo: str = Field(default="", max_length=2000)
+
+
+class CheckIn(BaseModel):
+    key: str = Field(max_length=80)
+    done: bool
+
+
+class CalcIn(BaseModel):
+    bid_krw: int = Field(gt=0)
+    cash_krw: int | None = None
+
+
+def _ok(done: bool) -> dict[str, bool]:
+    if not done:
+        raise HTTPException(status_code=404, detail="관심 물건이 아니에요")
+    return {"ok": True}
+
+
+@router.get("/watch/{item_id}/workspace")
+def get_workspace(item_id: str, uid: Uid) -> dict[str, Any]:
+    ws = me.workspace(uid, item_id, date.today())
+    if ws is None:
+        raise HTTPException(status_code=404, detail="관심 물건이 아니에요")
+    return ws
+
+
+@router.put("/watch/{item_id}/memo")
+def put_memo(item_id: str, body: MemoIn, uid: Uid) -> dict[str, bool]:
+    return _ok(me.ws_memo(uid, item_id, body.memo))
+
+
+@router.put("/watch/{item_id}/check")
+def put_check(item_id: str, body: CheckIn, uid: Uid) -> dict[str, bool]:
+    return _ok(me.ws_check(uid, item_id, body.key, body.done, date.today()))
+
+
+@router.post("/watch/{item_id}/calcs")
+def post_calc(item_id: str, body: CalcIn, uid: Uid) -> dict[str, bool]:
+    return _ok(me.ws_calc_add(uid, item_id, body.bid_krw, body.cash_krw, date.today()))
+
+
+@router.delete("/watch/{item_id}/calcs/{bid_krw}")
+def delete_calc(item_id: str, bid_krw: int, uid: Uid) -> dict[str, bool]:
+    return _ok(me.ws_calc_remove(uid, item_id, bid_krw))
+
+
 @router.delete("/watch/{item_id}")
 def delete_watch(item_id: str, uid: Uid) -> dict[str, bool]:
     me.watch_remove(uid, item_id)

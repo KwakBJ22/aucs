@@ -35,3 +35,24 @@ def test_watch_step():
     assert watch_step("money", date(2026, 10, 25), today) == "money"
     assert watch_step("money", date(2026, 10, 18), today) == "result"
     assert watch_step("odd", None, today) == "review"
+
+
+def test_history_rows():
+    from datetime import datetime
+
+    from aucs_api.services.me import history_rows
+
+    at = datetime(2026, 10, 19, 9)
+    rows = [
+        {
+            "kind": "min_price",
+            "prev_value": "1015000000",
+            "new_value": "710500000",
+            "created_at": at,
+        },
+        {"kind": "sale_date", "prev_value": None, "new_value": "2026-10-20", "created_at": at},
+        {"kind": "listing", "prev_value": "listed", "new_value": "gone", "created_at": at},
+    ]
+    h = history_rows(rows)
+    assert h[0]["change"] == "10억 1,500만 → 7억 1,050만"
+    assert len(h) == 2 and h[1]["change"] == "목록에 있음 → 빠짐"

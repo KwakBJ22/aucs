@@ -24,9 +24,14 @@ function StepRow({ c, onMove }: { c: WatchCard; onMove: (s: WatchStep) => void }
   return (
     <div style={{ padding: "0 0 12px 84px", display: "flex", gap: 6, flexWrap: "wrap" }}>
       {!open ? (
-        <button className="chip gray" style={{ border: 0 }} onClick={() => setOpen(true)}>
-          {t.stepNow} · {t.steps[c.step]} ›
-        </button>
+        <>
+          <button className="chip gray" style={{ border: 0 }} onClick={() => setOpen(true)}>
+            {t.stepNow} · {t.steps[c.step]} ›
+          </button>
+          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray">
+            {copy.ws.open} ›
+          </Link>
+        </>
       ) : (
         MOVABLE.map((s) => (
           <button

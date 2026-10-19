@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
+import { useWatch } from "@/components/watch-context";
 import {
   fetchBidCheck,
   fetchCalc,
@@ -861,10 +863,34 @@ function CalcBox({ id }: { id: string }) {
               </div>
             )}
             {d.resale && <div className="sub">{t.resale}</div>}
+            <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
           </div>
         </>
       )}
     </div>
+  );
+}
+
+// 관심 담은 물건이면 지금 입찰가를 작업 공간에 저장(WATCH-02)
+function SaveBid({ id, bid, cash }: { id: string; bid: number; cash: number }) {
+  const { ids, token } = useWatch();
+  const [saved, setSaved] = useState<number | null>(null);
+  if (!token || !ids.has(id)) return null;
+  const done = saved === bid;
+  return (
+    <button
+      className="chip gray"
+      disabled={done}
+      style={{ border: 0, minHeight: 36, marginTop: 10 }}
+      onClick={() =>
+        meApi
+          .addCalc(token, id, bid, cash)
+          .then(() => setSaved(bid))
+          .catch(() => {})
+      }
+    >
+      {done ? copy.ws.bidSaved : copy.ws.saveBid}
+    </button>
   );
 }
 
@@ -1240,6 +1266,16 @@ function answerOf(q: Question, u: RegistryUpload | null | undefined): string {
   return q.answer;
 }
 
+function WsLink({ id }: { id: string }) {
+  const { ids } = useWatch();
+  if (!ids.has(id)) return null;
+  return (
+    <Link href={`/watch/${encodeURIComponent(id)}`} className="chip gray" style={{ minHeight: 32 }}>
+      {copy.ws.open} ›
+    </Link>
+  );
+}
+
 export default function Item() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -1291,7 +1327,10 @@ export default function Item() {
             >
               ←
             </button>
-            <HeartButton id={d.item_id} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <WsLink id={d.item_id} />
+              <HeartButton id={d.item_id} />
+            </div>
           </div>
           {d.fatal && <div className="fatal">{d.fatal}</div>}
           <section className="section">

@@ -190,3 +190,104 @@ def bid_save(uid: str, body: dict[str, Any]) -> None:
 def bid_remove(uid: str, bid_id: int) -> None:
     with connect() as c:
         c.execute("delete from app.bid_results where user_id = %s and bid_id = %s", (uid, bid_id))
+
+
+# 물건 작업 공간(WATCH-02): 메모·내 확인 체크·저장한 입찰가·변경 이력
+MAX_CALCS = 5
+_KIND_KO = {
+    "sale_date": "매각기일",
+    "min_price": "최저가",
+    "result": "결과",
+    "listing": "법원 목록",
+}
+_VALUE_KO = {"gone": "빠짐", "listed": "목록에 있음", "sold": "매각", "failed": "유찰",
+             "changed": "변경", "withdrawn": "취하", "dismissed": "기각"}  # fmt: skip
+
+
+def _val(kind: str, v: str | None) -> str:
+    if v is None:
+        return "-"
+    if kind == "min_price" and v.isdigit():
+        n = int(v) // 10_000
+        eok, man = divmod(n, 10_000)
+        return f"{eok}억 {man:,}만" if eok and man else (f"{eok}억" if eok else f"{man:,}만")
+    return _VALUE_KO.get(v, v)
+
+
+def history_rows(rows: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """알림 기록 → 변경 이력 줄 (처음 기준값은 빼고 실제로 바뀐 것만)."""
+    return [
+        {
+            "at": r["created_at"].strftime("%Y-%m-%d"),
+            "what": _KIND_KO.get(r["kind"], r["kind"]),
+            "change": f"{_val(r['kind'], r['prev_value'])} → {_val(r['kind'], r['new_value'])}",
+        }
+        for r in rows
+        if r["prev_value"] is not None and r["kind"] in _KIND_KO
+    ]
+
+
+def workspace(uid: str, item_id: str, today: Any) -> dict[str, Any] | None:
+    with connect() as c:
+        w = c.execute(
+            """select w.step, w.memo, w.checks, w.calcs, i.sale_date from app.watch_items w
+               join core.items i using (item_id) where w.user_id = %s and w.item_id = %s""",
+            (uid, item_id),
+        ).fetchone()
+        if not w:
+            return None
+        ev = c.execute(
+            """select kind, prev_value, new_value, created_at from app.alert_events
+               where user_id = %s and item_id = %s order by created_at desc limit 30""",
+            (uid, item_id),
+        ).fetchall()
+    return {
+        "step": watch_step(w["step"], w["sale_date"], today),
+        "memo": w["memo"] or "",
+        "checks": w["checks"] or {},
+        "calcs": w["calcs"] or [],
+        "history": history_rows(ev),
+    }
+
+
+def _update(uid: str, item_id: str, sql: str, args: tuple[Any, ...]) -> bool:
+    with connect() as c:
+        n = c.execute(
+            f"update app.watch_items set {sql}, updated_at = now() where user_id = %s and item_id = %s",
+            (*args, uid, item_id),
+        ).rowcount
+    return n > 0
+
+
+def ws_memo(uid: str, item_id: str, memo: str) -> bool:
+    return _update(uid, item_id, "memo = %s", (memo[:2000],))
+
+
+def ws_check(uid: str, item_id: str, key: str, done: bool, today: Any) -> bool:
+    if done:
+        return _update(uid, item_id, "checks = checks || %s", (Jsonb({key: str(today)}),))
+    return _update(uid, item_id, "checks = checks - %s", (key,))
+
+
+def ws_calc_add(uid: str, item_id: str, bid_krw: int, cash_krw: int | None, today: Any) -> bool:
+    entry = Jsonb([{"bid_krw": bid_krw, "cash_krw": cash_krw, "saved_at": str(today)}])
+    # 새 것을 앞에, 같은 금액은 하나만, 최대 5개
+    return _update(
+        uid,
+        item_id,
+        """calcs = (select coalesce(jsonb_agg(x), '[]'::jsonb) from (
+                 select x from jsonb_array_elements(%s::jsonb || coalesce((
+                   select jsonb_agg(y) from jsonb_array_elements(calcs) y
+                   where (y->>'bid_krw')::bigint <> %s), '[]'::jsonb)) x limit %s) t)""",
+        (entry, bid_krw, MAX_CALCS),
+    )
+
+
+def ws_calc_remove(uid: str, item_id: str, bid_krw: int) -> bool:
+    return _update(
+        uid,
+        item_id,
+        """calcs = coalesce((select jsonb_agg(y) from jsonb_array_elements(calcs) y
+                   where (y->>'bid_krw')::bigint <> %s), '[]'::jsonb)""",
+        (bid_krw,),
+    )

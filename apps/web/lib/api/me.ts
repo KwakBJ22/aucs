@@ -124,7 +124,34 @@ async function call<T>(token: string, path: string, init?: RequestInit): Promise
   return (await res.json()) as T;
 }
 
+export type Workspace = {
+  step: WatchStep;
+  memo: string;
+  checks: Record<string, string>;
+  calcs: { bid_krw: number; cash_krw: number | null; saved_at: string }[];
+  history: { at: string; what: string; change: string }[];
+};
+
 export const meApi = {
+  workspace: (t: string, id: string) =>
+    call<Workspace>(t, `/watch/${encodeURIComponent(id)}/workspace`),
+  saveMemo: (t: string, id: string, memo: string) =>
+    call(t, `/watch/${encodeURIComponent(id)}/memo`, {
+      method: "PUT",
+      body: JSON.stringify({ memo }),
+    }),
+  check: (t: string, id: string, key: string, done: boolean) =>
+    call(t, `/watch/${encodeURIComponent(id)}/check`, {
+      method: "PUT",
+      body: JSON.stringify({ key, done }),
+    }),
+  addCalc: (t: string, id: string, bid_krw: number, cash_krw: number | null) =>
+    call(t, `/watch/${encodeURIComponent(id)}/calcs`, {
+      method: "POST",
+      body: JSON.stringify({ bid_krw, cash_krw }),
+    }),
+  removeCalc: (t: string, id: string, bid: number) =>
+    call(t, `/watch/${encodeURIComponent(id)}/calcs/${bid}`, { method: "DELETE" }),
   watch: (t: string) => call<WatchCard[]>(t, "/watch"),
   watchIds: (t: string) => call<string[]>(t, "/watch/ids"),
   addWatch: (t: string, id: string) =>
