@@ -745,3 +745,64 @@ button {
   flex: 1;
   min-width: 0;
 }
+
+/* PC 물건 상세 */
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 1024px) {
+  .band-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 2%;
+  }
+}
+.toc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+}
+.toc a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+.toc a:hover {
+  background: var(--bg);
+}
+.toc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.q-sec {
+  scroll-margin-top: 124px;
+}
+.pc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pc-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pc-act:hover {
+  background: var(--bg);
+}
