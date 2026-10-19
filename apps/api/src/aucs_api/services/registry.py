@@ -12,6 +12,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from aucs_rules.address_match import compare
 from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
 from aucs_rules.payout import NamedTenant, payout
 from aucs_rules.rights import Right, analyze
@@ -243,8 +244,9 @@ def parse_upload(upload_id: int) -> None:
         data = [right_to_json(x) for x in rights]
         with connect() as c:
             c.execute(
-                "update app.uploaded_registries set status='parsed', method=%s, rights=%s, parsed_at=now() where upload_id=%s",
-                (meta.get("method"), Jsonb(data), upload_id),
+                """update app.uploaded_registries set status='parsed', method=%s, rights=%s, address=%s, parsed_at=now()
+                   where upload_id=%s""",
+                (meta.get("method"), Jsonb(data), meta.get("소재지"), upload_id),
             )
     except Exception as e:  # noqa: BLE001 — 어떤 오류든 손님에게는 「못 읽었어요」로
         with connect() as c:
@@ -258,14 +260,14 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
     """이 물건에 내가 올린 마지막 등기부와 사다리."""
     with connect() as c:
         u = c.execute(
-            """select upload_id, file_name, status, method, rights, error, delete_after, created_at
+            """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok
                from app.uploaded_registries where user_id = %s and item_id = %s order by upload_id desc limit 1""",
             (uid, item_id),
         ).fetchone()
         if not u:
             return None
         meta = c.execute(
-            """select c.claim_deadline, i.case_id, i.min_price_krw, i.sido, i.sigungu
+            """select c.claim_deadline, i.case_id, i.min_price_krw, i.sido, i.sigungu, i.address
                from core.items i join core.cases c using (case_id) where i.item_id = %s""",
             (item_id,),
         ).fetchone()
@@ -282,6 +284,12 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
         "error": u["error"], "delete_after": u["delete_after"].isoformat(), "ladder": None,
         "created_at": u["created_at"].isoformat(), "choices": {"갑": names_for("갑"), "을": names_for("을")},
     }  # fmt: skip
+    # 주소가 이 물건과 다르면(손님이 「그래도 보기」 누르기 전엔) 판정하지 않음
+    if u["status"] == "parsed":
+        m = compare(u["address"], meta["address"] if meta else None)
+        out["address"] = {**m, "ok": u["address_ok"]}
+        if m["result"] in ("different", "unit_differs") and not u["address_ok"]:
+            return out
     if u["status"] == "parsed" and u["rights"]:
         rights, marks = apply_guesses(u["rights"])
         out["ladder"] = build_ladder(
@@ -291,6 +299,18 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
             small_table=flatten_small_lease_table([dict(r) for r in small_rows]),
         )  # fmt: skip
     return out
+
+
+def accept_address(uid: str, item_id: str) -> dict[str, Any] | None:
+    """「그래도 이 등기부로 보기」."""
+    with connect() as c:
+        c.execute(
+            """update app.uploaded_registries set address_ok = true where upload_id = (
+                 select upload_id from app.uploaded_registries where user_id = %s and item_id = %s
+                 order by upload_id desc limit 1)""",
+            (uid, item_id),
+        )
+    return latest(uid, item_id)
 
 
 def _region(meta: dict[str, Any], rights: list[Right]) -> str | None:

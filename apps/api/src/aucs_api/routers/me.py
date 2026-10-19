@@ -132,6 +132,11 @@ class RightFixIn(BaseModel):
     purpose: str = Field(max_length=40)
 
 
+@router.post("/registries/{item_id}/address-ok")
+def post_registry_address_ok(item_id: str, uid: Uid) -> dict[str, Any] | None:
+    return registry.accept_address(uid, item_id)
+
+
 @router.patch("/registries/{item_id}/rights")
 def patch_registry_right(item_id: str, body: RightFixIn, uid: Uid) -> dict[str, Any] | None:
     try:

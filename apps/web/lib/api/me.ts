@@ -86,6 +86,14 @@ export type RegistryUpload = {
   ladder: Ladder | null;
   created_at?: string;
   choices?: Record<string, string[]>;
+  address?: {
+    result: "same" | "unit_differs" | "different" | "unknown";
+    registry?: string;
+    item?: string;
+    registry_unit?: string | null;
+    item_unit?: string | null;
+    ok: boolean;
+  };
 };
 
 // 등기부 PDF 올리기 (multipart 라 공통 call 을 쓰지 않음)
@@ -133,6 +141,10 @@ export const meApi = {
   bids: (t: string) => call<Bids>(t, "/bids"),
   registry: (t: string, id: string) =>
     call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}`),
+  acceptAddress: (t: string, id: string) =>
+    call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}/address-ok`, {
+      method: "POST",
+    }),
   fixRight: (t: string, id: string, b: { section: string; rank_no: string; purpose: string }) =>
     call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}/rights`, {
       method: "PATCH",

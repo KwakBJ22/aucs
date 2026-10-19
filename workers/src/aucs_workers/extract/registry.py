@@ -90,7 +90,8 @@ def read_pdf(path: Path) -> tuple[list[Right], dict[str, Any]]:
 
     text = "\n".join((p.extract_text() or "") for p in PdfReader(str(path)).pages)
     if len(re.sub(r"\s", "", text)) > 200 and re.search(r"갑\s*구|을\s*구|주요\s*등기사항", text):
-        return text_to_rights(text), {"method": "text"}
+        m = re.search(r"\[(?:집합건물|건물|토지)\]\s*([^\n]+)", text)
+        return text_to_rights(text), {"method": "text", "소재지": m.group(1).strip() if m else None}
     from aucs_workers.extract.registry_ocr import ocr_rows
 
     rows, head = ocr_rows(path)

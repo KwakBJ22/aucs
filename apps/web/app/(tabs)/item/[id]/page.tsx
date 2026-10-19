@@ -63,6 +63,7 @@ type MyReg = {
   startedAt: number | null;
   pick: (f: File | undefined) => void;
   fix: (section: string, rank_no: string, purpose: string) => void;
+  accept: () => void;
 };
 const RegCtx = createContext<MyReg | null>(null);
 
@@ -127,7 +128,14 @@ function useMyRegistry(id: string): MyReg {
     },
     [token, id],
   );
-  return { ready, token, u, err, sending, startedAt, pick, fix };
+  const accept = useCallback(() => {
+    if (!token) return;
+    meApi
+      .acceptAddress(token, id)
+      .then(setU)
+      .catch((e: Error) => setErr(e.message));
+  }, [token, id]);
+  return { ready, token, u, err, sending, startedAt, pick, fix, accept };
 }
 
 // 읽는 동안 진행 막대: 서버가 페이지별 진행을 알려 주지 않아 시간 기준(그림 PDF 약 40초).
@@ -250,7 +258,10 @@ function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
   if (!reg || !reg.ready) return null;
-  const { token, u, err, pick, fix, sending, startedAt } = reg;
+  const { token, u, err, pick, fix, accept, sending, startedAt } = reg;
+  const addr = u?.status === "parsed" ? u.address : undefined;
+  const blocked =
+    !!addr && !addr.ok && (addr.result === "different" || addr.result === "unit_differs");
   if (!token)
     return (
       <p className="sub" style={{ marginTop: 10 }}>
@@ -261,6 +272,45 @@ function RegistryBox() {
   return (
     <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
       {u?.status === "processing" && <ReadingBar sending={sending} startedAt={startedAt} />}
+      {blocked && addr && (
+        <div style={{ border: "1px solid var(--amber)", borderRadius: 12, padding: 12 }}>
+          <b style={{ color: "var(--amber)", fontSize: 15 }}>
+            {addr.result === "unit_differs" && addr.registry_unit && addr.item_unit
+              ? r.addrUnit(addr.registry_unit, addr.item_unit)
+              : r.addrDiff}
+          </b>
+          <div style={{ fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
+            <div>
+              <span className="sub" style={{ margin: 0 }}>
+                {r.addrReg}
+              </span>{" "}
+              {addr.registry}
+            </div>
+            <div>
+              <span className="sub" style={{ margin: 0 }}>
+                {r.addrItem}
+              </span>{" "}
+              {addr.item}
+            </div>
+          </div>
+          <button
+            onClick={accept}
+            style={{
+              border: 0,
+              background: "none",
+              color: "var(--muted)",
+              fontSize: 13,
+              padding: "10px 0 0",
+              minHeight: 44,
+            }}
+          >
+            {r.addrStill} ›
+          </button>
+        </div>
+      )}
+      {lad && addr?.result === "unknown" && (
+        <p style={{ fontSize: 13, color: "var(--amber)", margin: "0 0 6px" }}>{r.addrUnknown}</p>
+      )}
       {u?.status === "failed" && <p style={{ color: "var(--amber)", fontSize: 14 }}>{r.failed}</p>}
       {lad && (
         <>
