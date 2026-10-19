@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -146,12 +147,14 @@ function ProItems() {
 
   return (
     <main className="page pro-page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-        <a href={proCsvUrl(f)} className="chip gray" style={{ minHeight: 32 }}>
-          {t.csv}
-        </a>
-      </div>
+      <PageHeader
+        title={t.title}
+        right={
+          <a href={proCsvUrl(f)} className="chip gray" style={{ minHeight: 32 }}>
+            {t.csv}
+          </a>
+        }
+      />
       <div className="pc-hint sub">{t.pcHint}</div>
 
       <section className="section pro-filters">

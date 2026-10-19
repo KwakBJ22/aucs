@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
@@ -87,9 +88,7 @@ export default function ProMarketPage() {
   const sc = m?.scorecard;
   return (
     <main className="page pro-page">
-      <div className="topbar">
-        <h1 className="brand">{t.title}</h1>
-      </div>
+      <PageHeader title={t.title} />
       <nav className="seg" style={{ marginBottom: 4 }}>
         <a href="#region">{t.tabRegion}</a>
         <a href="#cases">{t.cases}</a>

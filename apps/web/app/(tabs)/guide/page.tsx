@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useState } from "react";
 import { copy } from "@/lib/copy.ko";
@@ -11,9 +12,7 @@ export default function Guide() {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <main className="page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-      </div>
+      <PageHeader title={t.title} back="/more" />
       <div className="sub" style={{ fontSize: 15, margin: "0 4px 8px" }}>
         {t.sub}
       </div>

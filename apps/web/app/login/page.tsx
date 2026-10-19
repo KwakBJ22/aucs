@@ -1,7 +1,7 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import { useState } from "react";
-import Link from "next/link";
 import { sendLoginLink, signOut, useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
@@ -14,11 +14,7 @@ export default function Login() {
 
   return (
     <main className="page">
-      <div className="topbar">
-        <Link href="/home" aria-label="뒤로">
-          ←
-        </Link>
-      </div>
+      <PageHeader title="" back="/home" />
       <section className="section" style={{ padding: "28px 18px" }}>
         <h2 style={{ fontSize: 22 }}>{t.title}</h2>
         {session ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NeedLogin } from "@/components/need-login";
@@ -21,13 +22,7 @@ export default function Notifications() {
   if (!session) return <NeedLogin title={copy.noti.title} />;
   return (
     <main className="page">
-      <div className="topbar">
-        <Link href="/home" aria-label="뒤로">
-          ←
-        </Link>
-        <div className="brand">{copy.noti.title}</div>
-        <span />
-      </div>
+      <PageHeader title={copy.noti.title} back="/home" />
       <section className="section">
         {list && list.length === 0 && <p className="sub">{copy.noti.empty}</p>}
         {list?.map((n) => (

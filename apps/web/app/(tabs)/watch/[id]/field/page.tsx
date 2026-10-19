@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PageHeader } from "@/components/layout/page-header";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
@@ -115,12 +115,7 @@ export default function FieldPage() {
 
   return (
     <main className="page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-        <Link href={`/watch/${encodeURIComponent(id)}`} className="sub">
-          {copy.ws.title} ›
-        </Link>
-      </div>
+      <PageHeader title={t.title} back={`/watch/${encodeURIComponent(id)}`} />
       <div className="pc-grid g-55-45">
         <div>
           {d && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -158,9 +159,7 @@ function Cases() {
 
   return (
     <main className="page pro-page">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-      </div>
+      <PageHeader title={t.title} />
       <div className="sub" style={{ marginBottom: 8 }}>
         {t.sub}
       </div>

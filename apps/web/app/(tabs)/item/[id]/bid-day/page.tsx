@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -63,12 +64,7 @@ export default function BidDayPage() {
   );
   return (
     <main className="page narrow">
-      <div className="topbar">
-        <div className="brand">{t.title}</div>
-        <Link href={`/item/${encodeURIComponent(id)}`} className="sub">
-          {copy.bidSheet.back} ›
-        </Link>
-      </div>
+      <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
       <section className="section">
         <div style={{ color, fontWeight: 700 }}>
           {d.state === "ok" || d.state === "soon" ? "● " : "◆ "}

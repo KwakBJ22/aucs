@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
 import { useWatch } from "@/components/watch-context";
@@ -1641,7 +1641,6 @@ function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
 
 export default function Item() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [d, setD] = useState<ItemDetail | null | undefined>(undefined);
   const [open, setOpen] = useState<string | null>(null);
   const reg = useMyRegistry(decodeURIComponent(id));
@@ -1685,26 +1684,16 @@ export default function Item() {
     <RegCtx.Provider value={reg}>
       <DocCtx.Provider value={setDoc}>
         <main className="page">
-          <div className="topbar">
-            <button
-              aria-label={t.back}
-              onClick={() => router.back()}
-              style={{
-                border: 0,
-                background: "none",
-                fontSize: 20,
-                minWidth: 44,
-                minHeight: 44,
-                textAlign: "left",
-              }}
-            >
-              ←
-            </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <WsLink id={d.item_id} />
-              <HeartButton id={d.item_id} />
-            </div>
-          </div>
+          <PageHeader
+            title=""
+            back="history"
+            right={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <WsLink id={d.item_id} />
+                <HeartButton id={d.item_id} />
+              </div>
+            }
+          />
           {d.fatal && <div className="fatal">{d.fatal}</div>}
           {d.d_day != null && d.d_day <= 1 && d.d_day >= 0 && (
             <Link

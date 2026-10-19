@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -63,12 +64,7 @@ function Sheet() {
     <main className="page">
       <div className="pc-grid g-40-60">
         <div className="no-print">
-          <div className="topbar">
-            <div className="brand">{t.title}</div>
-            <Link href={`/item/${encodeURIComponent(id)}`} className="sub">
-              {t.back} ›
-            </Link>
-          </div>
+          <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
           <section className="section">
             <div className="sub">{t.hint}</div>
             <label style={{ display: "block", marginTop: 10 }}>

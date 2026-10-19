@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // 화면 머리(제목 줄). 휴대폰: 뒤로 · 제목 · 오른쪽 단추 하나. PC: 같은 자리가 화면 제목이 됩니다.
-// brand=true 는 탭 첫 화면(휴대폰에서만 「옥스」 글자를 보여 줌).
+// back="history" 는 바로 앞 화면으로(브라우저 뒤로).
 export function PageHeader({
   title,
   back,
@@ -13,25 +16,38 @@ export function PageHeader({
   right?: React.ReactNode;
   sub?: React.ReactNode;
 }) {
+  const router = useRouter();
+  const arrow = (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="m15 5-7 7 7 7" />
+    </svg>
+  );
   return (
     <>
       <div className="topbar">
-        {back && (
+        {back === "history" ? (
+          <button
+            aria-label="뒤로"
+            className="tb-back"
+            style={{ border: 0, background: "none" }}
+            onClick={() => router.back()}
+          >
+            {arrow}
+          </button>
+        ) : back ? (
           <Link href={back} aria-label="뒤로" className="tb-back">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
-            >
-              <path d="m15 5-7 7 7 7" />
-            </svg>
+            {arrow}
           </Link>
-        )}
-        <h1 className="brand">{title}</h1>
+        ) : null}
+        {title ? <h1 className="brand">{title}</h1> : null}
         <span style={{ flexGrow: 1 }} />
         {right}
       </div>
