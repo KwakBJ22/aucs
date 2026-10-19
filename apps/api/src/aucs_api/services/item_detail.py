@@ -53,6 +53,7 @@ def won(v: int | None) -> str:
 
 
 PENDING = "오늘 오후 분석이 끝나면 보여요"
+GONE_LINE = "법원 목록에서 빠졌어요 · 기일 변경이나 취하일 수 있어요 · 법원에서 확인하세요"
 
 
 def verdict(signals: list[dict[str, Any]], n_check: int | None = None) -> str:
@@ -261,7 +262,9 @@ def build_detail(
         **c,
         "verdict": verdict(signals, len(todo)) if analyzed else PENDING,
         "analyzed": analyzed,
-        "fatal": next((s["title"] for s in signals if s.get("level") == "fatal"), None),
+        "fatal": GONE_LINE
+        if r.get("status_code") == "gone"
+        else next((s["title"] for s in signals if s.get("level") == "fatal"), None),
         "address": r["address"],
         "sale_place": r["sale_place"],
         "dept_name": r["dept_name"],

@@ -20,7 +20,7 @@ from aucs_rules.schedule import after_sale, short
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
-WATCH_KINDS = ("sale_date", "min_price", "result")
+WATCH_KINDS = ("sale_date", "min_price", "result", "listing")
 RESULT_KO = {
     "sold": "매각",
     "failed": "유찰",
@@ -54,6 +54,13 @@ def change_text(place: str, ch: Change) -> tuple[str, str]:
     if ch.kind == "min_price":
         a, b = int(ch.prev or 0), int(ch.new)
         return f"{place} 최저가가 {'내렸' if b < a else '올랐'}어요", f"{won(a)} → {won(b)}"
+    if ch.kind == "listing":
+        if ch.new == "gone":
+            return (
+                f"{place} 법원 목록에서 빠졌어요",
+                "기일 변경이나 취하일 수 있어요 · 법원에서 확인하세요",
+            )
+        return f"{place} 다시 법원 목록에 올라왔어요", "매각기일과 최저가를 확인해 보세요"
     return f"{place} {RESULT_KO.get(ch.new, ch.new)}", "결과를 확인해 보세요"
 
 
@@ -66,7 +73,7 @@ def won(v: int) -> str:
 
 def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """찾기 화면과 같은 기준(시군구, 최저가/10 ≤ 현금)."""
-    sql = "i.sale_date >= current_date"
+    sql = "i.sale_date >= current_date and i.status_code is distinct from 'gone'"
     p: dict[str, Any] = {}
     if filters.get("sigungu"):
         sql += " and i.sigungu = any(%(sigungu)s)"
@@ -128,10 +135,11 @@ def make_watch_alerts(conn: psycopg.Connection) -> int:
         """select w.user_id, i.item_id, coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, ''),
                   i.sale_date::text, i.min_price_krw::text,
                   (select result from core.rounds r where r.item_id = i.item_id and r.result <> 'scheduled'
-                   order by sale_date desc limit 1)
+                   order by sale_date desc limit 1),
+                  case when i.status_code = 'gone' then 'gone' else 'listed' end
            from app.watch_items w join core.items i using (item_id)"""
     ).fetchall()
-    for uid, item_id, place, sale_date, min_price, result in rows:
+    for uid, item_id, place, sale_date, min_price, result, listing in rows:
         prev: dict[str, str] = dict(
             conn.execute(
                 """select distinct on (kind) kind, new_value from app.alert_events
@@ -139,7 +147,12 @@ def make_watch_alerts(conn: psycopg.Connection) -> int:
                 (uid, item_id, list(WATCH_KINDS)),
             ).fetchall()
         )
-        cur = {"sale_date": sale_date, "min_price": min_price, "result": result}
+        cur = {
+            "sale_date": sale_date,
+            "min_price": min_price,
+            "result": result,
+            "listing": listing,
+        }
         for ch in watch_changes(prev, cur):
             eid = _event(conn, uid, item_id, ch.kind, ch.prev, ch.new)
             if eid and ch.prev is not None:

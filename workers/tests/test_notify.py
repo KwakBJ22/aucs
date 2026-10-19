@@ -26,3 +26,8 @@ def test_match_sql():
     sql, p = match_sql({"sigungu": ["강남구"], "max_cash": 30_000_000})
     assert "any(%(sigungu)s)" in sql and p == {"sigungu": ["강남구"], "max_cash": 30_000_000}
     assert match_sql({})[1] == {}
+
+
+def test_listing_gone_text():
+    assert change_text("x", Change("listing", "listed", "gone"))[0] == "x 법원 목록에서 빠졌어요"
+    assert "다시" in change_text("x", Change("listing", "gone", "listed"))[0]

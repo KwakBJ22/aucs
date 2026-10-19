@@ -13,6 +13,31 @@ from aucs_workers.collectors.store import save_items, save_raw
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
+GONE = "gone"  # 법원 목록에서 빠짐(기일 변경·취하·정지 등). 다시 보이면 법원 상태 코드로 돌아감
+GONE_MAX_SHARE = 0.2  # 한 법원에서 이보다 많이 빠지면 수집 이상으로 보고 표시하지 않음
+
+
+def mark_gone(conn, court: str, d_from: date, d_to: date, started) -> int:  # type: ignore[no-untyped-def]
+    """이번 수집 기간(d_from~d_to)에 있어야 하는데 법원 목록에 안 나온 물건 표시."""
+    total, missing = conn.execute(
+        """select count(*), count(*) filter (where i.checked_at < %s)
+           from core.items i join core.cases c using (case_id)
+           where c.court_code = %s and i.sale_date between %s and %s""",
+        (started, court, d_from, d_to),
+    ).fetchone()
+    if not missing:
+        return 0
+    if missing > total * GONE_MAX_SHARE:
+        print(f"  {COURTS[court]} 빠진 물건 {missing}/{total} — 너무 많아 표시 안 함")
+        return 0
+    return conn.execute(
+        """update core.items i set status_code = %s, updated_at = now()
+           from core.cases c
+           where c.case_id = i.case_id and c.court_code = %s and i.sale_date between %s and %s
+             and i.checked_at < %s and i.status_code is distinct from %s""",
+        (GONE, court, d_from, d_to, started, GONE),
+    ).rowcount
+
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -24,6 +49,8 @@ def main() -> None:
     d_from = date.today()
     d_to = d_from + timedelta(weeks=a.weeks)
     with connect() as conn, run(conn, "court_items", "법원 경매 물건") as job:
+        started = conn.execute("select now()").fetchone()[0]
+        seen: set[str] = set()
         for court, rows in fetch_pages(
             courts, Polite(), results=False,
             date_from=f"{d_from:%Y%m%d}", date_to=f"{d_to:%Y%m%d}", show=a.show,
@@ -32,7 +59,11 @@ def main() -> None:
             job.count += save_items(conn, rows)
             conn.commit()
             print(f"  {COURTS[court]} +{len(rows)}")
-    print(f"끝: {job.count:,}건")
+            seen.add(court)
+        # 모든 법원을 끝까지 받았을 때만(중간에 멈추면 여기까지 오지 않음)
+        gone = sum(mark_gone(conn, cd, d_from, d_to, started) for cd in sorted(seen))
+        conn.commit()
+    print(f"끝: {job.count:,}건 · 법원 목록에서 빠진 물건 {gone:,}건")
 
 
 if __name__ == "__main__":
