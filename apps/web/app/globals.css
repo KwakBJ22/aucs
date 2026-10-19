@@ -501,6 +501,9 @@ button {
   .pc-grid.g-26-44-30 {
     grid-template-columns: 26fr 44fr 30fr;
   }
+  .pc-grid.g-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .pc-grid.g-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px 2%;

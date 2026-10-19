@@ -36,6 +36,7 @@ export type Noti = {
   link: string | null;
   read_at: string | null;
   created_at: string;
+  kind?: string | null;
 };
 
 export type Bid = {

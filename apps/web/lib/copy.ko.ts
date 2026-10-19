@@ -771,7 +771,16 @@ export const copy = {
     afterDeadline: "종기 뒤",
     footer: (t: string) => `법원경매정보 기준 · ${t} 계산`,
   },
-  noti: { title: "알림함", empty: "아직 알림이 없어요" },
+  noti: {
+    title: "알림함",
+    empty: "아직 알림이 없어요",
+    groups: { change: "관심 물건 변경", todo: "할 일·마감", new: "새 물건" },
+    groupSub: {
+      change: "이전 값 → 지금 값 · 누르면 그 물건으로",
+      todo: "입찰일 아침·명세서 공개·잔금 같은 마감",
+      new: "저장한 조건에 새로 맞은 물건",
+    },
+  },
   me: {
     upcoming: "입찰 예정",
     upcomingEmpty: "관심 물건 중 앞으로 입찰할 물건이 여기 모여요",

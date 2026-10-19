@@ -20,23 +20,50 @@ export default function Notifications() {
   }, [session]);
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.noti.title} />;
+  const group = (n: Noti): "change" | "todo" | "new" => {
+    const k = n.kind ?? "";
+    if (!k || k === "new_match") return "new";
+    if (k.startsWith("deadline_") || k === "bid_morning" || k === "spec_open") return "todo";
+    return "change";
+  };
+  const groups = (["change", "todo", "new"] as const).map((g) => ({
+    g,
+    rows: (list ?? []).filter((n) => group(n) === g),
+  }));
   return (
     <main className="page">
       <PageHeader title={copy.noti.title} back="/home" />
-      <section className="section">
-        {list && list.length === 0 && <p className="sub">{copy.noti.empty}</p>}
-        {list?.map((n) => (
-          <Link
-            key={n.noti_id}
-            href={n.link ?? "/home"}
-            className="menu-row"
-            style={{ display: "block" }}
-          >
-            <div style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</div>
-            {n.body && <div className="sub">{n.body}</div>}
-          </Link>
-        ))}
-      </section>
+      {list && list.length === 0 && (
+        <section className="section">
+          <p className="sub">{copy.noti.empty}</p>
+        </section>
+      )}
+      <div className="pc-grid g-3">
+        {groups
+          .filter((x) => x.rows.length > 0)
+          .map(({ g, rows }) => (
+            <section key={g} className="section">
+              <h2>
+                {copy.noti.groups[g]} <span className="sub">{rows.length}</span>
+              </h2>
+              <div className="sub">{copy.noti.groupSub[g]}</div>
+              {rows.map((n) => (
+                <Link
+                  key={n.noti_id}
+                  href={n.link ?? "/home"}
+                  className="menu-row"
+                  style={{ display: "block" }}
+                >
+                  <div style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</div>
+                  {n.body && <div className="sub">{n.body}</div>}
+                  <div className="sub" style={{ fontSize: 12 }}>
+                    {n.created_at.slice(5, 16).replace("T", " ").replace("-", "/")}
+                  </div>
+                </Link>
+              ))}
+            </section>
+          ))}
+      </div>
     </main>
   );
 }

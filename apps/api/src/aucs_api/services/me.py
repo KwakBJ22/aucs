@@ -118,7 +118,9 @@ def push_add(uid: str, endpoint: str, p256dh: str, auth: str) -> None:
 def notifications(uid: str) -> list[dict[str, Any]]:
     with connect() as c:
         return c.execute(
-            "select noti_id, title, body, link, read_at, created_at from app.notifications where user_id = %s order by created_at desc limit 100",
+            """select n.noti_id, n.title, n.body, n.link, n.read_at, n.created_at, e.kind
+               from app.notifications n left join app.alert_events e on e.event_id = n.event_id
+               where n.user_id = %s order by n.created_at desc limit 100""",
             (uid,),
         ).fetchall()
 
