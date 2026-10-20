@@ -62,10 +62,22 @@ export default function Home() {
   // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
   useEffect(() => {
     const p = loadProfile();
-    if (token && p)
-      meApi
-        .saveProfile(token, { regions: p.regions, cash: p.cash, purpose: p.purpose })
-        .catch(() => {});
+    if (!token || !p) return;
+    const body = { regions: p.regions, cash: p.cash, purpose: p.purpose };
+    const sig = JSON.stringify(body);
+    let last: string | null = null;
+    try {
+      last = localStorage.getItem("aucs_profile_sent");
+    } catch {}
+    if (last === sig) return; // 바뀐 게 없으면 다시 보내지 않음
+    meApi
+      .saveProfile(token, body)
+      .then(() => {
+        try {
+          localStorage.setItem("aucs_profile_sent", sig);
+        } catch {}
+      })
+      .catch(() => {});
   }, [token]);
 
   async function turnOnAlert(p: Profile) {

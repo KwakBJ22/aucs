@@ -9,7 +9,7 @@ from aucs_rules.schedule import after_sale
 
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
-from aucs_api.services.docs import item_spec, spec_text
+from aucs_api.services.docs import spec_sheet, spec_text
 from aucs_api.services.items import COURT_NAME, card
 
 _ITEM_SQL = """
@@ -321,47 +321,61 @@ def build_detail(
     }
 
 
+_CASE = "(select case_id from core.items where item_id = %s)"
+
+
 def detail(item_id: str, today: date) -> dict[str, Any] | None:
+    """여러 조회를 한 번에 묶어 보냄(pipeline) — DB 왕복이 8번에서 1번으로 줄어 빨라짐(10/20)."""
+    item_no = int(str(item_id).rsplit("-", 1)[-1] or 1)
     with connect() as c:
-        r = c.execute(_ITEM_SQL, (item_id,)).fetchone()
-        if not r:
-            return None
-        rounds = c.execute(
-            "select sale_date, min_price_krw, result from core.rounds where item_id = %s order by sale_date",
-            (item_id,),
-        ).fetchall()
-        events = c.execute(
-            """select event_date::text as date, category, importance, text_masked as text, after_deadline
-               from core.case_events where case_id = %s and importance in ('high', 'mid')
-               order by event_date desc nulls last limit 12""",
-            (r["case_id"],),
-        ).fetchall()
-        tenants = c.execute(
-            """select name_masked as name, occupied_part as part, move_in_date::text as move_in,
-                      fixed_date::text as fixed, claim_date::text as claim, deposit_krw, monthly_rent_krw
-               from core.tenants where case_id = %s order by move_in_date nulls last""",
-            (r["case_id"],),
-        ).fetchall()
-        red = c.execute(
-            "select value -> %s as v from ref.rule_tables where rule_key = 'court_reduction_pct' "
-            "and valid_from <= %s order by valid_from desc limit 1",
-            (r["court_code"], today),
-        ).fetchone()
-        spec, spec_at = item_spec(c, r["case_id"], int(str(item_id).rsplit("-", 1)[-1] or 1))
-        doc_times = {
-            x["doc_kind"]: x["t"]
-            for x in c.execute(
-                "select doc_kind, max(fetched_at) as t from raw.court_doc_raw where case_id = %s group by 1",
-                (r["case_id"],),
-            ).fetchall()
-        }
-        hol = [
-            x["holiday_date"]
-            for x in c.execute(
+        with c.pipeline():
+            q_item = c.execute(_ITEM_SQL, (item_id,))
+            q_rounds = c.execute(
+                "select sale_date, min_price_krw, result from core.rounds where item_id = %s order by sale_date",
+                (item_id,),
+            )
+            q_events = c.execute(
+                f"""select event_date::text as date, category, importance, text_masked as text, after_deadline
+                   from core.case_events where case_id = {_CASE} and importance in ('high', 'mid')
+                   order by event_date desc nulls last limit 12""",
+                (item_id,),
+            )
+            q_tenants = c.execute(
+                f"""select name_masked as name, occupied_part as part, move_in_date::text as move_in,
+                          fixed_date::text as fixed, claim_date::text as claim, deposit_krw, monthly_rent_krw
+                   from core.tenants where case_id = {_CASE} order by move_in_date nulls last""",
+                (item_id,),
+            )
+            q_red = c.execute(
+                "select value -> (select c.court_code from core.items i join core.cases c using (case_id) "
+                "where i.item_id = %s) as v from ref.rule_tables where rule_key = 'court_reduction_pct' "
+                "and valid_from <= %s order by valid_from desc limit 1",
+                (item_id, today),
+            )
+            q_spec = c.execute(
+                f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "
+                "and doc_kind = %s order by fetched_at desc limit 1",
+                (item_id, f"item_detail_{item_no}"),
+            )
+            q_docs = c.execute(
+                f"select doc_kind, max(fetched_at) as t from raw.court_doc_raw where case_id = {_CASE} group by 1",
+                (item_id,),
+            )
+            q_hol = c.execute(
                 "select holiday_date from ref.holidays where checked and holiday_date >= %s",
                 (today,),
-            ).fetchall()
-        ]
+            )
+        r = q_item.fetchone()
+        if not r:
+            return None
+        rounds = q_rounds.fetchall()
+        events = q_events.fetchall()
+        tenants = q_tenants.fetchall()
+        red = q_red.fetchone()
+        sp = q_spec.fetchone()
+        doc_times = {x["doc_kind"]: x["t"] for x in q_docs.fetchall()}
+        hol = [x["holiday_date"] for x in q_hol.fetchall()]
+    spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     if spec_at:
         doc_times["spec_sheet"] = spec_at
     return build_detail(
