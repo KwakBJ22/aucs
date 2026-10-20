@@ -8,7 +8,7 @@ from typing import Any
 
 from aucs_rules.progress import judge_progress
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 from aucs_api.services.items import COURT_NAME
 
 USAGE_GROUPS = {
@@ -137,16 +137,20 @@ def search(f: dict[str, Any], today: date, *, sort: str, page: int, limit: int) 
                     a.result -> 'signals' as signals, a.result -> 'market' as market"""
     order = SORTS.get(sort, SORTS["deadline"])
     with connect() as c:
-        rows = c.execute(
-            f"{sel} {_BASE} {where} order by {order} limit %(limit)s offset %(offset)s", p
-        ).fetchall()
-        s = c.execute(
-            f"""select count(*) as n, coalesce(sum(i.appraisal_krw), 0) as app_sum,
+        q_rows, q_sum, q_all = batch(
+            c,
+            [
+                (f"{sel} {_BASE} {where} order by {order} limit %(limit)s offset %(offset)s", p),
+                (
+                    f"""select count(*) as n, coalesce(sum(i.appraisal_krw), 0) as app_sum,
                        coalesce(avg(i.appraisal_krw), 0)::bigint as app_avg, coalesce(max(i.appraisal_krw), 0) as app_max,
                        coalesce(sum(i.min_price_krw), 0) as min_sum {_BASE} {where}""",
-            p,
-        ).fetchone()
-        all_n = c.execute(f"select count(*) as n {_BASE}", {"today": today}).fetchone()
+                    p,
+                ),
+                (f"select count(*) as n {_BASE}", {"today": today}),
+            ],
+        )
+        rows, s, all_n = q_rows.fetchall(), q_sum.fetchone(), q_all.fetchone()
     summary = dict(s or {})
     summary["all"] = all_n["n"] if all_n else 0
     return {
@@ -302,36 +306,39 @@ _MED = "round(percentile_cont(0.5) within group (order by s.sale_rate)::numeric,
 
 def market(f: dict[str, Any], today: date) -> dict[str, Any]:
     where, p = _market_where(f)
+    case = " ".join(f"when s.usage_name ~ '{v}' then '{k}'" for k, v in USAGE_GROUPS.items())
     with connect() as c:
-        by_court = c.execute(
-            f"select s.court_code, count(*) as n, {_MED} as p50 from core.sale_results s {where}"
-            " group by 1 order by 2 desc",
-            p,
-        ).fetchall()
-        by_failed = c.execute(
-            f"select least(s.failed_count, 4) as failed, count(*) as n, {_MED} as p50"
-            f" from core.sale_results s {where} and s.failed_count is not null group by 1 order by 1",
-            p,
-        ).fetchall()
-        by_month = c.execute(
-            f"select to_char(s.sale_date, 'YYYY-MM') as month, count(*) as n, {_MED} as p50"
-            f" from core.sale_results s {where} group by 1 order by 1",
-            p,
-        ).fetchall()
-        case = " ".join(f"when s.usage_name ~ '{v}' then '{k}'" for k, v in USAGE_GROUPS.items())
-        by_usage = c.execute(
-            f"select case {case} else 'etc' end as usage, count(*) as n, {_MED} as p50"
-            f" from core.sale_results s {where} group by 1 order by 2 desc",
-            p,
-        ).fetchall()
-        rows = c.execute(
-            f"""select s.sale_date, s.court_code, s.case_no, s.usage_name, s.address, s.building_area_m2,
+        qs = batch(
+            c,
+            [
+                (
+                    f"select s.court_code, count(*) as n, {_MED} as p50 from core.sale_results s {where}"
+                    " group by 1 order by 2 desc",
+                    p,
+                ),
+                (
+                    f"select least(s.failed_count, 4) as failed, count(*) as n, {_MED} as p50"
+                    f" from core.sale_results s {where} and s.failed_count is not null group by 1 order by 1",
+                    p,
+                ),
+                (
+                    f"select to_char(s.sale_date, 'YYYY-MM') as month, count(*) as n, {_MED} as p50"
+                    f" from core.sale_results s {where} group by 1 order by 1",
+                    p,
+                ),
+                (
+                    f"select case {case} else 'etc' end as usage, count(*) as n, {_MED} as p50"
+                    f" from core.sale_results s {where} group by 1 order by 2 desc",
+                    p,
+                ),
+                (
+                    f"""select s.sale_date, s.court_code, s.case_no, s.usage_name, s.address, s.building_area_m2,
                        s.appraisal_krw, s.winning_bid_krw, s.sale_rate, s.failed_count, s.item_id
                 from core.sale_results s {where} order by s.sale_date desc, s.result_id desc limit 100""",
-            p,
-        ).fetchall()
-        score = c.execute(
-            """with pred as (
+                    p,
+                ),
+                (
+                    """with pred as (
                  select s.item_id, s.sale_rate, (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
                         (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
                  from core.sale_results s
@@ -344,9 +351,10 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                       count(*) filter (where sale_rate < p25) as below,
                       count(*) filter (where sale_rate > p75) as above
                from pred""",
-        ).fetchone()
-        misses = c.execute(
-            """select s.sale_date, s.court_code, s.case_no, s.address, s.sale_rate, s.item_id,
+                    None,
+                ),
+                (
+                    """select s.sale_date, s.court_code, s.case_no, s.address, s.sale_rate, s.item_id,
                       (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
                       (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
                from core.sale_results s
@@ -357,7 +365,13 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                order by greatest((a.result -> 'sale_rate' ->> 'p25')::numeric - s.sale_rate,
                                  s.sale_rate - (a.result -> 'sale_rate' ->> 'p75')::numeric) desc
                limit 5""",
-        ).fetchall()
+                    None,
+                ),
+            ],
+        )
+        by_court, by_failed, by_month, by_usage, rows = (q.fetchall() for q in qs[:5])
+        score = qs[5].fetchone()
+        misses = qs[6].fetchall()
     return {
         "by_usage": by_usage,
         "misses": [

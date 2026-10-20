@@ -9,7 +9,7 @@ from typing import Any
 
 from aucs_workers.extract.mask import mask_names
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 
 # 손님이 꼭 봐야 하는 문건 (배당·권리·정지·점유)
 _KEY = re.compile(
@@ -168,18 +168,29 @@ def _ts(v: Any) -> str | None:
 def item_docs(item_id: str) -> dict[str, Any] | None:
     """물건의 사건 원문(가장 최근에 받은 것)."""
     with connect() as c:
-        it = c.execute(
-            "select case_id, item_no from core.items where item_id = %s", (item_id,)
-        ).fetchone()
+        case = "(select case_id from core.items where item_id = %(id)s)"
+        q_it, q_rows, q_spec = batch(
+            c,
+            [
+                ("select case_id, item_no from core.items where item_id = %(id)s", {"id": item_id}),
+                (
+                    f"""select distinct on (doc_kind) doc_kind, payload, fetched_at from raw.court_doc_raw
+                   where case_id = {case} and doc_kind in ('status_report','deliveries')
+                   order by doc_kind, fetched_at desc""",
+                    {"id": item_id},
+                ),
+                (
+                    f"""select payload, fetched_at from raw.court_doc_raw where case_id = {case}
+                   and doc_kind = 'item_detail_' || coalesce((select item_no from core.items
+                   where item_id = %(id)s), 1) order by fetched_at desc limit 1""",
+                    {"id": item_id},
+                ),
+            ],
+        )
+        it, rows, sp = q_it.fetchone(), q_rows.fetchall(), q_spec.fetchone()
         if not it:
             return None
-        rows = c.execute(
-            """select distinct on (doc_kind) doc_kind, payload, fetched_at from raw.court_doc_raw
-               where case_id = %s and doc_kind in ('status_report','deliveries')
-               order by doc_kind, fetched_at desc""",
-            (it["case_id"],),
-        ).fetchall()
-        spec, spec_at = item_spec(c, it["case_id"], it["item_no"] or 1)
+        spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     out: dict[str, Any] = {"status_report": None, "deliveries": None,
                            "spec_sheet": {**spec, "fetched_at": _ts(spec_at)} if spec else None}  # fmt: skip
     for r in rows:

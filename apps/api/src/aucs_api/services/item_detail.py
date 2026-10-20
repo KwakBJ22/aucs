@@ -7,7 +7,7 @@ from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price, restarted
 from aucs_rules.schedule import after_sale
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.docs import spec_sheet, spec_text
 from aucs_api.services.items import COURT_NAME, card
@@ -470,19 +470,22 @@ def calc(
     other_monthly_krw: int = 0,
 ) -> dict[str, Any] | None:
     with connect() as c:
-        r = c.execute(_CALC_SQL, (item_id,)).fetchone()
-        if not r or not r["min_price_krw"]:
-            return None
-        tables = {
-            k: _one(
-                c.execute(
+        qs = batch(
+            c,
+            [(_CALC_SQL, (item_id,))]
+            + [
+                (
                     "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
                     "order by valid_from desc limit 1",
                     (k,),
-                ).fetchone()
-            )["value"]
-            for k in _TABLE_KEYS
-        }
+                )
+                for k in _TABLE_KEYS
+            ],
+        )
+        r = qs[0].fetchone()
+        if not r or not r["min_price_krw"]:
+            return None
+        tables = {k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1:], strict=True)}
     return build_calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
         selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
@@ -503,7 +506,7 @@ def bid_day(item_id: str, today: date) -> dict[str, Any] | None:
             return None
         raw = c.execute(
             """select payload ->> 'maeHh1' as hh, payload ->> 'tel' as tel, payload ->> 'jiwonNm' as court_full
-               from raw.court_item_raw where court_code = %s and payload ->> 'docid' = %s
+               from raw.court_item_raw where court_code = %s and doc_key = %s
                order by fetched_at desc limit 1""",
             (r["court_code"], r["doc_key"]),
         ).fetchone()

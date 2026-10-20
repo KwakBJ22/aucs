@@ -4,7 +4,7 @@ from typing import Any
 
 from psycopg.types.json import Jsonb
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 from aucs_api.services.items import card
 
 _WATCH_SQL = """
@@ -155,21 +155,26 @@ def bids(uid: str, today: Any) -> dict[str, Any]:
     from aucs_rules.schedule import after_sale
 
     with connect() as c:
-        rows = c.execute(_BIDS_SQL, (uid,)).fetchall()
-        hol = [
-            r["holiday_date"]
-            for r in c.execute("select holiday_date from ref.holidays where checked").fetchall()
-        ]
-        todo = c.execute(
-            """select i.item_id, i.sale_date,
+        q_rows, q_hol, q_todo = batch(
+            c,
+            [
+                (_BIDS_SQL, (uid,)),
+                ("select holiday_date from ref.holidays where checked", None),
+                (
+                    """select i.item_id, i.sale_date,
                       coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
                from app.watch_items w join core.items i using (item_id)
                where w.user_id = %s and i.sale_date <= %s and i.sale_date >= %s - 60
                  and not exists (select 1 from app.bid_results b where b.user_id = w.user_id
                                  and b.item_id = i.item_id and b.sale_date = i.sale_date)
                order by i.sale_date desc""",
-            (uid, today, today),
-        ).fetchall()
+                    (uid, today, today),
+                ),
+            ],
+        )
+        rows = q_rows.fetchall()
+        hol = [r["holiday_date"] for r in q_hol.fetchall()]
+        todo = q_todo.fetchall()
     won = []
     for r in rows:
         if r["outcome"] == "won":
@@ -312,22 +317,26 @@ EXCLUDE_REASONS = ("budget", "assumed_unclear", "field_bad", "other")
 
 def compare_get(uid: str) -> dict[str, Any]:
     with connect() as c:
-        ids = [
-            r["item_id"]
-            for r in c.execute(
-                """select w.item_id from app.watch_items w join core.items i using (item_id)
+        q_ids, q_ex = batch(
+            c,
+            [
+                (
+                    """select w.item_id from app.watch_items w join core.items i using (item_id)
                    where w.user_id = %s and w.in_compare order by i.sale_date nulls last""",
-                (uid,),
-            ).fetchall()
-        ]
-        excluded = c.execute(
-            """select e.item_id, e.reason, e.created_at::date::text as at, c2.case_no,
+                    (uid,),
+                ),
+                (
+                    """select e.item_id, e.reason, e.created_at::date::text as at, c2.case_no,
                       coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
                from app.compare_exclusions e
                left join core.items i using (item_id) left join core.cases c2 on c2.case_id = i.case_id
                where e.user_id = %s order by e.created_at desc limit 50""",
-            (uid,),
-        ).fetchall()
+                    (uid,),
+                ),
+            ],
+        )
+        ids = [r["item_id"] for r in q_ids.fetchall()]
+        excluded = q_ex.fetchall()
     return {"items": ids, "excluded": excluded, "max": COMPARE_MAX}
 
 

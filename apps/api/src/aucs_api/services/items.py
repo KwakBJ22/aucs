@@ -4,7 +4,7 @@ import re
 from datetime import date
 from typing import Any
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 
 COURT_NAME = {
     "B000210": "서울중앙", "B000211": "서울동부", "B000215": "서울서부", "B000212": "서울남부",
@@ -188,8 +188,8 @@ def list_items(
     count_sql = "select count(*) as n from (" + sql + ") q"
     sql += f" order by {order.get(sort, order['deadline'])} limit %(limit)s"
     with connect() as c:
-        rows = c.execute(sql, params).fetchall()
-        total = c.execute(count_sql, params).fetchone()
+        q_rows, q_total = batch(c, [(sql, params), (count_sql, params)])
+        rows, total = q_rows.fetchall(), q_total.fetchone()
     items = [card(r, today) for r in rows]
     exact = items[0]["item_id"] if pq and pq["kind"] == "case" and len(items) == 1 else None
     return {"total": total["n"] if total else 0, "items": items, "exact_item_id": exact}

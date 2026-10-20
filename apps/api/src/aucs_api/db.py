@@ -14,7 +14,9 @@ from aucs_api import settings
 Conn = psycopg.Connection[dict[str, Any]]
 
 POOL_MAX = 8  # 쉬는 연결을 이만큼까지 보관
-IDLE_MAX = 60.0  # 이보다 오래 쉰 연결은 버림(중계 서버가 끊었을 수 있음)
+PING_AFTER = (
+    30.0  # 이보다 오래 쉰 연결은 쓰기 전에 살아 있는지 한 번 확인(새로 잇는 것보다 훨씬 빠름)
+)
 _idle: "queue.LifoQueue[tuple[Conn, float]]" = queue.LifoQueue(maxsize=POOL_MAX)
 
 
@@ -28,9 +30,14 @@ def _take() -> Conn:
             conn, at = _idle.get_nowait()
         except queue.Empty:
             return _new()
-        if conn.closed or time.monotonic() - at > IDLE_MAX:
-            conn.close()
+        if conn.closed:
             continue
+        if time.monotonic() - at > PING_AFTER:
+            try:
+                conn.execute("select 1")
+            except psycopg.Error:
+                conn.close()
+                continue
         return conn
 
 
@@ -59,3 +66,18 @@ def connect() -> Iterator[Conn]:
     finally:
         if not conn.closed:
             _give(conn)
+
+
+def warm(n: int = 3) -> None:
+    """서버가 켜질 때 연결을 미리 몇 개 만들어 둠(첫 화면이 느리지 않게)."""
+    for _ in range(n):
+        try:
+            _give(_new())
+        except psycopg.Error:
+            return
+
+
+def batch(c: Conn, queries: list[tuple[str, Any]]) -> list[psycopg.Cursor[dict[str, Any]]]:
+    """서로 상관없는 조회 여러 개를 한 번에 보냄(DB 왕복 1번). 결과는 돌려준 커서에서 꺼냄."""
+    with c.pipeline():
+        return [c.execute(q, a) for q, a in queries]
