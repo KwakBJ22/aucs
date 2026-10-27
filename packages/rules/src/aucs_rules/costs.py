@@ -4,6 +4,8 @@
 입찰 상한 = 시세 − (떠안는 돈 + 숨은 비용 + 취득세 + 목표 이익).
 """
 
+from typing import Any
+
 from aucs_rules.result import RuleResult, Status
 
 
@@ -71,3 +73,45 @@ def commercial_over_limit(
     limit = int(table[cls]["limit_krw"])
     value = {"over": conv > limit, "converted_krw": conv, "limit_krw": limit, "region": cls}
     return RuleResult(value, Status.ESTIMATED, "lease.commercial", [])
+
+
+PYEONG_M2 = 3.3058
+
+
+def _round_man(x: float) -> int:
+    """만 원 단위로."""
+    return int(round(x / 10_000)) * 10_000
+
+
+def move_out_cost(
+    area_m2: float | None, *, floor: int | None, elevators: int | None, table: dict[str, Any]
+) -> dict[str, Any]:
+    """명도비 대략 범위(10/27): 협의 이사비 ~ 강제집행 비용. 면적을 모르면 최소액 범위. [추정]
+
+    승강기가 없고(대장에 0 또는 없음) 3층 이상이면 위쪽에 30%를 더함.
+    """
+    t = table["move_out"]
+    lo_min, hi_min = t["min_krw"]
+    pp_lo, pp_hi = t["per_pyeong_krw"]
+    py = (area_m2 or 0) / PYEONG_M2
+    lo, hi = max(py * pp_lo, lo_min), max(py * pp_hi, hi_min)
+    stairs = bool(floor and floor >= t["no_elevator_from_floor"] and not elevators)
+    if stairs:
+        hi *= 1 + t["no_elevator_add_pct"] / 100
+    lo, hi = _round_man(lo), _round_man(hi)
+    return {"low_krw": lo, "high_krw": hi, "mid_krw": _round_man((lo + hi) / 2), "stairs": stairs,
+            "basis": "area" if area_m2 else "min"}  # fmt: skip
+
+
+def repair_cost(area_m2: float | None, *, age_years: int | None, table: dict[str, Any]) -> dict[str, Any]:
+    """수리비 대략 범위: 사용승인 연식별 전용 평당. 연식·면적을 모르면 넓은 범위 또는 None. [추정]"""
+    if not area_m2:
+        return {"low_krw": None, "high_krw": None, "mid_krw": 0, "basis": "none"}
+    t = table["repair"]
+    band = t["unknown"]
+    if age_years is not None:
+        band = next((b for lim, b in t["bands"] if age_years < lim), t["bands"][-1][1])
+    py = area_m2 / PYEONG_M2
+    lo, hi = _round_man(py * band[0]), _round_man(py * band[1])
+    return {"low_krw": lo, "high_krw": hi, "mid_krw": _round_man((lo + hi) / 2),
+            "basis": "age" if age_years is not None else "unknown_age"}  # fmt: skip

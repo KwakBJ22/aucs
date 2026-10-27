@@ -680,6 +680,11 @@ export const copy = {
       loanPlaceholder: "대출 금액(원)",
       tax: (p: number) => `취득세 등 (${p}%)`,
       reg: "등기·법무사(대략)",
+      moveOut: "명도비(대략)",
+      repair: "수리비(대략)",
+      range: (lo: string, hi: string) => `${lo}~${hi} · 사는 사람·집 상태에 따라 달라요`,
+      stairs: "승강기 없는 높은 층",
+      ageUnknown: "건물 나이를 몰라 넓게 잡았어요",
       assumed: "떠안는 돈",
       cash: "필요한 현금",
       vsCash: (more: boolean, x: string) =>

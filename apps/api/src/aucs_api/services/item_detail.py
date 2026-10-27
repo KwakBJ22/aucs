@@ -435,12 +435,12 @@ _CALC_SQL = """
 select i.item_id, i.sido, i.address, i.appraisal_krw, i.min_price_krw, i.building_area_m2, i.note_masked,
        a.result -> 'sale_rate' as sale_rate, a.result -> 'court_cell' as court_cell,
        a.result -> 'local_peers' as local_peers, a.result -> 'new_item' as new_item,
-       a.result -> 'market' as market, a.result -> 'signals' as signals
+       a.result -> 'market' as market, a.result -> 'signals' as signals, a.result -> 'building' as building
 from core.items i
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.item_id = %s and i.display_policy = 'public'
 """
-_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax", "dsr", "first_home_relief")
+_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax", "dsr", "first_home_relief", "move_out_repair")
 
 
 def build_calc(
@@ -457,16 +457,23 @@ def build_calc(
 ) -> dict[str, Any]:
     """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
     from aucs_rules.calc import area_class, bid_cases, cash_needed
+    from aucs_rules.costs import move_out_cost, repair_cost
 
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     mkt = (r.get("market") or {}).get("price_krw")
     cls = area_class(r.get("sido"), r.get("address"), tables["regulated_areas"])
     area = float(r["building_area_m2"]) if r.get("building_area_m2") else None
     resale = "재매각" in (r.get("note_masked") or "")
+    # 명도비·수리비 대략(10/27): 건축물대장의 층·승강기·연식으로. 표가 없으면 빼고 계산
+    mr = tables.get("move_out_repair")
+    b = r.get("building") or {}
+    move = move_out_cost(area, floor=b.get("unit_floor"), elevators=b.get("elevators"), table=mr) if mr else None
+    repair = repair_cost(area, age_years=b.get("age_years"), table=mr) if mr else None
     common = {
         "min_price_krw": mn, "appraisal_krw": app, "market_krw": mkt, "area_m2": area, "cls": cls,
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
         "selling": selling, "income_krw": income_krw, "other_monthly_krw": other_monthly_krw,
+        "move_out_krw": move["mid_krw"] if move else 0, "repair_krw": repair["mid_krw"] if repair else 0,
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
     cases = []
@@ -479,11 +486,13 @@ def build_calc(
     cap = None
     if mkt:
         at = cash_needed(mkt, **common).value
-        cap = mkt - at["tax"]["tax_krw"] - at["registration_krw"]
+        cap = mkt - at["tax"]["tax_krw"] - at["registration_krw"] - at["move_out_krw"] - at["repair_krw"]
     return {
         "cls": cls,
         "cases": cases,
         "selected": sel,
+        "move_out": move,
+        "repair": repair,
         "cap_krw": cap,
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,

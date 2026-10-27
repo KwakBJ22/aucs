@@ -258,6 +258,34 @@ export function CalcBox({ id }: { id: string }) {
             />
             <Row label={c.reg} value={`+ ${won(s.registration_krw)}`} />
             {s.assumed_krw > 0 && <Row label={c.assumed} value={`+ ${won(s.assumed_krw)}`} />}
+            {d.move_out && s.move_out_krw > 0 && (
+              <Row
+                label={c.moveOut}
+                value={
+                  <>
+                    + {won(s.move_out_krw)}
+                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
+                      {c.range(won(d.move_out.low_krw), won(d.move_out.high_krw))}
+                      {d.move_out.stairs ? ` · ${c.stairs}` : ""}
+                    </span>
+                  </>
+                }
+              />
+            )}
+            {d.repair && s.repair_krw > 0 && (
+              <Row
+                label={c.repair}
+                value={
+                  <>
+                    + {won(s.repair_krw)}
+                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
+                      {c.range(won(d.repair.low_krw), won(d.repair.high_krw))}
+                      {d.repair.basis === "unknown_age" ? ` · ${c.ageUnknown}` : ""}
+                    </span>
+                  </>
+                }
+              />
+            )}
             <Row
               label={<b>{c.cash}</b>}
               value={<b style={{ fontSize: 18 }}>{won(s.cash_krw)}</b>}

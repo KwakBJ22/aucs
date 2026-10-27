@@ -88,3 +88,31 @@ def test_dsr_limits_loan() -> None:
         ]
         == 0
     )
+
+
+MR = {
+    "move_out": {"per_pyeong_krw": [50_000, 150_000], "min_krw": [1_500_000, 3_000_000],
+                 "no_elevator_from_floor": 3, "no_elevator_add_pct": 30},
+    "repair": {"bands": [[10, [0, 100_000]], [20, [100_000, 300_000]], [30, [300_000, 600_000]],
+                         [999, [600_000, 1_000_000]]], "unknown": [100_000, 600_000]},
+}  # fmt: skip
+
+
+def test_move_out_cost():
+    from aucs_rules.costs import move_out_cost
+
+    small = move_out_cost(30.0, floor=2, elevators=0, table=MR)  # 9평 → 최소액
+    assert (small["low_krw"], small["high_krw"]) == (1_500_000, 3_000_000) and not small["stairs"]
+    big = move_out_cost(84.0, floor=5, elevators=0, table=MR)  # 25.4평, 승강기 없이 5층
+    assert big["low_krw"] == 1_500_000 and big["stairs"] and big["high_krw"] == 4_950_000
+    assert move_out_cost(None, floor=None, elevators=None, table=MR)["basis"] == "min"
+
+
+def test_repair_cost():
+    from aucs_rules.costs import repair_cost
+
+    r = repair_cost(84.0, age_years=32, table=MR)
+    assert (r["low_krw"], r["high_krw"]) == (15_250_000, 25_410_000)
+    assert repair_cost(84.0, age_years=5, table=MR)["low_krw"] == 0
+    assert repair_cost(84.0, age_years=None, table=MR)["basis"] == "unknown_age"
+    assert repair_cost(None, age_years=10, table=MR)["mid_krw"] == 0

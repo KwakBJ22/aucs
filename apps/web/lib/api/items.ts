@@ -208,6 +208,8 @@ export type CashBreakdown = {
     temporary_two: boolean;
   };
   registration_krw: number;
+  move_out_krw: number;
+  repair_krw: number;
   assumed_krw: number;
   cash_krw: number;
   total_krw: number;
@@ -220,6 +222,13 @@ export type Calc = {
   slider: { min: number; max: number; step: number };
   resale: boolean;
   check?: BidCheck | null; // 입찰표 실수 막기 검사(고른 입찰가 기준)
+  move_out?: { low_krw: number; high_krw: number; mid_krw: number; stairs: boolean } | null;
+  repair?: {
+    low_krw: number | null;
+    high_krw: number | null;
+    mid_krw: number;
+    basis: string;
+  } | null;
 };
 export function fetchCalc(
   id: string,

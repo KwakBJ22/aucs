@@ -155,6 +155,8 @@ def cash_needed(
     homes: int,
     first_time: bool,
     assumed_krw: int = 0,
+    move_out_krw: int = 0,
+    repair_krw: int = 0,
     loan_override_krw: int | None = None,
     deposit_rate_pct: float = 10.0,
     selling: bool = False,
@@ -187,7 +189,8 @@ def cash_needed(
     ).value  # fmt: skip
     reg = registration_cost(bid_krw)
     deposit = -(-min_price_krw * int(deposit_rate_pct * 100) // 10_000)
-    cash = bid_krw - loan_krw + tax["tax_krw"] + reg + assumed_krw
+    extra = move_out_krw + repair_krw  # 명도비·수리비(대략, 가운데 값) — 10/27
+    cash = bid_krw - loan_krw + tax["tax_krw"] + reg + assumed_krw + extra
     value = {
         "bid_krw": bid_krw,
         "deposit_krw": deposit,
@@ -197,8 +200,10 @@ def cash_needed(
         "tax": tax,
         "registration_krw": reg,
         "assumed_krw": assumed_krw,
+        "move_out_krw": move_out_krw,
+        "repair_krw": repair_krw,
         "cash_krw": cash,
-        "total_krw": bid_krw + tax["tax_krw"] + reg + assumed_krw,
+        "total_krw": bid_krw + tax["tax_krw"] + reg + assumed_krw + extra,
     }
     return RuleResult(value, Status.ESTIMATED, "calc.cash", [])
 
