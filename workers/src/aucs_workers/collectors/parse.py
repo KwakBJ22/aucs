@@ -159,6 +159,8 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
         "usage_code": r.get("sclsUtilCd"),
         "address": address or None,
         "region_code": r.get("srchHjguRdCd") or None,
+        # 법원 코드는 옛 코드가 섞여 있어 저장할 때 ref.region_code_for 로 바로잡음(0022)
+        "region_code_court": r.get("srchHjguRdCd") or None,
         "sido": sido,
         "sigungu": sigungu,
         "gu": gu,
@@ -219,6 +221,8 @@ def parse_result(r: dict[str, Any]) -> dict[str, Any] | None:
         "address": str(r.get("printSt") or "").strip() or None,
         "sido": sido,
         "region_code": r.get("srchHjguRdCd") or None,
+        # 법원 코드는 옛 코드가 섞여 있어 저장할 때 ref.region_code_for 로 바로잡음(0022)
+        "region_code_court": r.get("srchHjguRdCd") or None,
         "building_area_m2": building_area(r),
         "appraisal_krw": appraisal,
         "min_price_krw": min_price(r),

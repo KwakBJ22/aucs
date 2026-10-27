@@ -46,7 +46,9 @@ def lot_key(plat: str, bun: str, ji: str) -> str:
     return f"{'산' if plat == '1' else ''}{bun}-{ji}"
 
 
-def fetch(client: httpx.Client, key: str, op: str, code10: str, plat: str, bun: str, ji: str) -> list[dict[str, Any]]:
+def fetch(
+    client: httpx.Client, key: str, op: str, code10: str, plat: str, bun: str, ji: str
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     page, total = 1, 0
     params = {"serviceKey": key, "sigunguCd": code10[:5], "bjdongCd": code10[5:], "platGbCd": plat,
@@ -145,7 +147,9 @@ def main() -> None:
         todo = todo[: a.cap]
         print(f"[시작] 지번 {len(todo):,}곳 (전체 대상 {len(lots):,}곳)")
         retry: list[tuple[str, str, dict[str, Any]]] = []
-        with httpx.Client(timeout=30, follow_redirects=True, headers={"Accept": "application/json"}) as client:
+        with httpx.Client(
+            timeout=30, follow_redirects=True, headers={"Accept": "application/json"}
+        ) as client:
             for i, (_, _, code, lk, g) in enumerate(todo, 1):
                 got: dict[str, list[dict[str, Any]]] = {}
                 partial = False
@@ -158,11 +162,15 @@ def main() -> None:
                         except Incomplete:
                             partial = True
                 except ApiError as e:
-                    print(f"\n[멈춤] {e} — 활용신청·하루 한도를 확인하세요. 받은 데까지 저장했어요.")
+                    print(
+                        f"\n[멈춤] {e} — 활용신청·하루 한도를 확인하세요. 받은 데까지 저장했어요."
+                    )
                     conn.commit()
                     raise
                 if not got.get("title") and not partial:
-                    retry.append((code, lk, g))  # 표제부가 비면 끝에서 한 번 더(건축HUB 가 가끔 빈 결과를 줌)
+                    retry.append(
+                        (code, lk, g)
+                    )  # 표제부가 비면 끝에서 한 번 더(건축HUB 가 가끔 빈 결과를 줌)
                 save(conn, code, lk, got, partial, g["items"])
                 job.count += 1
                 if i % 50 == 0:
@@ -173,7 +181,9 @@ def main() -> None:
             found = 0
             if retry:
                 print(f"  빈 곳 {len(retry):,}곳 다시")
-                with httpx.Client(timeout=30, follow_redirects=True, headers={"Accept": "application/json"}) as c2:
+                with httpx.Client(
+                    timeout=30, follow_redirects=True, headers={"Accept": "application/json"}
+                ) as c2:
                     for code, lk, g in retry:
                         time.sleep(0.8)
                         got = {}

@@ -30,10 +30,20 @@ _ITEM_COLS = [
     "item_id", "case_id", "item_no", "doc_key", "usage_name", "usage_code", "address", "region_code",
     "sido", "sigungu", "gu", "lot_no", "building_desc", "building_area_m2", "appraisal_krw",
     "min_price_krw", "failed_count", "sale_date", "sale_place", "status_code", "note_masked", "is_share",
+    "region_code_court",
 ]  # fmt: skip
+# 법원 지역 코드는 옛 코드가 섞여 있음 → 원래 값은 region_code_court 에 두고,
+# region_code 는 DB 함수가 주소의 동 이름으로 바로잡은 값 (0022)
+_VALUE = {"region_code": "ref.region_code_for(%(region_code_court)s, %(address)s)"}
+
+
+def _val(c: str) -> str:
+    return _VALUE.get(c, f"%({c})s")
+
+
 _ITEM = (
     f"insert into core.items ({', '.join(_ITEM_COLS)}, geom, fetched_at, checked_at) values ("
-    + ", ".join(f"%({c})s" for c in _ITEM_COLS)
+    + ", ".join(_val(c) for c in _ITEM_COLS)
     + ", case when %(lon)s::float is null then null else "
     "st_setsrid(st_makepoint(%(lon)s::float, %(lat)s::float), 4326)::geography end, now(), now())"
     " on conflict (item_id) do update set "
@@ -77,11 +87,11 @@ def save_items(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
 _RESULT_COLS = [
     "court_code", "case_no", "item_no", "sale_date", "item_id", "usage_name", "address", "sido",
     "region_code", "building_area_m2", "appraisal_krw", "min_price_krw", "winning_bid_krw",
-    "sale_rate", "failed_count", "result", "is_share",
+    "sale_rate", "failed_count", "result", "is_share", "region_code_court",
 ]  # fmt: skip
 _RESULT = (
     f"insert into core.sale_results ({', '.join(_RESULT_COLS)}, origin, fetched_at) values ("
-    + ", ".join(f"%({c})s" for c in _RESULT_COLS)
+    + ", ".join(_val(c) for c in _RESULT_COLS)
     + ", 'court_collect', now()) on conflict (court_code, case_no, item_no, sale_date) do update set "
     + ", ".join(f"{c} = excluded.{c}" for c in _RESULT_COLS[4:])
     + ", origin = 'court_collect', fetched_at = now()"
