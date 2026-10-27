@@ -83,7 +83,9 @@ def verify_local(token: str, now: float) -> str | None:
     _load_keys()
     key = _keys.get(head["kid"])
     if key is None:
-        _load_keys(force=time.time() - _keys_at > 60)  # 새 키로 바뀌었을 수 있음(너무 자주는 안 받음)
+        _load_keys(
+            force=time.time() - _keys_at > 60
+        )  # 새 키로 바뀌었을 수 있음(너무 자주는 안 받음)
         key = _keys.get(head["kid"])
     if key is None or len(sig) != 64:
         return None

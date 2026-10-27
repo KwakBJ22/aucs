@@ -30,9 +30,9 @@ def memo(ttl: float = TTL, size: int = 300) -> Callable[[F], F]:
     """공개 자료 함수 결과를 잠깐 기억(같은 물건 상세를 비교함·상세·고른 물건이 다시 계산하지 않게, 10/27)."""
 
     def wrap(fn: F) -> F:
-        box: "OrderedDict[Any, tuple[float, Any]]" = OrderedDict()
+        box: OrderedDict[Any, tuple[float, Any]] = OrderedDict()
         lock = threading.Lock()
-        _memos.append(box)  # type: ignore[arg-type]
+        _memos.append(box)
 
         @functools.wraps(fn)
         def inner(*a: Any, **k: Any) -> Any:

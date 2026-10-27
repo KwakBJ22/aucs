@@ -233,7 +233,8 @@ def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
     return {
         "built": built,
         "old": bool(b.get("age_years") and b["age_years"] >= 30),
-        "shape": " · ".join(x for x in [b.get("main_use"), b.get("structure"), floors] if x) or None,
+        "shape": " · ".join(x for x in [b.get("main_use"), b.get("structure"), floors] if x)
+        or None,
         "extra": extra or None,
         "unit": unit,
         "villa": b.get("villa"),
@@ -302,7 +303,7 @@ def build_detail(
     )  # fmt: skip
     questions = [
         q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''}".strip(" ·"), "gray",
-          {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"], "building": r["building_desc"],
+          {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"],
            "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev"),
            "building": building_lines(r.get("building"))}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
@@ -379,7 +380,10 @@ def _unit(address: str | None) -> str | None:
     from aucs_rules.building import unit_from_address
 
     u = unit_from_address(address)
-    parts = [f"{u['dong']}동" if u["dong"] else None, (f"지하 {-u['floor']}층" if u["floor"] < 0 else f"{u['floor']}층") if u["floor"] else None]
+    parts = [
+        f"{u['dong']}동" if u["dong"] else None,
+        (f"지하 {-u['floor']}층" if u["floor"] < 0 else f"{u['floor']}층") if u["floor"] else None,
+    ]
     return " ".join(x for x in parts if x) or None
 
 
@@ -399,12 +403,16 @@ def build_complex(
     trades: list[dict[str, Any]], peers: list[dict[str, Any]], area: float | None, today: date
 ) -> dict[str, Any] | None:
     """같은 단지: 지난 낙찰과 실거래 추이(최근 6개월 vs 그 앞 6개월, 전세·월세 1년). 없으면 None. (순수 함수)"""
-    near = [t for t in trades if not area or (t["area_m2"] and abs(float(t["area_m2"]) - area) <= 3)]
+    near = [
+        t for t in trades if not area or (t["area_m2"] and abs(float(t["area_m2"]) - area) <= 3)
+    ]
     d6, d12 = today - timedelta(days=183), today - timedelta(days=366)
     sale = [t for t in near if t["deal_kind"] == "sale" and t["price_krw"]]
     recent = [t["price_krw"] for t in sale if t["deal_date"] >= d6]
     prev = [t["price_krw"] for t in sale if d12 <= t["deal_date"] < d6]
-    lease = [t for t in near if t["deal_kind"] == "lease" and t["deal_date"] >= d12 and t["deposit_krw"]]
+    lease = [
+        t for t in near if t["deal_kind"] == "lease" and t["deal_date"] >= d12 and t["deposit_krw"]
+    ]
     jeonse = [t["deposit_krw"] for t in lease if not t["monthly_rent_krw"]]
     wolse = [t for t in lease if t["monthly_rent_krw"]]
     rm, pm = _median(recent), _median(prev)
@@ -418,7 +426,9 @@ def build_complex(
     }  # fmt: skip
     quarters: dict[str, list[int]] = {}
     for t in sale:
-        quarters.setdefault(f"{t['deal_date'].year % 100}.{(t['deal_date'].month - 1) // 3 + 1}분기", []).append(t["price_krw"])
+        quarters.setdefault(
+            f"{t['deal_date'].year % 100}.{(t['deal_date'].month - 1) // 3 + 1}분기", []
+        ).append(t["price_krw"])
     auctions = [
         {"date": p["sale_date"].isoformat(), "price_krw": p["winning_bid_krw"],
          "rate": round(float(p["sale_rate"])) if p["sale_rate"] is not None else None,
@@ -432,7 +442,9 @@ def build_complex(
     return {
         "auctions": auctions,
         "trend": trend,
-        "quarters": [{"q": k, "price_krw": _median(v), "n": len(v)} for k, v in sorted(quarters.items())][-8:],
+        "quarters": [
+            {"q": k, "price_krw": _median(v), "n": len(v)} for k, v in sorted(quarters.items())
+        ][-8:],
     }
 
 
@@ -542,15 +554,28 @@ select t.deposit_krw, t.monthly_rent_krw, t.area_m2 from core.trades t
 join core.items i on i.region_code = t.region_code and i.lot_no = t.lot_no
 where i.item_id = %s and t.deal_kind = 'lease' and t.deal_date >= current_date - 366 and t.deposit_krw > 0
 """
-_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax", "dsr", "first_home_relief", "move_out_repair")
+_TABLE_KEYS = (
+    "regulated_areas",
+    "loan_ltv",
+    "acquisition_tax",
+    "dsr",
+    "first_home_relief",
+    "move_out_repair",
+)
 
 
 def _rent(
-    sel: dict[str, Any], cls: str, leases: list[dict[str, Any]], area: float | None,
-    tables: dict[str, Any], fn: Any,
+    sel: dict[str, Any],
+    cls: str,
+    leases: list[dict[str, Any]],
+    area: float | None,
+    tables: dict[str, Any],
+    fn: Any,
 ) -> dict[str, Any] | None:
     """세놓으면: 같은 단지(전용 ±3㎡) 1년 전세·월세 가운데 값으로."""
-    near = [x for x in leases if not area or (x["area_m2"] and abs(float(x["area_m2"]) - area) <= 3)]
+    near = [
+        x for x in leases if not area or (x["area_m2"] and abs(float(x["area_m2"]) - area) <= 3)
+    ]
     jeonse = [x["deposit_krw"] for x in near if not x["monthly_rent_krw"]]
     wolse = [x for x in near if x["monthly_rent_krw"]]
     rate = float((tables.get("dsr") or {}).get("base_rate_pct") or 4.5)
@@ -559,9 +584,10 @@ def _rent(
         wolse_deposit_krw=_median([x["deposit_krw"] for x in wolse]),
         wolse_rent_krw=_median([x["monthly_rent_krw"] for x in wolse]),
     )  # fmt: skip
-    if out:
-        out.update(jeonse_n=len(jeonse), wolse_n=len(wolse), rate_pct=rate)
-    return out
+    res: dict[str, Any] | None = out
+    if res:
+        res.update(jeonse_n=len(jeonse), wolse_n=len(wolse), rate_pct=rate)
+    return res
 
 
 def build_calc(
@@ -589,7 +615,11 @@ def build_calc(
     # 명도비·수리비 대략(10/27): 건축물대장의 층·승강기·연식으로. 표가 없으면 빼고 계산
     mr = tables.get("move_out_repair")
     b = r.get("building") or {}
-    move = move_out_cost(area, floor=b.get("unit_floor"), elevators=b.get("elevators"), table=mr) if mr else None
+    move = (
+        move_out_cost(area, floor=b.get("unit_floor"), elevators=b.get("elevators"), table=mr)
+        if mr
+        else None
+    )
     repair = repair_cost(area, age_years=b.get("age_years"), table=mr) if mr else None
     common = {
         "min_price_krw": mn, "appraisal_krw": app, "market_krw": mkt, "area_m2": area, "cls": cls,
@@ -608,7 +638,13 @@ def build_calc(
     cap = None
     if mkt:
         at = cash_needed(mkt, **common).value
-        cap = mkt - at["tax"]["tax_krw"] - at["registration_krw"] - at["move_out_krw"] - at["repair_krw"]
+        cap = (
+            mkt
+            - at["tax"]["tax_krw"]
+            - at["registration_krw"]
+            - at["move_out_krw"]
+            - at["repair_krw"]
+        )
     return {
         "cls": cls,
         "cases": cases,
@@ -652,7 +688,9 @@ def calc(
         if not r or not r["min_price_krw"]:
             return None
         n = len(_TABLE_KEYS)
-        tables = {k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1 : n + 1], strict=True)}
+        tables = {
+            k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1 : n + 1], strict=True)
+        }
         leases = qs[n + 1].fetchall()
     return build_calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,

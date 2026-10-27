@@ -22,7 +22,12 @@ def status() -> dict[str, Any]:
                       (select count(distinct case_id) from raw.court_doc_raw) as cases_with_docs,
                       pg_database_size(current_database()) as db_bytes"""
         ).fetchone()
-    return {"jobs": jobs, "counts": counts, "db_limit_bytes": 8 * 1024 * 1024 * 1024, "metrics": metrics()}
+    return {
+        "jobs": jobs,
+        "counts": counts,
+        "db_limit_bytes": 8 * 1024 * 1024 * 1024,
+        "metrics": metrics(),
+    }
 
 
 _METRICS_SQL = """

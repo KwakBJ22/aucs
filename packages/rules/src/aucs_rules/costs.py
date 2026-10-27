@@ -103,7 +103,9 @@ def move_out_cost(
             "basis": "area" if area_m2 else "min"}  # fmt: skip
 
 
-def repair_cost(area_m2: float | None, *, age_years: int | None, table: dict[str, Any]) -> dict[str, Any]:
+def repair_cost(
+    area_m2: float | None, *, age_years: int | None, table: dict[str, Any]
+) -> dict[str, Any]:
     """수리비 대략 범위: 사용승인 연식별 전용 평당. 연식·면적을 모르면 넓은 범위 또는 None. [추정]"""
     if not area_m2:
         return {"low_krw": None, "high_krw": None, "mid_krw": 0, "basis": "none"}
@@ -137,7 +139,10 @@ def rent_returns(
     no_loan = cls in ("regulated", "metro")
     loan = 0 if no_loan else loan_krw
     interest = int(loan * rate_pct / 100)
-    out: dict[str, Any] = {"loan_krw": loan, "no_loan_reason": "move_in_rule" if no_loan and loan_krw else None}
+    out: dict[str, Any] = {
+        "loan_krw": loan,
+        "no_loan_reason": "move_in_rule" if no_loan and loan_krw else None,
+    }
     if jeonse_krw:
         out["jeonse"] = {"deposit_krw": jeonse_krw, "cash_krw": total_krw - jeonse_krw - loan,
                          "interest_krw": interest}  # fmt: skip

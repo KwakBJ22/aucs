@@ -51,7 +51,7 @@ def fetch(
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     page, total = 1, 0
-    params = {"serviceKey": key, "sigunguCd": code10[:5], "bjdongCd": code10[5:], "platGbCd": plat,
+    params: dict[str, Any] = {"serviceKey": key, "sigunguCd": code10[:5], "bjdongCd": code10[5:], "platGbCd": plat,
               "bun": bun, "ji": ji, "numOfRows": ROWS, "_type": "json"}  # fmt: skip
     while True:
         body, status = "", 0

@@ -19,12 +19,18 @@ def parse_jibun(lot_no: str | None) -> tuple[str, str, str] | None:
     for part in (lot_no or "").replace(" ", "").split("^"):
         m = re.fullmatch(r"(산)?(\d{1,4})(?:-(\d{1,4}))?", part)
         if m:
-            return ("1" if m.group(1) else "0", f"{int(m.group(2)):04d}", f"{int(m.group(3) or 0):04d}")
+            return (
+                "1" if m.group(1) else "0",
+                f"{int(m.group(2)):04d}",
+                f"{int(m.group(3) or 0):04d}",
+            )
     return None
 
 
 # 「304동 2층」·「가동 지하1층」만 동으로 봄(「신당동 217」 같은 동네 이름은 앞 글자가 한글이라 뺌)
-_DONG = re.compile(r"(?<![가-힣\d])제?\s*(\d{1,4}|[가-하A-Z])\s*동\s*(?=제?\s*(?:지하\s*)?\d+\s*(?:층|호))")
+_DONG = re.compile(
+    r"(?<![가-힣\d])제?\s*(\d{1,4}|[가-하A-Z])\s*동\s*(?=제?\s*(?:지하\s*)?\d+\s*(?:층|호))"
+)
 _FLOOR = re.compile(r"(지하)?\s*제?\s*(\d{1,3})\s*층")
 
 
@@ -81,9 +87,7 @@ def pick_title(titles: list[dict[str, Any]], dong: str | None) -> dict[str, Any]
     return max(main, key=lambda t: _float(t.get("totArea")) or 0)
 
 
-def floor_uses(
-    floors: list[dict[str, Any]], floor: int | None, dong: str | None
-) -> list[str]:
+def floor_uses(floors: list[dict[str, Any]], floor: int | None, dong: str | None) -> list[str]:
     """그 층(동이 있으면 그 동)의 용도들. 층을 모르면 빈 목록."""
     if floor is None:
         return []
