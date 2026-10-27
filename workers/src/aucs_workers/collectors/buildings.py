@@ -2,6 +2,7 @@
 
     uv run python -m aucs_workers.collectors.buildings              # 아침 묶음: 새 지번 위주 (기본 800곳)
     uv run python -m aucs_workers.collectors.buildings --cap 3000   # 처음 한 번 따라잡기
+    uv run python -m aucs_workers.collectors.buildings --retry-none # 비었던 지번만 다시(새 지번도 같이)
 
 - 관심 담긴 물건 → 매각기일 가까운 순. 같은 지번은 90일 안에 다시 받지 않음(비었거나 덜 받은 곳은 3일 뒤 다시).
 - 층별개요는 근생빌라 판단이 필요한 주택류(아파트 빼고)만 — 큰 단지는 쪽수가 많아 하루 한도를 아낌.
@@ -105,6 +106,7 @@ from t group by 1, 2
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cap", type=int, default=800, help="한 번에 받을 최대 지번 수")
+    ap.add_argument("--retry-none", action="store_true", help="비었던 지번을 날짜와 상관없이 다시")
     a = ap.parse_args()
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
     key = unquote(key) if "%" in key else key
@@ -135,12 +137,14 @@ def main() -> None:
         todo = []
         for (code, lk), g in lots.items():
             prev = done.get((code, lk))
-            if prev and not (prev[1] >= 90 or (prev[0] in ("none", "partial") and prev[1] >= 3)):
+            again = prev and prev[0] in ("none", "partial") and (a.retry_none or prev[1] >= 3)
+            if prev and not (prev[1] >= 90 or again):
                 continue
             todo.append((not g["watched"], g["first"], code, lk, g))
         todo.sort(key=lambda x: (x[0], x[1]))
         todo = todo[: a.cap]
         print(f"[시작] 지번 {len(todo):,}곳 (전체 대상 {len(lots):,}곳)")
+        retry: list[tuple[str, str, dict[str, Any]]] = []
         with httpx.Client(timeout=30, follow_redirects=True, headers={"Accept": "application/json"}) as client:
             for i, (_, _, code, lk, g) in enumerate(todo, 1):
                 got: dict[str, list[dict[str, Any]]] = {}
@@ -157,11 +161,37 @@ def main() -> None:
                     print(f"\n[멈춤] {e} — 활용신청·하루 한도를 확인하세요. 받은 데까지 저장했어요.")
                     conn.commit()
                     raise
+                if not got.get("title") and not partial:
+                    retry.append((code, lk, g))  # 표제부가 비면 끝에서 한 번 더(건축HUB 가 가끔 빈 결과를 줌)
                 save(conn, code, lk, got, partial, g["items"])
                 job.count += 1
                 if i % 50 == 0:
                     conn.commit()
                     print(f"  {i:,}/{len(todo):,}")
+            conn.commit()
+            # 두 번째: 비었던 곳을 천천히 다시(새 연결) — 다시 받아지면 「일시적으로 빈 결과」였던 것
+            found = 0
+            if retry:
+                print(f"  빈 곳 {len(retry):,}곳 다시")
+                with httpx.Client(timeout=30, follow_redirects=True, headers={"Accept": "application/json"}) as c2:
+                    for code, lk, g in retry:
+                        time.sleep(0.8)
+                        got = {}
+                        try:
+                            for kind, op in OPS.items():
+                                if kind == "floor" and not g["floor"]:
+                                    continue
+                                got[kind] = fetch(c2, key, op, code, *g["p"])
+                        except Incomplete:
+                            continue
+                        except ApiError as e:
+                            print(f"  [다시 받기 멈춤] {e}")
+                            break
+                        if got.get("title"):
+                            found += 1
+                            save(conn, code, lk, got, False, g["items"])
+                    conn.commit()
+                print(f"  다시 받아 채운 곳 {found:,}/{len(retry):,}")
         conn.commit()
     print(f"끝: 지번 {job.count:,}곳")
 
