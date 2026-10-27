@@ -208,3 +208,22 @@ def test_checklist_states_and_flow():
     assert (
         flow["first"]["date"] == "2026-09-01" and flow["first"]["done"] and flow["pay"]["estimated"]
     )
+
+
+def test_build_complex():
+    from aucs_api.services.item_detail import build_complex
+
+    t0 = date(2026, 10, 27)
+    tr = [
+        {"deal_kind": "sale", "deal_date": date(2026, 9, 1), "price_krw": 1_100_000_000, "deposit_krw": None, "monthly_rent_krw": None, "area_m2": 84.9},
+        {"deal_kind": "sale", "deal_date": date(2026, 8, 1), "price_krw": 1_000_000_000, "deposit_krw": None, "monthly_rent_krw": None, "area_m2": 84.0},
+        {"deal_kind": "sale", "deal_date": date(2026, 2, 1), "price_krw": 900_000_000, "deposit_krw": None, "monthly_rent_krw": None, "area_m2": 84.5},
+        {"deal_kind": "sale", "deal_date": date(2026, 1, 5), "price_krw": 1_000_000_000, "deposit_krw": None, "monthly_rent_krw": None, "area_m2": 84.5},
+        {"deal_kind": "sale", "deal_date": date(2026, 9, 9), "price_krw": 2_000_000_000, "deposit_krw": None, "monthly_rent_krw": None, "area_m2": 150.0},
+        {"deal_kind": "lease", "deal_date": date(2026, 6, 1), "price_krw": None, "deposit_krw": 600_000_000, "monthly_rent_krw": 0, "area_m2": 84.0},
+    ]  # fmt: skip
+    cx = build_complex(tr, [], 84.0, t0)
+    assert cx is not None
+    assert cx["trend"]["recent_krw"] == 1_050_000_000 and cx["trend"]["prev_krw"] == 950_000_000
+    assert cx["trend"]["change_pct"] == 10.5 and cx["trend"]["jeonse_krw"] == 600_000_000
+    assert build_complex([], [], 84.0, t0) is None

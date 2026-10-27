@@ -635,6 +635,18 @@ export const copy = {
     name: "내 조건",
   },
   item: {
+    complex: {
+      auctions: (n: number) => `같은 단지 지난 낙찰 ${n}건`,
+      rate: (p: number) => `감정가의 ${p}%`,
+      failed: (n: number) => `유찰 ${n}`,
+      recent: (n: number) => `같은 단지 최근 6개월 거래(${n}건)`,
+      change: (p: number) => (p >= 0 ? `그 앞 6개월보다 +${p}%` : `그 앞 6개월보다 ${p}%`),
+      lease: "전월세(1년)",
+      jeonse: (v: string, n: number) => `전세 ${v}(${n}건)`,
+      wolse: (dep: string, rent: string, n: number) => `월세 ${dep}/${rent}(${n}건)`,
+      chart: "분기별 거래 가운데 값",
+      allAreas: "면적을 몰라 단지의 모든 면적 거래로 봤어요",
+    },
     bldg: {
       built: "건물 나이",
       shape: "건물",

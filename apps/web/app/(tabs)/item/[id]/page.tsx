@@ -790,6 +790,126 @@ function BuildingRows({ g }: { g: Bldg }) {
   );
 }
 
+// 같은 단지(10/27): 지난 낙찰 사례 · 실거래 추이 · 전월세. 휴대폰은 줄 몇 개, PC는 분기별 막대까지
+type Complex = {
+  auctions: {
+    date: string;
+    price_krw: number;
+    rate: number | null;
+    failed: number | null;
+    unit: string | null;
+    case_no: string;
+    court: string;
+  }[];
+  trend: {
+    recent_krw: number | null;
+    recent_n: number;
+    prev_krw: number | null;
+    change_pct: number | null;
+    jeonse_krw: number | null;
+    jeonse_n: number;
+    wolse_deposit_krw: number | null;
+    wolse_rent_krw: number | null;
+    wolse_n: number;
+    area_match: boolean;
+  };
+  quarters: { q: string; price_krw: number; n: number }[];
+};
+function ComplexBlock({ cx }: { cx: Complex }) {
+  const c = t.complex;
+  const pc = useIsPc();
+  const tr = cx.trend;
+  const top = Math.max(...cx.quarters.map((x) => x.price_krw), 1);
+  const low = Math.min(...cx.quarters.map((x) => x.price_krw));
+  return (
+    <div style={{ marginTop: 10 }}>
+      {cx.auctions.length > 0 && (
+        <>
+          <div className="sub" style={{ margin: "8px 0 2px" }}>
+            {c.auctions(cx.auctions.length)}
+          </div>
+          {cx.auctions.slice(0, pc ? 8 : 2).map((a) => (
+            <Row
+              key={a.case_no + a.date}
+              label={`${a.date.slice(2, 7).replace("-", ".")}${a.unit ? ` · ${a.unit}` : ""}`}
+              value={
+                <>
+                  <b>{won(a.price_krw)}</b>{" "}
+                  <span className="sub" style={{ margin: 0 }}>
+                    {[a.rate != null ? c.rate(a.rate) : null, a.failed ? c.failed(a.failed) : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </>
+              }
+            />
+          ))}
+        </>
+      )}
+      {tr.recent_krw && (
+        <Row
+          label={c.recent(tr.recent_n)}
+          value={
+            <>
+              <b>{won(tr.recent_krw)}</b>
+              {tr.change_pct != null && (
+                <span
+                  className="sub"
+                  style={{ margin: 0, color: tr.change_pct >= 0 ? "var(--red)" : "var(--blue)" }}
+                >
+                  {" "}
+                  {c.change(tr.change_pct)}
+                </span>
+              )}
+            </>
+          }
+        />
+      )}
+      {(tr.jeonse_krw || tr.wolse_rent_krw) && (
+        <Row
+          label={c.lease}
+          value={[
+            tr.jeonse_krw ? c.jeonse(won(tr.jeonse_krw), tr.jeonse_n) : null,
+            tr.wolse_rent_krw
+              ? c.wolse(won(tr.wolse_deposit_krw), won(tr.wolse_rent_krw), tr.wolse_n)
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        />
+      )}
+      {pc && cx.quarters.length > 1 && (
+        <div
+          role="img"
+          aria-label={c.chart}
+          style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 64, marginTop: 8 }}
+        >
+          {cx.quarters.map((x) => (
+            <div key={x.q} style={{ flex: 1, textAlign: "center", fontSize: 11 }}>
+              <div
+                title={`${x.q} ${won(x.price_krw)} (${x.n}건)`}
+                style={{
+                  height: 8 + (40 * (x.price_krw - low)) / Math.max(top - low, 1),
+                  background: "var(--blue-soft)",
+                  borderTop: "2px solid var(--blue)",
+                }}
+              />
+              <span className="sub" style={{ margin: 0, fontSize: 11 }}>
+                {x.q.replace("분기", "")}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {!tr.area_match && (
+        <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
+          {c.allAreas}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
   if (q.key === "buy")
@@ -906,39 +1026,44 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
       </>
     );
   if (q.key === "worth")
-    return b.range_krw ? (
+    return (
       <>
-        <Row
-          label={t.rangeLabel}
-          value={
-            <b>
-              {won(b.range_krw[0])} ~ {won(b.range_krw[1])}
-            </b>
-          }
-        />
-        <p className="sub">{t.sample(b.rate.n)}</p>
-        {b.market && (
+        {b.range_krw && (
           <>
-            <Row label={t.market(b.market.n)} value={<b>{won(b.market.price_krw)}</b>} />
-            <div className="sub" style={{ margin: 0, fontSize: 12 }}>
-              {t.recentTrades}{" "}
-              {b.market.recent
-                .slice(0, 3)
-                .map(
-                  (x: { date: string; floor: number | null; price_krw: number }) =>
-                    `${x.date.slice(2, 7).replace("-", ".")} ${x.floor ?? "-"}층 ${won(x.price_krw)}`,
-                )
-                .join(" · ")}
-            </div>
+            <Row
+              label={t.rangeLabel}
+              value={
+                <b>
+                  {won(b.range_krw[0])} ~ {won(b.range_krw[1])}
+                </b>
+              }
+            />
+            <p className="sub">{t.sample(b.rate.n)}</p>
+            {b.market && (
+              <>
+                <Row label={t.market(b.market.n)} value={<b>{won(b.market.price_krw)}</b>} />
+                <div className="sub" style={{ margin: 0, fontSize: 12 }}>
+                  {t.recentTrades}{" "}
+                  {b.market.recent
+                    .slice(0, 3)
+                    .map(
+                      (x: { date: string; floor: number | null; price_krw: number }) =>
+                        `${x.date.slice(2, 7).replace("-", ".")} ${x.floor ?? "-"}층 ${won(x.price_krw)}`,
+                    )
+                    .join(" · ")}
+                </div>
+              </>
+            )}
+            {b.notes.map((n: string) => (
+              <div key={n} style={{ fontSize: 14, color: "var(--amber)", padding: "2px 0" }}>
+                ◆ {n}
+              </div>
+            ))}
           </>
         )}
-        {b.notes.map((n: string) => (
-          <div key={n} style={{ fontSize: 14, color: "var(--amber)", padding: "2px 0" }}>
-            ◆ {n}
-          </div>
-        ))}
+        {b.complex && <ComplexBlock cx={b.complex} />}
       </>
-    ) : null;
+    );
   if (q.key === "cost")
     return (
       <>
