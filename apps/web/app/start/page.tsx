@@ -6,6 +6,7 @@ import { fetchRegions, type RegionRow } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
 import { saveProfile, type Purpose } from "@/lib/profile";
+import { track } from "@/lib/track";
 
 const t = copy.start;
 const wrap = {
@@ -64,6 +65,7 @@ export default function Start() {
 
   function finish() {
     saveProfile({ regions: picked, cash, purpose });
+    track("start_done");
     router.replace("/home");
   }
 

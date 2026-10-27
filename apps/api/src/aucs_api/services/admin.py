@@ -22,7 +22,34 @@ def status() -> dict[str, Any]:
                       (select count(distinct case_id) from raw.court_doc_raw) as cases_with_docs,
                       pg_database_size(current_database()) as db_bytes"""
         ).fetchone()
-    return {"jobs": jobs, "counts": counts, "db_limit_bytes": 8 * 1024 * 1024 * 1024}
+    return {"jobs": jobs, "counts": counts, "db_limit_bytes": 8 * 1024 * 1024 * 1024, "metrics": metrics()}
+
+
+_METRICS_SQL = """
+with w as (select * from app.events where at >= now() - interval '7 days'),
+first_seen as (select anon_id, min(at) as t0 from app.events group by 1),
+first_item as (select anon_id, min(at) as t1 from app.events where kind = 'item_view' group by 1)
+select
+  (select count(distinct anon_id) from w) as devices,
+  (select count(distinct anon_id) from w where kind = 'start_done') as started,
+  (select count(distinct anon_id) from w where kind = 'item_view') as viewed,
+  (select count(distinct anon_id) from w where kind = 'watch_add') as watched,
+  (select count(distinct anon_id) from w where kind = 'calc') as calc,
+  (select percentile_cont(0.5) within group (order by extract(epoch from fi.t1 - fs.t0))
+     from first_seen fs join first_item fi using (anon_id) where fs.t0 >= now() - interval '7 days') as first_item_sec,
+  (select count(*) from first_seen where t0 between now() - interval '14 days' and now() - interval '7 days') as cohort,
+  (select count(distinct w.anon_id) from w join first_seen fs using (anon_id)
+     where fs.t0 between now() - interval '14 days' and now() - interval '7 days') as returned
+"""
+
+
+def metrics() -> dict[str, Any]:
+    """사용 기록 7일(성공 지표): 기기 수, 시작·상세·관심·계산까지 간 기기, 처음 들어와 첫 상세까지 걸린 시간, 주간 재방문."""
+    with connect() as c:
+        m = dict(c.execute(_METRICS_SQL).fetchone() or {})
+    sec = m.get("first_item_sec")
+    m["first_item_sec"] = round(float(sec)) if sec is not None else None
+    return m
 
 
 def review_queue(limit: int = 50) -> dict[str, Any]:

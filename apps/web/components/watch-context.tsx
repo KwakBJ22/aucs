@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
+import { track } from "@/lib/track";
 
 type WatchState = { ids: Set<string>; token: string | null; toggle: (id: string) => Promise<void> };
 const Ctx = createContext<WatchState>({ ids: new Set(), token: null, toggle: async () => {} });
@@ -34,6 +35,7 @@ export function WatchProvider({ children }: { children: React.ReactNode }) {
         else n.add(id);
         return n;
       });
+      if (!on) track("watch_add", id);
       await (on ? meApi.removeWatch(token, id) : meApi.addWatch(token, id));
     },
     [ids, token],

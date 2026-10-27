@@ -1,7 +1,7 @@
 """누구에게나 같은 공개 자료(물건 목록·상세·전문가 표·시장)는 잠깐 보관했다 바로 돌려줌.
 
 자료는 하루 몇 번 모으므로 2분 보관이면 충분. 로그인 정보가 붙은 요청과 GET이 아닌 요청은 보관하지 않고,
-관리자가 무엇을 바꾸면(GET 아닌 요청 성공) 보관한 것을 모두 비움.
+관리자가 무엇을 바꾸면(/admin 의 GET 아닌 요청 성공) 보관한 것을 모두 비움.
 """
 
 import functools
@@ -16,6 +16,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 TTL = 120.0
 MAX = 500
 PREFIXES = ("/items", "/regions", "/pro/")
+# 공개 자료를 바꾸는 건 관리자 요청뿐 — 관심·메모·사용 기록 같은 회원 요청으로는 비우지 않음(10/27)
+CLEAR_ON = ("/admin",)
 
 LONG = {"/regions": 1800.0}  # 지역별 물건 수는 하루 한 번 바뀜 → 30분
 _store: "OrderedDict[str, tuple[float, int, list[tuple[bytes, bytes]], bytes]]" = OrderedDict()
@@ -76,7 +78,7 @@ class PublicCache:
                 await send(m)
 
             await self.app(scope, receive, watch)
-            if status and status[0] < 400:
+            if status and status[0] < 400 and path.startswith(CLEAR_ON):
                 clear()
             return
         if not path.startswith(PREFIXES) or b"authorization" in headers:

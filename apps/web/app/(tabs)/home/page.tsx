@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useIsPc } from "@/lib/use-pc";
 import { useSession } from "@/lib/auth";
 import { subscribePush } from "@/lib/push";
+import { track } from "@/lib/track";
 
 const t = copy.home;
 
@@ -80,6 +81,7 @@ export default function Home() {
       return;
     }
     await meApi.addSearch(token, copy.alert.name, { sigungu: p.regions, max_cash: p.cash });
+    track("alert_on");
     const r = await subscribePush(token);
     setAlertMsg(
       r === "ok" ? copy.alert.saved : r === "denied" ? copy.alert.denied : copy.alert.unsupported,

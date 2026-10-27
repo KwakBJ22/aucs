@@ -126,6 +126,17 @@ export default function AdminPage() {
         )}
       </section>
 
+      {status?.metrics && (
+        <section style={box}>
+          <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.metrics}</h2>
+          <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+            {t.metricRows(status.metrics).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section style={box}>
         <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.review}</h2>
         {review &&

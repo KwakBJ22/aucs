@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from aucs_api import settings
 from aucs_api.cache import PublicCache
 from aucs_api.db import warm
-from aucs_api.routers import admin, health, items, me, pro
+from aucs_api.routers import admin, events, health, items, me, pro
 
 app = FastAPI(title="옥스 API", on_startup=[warm])
 app.add_middleware(PublicCache)  # CORS보다 안쪽(먼저 추가)
@@ -23,3 +23,4 @@ app.include_router(admin.router)
 app.include_router(items.router)
 app.include_router(me.router)
 app.include_router(pro.router)
+app.include_router(events.router)

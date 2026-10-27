@@ -12,6 +12,16 @@ export type AdminStatus = {
   jobs: Job[];
   counts: { db_bytes: number; items_upcoming: number; sale_results: number; trades: number };
   db_limit_bytes: number;
+  metrics?: {
+    devices: number;
+    started: number;
+    viewed: number;
+    watched: number;
+    calc: number;
+    first_item_sec: number | null;
+    cohort: number;
+    returned: number;
+  };
 };
 export type Flag = { flag_key: string; enabled: boolean; note: string | null };
 export type Review = {

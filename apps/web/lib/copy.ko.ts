@@ -9,6 +9,40 @@ export const copy = {
     fail: "안 됨",
   },
   tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "전체" },
+  terms: {
+    close: "닫기",
+    more: "경매 처음이세요? 전체 안내",
+    extra: [
+      [
+        "감정가",
+        "법원이 맡긴 감정평가사가 매긴 값이에요. 시세와 다를 수 있어 실거래와 같이 봐야 해요.",
+      ],
+      [
+        "낙찰가율",
+        "낙찰가가 감정가의 몇 %인지. 같은 지역·종류의 지난 낙찰을 보면 이번 물건이 얼마쯤 팔릴지 짐작할 수 있어요.",
+      ],
+      ["시세", "같은 단지·같은 면적의 최근 실거래 가운데 값이에요(국토교통부 실거래 신고 기준)."],
+      [
+        "명도비",
+        "사는 사람이 나가는 데 드는 돈(이사비 협의 또는 강제집행 비용). 사는 사람·집 크기에 따라 달라요.",
+      ],
+      [
+        "수리비",
+        "들어가기 전에 고칠 돈. 건물 나이와 면적으로 대략 잡았어요 — 현장에서 꼭 다시 보세요.",
+      ],
+      ["취득세", "집을 사면 내는 세금. 집 수·지역·금액에 따라 1~12%예요."],
+      [
+        "근생빌라",
+        "건축물대장에는 근린생활시설(가게·사무실)인데 집으로 쓰는 건물. 주택 대출이 안 되거나 위반건축물일 수 있어요.",
+      ],
+      ["현황조사서", "법원 집행관이 직접 가서 누가 사는지·어떻게 쓰는지 적은 서류예요."],
+      [
+        "인도명령",
+        "낙찰자가 잔금을 낸 뒤 사는 사람에게 집을 비워 달라고 법원에 신청하는 것. 협의가 안 될 때 써요.",
+      ],
+      ["건축물대장", "건물의 용도·층수·사용승인 날짜가 적힌 공문서예요. 등기부와 함께 봐야 해요."],
+    ] as [string, string][],
+  },
   states: {
     errorTitle: "자료를 불러오지 못했어요",
     errorSub: "인터넷 연결을 확인하고 다시 시도해 주세요",
@@ -956,6 +990,21 @@ export const copy = {
     count: "건수",
     never: "아직 없음",
     db: "DB 용량",
+    metrics: "사용 기록 (최근 7일)",
+    metricRows: (m: {
+      devices: number;
+      started: number;
+      viewed: number;
+      watched: number;
+      calc: number;
+      first_item_sec: number | null;
+      cohort: number;
+      returned: number;
+    }) => [
+      `들어온 기기 ${m.devices} · 시작 질문 끝 ${m.started} · 물건 상세 ${m.viewed} · 관심 담음 ${m.watched} · 계산 ${m.calc}`,
+      `처음 들어와 첫 물건 상세까지 ${m.first_item_sec == null ? "-" : `${Math.round(m.first_item_sec / 6) / 10}분`} (가운데 값 · 목표 3분 안)`,
+      `관심 등록률 ${m.viewed ? Math.round((m.watched * 100) / m.viewed) : 0}% (목표 30%) · 주간 재방문 ${m.cohort ? Math.round((m.returned * 100) / m.cohort) : 0}% (지난주 처음 온 ${m.cohort}대 중, 목표 40%)`,
+    ],
     review: "확인 기다리는 것",
     reportsTitle: "「틀렸어요」 제보",
     reviewEmpty: "없어요",

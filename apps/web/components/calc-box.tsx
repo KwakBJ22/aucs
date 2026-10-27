@@ -9,6 +9,8 @@ import { useWatch } from "@/components/watch-context";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
 import { loadProfile, saveProfile } from "@/lib/profile";
+import { track } from "@/lib/track";
+import { Termed } from "@/components/term";
 
 const t = copy.item;
 
@@ -24,7 +26,7 @@ export function Row({ label, value }: { label: React.ReactNode; value: React.Rea
       }}
     >
       <span className="sub" style={{ margin: 0 }}>
-        {label}
+        {typeof label === "string" ? <Termed text={label} /> : label}
       </span>
       <span style={{ textAlign: "right" }}>{value}</span>
     </div>
@@ -96,6 +98,7 @@ export function CalcBox({ id }: { id: string }) {
 
   // 계산과 입찰표 검사를 한 번에 받음. 처음 받은 추천 입찰가로 같은 계산을 또 부르지 않음(10/27)
   const fromServer = useRef<number | null>(null);
+  const tracked = useRef(false); // 계산을 처음 열었을 때 한 번만 기록
   useEffect(() => {
     if (homes == null) return;
     if (bid != null && bid === fromServer.current) {
@@ -103,6 +106,10 @@ export function CalcBox({ id }: { id: string }) {
       return;
     }
     const h = setTimeout(() => {
+      if (!tracked.current) {
+        tracked.current = true;
+        track("calc", id);
+      }
       fetchCalc(id, {
         bid,
         homes,

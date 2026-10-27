@@ -22,6 +22,8 @@ import { CalcBox, Row } from "@/components/calc-box";
 import { LoadError } from "@/components/load-error";
 import { isNotFound } from "@/lib/api/client";
 import { rememberItem } from "@/lib/recent";
+import { track } from "@/lib/track";
+import { Termed } from "@/components/term";
 import { PageHeader } from "@/components/layout/page-header";
 
 const t = copy.item;
@@ -1197,7 +1199,9 @@ function CheckBody({ b }: { b: Record<string, any> }) {
         <div key={x.key} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
-            <b style={{ fontSize: 14 }}>{x.label}</b>
+            <b style={{ fontSize: 14 }}>
+              <Termed text={x.label} />
+            </b>
           </div>
           <div className="sub" style={{ margin: "2px 0 0", fontSize: 12 }}>
             {x.what}
@@ -1488,6 +1492,7 @@ export default function Item() {
     fetchItem(decodeURIComponent(id))
       .then((x) => {
         setD(x);
+        track("item_view", x.item_id);
         rememberItem(
           x.item_id,
           `${x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,
