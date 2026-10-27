@@ -40,7 +40,12 @@ def review_queue(limit: int = 50) -> dict[str, Any]:
                order by i.sale_date, s.item_id limit %s""",
             (limit,),
         ).fetchall()
-    return {"fields": fields, "signals": signals}
+        reports = c.execute(
+            """select r.report_id, r.item_id, r.section, r.note, r.created_at::date::text as at
+               from app.value_reports r where r.status = 'open' order by r.created_at desc limit %s""",
+            (limit,),
+        ).fetchall()
+    return {"fields": fields, "signals": signals, "reports": reports}
 
 
 def flags() -> list[dict[str, Any]]:

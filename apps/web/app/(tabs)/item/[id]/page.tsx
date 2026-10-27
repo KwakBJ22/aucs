@@ -19,6 +19,9 @@ import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { useIsPc } from "@/lib/use-pc";
 import { CalcBox, Row } from "@/components/calc-box";
+import { LoadError } from "@/components/load-error";
+import { isNotFound } from "@/lib/api/client";
+import { rememberItem } from "@/lib/recent";
 import { PageHeader } from "@/components/layout/page-header";
 
 const t = copy.item;
@@ -46,6 +49,65 @@ function DocH({ children }: { children: React.ReactNode }) {
 function DocP({ children }: { children: React.ReactNode }) {
   return (
     <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{children}</p>
+  );
+}
+
+// 「이 값이 틀렸어요」 제보(DOC-01): 우리가 뽑은 값이 원문과 다르면 알려 주세요 → 관리자 검증 대기(ADM-01)
+function ReportBox({ id, section }: { id: string; section: string }) {
+  const r = t.report;
+  const { session } = useSession();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [state, setState] = useState<"" | "sending" | "sent" | "fail">("");
+  if (state === "sent")
+    return (
+      <p className="sub" style={{ marginTop: 24 }}>
+        {r.thanks}
+      </p>
+    );
+  if (!open)
+    return (
+      <button
+        className="chip gray"
+        style={{ border: 0, minHeight: 40, marginTop: 24 }}
+        onClick={() => (session ? setOpen(true) : (window.location.href = "/login"))}
+      >
+        {r.open}
+      </button>
+    );
+  const send = () => {
+    if (!session || !note.trim()) return;
+    setState("sending");
+    meApi
+      .report(session.access_token, { item_id: id, section, note: note.trim() })
+      .then(() => setState("sent"))
+      .catch(() => setState("fail"));
+  };
+  return (
+    <section className="section" style={{ marginTop: 24 }}>
+      <label style={{ display: "block", fontSize: 14, fontWeight: 600 }}>
+        {r.label}
+        <textarea
+          value={note}
+          maxLength={500}
+          rows={3}
+          placeholder={r.placeholder}
+          onChange={(e) => setNote(e.target.value)}
+          style={{ display: "block", width: "100%", marginTop: 6, fontSize: 15, padding: 8 }}
+        />
+      </label>
+      <p className="sub" style={{ margin: "6px 0" }}>
+        {state === "fail" ? r.fail : r.hint}
+      </p>
+      <button
+        className="btn"
+        disabled={!note.trim() || state === "sending"}
+        onClick={send}
+        style={{ minHeight: 44 }}
+      >
+        {r.send}
+      </button>
+    </section>
   );
 }
 
@@ -213,6 +275,7 @@ function DocSheet({ id, kind, onClose }: { id: string; kind: DocKind; onClose: (
           )}
         </>
       )}
+      <ReportBox id={id} section={c.names[kind] ?? kind} />
     </div>
   );
 }
@@ -1250,12 +1313,28 @@ export default function Item() {
   const [doc, setDoc] = useState<DocKind | null>(null);
   const pc = useIsPc();
 
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
+    setFailed(false);
     fetchItem(decodeURIComponent(id))
-      .then(setD)
-      .catch(() => setD(null));
-  }, [id]);
+      .then((x) => {
+        setD(x);
+        rememberItem(
+          x.item_id,
+          `${x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,
+        );
+      })
+      .catch((e: unknown) => (isNotFound(e) ? setD(null) : setFailed(true)));
+  }, [id, tries]);
 
+  if (failed && d === undefined)
+    return (
+      <main className="page">
+        <PageHeader title="" back="history" />
+        <LoadError onRetry={() => setTries((n) => n + 1)} />
+      </main>
+    );
   if (d === undefined)
     return (
       <main className="page" aria-busy="true">

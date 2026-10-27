@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { fetchBidCheck, fetchCalc, type BidCheck, type Calc } from "@/lib/api/items";
+import { useEffect, useRef, useState } from "react";
+import { fetchCalc, type BidCheck, type Calc } from "@/lib/api/items";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { useWatch } from "@/components/watch-context";
@@ -47,8 +47,14 @@ export function CalcBox({ id }: { id: string }) {
   const [d, setD] = useState<Calc | null>(null);
   const [chk, setChk] = useState<BidCheck | null>(null);
 
+  // 계산과 입찰표 검사를 한 번에 받음. 처음 받은 추천 입찰가로 같은 계산을 또 부르지 않음(10/27)
+  const fromServer = useRef<number | null>(null);
   useEffect(() => {
     if (homes == null) return;
+    if (bid != null && bid === fromServer.current) {
+      fromServer.current = null; // 다음 바꿈부터는 다시 부름
+      return;
+    }
     const h = setTimeout(() => {
       fetchCalc(id, {
         bid,
@@ -61,13 +67,13 @@ export function CalcBox({ id }: { id: string }) {
       })
         .then((r) => {
           setD(r);
-          if (bid == null) setBid(r.selected.bid_krw);
+          setChk(r.check ?? null);
+          if (bid == null) {
+            fromServer.current = r.selected.bid_krw;
+            setBid(r.selected.bid_krw);
+          }
         })
         .catch(() => setD(null));
-      if (bid)
-        fetchBidCheck(id, bid)
-          .then(setChk)
-          .catch(() => setChk(null));
     }, 250);
     return () => clearTimeout(h);
   }, [id, bid, homes, first, loan, selling, income, otherMonthly]);

@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -11,13 +12,16 @@ import { copy } from "@/lib/copy.ko";
 export default function Notifications() {
   const { session, ready } = useSession();
   const [list, setList] = useState<Noti[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
-    if (session)
-      meApi
-        .notifications(session.access_token)
-        .then(setList)
-        .catch(() => setList([]));
-  }, [session]);
+    if (!session) return;
+    setFailed(false);
+    meApi
+      .notifications(session.access_token)
+      .then(setList)
+      .catch(() => setFailed(true));
+  }, [session, tries]);
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.noti.title} />;
   const group = (n: Noti): "change" | "todo" | "new" => {
@@ -33,6 +37,7 @@ export default function Notifications() {
   return (
     <main className="page">
       <PageHeader title={copy.noti.title} back="/home" />
+      {failed && !list && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       {list && list.length === 0 && (
         <section className="section">
           <p className="sub">{copy.noti.empty}</p>

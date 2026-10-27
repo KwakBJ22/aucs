@@ -42,11 +42,20 @@ while ($true) {
     # → API처럼 node 로 next 를 직접 켜고 출력은 파일로 바로 남김 (실행 기록 logs\server_web_run.log, 오류 logs\server_web_err.log)
     $node = (Get-Command node -ErrorAction SilentlyContinue).Source
     if (-not $node) { $node = "$env:ProgramFiles\nodejs\node.exe" }
-    $p = Start-Process -FilePath $node -ArgumentList 'node_modules\next\dist\bin\next', 'dev', '-p', '3000' `
+    # 10/27: 터보팩으로 켜서 화면 첫 열기(옮겨 엮기)를 빠르게 함(예전 상세 화면 첫 열기 약 30초).
+    #        터보팩으로 켠 뒤 1분 안에 꺼지면 다음부터는 예전 방식으로 켬.
+    $nextArgs = @('node_modules\next\dist\bin\next', 'dev', '-p', '3000')
+    if (-not $script:noTurbo) { $nextArgs += '--turbopack' }
+    $started = Get-Date
+    $p = Start-Process -FilePath $node -ArgumentList $nextArgs `
       -WorkingDirectory "$root\apps\web" -NoNewWindow -PassThru `
       -RedirectStandardOutput "$root\logs\server_web_run.log" -RedirectStandardError "$root\logs\server_web_err.log"
     $p.WaitForExit()
     "[$(Get-Date -Format 'MM-dd HH:mm:ss')] next 끝남(코드 $($p.ExitCode)) — 오류는 server_web_err.log" | Out-File -Append -Encoding utf8 $log
+    if (-not $script:noTurbo -and ((Get-Date) - $started).TotalSeconds -lt 60) {
+      $script:noTurbo = $true
+      "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 터보팩으로 바로 꺼짐 — 예전 방식으로 켬" | Out-File -Append -Encoding utf8 $log
+    }
   }
   "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 꺼짐 — 다시 켬" | Out-File -Append -Encoding utf8 $log
   Start-Sleep -Seconds $(if ($Name -eq 'api') { 1 } else { 5 })

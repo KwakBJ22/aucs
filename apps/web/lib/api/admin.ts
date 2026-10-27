@@ -17,6 +17,7 @@ export type Flag = { flag_key: string; enabled: boolean; note: string | null };
 export type Review = {
   fields: { field_id: number; case_id: string; field: string; raw_text: string | null }[];
   signals: { item_id: string; title: string; sale_date: string }[];
+  reports?: { report_id: number; item_id: string; section: string; note: string; at: string }[];
 };
 export type RuleRow = {
   rule_key: string;

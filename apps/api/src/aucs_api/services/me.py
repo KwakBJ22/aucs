@@ -11,7 +11,9 @@ _WATCH_SQL = """
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
-       a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step, w.in_compare
+       a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step, w.in_compare,
+       (select max(e.created_at) from app.alert_events e
+         where e.user_id = w.user_id and e.item_id = i.item_id and e.prev_value is not null) as changed_at
 from app.watch_items w
 join core.items i on i.item_id = w.item_id
 join core.cases c using (case_id)
@@ -37,14 +39,20 @@ def watch_step(step: str | None, sale_date: Any, today: Any) -> str:
 def watch_list(uid: str, today: Any) -> list[dict[str, Any]]:
     with connect() as c:
         rows = c.execute(_WATCH_SQL, (uid,)).fetchall()
-    return [
-        {
-            **card(r, today),
-            "step": watch_step(r["step"], r["sale_date"], today),
-            "in_compare": r["in_compare"],
-        }
-        for r in rows
-    ]
+    return [watch_card(r, today) for r in rows]
+
+
+CHANGED_DAYS = 3  # 관심 목록 「바뀜」 표시: 최근 이만큼 안에 기일·최저가·결과가 바뀐 물건(WATCH-01)
+
+
+def watch_card(r: dict[str, Any], today: Any) -> dict[str, Any]:
+    ch = r.get("changed_at")
+    return {
+        **card(r, today),
+        "step": watch_step(r["step"], r["sale_date"], today),
+        "in_compare": r["in_compare"],
+        "changed": bool(ch and (today - ch.date()).days <= CHANGED_DAYS),
+    }
 
 
 def watch_set_step(uid: str, item_id: str, step: str) -> bool:
@@ -383,3 +391,59 @@ def compare_unexclude(uid: str, item_id: str) -> None:
             "delete from app.compare_exclusions where user_id = %s and item_id = %s",
             (uid, item_id),
         )
+
+
+_NOTI_SQL = """select n.noti_id, n.title, n.body, n.link, n.read_at, n.created_at, e.kind
+               from app.notifications n left join app.alert_events e on e.event_id = n.event_id
+               where n.user_id = %s order by n.created_at desc limit 100"""
+
+
+def home(uid: str, today: Any) -> dict[str, Any]:
+    """홈 화면에 쓰는 내 자료를 한 번에(10/27 — 예전엔 관심·알림·비교함 3번 불렀음)."""
+    with connect() as c:
+        q_w, q_n, q_x = batch(
+            c,
+            [
+                (_WATCH_SQL, (uid,)),
+                (_NOTI_SQL, (uid,)),
+                ("select item_id from app.compare_exclusions where user_id = %s", (uid,)),
+            ],
+        )
+        rows, notis, ex = q_w.fetchall(), q_n.fetchall(), q_x.fetchall()
+    watch = [watch_card(r, today) for r in rows]
+    return {"watch": watch, "notifications": notis, "excluded": [r["item_id"] for r in ex]}
+
+
+def compare_full(uid: str, homes: int, first: bool, today: Any) -> dict[str, Any]:
+    """비교함 화면 전부를 한 번에: 담은 물건마다 상세·계산·작업 공간(10/27 — 예전엔 물건 수 × 3번)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from aucs_api.services import item_detail
+
+    base = compare_get(uid)
+
+    def one(item_id: str) -> dict[str, Any]:
+        return {
+            "id": item_id,
+            "d": item_detail.detail(item_id, today),
+            "calc": item_detail.calc(
+                item_id, bid_krw=None, homes=homes, first_time=first, loan_krw=None
+            ),
+            "w": workspace(uid, item_id, today),
+        }
+
+    ids = base["items"]
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(ids)))) as ex:
+        cols = list(ex.map(one, ids))
+    return {**base, "cols": cols}
+
+
+def report_add(uid: str, item_id: str, section: str, note: str) -> int:
+    """「이 값이 틀렸어요」 제보(DOC-01). 관리자 화면 검증 대기에 쌓임."""
+    with connect() as c:
+        row = c.execute(
+            """insert into app.value_reports (user_id, item_id, section, note)
+               values (%s, %s, %s, %s) returning report_id""",
+            (uid, item_id, section, note),
+        ).fetchone()
+    return int(row["report_id"]) if row else 0

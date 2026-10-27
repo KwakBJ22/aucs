@@ -71,10 +71,13 @@ export default function ProMarketPage() {
       .catch(() => {});
   }, []);
   useEffect(() => {
-    setM(null);
+    let stale = false;
     fetchMarket({ sido: sido || undefined, sigungu: sigungu || undefined, usage, months })
-      .then(setM)
+      .then((r) => !stale && setM(r))
       .catch(() => {});
+    return () => {
+      stale = true;
+    };
   }, [sido, sigungu, usage, months]);
 
   const sel = {

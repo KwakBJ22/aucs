@@ -1,9 +1,10 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { fetchCalc, fetchItem, type Calc, type ItemDetail } from "@/lib/api/items";
+import { type Calc, type ItemDetail } from "@/lib/api/items";
 import { meApi, type Compare, type Workspace } from "@/lib/api/me";
 import { PageHeader } from "@/components/layout/page-header";
 import { useIsPc } from "@/lib/use-pc";
@@ -27,28 +28,21 @@ export default function ComparePage() {
   const [cols, setCols] = useState<Col[]>([]);
   const [asking, setAsking] = useState<string | null>(null);
   const [more, setMore] = useState(false);
+  const [failed, setFailed] = useState(false);
   const pc = useIsPc();
 
-  const load = (tok: string) =>
-    meApi
-      .compare(tok)
-      .then(async (c) => {
-        setData(c);
-        const p = loadProfile();
-        const homes = p?.homes ?? 0;
-        const rows = await Promise.all(
-          c.items.map(async (id) => {
-            const [d, calc, w] = await Promise.all([
-              fetchItem(id).catch(() => null),
-              fetchCalc(id, { homes, first: Boolean(p?.firstTime) }).catch(() => null),
-              meApi.workspace(tok, id).catch(() => null),
-            ]);
-            return { id, d, calc, w };
-          }),
-        );
-        setCols(rows);
+  // 담은 물건마다 상세·계산·작업 공간을 한 번에(10/27 — 예전엔 1 + 물건 수 × 3번)
+  const load = (tok: string) => {
+    const p = loadProfile();
+    return meApi
+      .compareFull(tok, p?.homes ?? 0, Boolean(p?.firstTime))
+      .then(({ cols: c, ...rest }) => {
+        setFailed(false);
+        setData(rest);
+        setCols(c);
       })
-      .catch(() => setData({ items: [], excluded: [], max: 5 }));
+      .catch(() => setFailed(true));
+  };
 
   useEffect(() => {
     if (token) void load(token);
@@ -173,6 +167,7 @@ export default function ComparePage() {
           ) : undefined
         }
       />
+      {failed && !data && <LoadError onRetry={() => token && void load(token)} />}
       {data && data.items.length === 0 && (
         <section className="section">
           <p className="sub">{t.empty}</p>

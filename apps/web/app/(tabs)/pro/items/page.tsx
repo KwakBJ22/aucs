@@ -99,18 +99,24 @@ function ProItems() {
       if (saved?.length) setCols(saved.filter((c) => ALL_COLS.includes(c)));
     } catch {}
   }, []);
+  // 조건을 바꿔도 앞 표를 지우지 않고 새 표가 오면 바꿈(깜빡임 없게), 늦게 온 앞 결과는 버림(10/27)
   useEffect(() => {
-    setData(null);
+    let stale = false;
     fetchPro(f)
-      .then(setData)
-      .catch(() =>
-        setData({
-          rows: [],
-          summary: { n: 0, app_sum: 0, app_avg: 0, app_max: 0, min_sum: 0, all: 0 },
-          page: 1,
-          limit: 50,
-        }),
+      .then((r) => !stale && setData(r))
+      .catch(
+        () =>
+          !stale &&
+          setData({
+            rows: [],
+            summary: { n: 0, app_sum: 0, app_avg: 0, app_max: 0, min_sum: 0, all: 0 },
+            page: 1,
+            limit: 50,
+          }),
       );
+    return () => {
+      stale = true;
+    };
   }, [f]);
 
   // 조건이 바뀌면 주소창에 그대로 남김(그 주소를 저장·공유하면 같은 조건)

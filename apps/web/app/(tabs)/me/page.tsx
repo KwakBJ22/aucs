@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
@@ -142,16 +143,18 @@ export default function Me() {
   const [mocks, setMocks] = useState<Mock[]>([]);
   const [watch, setWatch] = useState<WatchCard[]>([]);
   const pc = useIsPc();
+  const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
     if (!session) return;
     meApi
       .watch(session.access_token)
       .then(setWatch)
       .catch(() => setWatch([]));
+    setFailed(false);
     meApi
       .bids(session.access_token)
       .then(setD)
-      .catch(() => setD({ won: [], history: [], todo: [] }));
+      .catch(() => setFailed(true));
     meApi
       .mocks(session.access_token)
       .then(setMocks)
@@ -161,6 +164,13 @@ export default function Me() {
 
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.tabs.me} />;
+  if (failed && !d)
+    return (
+      <main className="page">
+        <PageHeader title={copy.tabs.me} />
+        <LoadError onRetry={load} />
+      </main>
+    );
   const empty = d && !d.won.length && !d.history.length && !d.todo.length && !mocks.length;
   const dropMock = (id: number) => {
     setMocks((l) => l.filter((x) => x.mock_id !== id));

@@ -128,7 +128,23 @@ export default function AdminPage() {
 
       <section style={box}>
         <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.review}</h2>
-        {review && review.fields.length + review.signals.length === 0 && <p>{t.reviewEmpty}</p>}
+        {review &&
+          review.fields.length + review.signals.length + (review.reports?.length ?? 0) === 0 && (
+            <p>{t.reviewEmpty}</p>
+          )}
+        {(review?.reports?.length ?? 0) > 0 && (
+          <>
+            <b style={{ fontSize: 14 }}>{t.reportsTitle}</b>
+            <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+              {review?.reports?.map((r) => (
+                <li key={r.report_id}>
+                  {r.at} · <a href={`/item/${encodeURIComponent(r.item_id)}`}>{r.item_id}</a> ·{" "}
+                  {r.section} · {r.note}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <ul style={{ paddingLeft: 18, fontSize: 14 }}>
           {review?.signals.map((s) => (
             <li key={`${s.item_id}-${s.title}`}>

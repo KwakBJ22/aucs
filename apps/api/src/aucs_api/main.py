@@ -14,8 +14,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.WEB_ORIGINS,
     allow_origin_regex=settings.WEB_ORIGIN_REGEX,
-    allow_methods=["GET", "PUT", "POST", "DELETE"],
+    allow_methods=["GET", "PUT", "POST", "PATCH", "DELETE"],  # PATCH: 등기부 「이 줄 고치기」
     allow_headers=["*"],
+    max_age=7200,  # 사전 확인(OPTIONS) 응답을 브라우저가 2시간 기억 — 로그인 요청마다 왕복 한 번 줄임
 )
 app.include_router(health.router)
 app.include_router(admin.router)

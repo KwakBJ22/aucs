@@ -15,7 +15,9 @@ export function won(n: number | null | undefined): string {
   return `${rest.toLocaleString("ko-KR")}만`;
 }
 
+// 지난 날은 「D--8」이 아니라 「8일 지남」
 export function dday(d: number | null): string {
   if (d == null) return "";
+  if (d < 0) return `${-d}일 지남`;
   return d === 0 ? "D-day" : `D-${d}`;
 }

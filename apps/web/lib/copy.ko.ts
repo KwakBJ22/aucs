@@ -9,6 +9,11 @@ export const copy = {
     fail: "안 됨",
   },
   tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "전체" },
+  states: {
+    errorTitle: "자료를 불러오지 못했어요",
+    errorSub: "인터넷 연결을 확인하고 다시 시도해 주세요",
+    retry: "다시 시도",
+  },
   footer: {
     links: [
       ["서비스 소개", "/guide"],
@@ -233,6 +238,10 @@ export const copy = {
     stepNow: "단계",
     moveHint: "어느 단계로 옮길까요? · 발견 → 서류 → 현장 → 자금 → 입찰 준비 → 결과 → 잔금·명도",
     resultShort: "결과 남기기",
+    changed: "바뀜",
+    changedHint: "최근 3일 안에 기일·최저가·결과가 바뀌었어요",
+    recent: "최근 본",
+    recentEmpty: "물건 상세를 열면 여기 남아요 · 이 기기에만",
     summary: (n: number, c: number) => `담은 물건 ${n}개 · 비교 중 ${c}개`,
     boardTitle: "단계별 보드",
     boardHint:
@@ -626,6 +635,15 @@ export const copy = {
     name: "내 조건",
   },
   item: {
+    report: {
+      open: "이 값이 틀렸어요",
+      label: "어디가 원문과 다른가요?",
+      placeholder: "예: 임차인 전입일이 원문은 2021.3.5인데 3.15로 나와요",
+      hint: "확인해서 고칠게요 · 보낸 사람은 남에게 보이지 않아요",
+      send: "보내기",
+      thanks: "고마워요. 확인해서 고칠게요",
+      fail: "보내지 못했어요 · 다시 눌러 주세요",
+    },
     back: "뒤로",
     notFound: "물건을 찾을 수 없어요",
     nextRound: "이번에 유찰되면 · 다음 최저가",
@@ -903,6 +921,7 @@ export const copy = {
     never: "아직 없음",
     db: "DB 용량",
     review: "확인 기다리는 것",
+    reportsTitle: "「틀렸어요」 제보",
     reviewEmpty: "없어요",
     flags: "자료 공개 설정",
     rules: "기준표",

@@ -219,6 +219,7 @@ export type Calc = {
   cap_krw: number | null;
   slider: { min: number; max: number; step: number };
   resale: boolean;
+  check?: BidCheck | null; // 입찰표 실수 막기 검사(고른 입찰가 기준)
 };
 export function fetchCalc(
   id: string,

@@ -11,4 +11,5 @@ describe("won", () => {
     expect(won(1_000_000_000_000)).toBe("1조");
   });
   it("D-day", () => expect(dday(0)).toBe("D-day"));
+  it("지난 날", () => expect(dday(-8)).toBe("8일 지남"));
 });

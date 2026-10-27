@@ -95,4 +95,6 @@ def get_calc(
     )  # fmt: skip
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
-    return d
+    # 입찰표 실수 막기 검사도 같이(10/27 — 예전엔 계산·검사를 따로 두 번 불렀음)
+    sel = bid or (d.get("selected") or {}).get("bid_krw")
+    return {**d, "check": item_detail.bid_check(item_id, sel) if sel else None}

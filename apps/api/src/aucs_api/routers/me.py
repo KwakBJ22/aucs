@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from aucs_api import settings
@@ -47,6 +47,12 @@ class ProfileIn(BaseModel):
 @router.get("/watch")
 def get_watch(uid: Uid) -> list[dict[str, Any]]:
     return me.watch_list(uid, date.today())
+
+
+@router.get("/home")
+def get_home(uid: Uid) -> dict[str, Any]:
+    """홈 화면 내 자료 한 번에(관심·알림·비교함에서 뺀 물건)."""
+    return me.home(uid, date.today())
 
 
 @router.get("/watch/ids")
@@ -126,6 +132,14 @@ class ExcludeIn(BaseModel):
 @router.get("/compare")
 def get_compare(uid: Uid) -> dict[str, Any]:
     return me.compare_get(uid)
+
+
+@router.get("/compare/full")
+def get_compare_full(
+    uid: Uid, homes: Annotated[int, Query(ge=0, le=5)] = 0, first: bool = False
+) -> dict[str, Any]:
+    """비교함 화면 전부(담은 물건마다 상세·계산·작업 공간) 한 번에."""
+    return me.compare_full(uid, homes, first, date.today())
 
 
 @router.put("/compare/{item_id}")
@@ -238,6 +252,18 @@ def put_bid(body: BidIn, uid: Uid) -> dict[str, bool]:
 def delete_bid(bid_id: int, uid: Uid) -> dict[str, bool]:
     me.bid_remove(uid, bid_id)
     return {"ok": True}
+
+
+class ReportIn(BaseModel):
+    item_id: str = Field(max_length=80)
+    section: str = Field(min_length=1, max_length=40)
+    note: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/reports")
+def post_report(body: ReportIn, uid: Uid) -> dict[str, Any]:
+    """「이 값이 틀렸어요」 제보 → 관리자 검증 대기(ADM-01)."""
+    return {"report_id": me.report_add(uid, body.item_id, body.section, body.note.strip())}
 
 
 @router.get("/registries/{item_id}")

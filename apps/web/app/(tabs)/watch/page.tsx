@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ItemCard } from "@/components/item-card";
+import { LoadError } from "@/components/load-error";
 import { NeedLogin } from "@/components/need-login";
+import { loadRecent, type Recent } from "@/lib/recent";
 import { PageHeader } from "@/components/layout/page-header";
 import { MOVABLE, WorkspacePanel } from "@/components/workspace-panel";
 import { meApi, WATCH_STEPS, type WatchCard, type WatchStep } from "@/lib/api/me";
@@ -30,6 +32,11 @@ function StepRow({
     <div style={{ padding: "0 0 12px 84px", display: "flex", gap: 6, flexWrap: "wrap" }}>
       {!open ? (
         <>
+          {c.changed && (
+            <span className="chip orange" title={t.changedHint} style={{ minHeight: 32 }}>
+              {t.changed}
+            </span>
+          )}
           <button
             className="chip green"
             style={{ border: 0, minHeight: 32 }}
@@ -91,6 +98,12 @@ function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () =>
           {dday(c.d_day)}
         </b>{" "}
         · {c.court}
+        {c.changed && (
+          <b style={{ color: "var(--amber)" }} title={t.changedHint}>
+            {" "}
+            · {t.changed}
+          </b>
+        )}
       </span>
       <span className="clamp2" style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
         {c.building?.split(" ")[0] ?? c.usage} <span className="sub">{c.place}</span>
@@ -115,17 +128,22 @@ export default function Watch() {
   const [msg, setMsg] = useState("");
   const [pick, setPick] = useState<string | null>(null);
   const [asTable, setAsTable] = useState(false);
+  const [onlyChanged, setOnlyChanged] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
+  const [recent, setRecent] = useState<Recent[] | null>(null); // 「최근 본」을 펼쳤을 때만
 
   useEffect(() => {
-    if (session)
-      meApi
-        .watch(session.access_token)
-        .then((l) => {
-          setList(l);
-          setPick((p) => p ?? l[0]?.item_id ?? null);
-        })
-        .catch(() => setList([]));
-  }, [session]);
+    if (!session) return;
+    setFailed(false);
+    meApi
+      .watch(session.access_token)
+      .then((l) => {
+        setList(l);
+        setPick((p) => p ?? l[0]?.item_id ?? null);
+      })
+      .catch(() => setFailed(true));
+  }, [session, tries]);
 
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.tabs.watch} />;
@@ -152,12 +170,38 @@ export default function Watch() {
       title={t.title}
       sub={list ? t.summary(list.length, inCompare) : undefined}
       right={
-        <Link href="/compare" className="chip gray" style={{ minHeight: 32 }}>
-          {copy.compare.title} {inCompare} ›
-        </Link>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            className={`chip ${recent ? "green" : "gray"}`}
+            style={{ border: 0, minHeight: 32 }}
+            onClick={() => setRecent(recent ? null : loadRecent())}
+          >
+            {t.recent}
+          </button>
+          <Link href="/compare" className="chip gray" style={{ minHeight: 32 }}>
+            {copy.compare.title} {inCompare} ›
+          </Link>
+        </div>
       }
     />
   );
+  // 최근 본 물건(이 기기) — 관심에 안 담은 것도 다시 찾기 쉽게
+  const recentBox = recent && (
+    <section className="section">
+      <h2>{t.recent}</h2>
+      {recent.length === 0 && <p className="sub">{t.recentEmpty}</p>}
+      {recent.map((r) => (
+        <Link
+          key={r.id}
+          href={`/item/${encodeURIComponent(r.id)}`}
+          style={{ display: "block", padding: "10px 0", fontSize: 14, color: "inherit" }}
+        >
+          {r.label} ›
+        </Link>
+      ))}
+    </section>
+  );
+  const errorBox = failed && !list && <LoadError onRetry={() => setTries((n) => n + 1)} />;
   const empty = list && list.length === 0 && (
     <section className="section">
       <p className="sub">{t.empty}</p>
@@ -170,6 +214,8 @@ export default function Watch() {
     return (
       <main className="page">
         {header}
+        {recentBox}
+        {errorBox}
         {msg && (
           <div className="sub" style={{ color: "var(--amber)" }}>
             {msg}
@@ -280,10 +326,16 @@ export default function Watch() {
       </main>
     );
 
-  const groups = WATCH_STEPS.filter((s) => (only ? s === only : count(s) > 0));
+  const nChanged = list?.filter((x) => x.changed).length ?? 0;
+  const shownList = onlyChanged ? (list?.filter((x) => x.changed) ?? null) : list;
+  const groups = WATCH_STEPS.filter((s) =>
+    only ? s === only : (shownList?.some((x) => x.step === s) ?? false),
+  );
   return (
     <main className="page">
       {header}
+      {recentBox}
+      {errorBox}
       {msg && (
         <div className="sub" style={{ color: "var(--amber)", marginBottom: 6 }}>
           {msg}
@@ -294,10 +346,23 @@ export default function Watch() {
           <button
             className={`chip ${only === null ? "green" : "gray"}`}
             style={{ border: 0, minHeight: 32, whiteSpace: "nowrap" }}
-            onClick={() => setOnly(null)}
+            onClick={() => {
+              setOnly(null);
+              setOnlyChanged(false);
+            }}
           >
             {t.all} {list.length}
           </button>
+          {nChanged > 0 && (
+            <button
+              className={`chip ${onlyChanged ? "green" : "orange"}`}
+              style={{ border: 0, minHeight: 32, whiteSpace: "nowrap" }}
+              onClick={() => setOnlyChanged(!onlyChanged)}
+              title={t.changedHint}
+            >
+              {t.changed} {nChanged}
+            </button>
+          )}
           {WATCH_STEPS.filter((s) => count(s) > 0).map((s) => (
             <button
               key={s}
@@ -311,13 +376,13 @@ export default function Watch() {
         </div>
       )}
       {empty}
-      {list &&
+      {shownList &&
         groups.map((s) => (
           <section key={s} className="section" style={{ paddingTop: 12, paddingBottom: 0 }}>
             <h2>
               {t.steps[s]} <span className="sub">{count(s)}</span>
             </h2>
-            {list
+            {shownList
               .filter((x) => x.step === s)
               .map((c) => (
                 <div key={c.item_id}>

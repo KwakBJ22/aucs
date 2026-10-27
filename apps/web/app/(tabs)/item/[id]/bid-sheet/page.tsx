@@ -53,12 +53,20 @@ function Sheet() {
       .then(setDay)
       .catch(() => setDay(null));
   }, [id]);
+  // 글자 칠 때마다 부르지 않고 멈춘 뒤 한 번(10/27)
   useEffect(() => {
     setSure(false);
     if (!bid) return setChk(null);
-    fetchBidCheck(id, bid)
-      .then(setChk)
-      .catch(() => setChk(null));
+    let stale = false;
+    const h = setTimeout(() => {
+      fetchBidCheck(id, bid)
+        .then((r) => !stale && setChk(r))
+        .catch(() => !stale && setChk(null));
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(h);
+    };
   }, [id, bid]);
 
   const canPrint = chk && chk.level !== "block" && (chk.level === "ok" || sure);

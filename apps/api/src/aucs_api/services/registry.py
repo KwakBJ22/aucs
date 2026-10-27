@@ -25,8 +25,8 @@ from aucs_rules.tenants import (
 )
 from psycopg.types.json import Jsonb
 
-from aucs_api.db import connect
-from aucs_api.services.docs import item_spec
+from aucs_api.db import batch, connect
+from aucs_api.services.docs import spec_sheet
 
 MAX_BYTES = 10 * 1024 * 1024
 KEEP_DAYS = 30  # 매각기일 뒤 원본 보관 날수 (10/18 대표님)
@@ -262,28 +262,45 @@ def parse_upload(upload_id: int) -> None:
 
 def latest(uid: str, item_id: str) -> dict[str, Any] | None:
     """이 물건에 내가 올린 마지막 등기부와 사다리."""
+    case = "(select case_id from core.items where item_id = %(id)s)"
     with connect() as c:
-        u = c.execute(
-            """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok
-               from app.uploaded_registries where user_id = %s and item_id = %s order by upload_id desc limit 1""",
-            (uid, item_id),
-        ).fetchone()
-        if not u:
-            return None
-        meta = c.execute(
-            """select c.claim_deadline, i.case_id, i.item_no, i.min_price_krw, i.sido, i.sigungu, i.address
-               from core.items i join core.cases c using (case_id) where i.item_id = %s""",
-            (item_id,),
-        ).fetchone()
-        spec, _ = item_spec(c, meta["case_id"], meta["item_no"] or 1) if meta else (None, None)
-        small_rows = c.execute(
-            "select valid_from, valid_to, value from ref.rule_tables where rule_key = 'small_lease_limit'"
-        ).fetchall()
-        tenants = c.execute(
-            """select name_masked as name, move_in_date::text as move_in, fixed_date::text as fixed,
-                      claim_date::text as claim, deposit_krw from core.tenants where case_id = %s""",
-            (meta["case_id"],),
-        ).fetchall() if meta else []  # fmt: skip
+        # 서로 상관없는 조회 5개를 한 번에 보냄(10/27 — 예전엔 차례로 5번 왕복)
+        q_u, q_meta, q_spec, q_small, q_ten = batch(
+            c,
+            [
+                (
+                    """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok
+                       from app.uploaded_registries where user_id = %(uid)s and item_id = %(id)s order by upload_id desc limit 1""",
+                    {"uid": uid, "id": item_id},
+                ),
+                (
+                    """select c.claim_deadline, i.case_id, i.item_no, i.min_price_krw, i.sido, i.sigungu, i.address
+                       from core.items i join core.cases c using (case_id) where i.item_id = %(id)s""",
+                    {"id": item_id},
+                ),
+                (
+                    f"""select payload, fetched_at from raw.court_doc_raw where case_id = {case}
+                       and doc_kind = 'item_detail_' || coalesce((select item_no from core.items
+                       where item_id = %(id)s), 1) order by fetched_at desc limit 1""",
+                    {"id": item_id},
+                ),
+                (
+                    "select valid_from, valid_to, value from ref.rule_tables"
+                    " where rule_key = 'small_lease_limit'",
+                    None,
+                ),
+                (
+                    f"""select name_masked as name, move_in_date::text as move_in, fixed_date::text as fixed,
+                          claim_date::text as claim, deposit_krw from core.tenants where case_id = {case}""",
+                    {"id": item_id},
+                ),
+            ],
+        )
+        u, meta, spec_row = q_u.fetchone(), q_meta.fetchone(), q_spec.fetchone()
+        small_rows, tenants = q_small.fetchall(), q_ten.fetchall()
+    if not u:
+        return None
+    spec = spec_sheet(spec_row["payload"]) if spec_row else None
     out = {
         "upload_id": u["upload_id"], "file_name": u["file_name"], "status": u["status"], "method": u["method"],
         "error": u["error"], "delete_after": u["delete_after"].isoformat(), "ladder": None,

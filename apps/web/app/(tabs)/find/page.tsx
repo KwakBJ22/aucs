@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -82,6 +83,9 @@ export default function Find() {
   const [saveMsg, setSaveMsg] = useState("");
   const [pick, setPick] = useState<string | null>(null);
   const [asTable, setAsTable] = useState(false);
+  const [prefsReady, setPrefsReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0); // 이 기기에 기억한 조건을 읽은 뒤에 한 번만 부름
   const pc = useIsPc();
   const { session } = useSession();
 
@@ -98,6 +102,7 @@ export default function Find() {
     } catch {
       setRecent([]);
     }
+    setPrefsReady(true);
   }, []);
 
   useEffect(() => {
@@ -106,6 +111,9 @@ export default function Find() {
   }, [q]);
 
   useEffect(() => {
+    if (!prefsReady) return; // 예전엔 빈 조건으로 한 번, 기억한 조건으로 또 한 번 불렀음(10/27)
+    let stale = false; // 빨리 고치면 늦게 온 앞 결과가 새 결과를 덮지 않게
+    setFailed(false);
     const p = loadProfile();
     setRegions(p?.regions ?? []);
     fetchItems({
@@ -118,6 +126,7 @@ export default function Find() {
       filter,
     })
       .then((r) => {
+        if (stale) return;
         if (r.exact_item_id) {
           remember(query);
           router.push(`/item/${r.exact_item_id}`);
@@ -128,8 +137,11 @@ export default function Find() {
           p && r.items.some((x) => x.item_id === p) ? p : (r.items[0]?.item_id ?? null),
         );
       })
-      .catch(() => setList({ total: 0, items: [], results: [] }));
-  }, [sort, status, query, filter]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => !stale && setFailed(true)); // 빈 목록처럼 보이지 않게 오류로
+    return () => {
+      stale = true;
+    };
+  }, [sort, status, query, filter, prefsReady, tries]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeFilter = (f: FindFilter) => {
     setFilter(f);
@@ -296,7 +308,8 @@ export default function Find() {
   );
   const results = (
     <>
-      {empty && <p className="sub">{t.noResult}</p>}
+      {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
+      {!failed && empty && <p className="sub">{t.noResult}</p>}
       {list?.items.map((c) => (
         <ItemCard key={c.item_id} c={c} />
       ))}

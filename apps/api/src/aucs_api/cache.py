@@ -4,9 +4,12 @@
 관리자가 무엇을 바꾸면(GET 아닌 요청 성공) 보관한 것을 모두 비움.
 """
 
+import functools
+import threading
 import time
 from collections import OrderedDict
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -14,11 +17,44 @@ TTL = 120.0
 MAX = 500
 PREFIXES = ("/items", "/regions", "/pro/")
 
+LONG = {"/regions": 1800.0}  # 지역별 물건 수는 하루 한 번 바뀜 → 30분
 _store: "OrderedDict[str, tuple[float, int, list[tuple[bytes, bytes]], bytes]]" = OrderedDict()
+_memos: list[dict[Any, Any]] = []
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def memo(ttl: float = TTL, size: int = 300) -> Callable[[F], F]:
+    """공개 자료 함수 결과를 잠깐 기억(같은 물건 상세를 비교함·상세·고른 물건이 다시 계산하지 않게, 10/27)."""
+
+    def wrap(fn: F) -> F:
+        box: "OrderedDict[Any, tuple[float, Any]]" = OrderedDict()
+        lock = threading.Lock()
+        _memos.append(box)  # type: ignore[arg-type]
+
+        @functools.wraps(fn)
+        def inner(*a: Any, **k: Any) -> Any:
+            key = (a, tuple(sorted(k.items())))
+            hit = box.get(key)
+            if hit and time.monotonic() - hit[0] < ttl:
+                return hit[1]
+            v = fn(*a, **k)
+            with lock:
+                box[key] = (time.monotonic(), v)
+                box.move_to_end(key)
+                while len(box) > size:
+                    box.popitem(last=False)
+            return v
+
+        return inner  # type: ignore[return-value]
+
+    return wrap
 
 
 def clear() -> None:
     _store.clear()
+    for b in _memos:
+        b.clear()
 
 
 class PublicCache:
@@ -48,7 +84,7 @@ class PublicCache:
             return
         key = path + "?" + scope.get("query_string", b"").decode()
         hit = _store.get(key)
-        if hit and time.monotonic() - hit[0] < TTL:
+        if hit and time.monotonic() - hit[0] < LONG.get(path, TTL):
             _, st, hd, body = hit
             await send({"type": "http.response.start", "status": st, "headers": hd})
             await send({"type": "http.response.body", "body": body})

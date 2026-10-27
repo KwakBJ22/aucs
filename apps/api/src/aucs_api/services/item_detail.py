@@ -7,6 +7,7 @@ from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price, restarted
 from aucs_rules.schedule import after_sale
 
+from aucs_api.cache import memo
 from aucs_api.db import batch, connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.docs import spec_sheet, spec_text
@@ -324,6 +325,7 @@ def build_detail(
 _CASE = "(select case_id from core.items where item_id = %s)"
 
 
+@memo()
 def detail(item_id: str, today: date) -> dict[str, Any] | None:
     """여러 조회를 한 번에 묶어 보냄(pipeline) — DB 왕복이 8번에서 1번으로 줄어 빨라짐(10/20)."""
     item_no = int(str(item_id).rsplit("-", 1)[-1] or 1)
@@ -458,6 +460,7 @@ def build_calc(
     }
 
 
+@memo()
 def calc(
     item_id: str,
     *,

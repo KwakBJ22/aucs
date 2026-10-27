@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,18 +29,20 @@ export default function Home() {
   const [watch, setWatch] = useState<WatchCard[]>([]);
   const [notis, setNotis] = useState<Noti[]>([]);
   const [market, setMarket] = useState<Market | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
   const pc = useIsPc();
 
-  // 내 물건 변화·오늘 할 일: 관심 물건과 알림함에서
+  // 내 물건 변화·오늘 할 일·비교함에서 뺀 물건(맞춤 목록에서 숨김)을 한 번에
   useEffect(() => {
     if (!token) return;
     meApi
-      .watch(token)
-      .then(setWatch)
-      .catch(() => {});
-    meApi
-      .notifications(token)
-      .then(setNotis)
+      .home(token)
+      .then((h) => {
+        setWatch(h.watch);
+        setNotis(h.notifications);
+        setDropped(new Set(h.excluded));
+      })
       .catch(() => {});
   }, [token]);
   // PC 오른쪽: 이번 석 달 법원별 낙찰가율
@@ -49,15 +52,6 @@ export default function Home() {
         .then(setMarket)
         .catch(() => {});
   }, [pc, market]);
-
-  // 비교함에서 이유를 남기고 뺀 물건은 맞춤 목록에서 숨김
-  useEffect(() => {
-    if (token)
-      meApi
-        .compare(token)
-        .then((c) => setDropped(new Set(c.excluded.map((e) => e.item_id))))
-        .catch(() => {});
-  }, [token]);
 
   // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
   useEffect(() => {
@@ -99,10 +93,11 @@ export default function Home() {
       return;
     }
     setProfile(p);
+    setFailed(false);
     fetchItems({ sigungu: p.regions, maxCash: p.cash, limit: 20 })
       .then(setMine)
-      .catch(() => setMine({ total: 0, items: [] }));
-  }, [router]);
+      .catch(() => setFailed(true));
+  }, [router, tries]);
 
   if (!profile) return null;
   const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
@@ -301,6 +296,7 @@ export default function Home() {
       <div className="sub" style={{ marginBottom: 4 }}>
         {summary}
       </div>
+      {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       <button
         className="btn"
         style={{

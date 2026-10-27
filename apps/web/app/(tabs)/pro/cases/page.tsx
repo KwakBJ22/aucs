@@ -128,6 +128,7 @@ function Cases() {
   const sp = useSearchParams();
   const cat = sp.get("category") ?? "";
   const id = sp.get("id") ?? "";
+  const sq = sp.get("q") ?? "";
   const [list, setList] = useState<CaseRow[] | null>(null);
   const [cats, setCats] = useState<string[]>([]);
   const [q, setQ] = useState("");
@@ -141,15 +142,21 @@ function Cases() {
     }
     router.replace(`/pro/cases?${p}`);
   };
+  // 사건을 고를 때(주소의 id만 바뀔 때)는 목록을 다시 부르지 않음(10/27)
   useEffect(() => {
+    let stale = false;
     setList(null);
-    fetchCases(cat || undefined, sp.get("q") ?? undefined)
+    fetchCases(cat || undefined, sq || undefined)
       .then((r) => {
+        if (stale) return;
         setList(r.cases);
         setCats(r.categories);
       })
-      .catch(() => setList([]));
-  }, [cat, sp]);
+      .catch(() => !stale && setList([]));
+    return () => {
+      stale = true;
+    };
+  }, [cat, sq]);
   useEffect(() => {
     if (!id) return setD(null);
     fetchCase(id)
