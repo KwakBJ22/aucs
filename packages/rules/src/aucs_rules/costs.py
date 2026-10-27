@@ -115,3 +115,38 @@ def repair_cost(area_m2: float | None, *, age_years: int | None, table: dict[str
     lo, hi = _round_man(py * band[0]), _round_man(py * band[1])
     return {"low_krw": lo, "high_krw": hi, "mid_krw": _round_man((lo + hi) / 2),
             "basis": "age" if age_years is not None else "unknown_age"}  # fmt: skip
+
+
+def rent_returns(
+    total_krw: int,
+    *,
+    cls: str,
+    loan_krw: int,
+    rate_pct: float,
+    jeonse_krw: int | None,
+    wolse_deposit_krw: int | None,
+    wolse_rent_krw: int | None,
+) -> dict[str, Any] | None:
+    """세놓으면(옥스 기능 9, 10/27): 같은 단지 전월세 가운데 값으로 묶이는 돈·연 수익·현금 수익률. [추정]
+
+    수도권·규제지역은 주담대를 받으면 6개월 안에 들어가 살아야 해서 세놓기는 대출 없이 계산.
+    total_krw = 낙찰가 + 취득세 + 등기 + 떠안는 돈 + 명도·수리(실제로 드는 돈 전부).
+    """
+    if not jeonse_krw and not wolse_rent_krw:
+        return None
+    no_loan = cls in ("regulated", "metro")
+    loan = 0 if no_loan else loan_krw
+    interest = int(loan * rate_pct / 100)
+    out: dict[str, Any] = {"loan_krw": loan, "no_loan_reason": "move_in_rule" if no_loan and loan_krw else None}
+    if jeonse_krw:
+        out["jeonse"] = {"deposit_krw": jeonse_krw, "cash_krw": total_krw - jeonse_krw - loan,
+                         "interest_krw": interest}  # fmt: skip
+    if wolse_rent_krw:
+        dep = wolse_deposit_krw or 0
+        cash = total_krw - dep - loan
+        net = wolse_rent_krw * 12 - interest
+        out["wolse"] = {
+            "deposit_krw": dep, "rent_krw": wolse_rent_krw, "cash_krw": cash, "net_year_krw": net,
+            "yield_pct": round(net * 100 / cash, 1) if cash > 0 else None,
+        }  # fmt: skip
+    return out

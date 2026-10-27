@@ -222,6 +222,21 @@ export type Calc = {
   slider: { min: number; max: number; step: number };
   resale: boolean;
   check?: BidCheck | null; // 입찰표 실수 막기 검사(고른 입찰가 기준)
+  rent?: {
+    loan_krw: number;
+    no_loan_reason: string | null;
+    rate_pct: number;
+    jeonse_n: number;
+    wolse_n: number;
+    jeonse?: { deposit_krw: number; cash_krw: number };
+    wolse?: {
+      deposit_krw: number;
+      rent_krw: number;
+      cash_krw: number;
+      net_year_krw: number;
+      yield_pct: number | null;
+    };
+  } | null;
   move_out?: { low_krw: number; high_krw: number; mid_krw: number; stairs: boolean } | null;
   repair?: {
     low_krw: number | null;

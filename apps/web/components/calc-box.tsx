@@ -32,6 +32,53 @@ export function Row({ label, value }: { label: React.ReactNode; value: React.Rea
 }
 
 // 입찰가 계산(CALC-01): 집 수 → 세 경우 → 슬라이더 → 필요한 현금. 금액은 한글로도 읽어 줍니다.
+// 세놓으면(옥스 기능 9, 10/27): 같은 단지 1년 전월세 가운데 값. 「세를 놓을 거예요」로 답한 사람은 펼쳐서
+function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boolean }) {
+  const c = t.calc.rent;
+  const [open, setOpen] = useState(start);
+  if (!open)
+    return (
+      <button
+        className="chip gray"
+        style={{ border: 0, minHeight: 36, marginTop: 10, display: "inline-flex" }}
+        onClick={() => setOpen(true)}
+      >
+        {c.open} ›
+      </button>
+    );
+  return (
+    <div style={{ marginTop: 12, borderTop: "1px dashed var(--line)", paddingTop: 10 }}>
+      <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
+      {r.jeonse && (
+        <Row
+          label={c.jeonse(won(r.jeonse.deposit_krw), r.jeonse_n)}
+          value={c.tied(won(r.jeonse.cash_krw))}
+        />
+      )}
+      {r.wolse && (
+        <>
+          <Row
+            label={c.wolse(won(r.wolse.deposit_krw), won(r.wolse.rent_krw), r.wolse_n)}
+            value={c.tied(won(r.wolse.cash_krw))}
+          />
+          <Row
+            label={c.net}
+            value={
+              <b>
+                {won(r.wolse.net_year_krw)}
+                {r.wolse.yield_pct != null ? ` · ${c.yieldPct(r.wolse.yield_pct)}` : ""}
+              </b>
+            }
+          />
+        </>
+      )}
+      <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
+        {r.no_loan_reason ? c.noLoan : c.withLoan(r.rate_pct)} · {c.basis}
+      </div>
+    </div>
+  );
+}
+
 export function CalcBox({ id }: { id: string }) {
   const c = t.calc;
   const prof = typeof window === "undefined" ? null : loadProfile();
@@ -313,6 +360,7 @@ export function CalcBox({ id }: { id: string }) {
               </div>
             )}
             {d.resale && <div className="sub">{t.resale}</div>}
+            {d.rent && <RentBox r={d.rent} open={prof?.purpose === "rent"} />}
             <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
             <Link
               href={`/item/${encodeURIComponent(id)}/bid-sheet?bid=${s.bid_krw}`}

@@ -116,3 +116,18 @@ def test_repair_cost():
     assert repair_cost(84.0, age_years=5, table=MR)["low_krw"] == 0
     assert repair_cost(84.0, age_years=None, table=MR)["basis"] == "unknown_age"
     assert repair_cost(None, age_years=10, table=MR)["mid_krw"] == 0
+
+
+def test_rent_returns():
+    from aucs_rules.costs import rent_returns
+
+    r = rent_returns(1_000_000_000, cls="metro", loan_krw=400_000_000, rate_pct=4.5,
+                     jeonse_krw=700_000_000, wolse_deposit_krw=200_000_000, wolse_rent_krw=2_400_000)  # fmt: skip
+    assert r["loan_krw"] == 0 and r["no_loan_reason"] == "move_in_rule"
+    assert r["jeonse"]["cash_krw"] == 300_000_000
+    assert r["wolse"]["cash_krw"] == 800_000_000 and r["wolse"]["yield_pct"] == 3.6
+    other = rent_returns(500_000_000, cls="other", loan_krw=200_000_000, rate_pct=5.0,
+                         jeonse_krw=None, wolse_deposit_krw=50_000_000, wolse_rent_krw=1_500_000)  # fmt: skip
+    assert other["wolse"]["net_year_krw"] == 18_000_000 - 10_000_000 and other["wolse"]["yield_pct"] == 3.2
+    assert rent_returns(1, cls="other", loan_krw=0, rate_pct=4.5, jeonse_krw=None,
+                        wolse_deposit_krw=None, wolse_rent_krw=None) is None  # fmt: skip

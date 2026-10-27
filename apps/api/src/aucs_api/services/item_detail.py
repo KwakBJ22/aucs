@@ -537,7 +537,31 @@ from core.items i
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.item_id = %s and i.display_policy = 'public'
 """
+_LEASE_SQL = """
+select t.deposit_krw, t.monthly_rent_krw, t.area_m2 from core.trades t
+join core.items i on i.region_code = t.region_code and i.lot_no = t.lot_no
+where i.item_id = %s and t.deal_kind = 'lease' and t.deal_date >= current_date - 366 and t.deposit_krw > 0
+"""
 _TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax", "dsr", "first_home_relief", "move_out_repair")
+
+
+def _rent(
+    sel: dict[str, Any], cls: str, leases: list[dict[str, Any]], area: float | None,
+    tables: dict[str, Any], fn: Any,
+) -> dict[str, Any] | None:
+    """세놓으면: 같은 단지(전용 ±3㎡) 1년 전세·월세 가운데 값으로."""
+    near = [x for x in leases if not area or (x["area_m2"] and abs(float(x["area_m2"]) - area) <= 3)]
+    jeonse = [x["deposit_krw"] for x in near if not x["monthly_rent_krw"]]
+    wolse = [x for x in near if x["monthly_rent_krw"]]
+    rate = float((tables.get("dsr") or {}).get("base_rate_pct") or 4.5)
+    out = fn(
+        sel["total_krw"], cls=cls, loan_krw=sel["loan_krw"], rate_pct=rate, jeonse_krw=_median(jeonse),
+        wolse_deposit_krw=_median([x["deposit_krw"] for x in wolse]),
+        wolse_rent_krw=_median([x["monthly_rent_krw"] for x in wolse]),
+    )  # fmt: skip
+    if out:
+        out.update(jeonse_n=len(jeonse), wolse_n=len(wolse), rate_pct=rate)
+    return out
 
 
 def build_calc(
@@ -551,10 +575,11 @@ def build_calc(
     selling: bool = False,
     income_krw: int | None = None,
     other_monthly_krw: int = 0,
+    leases: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
     from aucs_rules.calc import area_class, bid_cases, cash_needed
-    from aucs_rules.costs import move_out_cost, repair_cost
+    from aucs_rules.costs import move_out_cost, rent_returns, repair_cost
 
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     mkt = (r.get("market") or {}).get("price_krw")
@@ -588,6 +613,7 @@ def build_calc(
         "cls": cls,
         "cases": cases,
         "selected": sel,
+        "rent": _rent(sel, cls, leases or [], area, tables, rent_returns),
         "move_out": move,
         "repair": repair,
         "cap_krw": cap,
@@ -619,15 +645,18 @@ def calc(
                     (k,),
                 )
                 for k in _TABLE_KEYS
-            ],
+            ]
+            + [(_LEASE_SQL, (item_id,))],  # 세놓으면(같은 단지 전월세 1년)
         )
         r = qs[0].fetchone()
         if not r or not r["min_price_krw"]:
             return None
-        tables = {k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1:], strict=True)}
+        n = len(_TABLE_KEYS)
+        tables = {k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1 : n + 1], strict=True)}
+        leases = qs[n + 1].fetchall()
     return build_calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
-        selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
+        selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw, leases=leases,
     )  # fmt: skip
 
 
