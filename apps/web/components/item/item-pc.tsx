@@ -1,0 +1,178 @@
+"use client";
+
+import { useState } from "react";
+import { HeartButton } from "@/components/heart-button";
+import { PageHeader } from "@/components/layout/page-header";
+import type { ItemDetail } from "@/lib/api/items";
+import { copy } from "@/lib/copy.ko";
+import { dday, won } from "@/lib/format";
+import Link from "next/link";
+import { WsLink, CompareAdd } from "@/components/item/actions";
+import { Body } from "@/components/item/body";
+import { answerOf } from "@/components/item/checklist";
+import type { MyReg } from "@/components/item/registry";
+import { t, DOT } from "@/components/item/shared";
+
+export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
+  const [copied, setCopied] = useState(false);
+  const id = encodeURIComponent(d.item_id);
+  const urgent = d.d_day != null && d.d_day <= 7;
+  const stats: [string, React.ReactNode][] = [
+    [
+      t.pc.sale,
+      <>
+        <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b>{" "}
+        {d.sale_date ?? "-"}
+      </>,
+    ],
+    [t.pc.appraisal, won(d.appraisal_krw)],
+    [
+      t.pc.min,
+      <>
+        {won(d.min_price_krw)} <span className="sub">{d.min_rate}%</span>
+      </>,
+    ],
+    [t.pc.failed, d.failed_count ? copy.card.failed(d.failed_count) : t.pc.none],
+    [
+      t.nextRound,
+      d.next_round.min_price_krw
+        ? `${won(d.next_round.min_price_krw)}${d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}`
+        : "-",
+    ],
+    [t.pc.deposit, won(d.deposit_krw)],
+  ];
+  return (
+    <main className="page">
+      <PageHeader
+        title={`${d.place} ${d.building ?? d.usage ?? ""}`}
+        sub={
+          <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <span>
+              {d.court} {d.case_no}
+              {d.dept_name ? ` · ${d.dept_name}` : ""}
+              {d.sale_place ? ` · ${d.sale_place}` : ""}
+            </span>
+            <button
+              className="chip gray"
+              style={{ border: 0, minHeight: 28 }}
+              onClick={() => {
+                navigator.clipboard?.writeText(d.case_no).then(() => setCopied(true));
+              }}
+            >
+              {copied ? t.pc.copied : t.pc.copy}
+            </button>
+          </span>
+        }
+        right={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <WsLink id={d.item_id} />
+            <HeartButton id={d.item_id} />
+          </div>
+        }
+      />
+      {d.fatal && <div className="fatal">{d.fatal}</div>}
+      <section className="section">
+        <div className="band-grid">
+          {stats.map(([k, v]) => (
+            <div key={k}>
+              <div className="sub" style={{ margin: 0 }}>
+                {k}
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, margin: "14px 0 0" }}>
+          {d.verdict}
+        </p>
+        {d.tags.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+            {d.tags.map((x) => (
+              <span key={x.label} className={`chip ${x.ok ? "green" : "gray"}`}>
+                {x.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+      <div className="pc-grid g-14-62-24">
+        <nav className="section pc-sticky toc" aria-label={t.pc.toc}>
+          {d.questions.map((q) => (
+            <a key={q.key} href={`#q-${q.key}`}>
+              <span className="toc-dot" style={{ background: DOT[q.tone] }} />
+              {q.title}
+            </a>
+          ))}
+          <a href="#q-rounds">
+            <span className="toc-dot" style={{ background: "var(--faint)" }} />
+            {t.rounds}
+          </a>
+        </nav>
+        <div>
+          {d.questions.map((q) => (
+            <section key={q.key} id={`q-${q.key}`} className="section q-sec">
+              <div className="sub" style={{ margin: 0 }}>
+                {q.title}
+              </div>
+              <h2 style={{ display: "flex", gap: 8, alignItems: "baseline", margin: "4px 0 12px" }}>
+                <span className="toc-dot" style={{ background: DOT[q.tone] }} />
+                {answerOf(q, reg.u)}
+              </h2>
+              <Body q={q} d={d} />
+            </section>
+          ))}
+          <section id="q-rounds" className="section q-sec">
+            <h2>{t.rounds}</h2>
+            <table className="pro-table" style={{ marginTop: 8 }}>
+              <thead>
+                <tr>
+                  <th>{t.pc.date}</th>
+                  <th>{t.pc.min}</th>
+                  <th>{t.pc.result}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.rounds.map((r) => (
+                  <tr key={r.sale_date}>
+                    <td>{r.sale_date}</td>
+                    <td>{won(r.min_price_krw)}</td>
+                    <td>{r.result}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <p className="sub" style={{ fontSize: 12 }}>
+            {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
+          </p>
+        </div>
+        <aside className="section pc-sticky pc-actions">
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{t.pc.actions}</div>
+          <Link
+            href={`/item/${id}/calc`}
+            className="btn primary"
+            style={{ height: 46, fontSize: 15 }}
+          >
+            {t.bidTry}
+          </Link>
+          <Link href={`/item/${id}/bid-sheet`} className="pc-act">
+            {copy.bidSheet.title}
+          </Link>
+          <Link href={`/item/${id}/bid-day`} className="pc-act">
+            {copy.bidDay.title}
+          </Link>
+          <CompareAdd id={d.item_id} />
+          <Link href="/pro/market" className="pc-act">
+            {t.pc.market}
+          </Link>
+          <button className="pc-act" onClick={() => window.print()}>
+            {t.pc.print}
+          </button>
+          <div className="sub" style={{ fontSize: 12 }}>
+            {t.pc.basis(d.computed_at ? d.computed_at.slice(0, 16).replace("T", " ") : "-")}
+          </div>
+        </aside>
+      </div>
+    </main>
+  );
+}
