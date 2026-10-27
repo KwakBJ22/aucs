@@ -1,6 +1,8 @@
 from datetime import date, datetime
 
-from aucs_api.services.item_detail import build_detail, verdict, won
+from aucs_api.services.item_detail import build_detail
+from aucs_api.services.item_text import verdict
+from aucs_rules.fmt import won
 from test_items import TODAY, row
 
 
@@ -151,7 +153,7 @@ def test_worth_with_market():
 
 
 def test_build_calc_cases_and_cap():
-    from aucs_api.services.item_detail import build_calc
+    from aucs_api.services.item_calc import build_calc
 
     tables = {
         "regulated_areas": {"seoul_all": True, "gyeonggi": []},
@@ -211,7 +213,7 @@ def test_checklist_states_and_flow():
 
 
 def test_build_complex():
-    from aucs_api.services.item_detail import build_complex
+    from aucs_api.services.item_complex import build_complex
 
     t0 = date(2026, 10, 27)
     tr = [

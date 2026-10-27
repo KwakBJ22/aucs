@@ -14,6 +14,7 @@ from typing import Any
 
 from aucs_rules.address_match import compare
 from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
+from aucs_rules.fmt import won_small as won
 from aucs_rules.payout import NamedTenant, payout
 from aucs_rules.rights import Right, analyze
 from aucs_rules.small_lease_region import region_class
@@ -180,17 +181,6 @@ def build_ladder(
         "base": {"name": normalize_purpose(base.purpose) or base.purpose, "date": _iso(base.receipt_date)} if base else None,
         "rows": rows, "tenants": t_rows, "hold_krw": hold, "line": line, "state": state, "payout": pay,
     }  # fmt: skip
-
-
-def won(n: int) -> str:
-    """1억 200만 꼴 (만 원 아래 버림)."""
-    man = n // 10_000
-    eok, rest = divmod(man, 10_000)
-    if eok and rest:
-        return f"{eok}억 {rest:,}만"
-    if eok:
-        return f"{eok}억"
-    return f"{rest:,}만" if rest else f"{n:,}원"
 
 
 def _d(s: Any) -> date | None:

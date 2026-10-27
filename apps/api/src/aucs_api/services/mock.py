@@ -4,14 +4,9 @@
 from datetime import date
 from typing import Any
 
+from aucs_rules.fmt import man_text as won
+
 from aucs_api.db import connect
-
-
-def won(v: int) -> str:
-    eok, man = divmod(v // 10_000, 10_000)
-    if eok and man:
-        return f"{eok}억 {man:,}만"
-    return f"{eok}억" if eok else f"{man:,}만"
 
 
 def review(m: dict[str, Any], result: str | None, winning: int | None) -> list[str]:

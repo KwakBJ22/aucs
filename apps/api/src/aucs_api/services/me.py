@@ -418,7 +418,7 @@ def compare_full(uid: str, homes: int, first: bool, today: Any) -> dict[str, Any
     """비교함 화면 전부를 한 번에: 담은 물건마다 상세·계산·작업 공간(10/27 — 예전엔 물건 수 × 3번)."""
     from concurrent.futures import ThreadPoolExecutor
 
-    from aucs_api.services import item_detail
+    from aucs_api.services import item_calc, item_detail
 
     base = compare_get(uid)
 
@@ -426,7 +426,7 @@ def compare_full(uid: str, homes: int, first: bool, today: Any) -> dict[str, Any
         return {
             "id": item_id,
             "d": item_detail.detail(item_id, today),
-            "calc": item_detail.calc(
+            "calc": item_calc.calc(
                 item_id, bid_krw=None, homes=homes, first_time=first, loan_krw=None
             ),
             "w": workspace(uid, item_id, today),

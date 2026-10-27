@@ -15,6 +15,7 @@ from datetime import date
 from typing import Any
 
 import psycopg
+from aucs_rules.fmt import won_unit as won
 from aucs_rules.schedule import after_sale, short
 
 from aucs_workers.db import connect
@@ -62,13 +63,6 @@ def change_text(place: str, ch: Change) -> tuple[str, str]:
             )
         return f"{place} 다시 법원 목록에 올라왔어요", "매각기일과 최저가를 확인해 보세요"
     return f"{place} {RESULT_KO.get(ch.new, ch.new)}", "결과를 확인해 보세요"
-
-
-def won(v: int) -> str:
-    eok, man = divmod(v // 10_000, 10_000)
-    if eok and man:
-        return f"{eok}억 {man:,}만원"
-    return f"{eok}억원" if eok else f"{man:,}만원"
 
 
 USAGE_GROUPS = {

@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from aucs_api.services import docs, item_detail, items
+from aucs_api.services import docs, item_calc, item_detail, items
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ def get_item_docs(item_id: str) -> dict[str, Any]:
 
 @router.get("/items/{item_id}/bid-check")
 def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, Any]:
-    d = item_detail.bid_check(item_id, bid)
+    d = item_calc.bid_check(item_id, bid)
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
     return d
@@ -72,7 +72,7 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
 
 @router.get("/items/{item_id}/bid-day")
 def get_bid_day(item_id: str) -> dict[str, Any]:
-    d = item_detail.bid_day(item_id, date.today())
+    d = item_calc.bid_day(item_id, date.today())
     if d is None:
         raise HTTPException(status_code=404, detail="없는 물건")
     return d
@@ -89,7 +89,7 @@ def get_calc(
     income: Annotated[int | None, Query(ge=0)] = None,
     other_monthly: Annotated[int, Query(ge=0)] = 0,
 ) -> dict[str, Any]:
-    d = item_detail.calc(
+    d = item_calc.calc(
         item_id, bid_krw=bid, homes=homes, first_time=first, loan_krw=loan,
         selling=selling, income_krw=income, other_monthly_krw=other_monthly,
     )  # fmt: skip
@@ -97,4 +97,4 @@ def get_calc(
         raise HTTPException(404, "물건을 찾을 수 없어요")
     # 입찰표 실수 막기 검사도 같이(10/27 — 예전엔 계산·검사를 따로 두 번 불렀음)
     sel = bid or (d.get("selected") or {}).get("bid_krw")
-    return {**d, "check": item_detail.bid_check(item_id, sel) if sel else None}
+    return {**d, "check": item_calc.bid_check(item_id, sel) if sel else None}

@@ -20,7 +20,7 @@ from urllib.parse import unquote
 
 import httpx
 import psycopg
-from aucs_rules.building import parse_jibun
+from aucs_rules.building import lot_key, parse_jibun
 from psycopg.types.json import Jsonb
 
 from aucs_workers.db import connect
@@ -40,10 +40,6 @@ class ApiError(Exception):
 
 class Incomplete(Exception):
     pass
-
-
-def lot_key(plat: str, bun: str, ji: str) -> str:
-    return f"{'산' if plat == '1' else ''}{bun}-{ji}"
 
 
 def fetch(

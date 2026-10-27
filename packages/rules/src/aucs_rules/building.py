@@ -27,6 +27,11 @@ def parse_jibun(lot_no: str | None) -> tuple[str, str, str] | None:
     return None
 
 
+def lot_key(plat: str, bun: str, ji: str) -> str:
+    """건축물대장 표의 지번 키: 「0100-0002」, 산이면 「산0100-0002」 (수집·분석이 같이 씀)."""
+    return f"{'산' if plat == '1' else ''}{bun}-{ji}"
+
+
 # 「304동 2층」·「가동 지하1층」만 동으로 봄(「신당동 217」 같은 동네 이름은 앞 글자가 한글이라 뺌)
 _DONG = re.compile(
     r"(?<![가-힣\d])제?\s*(\d{1,4}|[가-하A-Z])\s*동\s*(?=제?\s*(?:지하\s*)?\d+\s*(?:층|호))"

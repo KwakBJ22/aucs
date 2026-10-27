@@ -63,4 +63,6 @@ def test_villa_signal_uses_register_first():
     ids = lambda f: {(s.rule_id, s.level) for s in signals(f)}  # noqa: E731
     assert ("risk.neighborhood_villa", "mid") in ids(guess)
     assert ("risk.neighborhood_villa", "high") in ids({**guess, "villa_by_register": "confirmed"})
-    assert not any(r == "risk.neighborhood_villa" for r, _ in ids({**guess, "villa_by_register": "clear"}))
+    assert not any(
+        r == "risk.neighborhood_villa" for r, _ in ids({**guess, "villa_by_register": "clear"})
+    )

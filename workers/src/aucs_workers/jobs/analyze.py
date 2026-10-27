@@ -16,7 +16,7 @@ from typing import Any
 
 import psycopg
 from aucs_rules import ENGINE_VERSION
-from aucs_rules.building import parse_jibun, summarize
+from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.price import Trade, market_price
 from aucs_rules.progress import judge_progress
@@ -142,7 +142,7 @@ def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any]
     p = parse_jibun(item.get("lot_no"))
     if not p or not item.get("region_code"):
         return None
-    lk = f"{'산' if p[0] == '1' else ''}{p[1]}-{p[2]}"
+    lk = lot_key(*p)
     rows = cur.execute(
         "select kind, data from core.building_register where region_code = %s and lot_no = %s order by kind, seq",
         (item["region_code"], lk),
