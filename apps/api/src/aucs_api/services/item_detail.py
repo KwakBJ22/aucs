@@ -19,7 +19,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
        a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'redev' as redev,
-       a.computed_at,
+       a.result -> 'building' as building, a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
 join core.cases c using (case_id)
@@ -212,6 +212,35 @@ def worth(
     return ans, notes, {**rate, "p25": lo, "p50": mid, "p75": hi, "court_shift": shift}
 
 
+def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
+    """건축물대장 요약 → 화면 줄(값만, 같은 설명 되풀이 없이). 못 받았으면 None."""
+    if not b:
+        return None
+    floors = " / ".join(
+        x for x in [f"지상 {b['floors_above']}층" if b.get("floors_above") else None,
+                    f"지하 {b['floors_below']}층" if b.get("floors_below") else None] if x
+    )  # fmt: skip
+    built = f"{b['approved'][:4]}년 사용승인 · {b['age_years']}년 됨" if b.get("approved") else None
+    extra = " · ".join(
+        x for x in [f"{b['households']}세대" if b.get("households") else None,
+                    f"승강기 {b['elevators']}대" if b.get("elevators") else None,
+                    f"주차 {b['parking']}대" if b.get("parking") else None] if x
+    )  # fmt: skip
+    unit = None
+    if b.get("unit_floor") is not None and b.get("unit_floor_uses"):
+        f = b["unit_floor"]
+        unit = f"{'지하 ' + str(-f) if f < 0 else f}층 용도: {', '.join(b['unit_floor_uses'])}"
+    return {
+        "built": built,
+        "old": bool(b.get("age_years") and b["age_years"] >= 30),
+        "shape": " · ".join(x for x in [b.get("main_use"), b.get("structure"), floors] if x) or None,
+        "extra": extra or None,
+        "unit": unit,
+        "villa": b.get("villa"),
+        "dong": b.get("dong"),
+    }
+
+
 def build_detail(
     r: dict[str, Any],
     rounds: list[dict[str, Any]],
@@ -274,7 +303,8 @@ def build_detail(
     questions = [
         q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''}".strip(" ·"), "gray",
           {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"], "building": r["building_desc"],
-           "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev")}),
+           "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev"),
+           "building": building_lines(r.get("building"))}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals}),
         q("worth", "얼마짜리인가", rate_ans, "gray" if not rate else "blue",

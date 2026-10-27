@@ -2,6 +2,6 @@
 
 from aucs_rules.result import RuleResult, Status
 
-ENGINE_VERSION = "rules-0.3.3"  # 0.3.3: 서울 정비사업 구역 잇기(10/19)
+ENGINE_VERSION = "rules-0.4.0"  # 0.4.0: 건축물대장(사용승인·그 층 용도로 근생빌라 확정, 10/27)
 
 __all__ = ["ENGINE_VERSION", "RuleResult", "Status"]

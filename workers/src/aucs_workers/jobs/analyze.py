@@ -16,6 +16,7 @@ from typing import Any
 
 import psycopg
 from aucs_rules import ENGINE_VERSION
+from aucs_rules.building import parse_jibun, summarize
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.price import Trade, market_price
 from aucs_rules.progress import judge_progress
@@ -136,6 +137,22 @@ def build_facts(
     }
 
 
+def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any] | None:
+    """건축물대장(collectors/buildings) → 요약. 지번을 못 읽거나 아직 안 받았으면 None."""
+    p = parse_jibun(item.get("lot_no"))
+    if not p or not item.get("region_code"):
+        return None
+    lk = f"{'산' if p[0] == '1' else ''}{p[1]}-{p[2]}"
+    rows = cur.execute(
+        "select kind, data from core.building_register where region_code = %s and lot_no = %s order by kind, seq",
+        (item["region_code"], lk),
+    ).fetchall()
+    titles = [r["data"] for r in rows if r["kind"] == "title"]
+    floors = [r["data"] for r in rows if r["kind"] == "floor"]
+    usage = f"{item.get('usage_name') or ''} {item.get('building_desc') or ''}"
+    return summarize(titles, floors, item.get("address"), usage, today)
+
+
 def _hash(obj: Any) -> str:
     return hashlib.sha256(
         json.dumps(obj, sort_keys=True, default=str, ensure_ascii=False).encode()
@@ -177,6 +194,12 @@ def analyze_item(
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
     for k, v in sf.items():
         facts[k] = facts.get(k) or v
+    bldg = load_building(cur, item, today)  # 건축물대장: 사용승인·그 층 용도(근생빌라 확정)
+    if bldg:
+        facts.update(
+            villa_by_register=bldg["villa"], floor_uses=bldg["unit_floor_uses"], as_of=today,
+            use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
+        )  # fmt: skip
     redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
     if redev:
         facts["in_redev_zone"] = redev
@@ -224,9 +247,10 @@ def analyze_item(
         "market": market,
         "tenant_count": len(tenants),
         "redev": redev,
+        "building": bldg,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
-               "tenants": tenants, "market": market, "engine": ENGINE_VERSION})  # fmt: skip
+               "tenants": tenants, "market": market, "building": bldg, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),
@@ -251,7 +275,8 @@ def analyze_item(
             for s in sig
         ],
     )
-    for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events))]:
+    for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events)),
+                     ("building", bool(bldg))]:  # fmt: skip
         cur.execute(
             "insert into analysis.item_data_status (item_id, data_kind, status, computed_at) values (%s,%s,%s, now())"
             " on conflict (item_id, data_kind) do update set status = excluded.status, computed_at = now()",

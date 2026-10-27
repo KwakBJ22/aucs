@@ -748,6 +748,48 @@ function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_table"]> }
   );
 }
 
+// 건축물대장(10/27): 사용승인·건물 모양·세대·승강기·주차, 이 층 용도(근생이면 빨강)
+type Bldg = {
+  built: string | null;
+  old: boolean;
+  shape: string | null;
+  extra: string | null;
+  unit: string | null;
+  villa: "confirmed" | "mixed" | "clear" | null;
+};
+function BuildingRows({ g }: { g: Bldg }) {
+  const c = t.bldg;
+  const tone =
+    g.villa === "confirmed" ? "var(--red)" : g.villa === "mixed" ? "var(--orange)" : undefined;
+  return (
+    <>
+      {g.built && (
+        <Row
+          label={c.built}
+          value={<span style={{ color: g.old ? "var(--orange)" : undefined }}>{g.built}</span>}
+        />
+      )}
+      {g.shape && <Row label={c.shape} value={g.shape} />}
+      {g.extra && <Row label="" value={g.extra} />}
+      {g.unit && (
+        <Row
+          label={c.unit}
+          value={
+            <span style={{ color: tone }}>
+              {g.unit}
+              {g.villa === "confirmed"
+                ? ` · ${c.villa}`
+                : g.villa === "mixed"
+                  ? ` · ${c.mixed}`
+                  : ""}
+            </span>
+          }
+        />
+      )}
+    </>
+  );
+}
+
 function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
   if (q.key === "buy")
@@ -761,6 +803,7 @@ function Body({ q, d }: { q: Question; d: ItemDetail }) {
           />
         )}
         {b.is_share && <Row label="" value={<b style={{ color: "var(--red)" }}>{t.share}</b>} />}
+        {b.building && <BuildingRows g={b.building} />}
         {b.redev && (
           <Row
             label={t.redev}

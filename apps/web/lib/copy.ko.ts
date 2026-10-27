@@ -635,6 +635,13 @@ export const copy = {
     name: "내 조건",
   },
   item: {
+    bldg: {
+      built: "건물 나이",
+      shape: "건물",
+      unit: "이 층",
+      villa: "근생빌라(주택 대출·세금 주의)",
+      mixed: "근린생활시설이 섞여 있어요",
+    },
     report: {
       open: "이 값이 틀렸어요",
       label: "어디가 원문과 다른가요?",

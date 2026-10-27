@@ -107,7 +107,21 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.conflict", "high", "자료가 서로 다름", Status.NEEDS_CHECK)
 
     usage_code, usage_text = f.get("usage_code"), f.get("usage_text") or ""
-    if usage_code == "21101" and _HOUSING_WORDS.search(usage_text):
+    # 건축물대장(그 층 용도)이 있으면 그것으로, 없으면 용도 코드로 짐작(10/27)
+    villa = f.get("villa_by_register")
+    if villa == "confirmed":
+        add(
+            "risk.neighborhood_villa", "high",
+            "근생빌라 — 건축물대장에 이 층이 근린생활시설이에요(주택 대출·세금 확인)",
+            Status.CONFIRMED, floor_uses=f.get("floor_uses"),
+        )  # fmt: skip
+    elif villa == "mixed":
+        add(
+            "risk.neighborhood_villa", "mid",
+            "이 층에 근린생활시설이 섞여 있어요 — 이 호의 용도 확인",
+            Status.NEEDS_CHECK, floor_uses=f.get("floor_uses"),
+        )  # fmt: skip
+    elif villa != "clear" and usage_code == "21101" and _HOUSING_WORDS.search(usage_text):
         add("risk.neighborhood_villa", "mid", "근생빌라 의심 — 대출·위반건축물·세금 확인")
     note = f.get("note") or ""
     if m := _SPECIAL_CONDITION.search(note):
