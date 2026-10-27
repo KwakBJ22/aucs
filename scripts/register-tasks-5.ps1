@@ -4,7 +4,7 @@
 $run = Join-Path $PSScriptRoot 'run-job.ps1'
 $tr = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$run`" daily"
 schtasks /Create /TN "\Aucs\아침_묶음" /SC DAILY /ST 07:00 /TR $tr /F | Out-Null
-$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 5)
+$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 5)
 Set-ScheduledTask -TaskPath '\Aucs\' -TaskName '아침_묶음' -Settings $s | Out-Null
 Write-Host "등록: \Aucs\아침_묶음 — 매일 07:00 (꺼져 있었으면 켜질 때)"
 foreach ($t in '매각결과', '물건', '서류보관', '분석', '알림') {

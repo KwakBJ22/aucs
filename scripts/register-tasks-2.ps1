@@ -2,7 +2,7 @@
 # 다시 켜기: Enable-ScheduledTask -TaskPath '\Auction\' -TaskName '실거래가_월간' (정비사업_분기 도 같음)
 $run = Join-Path $PSScriptRoot 'run-job.ps1'
 function Set-Opts($name, $hours) {
-  $s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours $hours)
+  $s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours $hours)
   Set-ScheduledTask -TaskPath '\Aucs\' -TaskName $name -Settings $s | Out-Null
 }
 $tr = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$run`""
