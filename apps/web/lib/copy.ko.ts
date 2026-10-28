@@ -1157,6 +1157,7 @@ export const copy = {
     ],
     review: "확인 기다리는 것",
     reportsTitle: "「틀렸어요」 제보",
+    reportAction: { fixed: "고침", rejected: "안 고침" },
     reviewEmpty: "없어요",
     flags: "자료 공개 설정",
     rules: "기준표",

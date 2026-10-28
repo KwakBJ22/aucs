@@ -80,6 +80,30 @@ def review_queue(limit: int = 50) -> dict[str, Any]:
     return {"fields": fields, "signals": signals, "reports": reports}
 
 
+REPORT_REPLY = {
+    "fixed": ("제보하신 값을 고쳤어요", "알려 주셔서 고맙습니다 · 물건 화면에서 확인해 보세요"),
+    "rejected": ("제보하신 값을 확인했어요", "원문과 대조해 보니 지금 값이 맞아 그대로 두었어요"),
+}
+
+
+def close_report(report_id: int, status: str) -> bool:
+    """「틀렸어요」 제보 처리: 고침(fixed)·안 고침(rejected). 제보한 사람에게 알림 한 통."""
+    title, body = REPORT_REPLY[status]
+    with connect() as c:
+        r = c.execute(
+            """update app.value_reports set status = %s, closed_at = now()
+               where report_id = %s and status = 'open' returning user_id, item_id""",
+            (status, report_id),
+        ).fetchone()
+        if not r:
+            return False
+        c.execute(
+            "insert into app.notifications (user_id, title, body, link) values (%s, %s, %s, %s)",
+            (r["user_id"], title, body, f"/item/{r['item_id']}"),
+        )
+    return True
+
+
 def flags() -> list[dict[str, Any]]:
     with connect() as c:
         return c.execute(

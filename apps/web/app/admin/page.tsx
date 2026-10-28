@@ -150,7 +150,21 @@ export default function AdminPage() {
               {review?.reports?.map((r) => (
                 <li key={r.report_id}>
                   {r.at} · <a href={`/item/${encodeURIComponent(r.item_id)}`}>{r.item_id}</a> ·{" "}
-                  {r.section} · {r.note}
+                  {r.section} · {r.note}{" "}
+                  {(["fixed", "rejected"] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() =>
+                        adminApi
+                          .closeReport(token, r.report_id, st)
+                          .then(() => load(token))
+                          .catch(() => {})
+                      }
+                      style={{ marginLeft: 6, fontSize: 12, padding: "2px 8px" }}
+                    >
+                      {t.reportAction[st]}
+                    </button>
+                  ))}
                 </li>
               ))}
             </ul>

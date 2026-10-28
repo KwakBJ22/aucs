@@ -1,6 +1,6 @@
 """관리자 주소 (ADM-01). 라우터는 서비스만 부릅니다."""
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -23,6 +23,17 @@ def get_status() -> dict[str, Any]:
 @router.get("/review")
 def get_review() -> dict[str, Any]:
     return admin.review_queue()
+
+
+class ReportIn(BaseModel):
+    status: Literal["fixed", "rejected"]
+
+
+@router.put("/reports/{report_id}")
+def put_report(report_id: int, body: ReportIn) -> dict[str, bool]:
+    if not admin.close_report(report_id, body.status):
+        raise HTTPException(status_code=404, detail="없거나 이미 처리한 제보")
+    return {"ok": True}
 
 
 @router.get("/flags")

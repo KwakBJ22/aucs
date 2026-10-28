@@ -53,6 +53,8 @@ export const adminApi = {
   review: (t: string) => call<Review>(t, "/review"),
   flags: (t: string) => call<Flag[]>(t, "/flags"),
   rules: (t: string) => call<RuleRow[]>(t, "/rule-tables"),
+  closeReport: (t: string, id: number, status: "fixed" | "rejected") =>
+    call<{ ok: boolean }>(t, `/reports/${id}`, { method: "PUT", body: JSON.stringify({ status }) }),
   setFlag: (t: string, key: string, enabled: boolean) =>
     call<Flag>(t, `/flags/${key}`, { method: "PUT", body: JSON.stringify({ enabled }) }),
 };
