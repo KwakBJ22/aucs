@@ -94,3 +94,23 @@ def test_result_rate_from_prices() -> None:
     assert p is not None and p["sido"] == "경기도" and p["bidders"] == 13
     assert p["rate_min"] == 112.73 and p["rate_appraisal"] == 67.64
     assert parse_result({"cltrMngNo": "x"}) is None
+
+
+def test_result_code() -> None:
+    from aucs_workers.collectors.onbid import _items, _result_code
+
+    assert _result_code({"response": {"header": {"resultCode": "00", "resultMsg": "OK"}}}) == (
+        "00",
+        "OK",
+    )
+    assert (
+        _result_code({"resultCode": "30", "resultMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"})[0]
+        == "30"
+    )
+    assert (
+        _result_code({"OpenAPI_ServiceResponse": {"cmmMsgHeader": {"returnReasonCode": "30"}}})[0]
+        == "30"
+    )
+    items, total = _items({"response": {"body": {"items": {"item": [{"a": 1}]}, "totalCount": 1}}})
+    assert items == [{"a": 1}] and total == 1
+    assert _items({"resultCode": "00"}) == ([], None)

@@ -6,6 +6,7 @@ Set-Location $root
 New-Item -ItemType Directory -Force -Path "$root\logs" | Out-Null
 $log = "$root\logs\{0}_{1}.log" -f $Job, (Get-Date -Format 'yyyyMMdd_HHmm')
 $env:PYTHONIOENCODING = 'utf-8'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8  # 창에 한글이 깨지지 않게(10/28)
 $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
 if (-not $uv) { $uv = "$env:USERPROFILE\.local\bin\uv.exe" }
 $mod = @{ items = 'aucs_workers.collectors.court_items'; results = 'aucs_workers.collectors.court_results';

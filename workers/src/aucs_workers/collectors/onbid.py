@@ -13,6 +13,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import date, datetime, timedelta
@@ -38,6 +39,16 @@ PRPT_ALL = "0007,0010,0005,0004,0002,0003,0006,0008,0011,0013"
 SIDO = ["서울특별시", "경기도"]
 GAP = 0.3  # 초당 3회쯤
 ROWS = 1000
+
+
+HINT = {
+    "30": "이 API 활용신청이 안 됨 — data.go.kr 에서 신청",
+    "31": "서비스키 기간 만료",
+    "22": "하루 한도 넘음 — 내일 다시",
+    "12": "서비스 없음 — 주소 확인",
+    "11": "필수 칸 빠짐",
+    "_": "활용신청이 안 됐거나 아직 반영 전일 수 있음",
+}
 
 
 class ApiError(Exception):
@@ -69,6 +80,22 @@ def _items(node: Any) -> tuple[list[dict[str, Any]], int | None]:
     return (items or []), total
 
 
+def _result_code(d: Any) -> tuple[str, str]:
+    """응답 어디에 있든 resultCode·resultMsg(공공데이터포털 게이트웨이 오류는 맨 바깥에 옴)."""
+    stack = [d]
+    while stack:
+        n = stack.pop()
+        if isinstance(n, dict):
+            for k in ("resultCode", "returnReasonCode", "errCd"):
+                if k in n and n[k] not in (None, ""):
+                    m = n.get("resultMsg") or n.get("returnAuthMsg") or n.get("errMsg") or ""
+                    return str(n[k]), str(m)
+            stack.extend(v for v in n.values() if isinstance(v, (dict, list)))
+        elif isinstance(n, list):
+            stack.extend(n)
+    return "00", ""
+
+
 def call(
     client: httpx.Client, key: str, path: str, params: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], int]:
@@ -85,7 +112,10 @@ def call(
         if not body:
             raise ApiError("빈 응답 — 활용신청을 확인하세요", "EMPTY")
         if body.startswith("<"):
-            raise ApiError(body[:160], "XML")
+            # 게이트웨이 오류는 JSON 을 달라고 해도 XML 로 옴: <returnReasonCode>30</returnReasonCode> 등
+            m = re.search(r"<(?:returnReasonCode|resultCode)>(\w+)<", body)
+            t = re.search(r"<(?:returnAuthMsg|resultMsg)>([^<]+)<", body)
+            raise ApiError(t.group(1) if t else body[:160], m.group(1) if m else "XML")
         try:
             d = json.loads(body)
         except json.JSONDecodeError:
@@ -94,11 +124,13 @@ def call(
         if "초당" in s or "PER_SECOND" in s or "LIMITED_NUMBER" in s:
             time.sleep(2 * (attempt + 1))
             continue
-        hdr = (d.get("response") or {}).get("header") or d.get("header") or (d.get("result") or {})
-        code = str(hdr.get("resultCode", "00"))
+        code, msg = _result_code(d)
         if code not in ("00", "000", "0"):
-            raise ApiError(str(hdr.get("resultMsg", "오류")), code)
+            raise ApiError(msg or "오류", code)
         items, total = _items(d)
+        if total is None and not items:
+            # 목록도 건수도 없는 응답 = 알아보지 못한 모양(활용신청 전 안내 등). 0건으로 넘기지 않음(10/28)
+            raise ApiError("알 수 없는 응답: " + body[:200], "SHAPE")
         return items, (total if total is not None else len(items))
     raise ApiError("초당 호출 제한이 계속 걸림", "RATE")
 
@@ -281,10 +313,7 @@ def main() -> None:
                 except ApiError as e:
                     conn.rollback()
                     failed.append(j)
-                    print(
-                        f"\n[건너뜀] {j} — {e} (활용신청이 안 됐거나 아직 반영 전일 수 있음)",
-                        flush=True,
-                    )
+                    print(f"\n[건너뜀] {j} — {e} ({HINT.get(e.code, HINT['_'])})", flush=True)
         if failed and len(failed) == len(jobs):
             raise RuntimeError("공매 수집 전부 실패: " + ", ".join(failed))
     if failed:

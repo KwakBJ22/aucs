@@ -34,20 +34,19 @@ rows = duck.execute(
 COLS = (
     "mng_no, opened_at, notice_no, item_seq, kind_name, disposal, usage_l, usage_m, usage_s, title, sido, "
     "land_m2, building_m2, appraisal_krw, min_price_krw, win_krw, failed_round, bidders, invalid_bidders, "
-    "rate_appraisal, rate_min, result"
+    "rate_appraisal, rate_min, result, source"
 )
 with psycopg.connect(os.environ["DATABASE_URL"]) as pg, pg.cursor() as cur:
     cur.execute("create temp table _r (like core.onbid_results including defaults) on commit drop")
     with cur.copy(f"copy _r ({COLS}) from stdin") as cp:
         for r in rows:
-            cp.write_row(r)
+            cp.write_row((*r, SOURCE))
     # 개찰일시는 한국 시각으로 적혀 있음
     cur.execute(
-        "update _r set opened_at = (opened_at at time zone 'UTC') at time zone 'Asia/Seoul', source = %s",
-        (SOURCE,),
+        "update _r set opened_at = (opened_at at time zone 'UTC') at time zone 'Asia/Seoul'"
     )
     cur.execute(
-        f"insert into core.onbid_results ({COLS}, source) select {COLS}, source from _r "
+        f"insert into core.onbid_results ({COLS}) select {COLS} from _r "
         "on conflict (mng_no, opened_at, notice_no) do nothing"
     )
     n = cur.rowcount
