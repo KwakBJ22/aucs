@@ -376,6 +376,13 @@ export function CalcBox({ id }: { id: string }) {
             >
               {copy.bidDay.toSheet} ›
             </Link>
+            <Link
+              href={`/item/${encodeURIComponent(id)}/report?bid=${s.bid_krw}`}
+              className="chip gray"
+              style={{ minHeight: 36, marginTop: 10, marginLeft: 6, display: "inline-flex" }}
+            >
+              {copy.report.open} ›
+            </Link>
             <MockForm id={id} bid={s.bid_krw} />
           </div>
         </>

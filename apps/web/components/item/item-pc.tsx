@@ -167,9 +167,9 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
           <Link href="/pro/market" className="pc-act">
             {t.pc.market}
           </Link>
-          <button className="pc-act" onClick={() => window.print()}>
-            {t.pc.print}
-          </button>
+          <Link href={`/item/${id}/report`} className="pc-act">
+            {copy.report.open}
+          </Link>
           <div className="sub" style={{ fontSize: 12 }}>
             {t.pc.basis(d.computed_at ? d.computed_at.slice(0, 16).replace("T", " ") : "-")}
           </div>

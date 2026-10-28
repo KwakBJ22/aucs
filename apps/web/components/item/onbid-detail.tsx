@@ -307,6 +307,13 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
         <button className="btn" onClick={copyNo} style={{ flex: 1 }}>
           {copied ? t.copied : t.copyNo}
         </button>
+        <Link
+          className="btn"
+          href={`/item/${encodeURIComponent(d.item_id)}/report`}
+          style={{ flex: 1 }}
+        >
+          {copy.report.open}
+        </Link>
         {d.bid_end && (d.d_day ?? -1) >= 0 && (
           <Link
             className="btn primary"
