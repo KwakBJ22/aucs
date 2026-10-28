@@ -14,6 +14,7 @@ import {
   type FindStatus,
   type ItemList,
   type ResultCard,
+  type Source,
 } from "@/lib/api/items";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
@@ -26,6 +27,7 @@ const t = copy.find;
 const KEY_STATUS = "aucs_find_status";
 const KEY_RECENT = "aucs_recent_q";
 const KEY_FILTER = "aucs_find_filter";
+const KEY_SOURCE = "aucs_find_source"; // 전체·경매·공매(10/28) — 기본은 함께 보기
 function load(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -72,6 +74,7 @@ export default function Find() {
   const router = useRouter();
   const [sort, setSort] = useState<"deadline" | "rate">("deadline");
   const [status, setStatus] = useState<FindStatus>("active");
+  const [source, setSource] = useState<Source>("all");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState(""); // 실제로 찾는 말 (입력 멈춘 뒤)
   const [focus, setFocus] = useState(false);
@@ -92,6 +95,8 @@ export default function Find() {
   useEffect(() => {
     const s = load(KEY_STATUS);
     if (s === "active" || s === "sold" || s === "withdrawn" || s === "all") setStatus(s);
+    const src = load(KEY_SOURCE);
+    if (src === "court" || src === "onbid") setSource(src);
     try {
       setFilter(JSON.parse(load(KEY_FILTER) ?? "{}") as FindFilter);
     } catch {
@@ -124,6 +129,7 @@ export default function Find() {
       q: query || undefined,
       status,
       filter,
+      source,
     })
       .then((r) => {
         if (stale) return;
@@ -141,7 +147,7 @@ export default function Find() {
     return () => {
       stale = true;
     };
-  }, [sort, status, query, filter, prefsReady, tries]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sort, status, source, query, filter, prefsReady, tries]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeFilter = (f: FindFilter) => {
     setFilter(f);
@@ -168,6 +174,10 @@ export default function Find() {
   const pickStatus = (s: FindStatus) => {
     setStatus(s);
     save(KEY_STATUS, s);
+  };
+  const pickSource = (s: Source) => {
+    setSource(s);
+    save(KEY_SOURCE, s);
   };
   const empty = list && list.items.length === 0 && !(list.results ?? []).length;
 
@@ -259,6 +269,15 @@ export default function Find() {
           </div>
         )}
       </div>
+      {status !== "sold" && status !== "withdrawn" && (
+        <div className="pills" role="group" aria-label={t.sourceLabel} style={{ marginTop: 10 }}>
+          {(["all", "court", "onbid"] as const).map((s) => (
+            <button key={s} className={source === s ? "on" : ""} onClick={() => pickSource(s)}>
+              {t.source[s]}
+            </button>
+          ))}
+        </div>
+      )}
       {!query && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
           {regions.map((r) => (

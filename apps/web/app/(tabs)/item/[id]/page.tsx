@@ -6,7 +6,13 @@ import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
 import { isNotFound } from "@/lib/api/client";
-import { fetchItem, type DocKind, type ItemDetail } from "@/lib/api/items";
+import {
+  fetchItem,
+  isOnbid,
+  type DocKind,
+  type ItemDetail,
+  type OnbidDetail,
+} from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { rememberItem } from "@/lib/recent";
@@ -18,6 +24,7 @@ import { WsLink } from "@/components/item/actions";
 import { Body } from "@/components/item/body";
 import { answerOf } from "@/components/item/checklist";
 import { DocSheet } from "@/components/item/doc-sheet";
+import { OnbidItem } from "@/components/item/onbid-detail";
 import { ItemPc } from "@/components/item/item-pc";
 import { RegCtx, useMyRegistry } from "@/components/item/registry";
 import { t, DOT, DocCtx } from "@/components/item/shared";
@@ -40,7 +47,7 @@ export default function Item() {
         track("item_view", x.item_id);
         rememberItem(
           x.item_id,
-          `${x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,
+          `${isOnbid(x) ? "공매" : x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,
         );
       })
       .catch((e: unknown) => (isNotFound(e) ? setD(null) : setFailed(true)));
@@ -70,6 +77,7 @@ export default function Item() {
         </p>
       </main>
     );
+  if (isOnbid(d)) return <OnbidItem d={d as unknown as OnbidDetail} />; // 공매(10/28)
   const urgent = d.d_day != null && d.d_day <= 7;
   if (pc)
     return (

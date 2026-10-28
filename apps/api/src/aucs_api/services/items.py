@@ -40,6 +40,7 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
     ]
     return {
         "item_id": r["item_id"],
+        "source": "court",
         "court": COURT_NAME.get(r["court_code"], r["court_code"]),
         "case_no": r["case_no"],
         "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
@@ -161,9 +162,71 @@ def list_items(
     today: date,
     q: str | None = None,
     extra: dict[str, Any] | None = None,
+    source: str = "all",
 ) -> dict[str, Any]:
+    """진행 중 물건. source: all(경매·공매 함께, 기본) · court · onbid (10/28 공매)."""
+    from aucs_api.services import onbid
+
+    queries: list[tuple[str, dict[str, Any]]] = []
+    if source in ("all", "court"):
+        queries += _court_query(sigungu, max_cash, sort, limit, today, q, extra)
+    oq = (
+        onbid.build_query(sigungu=sigungu, max_cash=max_cash, q=q, extra=extra, today=today)
+        if source in ("all", "onbid")
+        else None
+    )
+    if oq:
+        osql, op = oq
+        op["limit"] = limit
+        queries += [
+            (
+                osql
+                + f" order by {onbid.ORDER.get(sort, onbid.ORDER['deadline'])} limit %(limit)s",
+                op,
+            ),
+            ("select count(*) as n from (" + osql + ") q", op),
+        ]
+    if not queries:
+        return {"total": 0, "items": [], "exact_item_id": None}
+    with connect() as c:
+        res = batch(c, queries)
+    court_items: list[dict[str, Any]] = []
+    onbid_items: list[dict[str, Any]] = []
+    total = 0
+    i = 0
+    if source in ("all", "court"):
+        court_items = [card(r, today) for r in res[0].fetchall()]
+        total += (res[1].fetchone() or {"n": 0})["n"]
+        i = 2
+    if oq:
+        onbid_items = [onbid.onbid_card(r, today) for r in res[i].fetchall()]
+        total += (res[i + 1].fetchone() or {"n": 0})["n"]
+    items = onbid.merge(court_items, onbid_items, sort, limit)
+    pq = parse_query(q)
+    exact = None
+    if (
+        len(items) == 1
+        and pq is not None
+        and (pq["kind"] == "case" or items[0]["source"] == "onbid")
+    ):
+        exact = items[0]["item_id"]
+    return {"total": total, "items": items, "exact_item_id": exact}
+
+
+def _court_query(
+    sigungu: list[str],
+    max_cash: int | None,
+    sort: str,
+    limit: int,
+    today: date,
+    q: str | None,
+    extra: dict[str, Any] | None,
+) -> list[tuple[str, dict[str, Any]]]:
+    """경매 물건 목록 SQL 과 건수 SQL. 공매 물건관리번호 검색이면 빈 목록."""
     from aucs_api.services.pro import build_where  # 찾기 조건(FIND-03)은 전문가 표와 같은 규칙
 
+    if q and re.fullmatch(r"\d{4}-\d{4,5}-\d{3,6}", re.sub(r"\s+", "", q)):
+        return []
     sql = _CARD_SQL
     params: dict[str, Any] = {"today": today, "limit": limit}
     if extra and any(v not in (None, []) for v in extra.values()):
@@ -187,12 +250,7 @@ def list_items(
     }
     count_sql = "select count(*) as n from (" + sql + ") q"
     sql += f" order by {order.get(sort, order['deadline'])} limit %(limit)s"
-    with connect() as c:
-        q_rows, q_total = batch(c, [(sql, params), (count_sql, params)])
-        rows, total = q_rows.fetchall(), q_total.fetchone()
-    items = [card(r, today) for r in rows]
-    exact = items[0]["item_id"] if pq and pq["kind"] == "case" and len(items) == 1 else None
-    return {"total": total["n"] if total else 0, "items": items, "exact_item_id": exact}
+    return [(sql, params), (count_sql, params)]
 
 
 def regions() -> list[dict[str, Any]]:

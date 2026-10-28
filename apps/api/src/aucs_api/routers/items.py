@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from aucs_api.services import docs, item_calc, item_detail, items
+from aucs_api.services import docs, item_calc, item_detail, items, onbid_detail
 
 router = APIRouter()
 
@@ -26,6 +26,7 @@ def get_items(
     area_min: Annotated[float | None, Query(ge=0)] = None,
     area_max: Annotated[float | None, Query(ge=0)] = None,
     price_max: Annotated[int | None, Query(ge=0)] = None,
+    source: Annotated[str, Query(pattern="^(all|court|onbid)$")] = "all",
 ) -> dict[str, Any]:
     """진행 중 물건(items)과 끝난 사건(results). status 에 따라 한쪽 또는 둘 다."""
     out: dict[str, Any] = {"total": 0, "items": [], "results": [], "exact_item_id": None}
@@ -34,6 +35,7 @@ def get_items(
             sigungu=sigungu or [], max_cash=max_cash, sort=sort, limit=limit, today=date.today(), q=q,
             extra={"usage": usage, "exclude": exclude, "failed_min": failed_min, "rate_max": rate_max,
                    "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max},
+            source=source,
         ))  # fmt: skip
     if status != "active":
         out.update(items.search_results(q=q, status=status, sigungu=sigungu or [], limit=limit))
@@ -47,6 +49,11 @@ def get_regions() -> list[dict[str, Any]]:
 
 @router.get("/items/{item_id}")
 def get_item(item_id: str) -> dict[str, Any]:
+    if item_id.startswith("OB-"):  # 공매(온비드) — 10/28
+        d = onbid_detail.detail(item_id, date.today())
+        if not d:
+            raise HTTPException(404, "물건을 찾을 수 없어요")
+        return d
     d = item_detail.detail(item_id, date.today())
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")

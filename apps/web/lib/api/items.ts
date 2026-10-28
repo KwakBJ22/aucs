@@ -33,8 +33,14 @@ export type BidCheck = {
   resale: boolean;
   tips: string[];
 };
+export type Source = "all" | "court" | "onbid";
 export type ItemCard = {
   item_id: string;
+  source?: "court" | "onbid"; // 공매(온비드)는 경매와 같은 카드 + 아래 칸(10/28)
+  kind?: string;
+  kind_name?: string;
+  bid_end?: string | null;
+  next_round?: { min_price_krw: number; bid_end: string | null } | null;
   court: string;
   case_no: string;
   sale_date: string | null;
@@ -99,6 +105,7 @@ export function fetchItems(opts: {
   q?: string;
   status?: FindStatus;
   filter?: FindFilter;
+  source?: Source;
 }): Promise<ItemList> {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(opts.filter ?? {})) {
@@ -108,6 +115,7 @@ export function fetchItems(opts: {
   }
   if (opts.q) q.set("q", opts.q);
   if (opts.status) q.set("status", opts.status);
+  if (opts.source && opts.source !== "all") q.set("source", opts.source);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
   if (opts.sort) q.set("sort", opts.sort);
@@ -146,6 +154,57 @@ export type ItemDetail = ItemCard & {
 };
 
 export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
+
+// 공매 상세(10/28, 설계서 4절) — /items/OB-… 이 돌려줌
+export type OnbidRound = {
+  label: "지난" | "이번" | "다음";
+  bid_start?: string | null;
+  bid_end: string | null;
+  open_at: string | null;
+  min_price_krw: number | null;
+  rate: number | null;
+  result: string | null;
+};
+export type OnbidExpected = {
+  bucket: string;
+  n: number;
+  share: number | null;
+  p25: number | null;
+  p50: number | null;
+  p75: number | null;
+  price_krw: number | null;
+};
+export type OnbidDetail = ItemCard & {
+  source: "onbid";
+  title: string | null;
+  address: string | null;
+  bid_start: string | null;
+  open_at: string | null;
+  status_name: string | null;
+  gone: boolean;
+  notice: { no: string | null; date: string | null; name: string | null; org: string | null };
+  verdict: string;
+  fatal: string | null;
+  warnings: string[];
+  missing_docs: string[];
+  rounds: OnbidRound[];
+  wait_line: string | null;
+  market: {
+    price_krw: number;
+    lo_krw: number;
+    hi_krw: number;
+    n: number;
+    recent: { date: string; floor: number | null; price_krw: number }[];
+  } | null;
+  market_rate: number | null;
+  appraisal_vs_market: number | null;
+  expected: OnbidExpected[];
+  expected_basis: string;
+  checklist: { key: string; label: string; state: string; what: string }[];
+  check_left: number;
+  computed_at: string;
+};
+export const isOnbid = (d: { source?: string }): boolean => d.source === "onbid";
 
 // DOC-01 원문 보기
 export type DocKind = "status_report" | "deliveries" | "spec_sheet";

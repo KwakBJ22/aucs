@@ -23,6 +23,7 @@ export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mine, setMine] = useState<ItemList | null>(null);
+  const [onbidSoon, setOnbidSoon] = useState<ItemList | null>(null); // 이번 주 마감 공매(10/28)
   const { session } = useSession();
   const token = session?.access_token ?? null;
   const [alertMsg, setAlertMsg] = useState("");
@@ -99,11 +100,23 @@ export default function Home() {
     fetchItems({ sigungu: p.regions, maxCash: p.cash, limit: 20 })
       .then(setMine)
       .catch(() => setFailed(true));
+    fetchItems({
+      sigungu: p.regions,
+      maxCash: p.cash,
+      limit: 5,
+      source: "onbid",
+      filter: { days_max: 3 },
+    })
+      .then(setOnbidSoon)
+      .catch(() => setOnbidSoon(null)); // 공매가 안 와도 홈은 그대로
   }, [router, tries]);
 
   if (!profile) return null;
   const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
-  const closing = (shown?.items ?? []).filter((c) => c.d_day != null && c.d_day <= 7).slice(0, 2);
+  const closing = (shown?.items ?? [])
+    .filter((c) => c.source !== "onbid" && c.d_day != null && c.d_day <= 7)
+    .slice(0, 2);
+  const onbidClosing = (onbidSoon?.items ?? []).filter((c) => !dropped.has(c.item_id)).slice(0, 4);
   const summary = [
     profile.regions.join("·"),
     profile.cash ? `현금 ${won(profile.cash)}` : null,
@@ -243,44 +256,83 @@ export default function Home() {
     </section>
   );
 
+  const smallCard = (c: (typeof closing)[number]) => (
+    <Link
+      key={c.item_id}
+      href={`/item/${encodeURIComponent(c.item_id)}`}
+      style={{
+        border: "1px solid var(--line)",
+        borderRadius: 14,
+        padding: 12,
+        color: "inherit",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: "var(--red)",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <span>
+          {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
+        </span>
+        {c.source === "onbid" && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "1px 6px",
+              borderRadius: 5,
+              border: "1px solid var(--text)",
+              color: "var(--text)",
+            }}
+          >
+            {c.kind === "trust" ? copy.card.trust : copy.card.onbid}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>{c.place}</div>
+      <div
+        className="sub"
+        style={{
+          fontSize: 12,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {c.building ?? c.usage}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{won(c.min_price_krw)}</div>
+      <div className="sub" style={{ fontSize: 12 }}>
+        {copy.card.ofAppraisal} {c.min_rate}%
+      </div>
+    </Link>
+  );
   const closingBlock = closing.length > 0 && (
     <section className="section">
       <h2 style={{ marginBottom: 12 }}>{t.closing}</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-        {closing.map((c) => (
-          <Link
-            key={c.item_id}
-            href={`/item/${encodeURIComponent(c.item_id)}`}
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 14,
-              padding: 12,
-              color: "inherit",
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--red)" }}>
-              {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>{c.place}</div>
-            <div
-              className="sub"
-              style={{
-                fontSize: 12,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {c.building ?? c.usage}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>
-              {won(c.min_price_krw)}
-            </div>
-            <div className="sub" style={{ fontSize: 12 }}>
-              {copy.card.ofAppraisal} {c.min_rate}%
-            </div>
-          </Link>
-        ))}
+        {closing.map(smallCard)}
+      </div>
+    </section>
+  );
+  const onbidBlock = onbidClosing.length > 0 && (
+    <section className="section">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2 style={{ marginBottom: 12 }}>{t.onbidClosing}</h2>
+        <Link href="/find" className="sub" style={{ fontSize: 13 }}>
+          {t.onbidAll}
+        </Link>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+        {onbidClosing.map(smallCard)}
+      </div>
+      <div className="sub" style={{ fontSize: 12, marginTop: 10 }}>
+        {t.onbidClosingSub}
       </div>
     </section>
   );
@@ -450,6 +502,7 @@ export default function Home() {
               </section>
             )}
             {closingBlock}
+            {onbidBlock}
             {whyBlock}
           </div>
         </div>
@@ -464,6 +517,7 @@ export default function Home() {
       {changesBlock}
       {todayBlock}
       {closingBlock}
+      {onbidBlock}
       {forMeBlock}
       {whyBlock}
       {!token && (

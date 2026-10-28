@@ -121,6 +121,17 @@ button {
   background: var(--orange-soft);
   color: var(--orange);
 }
+.chip.blue {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.note.blue {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  line-height: 1.5;
+}
 .fatal {
   margin-top: 6px;
   padding: 5px 8px;
