@@ -21,6 +21,20 @@ def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:
     """입찰표 점검(BID-01). 재매각이면 보증금 20%로 봅니다(법원 공고로 확인)."""
     from aucs_rules.bid_form_check import check
 
+    if item_id.startswith(
+        "OB-"
+    ):  # 공매: 온비드 입찰서 — 보증금 최저가 10%(공고에 따로 있으면 공고 값)
+        with connect() as c:
+            o = c.execute(
+                "select min_price_krw from core.onbid_items where item_id = %s and display_policy = 'public'",
+                (item_id,),
+            ).fetchone()
+        if not o or not o["min_price_krw"]:
+            return None
+        res = check(bid_krw, o["min_price_krw"])
+        tips = ["온비드 입찰서의 금액을 한 번 더 소리 내 읽기", "물건관리번호가 맞는지 확인"]
+        return {**res.value, "tips": tips, "status": str(res.status)}
+
     with connect() as c:
         r = c.execute(
             "select min_price_krw, note_masked from core.items where item_id = %s and display_policy = 'public'",

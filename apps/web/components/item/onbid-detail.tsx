@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { Row } from "@/components/calc-box";
@@ -347,16 +348,25 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
         <button className="btn" onClick={copyNo} style={{ flex: 1 }}>
           {copied ? t.copied : t.copyNo}
         </button>
-        <a
-          className="btn primary"
-          href={t.onbidUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{ flex: 1 }}
-        >
-          {t.openOnbid}
-        </a>
+        {d.bid_end && (d.d_day ?? -1) >= 0 && (
+          <Link
+            className="btn primary"
+            href={`/item/${encodeURIComponent(d.item_id)}/onbid-bid`}
+            style={{ flex: 1 }}
+          >
+            {copy.onbidBid.title}
+          </Link>
+        )}
       </section>
+      <a
+        className="sub"
+        href={t.onbidUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: "block", textAlign: "center", fontSize: 13, padding: "4px 0 12px" }}
+      >
+        {t.openOnbid}
+      </a>
       <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
         {t.footer(d.computed_at.slice(0, 10))}
       </p>

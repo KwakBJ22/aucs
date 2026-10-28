@@ -134,6 +134,32 @@ export const copy = {
     nextRound: (x: string) => `다음 회차 ${x}`,
     noNextRound: "다음 회차는 아직 공고 전이에요",
   },
+  onbidBid: {
+    title: "온비드 입찰 준비",
+    closesAt: (x: string) => `${x} 마감`,
+    left: (d: string, n: number) =>
+      n < 0 ? "입찰이 끝났어요" : n === 0 ? "오늘 입찰 마감이에요" : `입찰 마감까지 ${n}일`,
+    readyTitle: "준비물",
+    ready: [
+      "온비드 회원가입 · 공동인증서 등록",
+      (x: string) => `입찰보증금 ${x} 넣을 내 계좌`,
+      "입찰가 정하기",
+    ] as const,
+    bidTitle: "내 입찰가",
+    bidLabel: "입찰가 (만 원)",
+    man: "만 원",
+    bidNote: "혼자 들어갈 때의 가운데값으로 넣어 뒀어요 · 바꿔서 확인해 보세요",
+    stepsTitle: "입찰 순서",
+    steps: [
+      "온비드에 공동인증서로 로그인",
+      "물건관리번호로 찾기",
+      "입찰서 내기 · 입찰가 다시 확인",
+      "안내받은 계좌로 보증금 넣기 · 마감 전까지",
+      "개찰 다음 날 옥스가 결과를 알려 드려요",
+    ],
+    go: "온비드에서 입찰하기 ›",
+    foot: "입찰은 온비드에서 직접 해요 · 옥스는 입찰을 대신하지 않아요",
+  },
   onbid: {
     badge: (k: string) => `공매 · ${k}`,
     period: (a: string, b: string) => `입찰 ${a} ~ ${b}`,
