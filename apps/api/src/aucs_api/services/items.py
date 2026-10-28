@@ -23,6 +23,7 @@ from core.items i
 join core.cases c using (case_id)
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.display_policy = 'public' and i.sale_date >= %(today)s
+  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'  -- 부동산만(10/28)
   and i.status_code is distinct from 'gone'  -- 법원 목록에서 빠진 물건
   and a.result is not null  -- 분석이 끝난 물건만 손님에게 보임(10/18 대표님)
 """
@@ -116,7 +117,9 @@ def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int
     pq = parse_query(q)
     params: dict[str, Any] = {"limit": limit}
     kinds = RESULT_GROUPS.get(status)
-    where = "s.display_policy = 'public'"
+    where = (
+        "s.display_policy = 'public' and coalesce(s.usage_name, '') !~ '자동차|중기|선박|항공기'"
+    )
     if kinds:
         where += " and s.result = any(%(kinds)s)"
         params["kinds"] = list(kinds)

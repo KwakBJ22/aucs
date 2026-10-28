@@ -47,6 +47,7 @@ from core.items i
 join core.cases c using (case_id)
 left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.display_policy = 'public' and i.sale_date >= %(today)s
+  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'
   and i.status_code is distinct from 'gone' and a.result is not null
 """
 

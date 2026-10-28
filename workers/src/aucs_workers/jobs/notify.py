@@ -99,7 +99,10 @@ EXCLUDE_RULES = {
 
 def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """찾기 화면과 같은 기준(시군구, 최저가/10 ≤ 현금, 찾기 조건 칸, 피하고 싶은 것)."""
-    sql = "i.sale_date >= current_date and i.status_code is distinct from 'gone'"
+    sql = (
+        "i.sale_date >= current_date and i.status_code is distinct from 'gone'"
+        " and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'"
+    )
     p: dict[str, Any] = {}
     if filters.get("sigungu"):
         sql += " and i.sigungu = any(%(sigungu)s)"
