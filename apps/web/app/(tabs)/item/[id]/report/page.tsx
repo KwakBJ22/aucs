@@ -70,7 +70,7 @@ function Report() {
       ]
     : d.questions.map((q) => [q.title, q.answer]);
   const risks: string[] = ob
-    ? d.warnings
+    ? d.warnings.filter((w) => w !== d.fatal)
     : (d.failure_table ?? [])
         .filter((r) => r.state !== "신호 없음")
         .map((r) => `${r.state === "걸림" ? "●" : "○"} ${r.title} — ${r.why}`);
