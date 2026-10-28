@@ -173,6 +173,27 @@ def test_build_calc_cases_and_cap():
     )
 
 
+def test_build_calc_onbid_lawsuit():
+    from aucs_api.services.item_calc import build_calc
+
+    tables = {
+        "regulated_areas": {"seoul_all": True, "gyeonggi": []},
+        "loan_ltv": {"regulated": {"none": 40, "first_time": 70, "owner": 0}, "metro": {"none": 70, "first_time": 70, "owner": 0},
+                     "other": {"none": 70, "first_time": 80, "owner": 60},
+                     "caps_regulated": [[1_500_000_000, 600_000_000], [None, 200_000_000]], "cap_metro_krw": 600_000_000},
+        "acquisition_tax": {"heavy": {"regulated": {"2": 8.0, "3": 12.0}, "other": {"3": 8.0}}, "edu_rate_of_basic": 10,
+                            "edu_heavy": 0.4, "farm_over85": {"basic": 0.2, "8": 0.6, "12": 1.0}},
+        "move_out_repair": {"move_out": {"min_krw": [1_500_000, 3_000_000], "per_pyeong_krw": [50_000, 150_000],
+                                         "no_elevator_add_pct": 30, "no_elevator_from_floor": 3},
+                            "repair": {"bands": [[999, [600_000, 1_000_000]]], "unknown": [100_000, 600_000]}},
+    }  # fmt: skip
+    r = full(sido="서울특별시", address="서울 관악구", building_area_m2=30, sale_rate=None, new_item=True)
+    base = build_calc(r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None)
+    ob = build_calc(r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None, extra_move_krw=5_000_000)
+    assert ob["move_out"]["mid_krw"] == base["move_out"]["mid_krw"] + 5_000_000
+    assert ob["selected"]["cash_krw"] == base["selected"]["cash_krw"] + 5_000_000
+
+
 def test_not_analyzed_says_pending():
     d = build_detail(full(computed_at=None), [], [], [], None, TODAY, [])
     assert d["analyzed"] is False and d["verdict"] == "오늘 오후 분석이 끝나면 보여요"

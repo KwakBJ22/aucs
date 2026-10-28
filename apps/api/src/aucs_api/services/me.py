@@ -457,9 +457,17 @@ def compare_full(uid: str, homes: int, first: bool, today: Any) -> dict[str, Any
     base = compare_get(uid)
 
     def one(item_id: str) -> dict[str, Any]:
-        if item_id.startswith("OB-"):  # 공매: 상세는 공매 것, 입찰가 계산은 아직 경매만
-            return {"id": item_id, "d": onbid_detail.detail(item_id, today), "calc": None,
-                    "w": workspace(uid, item_id, today)}  # fmt: skip
+        if item_id.startswith(
+            "OB-"
+        ):  # 공매: 상세는 공매 것, 계산은 공매 기준(item_calc.onbid_calc)
+            return {
+                "id": item_id,
+                "d": onbid_detail.detail(item_id, today),
+                "calc": item_calc.calc(
+                    item_id, bid_krw=None, homes=homes, first_time=first, loan_krw=None
+                ),
+                "w": workspace(uid, item_id, today),
+            }
         return {
             "id": item_id,
             "d": item_detail.detail(item_id, today),

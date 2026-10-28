@@ -105,6 +105,7 @@ def build_calc(
     r: dict[str, Any],
     tables: dict[str, Any],
     *,
+    extra_move_krw: int = 0,
     bid_krw: int | None,
     homes: int,
     first_time: bool,
@@ -132,6 +133,9 @@ def build_calc(
         else None
     )
     repair = repair_cost(area, age_years=b.get("age_years"), table=mr) if mr else None
+    if move and extra_move_krw:  # 공매: 인도명령이 없어 명도소송 비용을 더함
+        move = {**move, "low_krw": move["low_krw"] + extra_move_krw, "high_krw": move["high_krw"] + extra_move_krw,
+                "mid_krw": move["mid_krw"] + extra_move_krw, "lawsuit_krw": extra_move_krw}  # fmt: skip
     common = {
         "min_price_krw": mn, "appraisal_krw": app, "market_krw": mkt, "area_m2": area, "cls": cls,
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
@@ -169,6 +173,50 @@ def build_calc(
     }
 
 
+_ONBID_CALC_SQL = """
+select item_id, sido, address, title, usage_name, region_code, lot_no, appraisal_krw, min_price_krw,
+       coalesce(building_m2, land_m2) as building_area_m2, failed_count
+from core.onbid_items where item_id = %s and display_policy = 'public'
+"""
+ONBID_LAWSUIT_KRW = (
+    3_000_000,
+    7_000_000,
+)  # 명도소송·집행 대략(기준표에 onbid_lawsuit_krw 가 있으면 그 값) [추정]
+
+
+def onbid_calc(item_id: str, *, bid_krw: int | None, homes: int, first_time: bool, loan_krw: int | None,
+               selling: bool = False, income_krw: int | None = None, other_monthly_krw: int = 0,
+               ) -> dict[str, Any] | None:  # fmt: skip
+    """공매 「얼마가 드나」: 경매와 같은 세금·대출 계산, 기본 입찰가는 「혼자면」 예상가, 명도는 소송 비용을 더함."""
+    from aucs_api.services import onbid_detail
+
+    today = date.today()
+    with connect() as c:
+        r = c.execute(_ONBID_CALC_SQL, (item_id,)).fetchone()
+        if not r or not r["min_price_krw"]:
+            return None
+        tables = {}
+        for k in _TABLE_KEYS:
+            row = c.execute(
+                "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
+                "order by valid_from desc limit 1",
+                (k,),
+            ).fetchone()
+            tables[k] = _one(row)["value"]
+        bldg = onbid_detail.building_summary(c, r, today)
+    d = onbid_detail.detail(item_id, today) or {}
+    solo = next((e for e in d.get("expected") or [] if e.get("bucket") == "혼자"), None)
+    row = {**r, "note_masked": None, "sale_rate": None, "signals": [], "new_item": True,
+           "building": bldg, "market": d.get("market")}  # fmt: skip
+    lo, hi = (tables.get("move_out_repair") or {}).get("onbid_lawsuit_krw") or ONBID_LAWSUIT_KRW
+    out = build_calc(
+        row, tables, bid_krw=bid_krw or (solo or {}).get("price_krw"), homes=homes, first_time=first_time,
+        loan_krw=loan_krw, selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
+        extra_move_krw=int((lo + hi) / 2),
+    )  # fmt: skip
+    return {**out, "onbid": True}
+
+
 @memo()
 def calc(
     item_id: str,
@@ -181,6 +229,11 @@ def calc(
     income_krw: int | None = None,
     other_monthly_krw: int = 0,
 ) -> dict[str, Any] | None:
+    if item_id.startswith("OB-"):
+        return onbid_calc(
+            item_id, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
+            selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
+        )  # fmt: skip
     with connect() as c:
         qs = batch(
             c,

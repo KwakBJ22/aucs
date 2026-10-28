@@ -141,8 +141,8 @@ def market_of(
     }
 
 
-def building_of(c: Any, r: dict[str, Any], today: date) -> dict[str, Any] | None:
-    """건축물대장(collectors/buildings 가 공매 물건도 받음) → 「무엇을 사나」 줄."""
+def building_summary(c: Any, r: dict[str, Any], today: date) -> dict[str, Any] | None:
+    """건축물대장(collectors/buildings 가 공매 물건도 받음) → 요약(층·승강기·연식 등)."""
     p = parse_jibun(r["lot_no"])
     if not p or not r["region_code"]:
         return None
@@ -153,9 +153,12 @@ def building_of(c: Any, r: dict[str, Any], today: date) -> dict[str, Any] | None
     titles = [x["data"] for x in rows if x["kind"] == "title"]
     floors = [x["data"] for x in rows if x["kind"] == "floor"]
     addr = r["address"] or r["title"]
-    return building_lines(
-        summarize(titles, floors, addr, f"{r['usage_name'] or ''} {r['title'] or ''}", today)
-    )
+    return summarize(titles, floors, addr, f"{r['usage_name'] or ''} {r['title'] or ''}", today)
+
+
+def building_of(c: Any, r: dict[str, Any], today: date) -> dict[str, Any] | None:
+    """「무엇을 사나」 건물 줄."""
+    return building_lines(building_summary(c, r, today))
 
 
 def checklist(kind: str) -> list[dict[str, Any]]:
