@@ -215,6 +215,15 @@ export type OnbidDetail = ItemCard & {
   building?: import("@/components/item/building").Bldg | null;
   computed_at: string;
 };
+export type OnbidNotice = {
+  item_id: string;
+  mng_no: string;
+  title: string | null;
+  kind_name: string | null;
+  rows: { label: string; value: string }[];
+};
+export const fetchNotice = (id: string) =>
+  getJson<OnbidNotice>(`/items/${encodeURIComponent(id)}/notice`);
 export const isOnbid = (d: { source?: string }): d is OnbidDetail => d.source === "onbid";
 
 // DOC-01 원문 보기

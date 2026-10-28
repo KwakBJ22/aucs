@@ -255,3 +255,57 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         "deposit_krw": mn // 10 if mn else None,
         "computed_at": datetime.now(KST).isoformat(timespec="minutes"),
     }
+
+
+_NOTICE_SQL = """
+select o.item_id, o.mng_no, o.notice_no, o.title, o.kind, o.kind_name,
+       (select payload from raw.onbid_raw r where r.kind = 'item' and r.key like o.mng_no || '|%%'
+        order by r.fetched_at desc limit 1) as item,
+       (select payload from raw.onbid_raw r where r.kind = 'notice' and r.key = o.notice_no) as notice
+from core.onbid_items o where o.item_id = %s and o.display_policy = 'public'
+"""
+_YN = {"Y": "돼요", "N": "안 돼요"}
+
+
+def _ymd(v: Any) -> str | None:
+    s = str(v or "")
+    return f"{s[:4]}-{s[4:6]}-{s[6:8]}" if len(s) >= 8 and s[:4] not in ("2999", "9999") else None
+
+
+def notice_rows(item: dict[str, Any], notice: dict[str, Any]) -> list[dict[str, str]]:
+    """공고문 보기(GM-01) 줄 — 온비드가 준 칸만, 없으면 줄을 뺌. (순수 함수)"""
+    i, n = item or {}, notice or {}
+    how = " · ".join(
+        x for x in (i.get("bidDivNm") or n.get("bidDivNm"), i.get("cptnMthodNm"), i.get("bidMthodNm"),
+                    i.get("totalamtUnpcDivNm")) if x
+    )  # fmt: skip
+    rows = [
+        ("공고명", n.get("onbidPbancNm")),
+        ("공고 종류", n.get("pbancKindNm")),
+        ("공고일", _ymd(n.get("pbancYmd"))),
+        ("공고 번호", n.get("pbancMngNo")),
+        ("파는 곳", i.get("orgNm") or n.get("orgNm")),
+        ("맡긴 기관", i.get("rqstOrgNm")),
+        ("담당", n.get("rspbSbrNm")),
+        ("입찰 방식", how or None),
+        ("공동 입찰", _YN.get(str(i.get("collbBidPsblYn") or ""))),
+        ("대리 입찰", _YN.get(str(i.get("subtBidPsblYn") or ""))),
+        ("일괄 입찰", "여러 물건을 한 번에 사야 해요" if i.get("batcBidYn") == "Y" else None),
+        ("명도 책임", i.get("evcRsbyTrgtCont")),
+        ("배분요구 종기", i.get("dtbtRqrEdtmCont")),
+    ]
+    return [{"label": k, "value": str(v)} for k, v in rows if v]
+
+
+def notice_page(item_id: str) -> dict[str, Any] | None:
+    with connect() as c:
+        r = c.execute(_NOTICE_SQL, (item_id,)).fetchone()
+    if not r:
+        return None
+    return {
+        "item_id": r["item_id"],
+        "mng_no": r["mng_no"],
+        "title": r["title"],
+        "kind_name": KIND_KO.get(r["kind"], r["kind_name"]),
+        "rows": notice_rows(r["item"] or {}, r["notice"] or {}),
+    }

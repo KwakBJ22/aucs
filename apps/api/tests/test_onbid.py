@@ -71,3 +71,16 @@ def test_misc() -> None:
     ck = {x["key"]: x["state"] for x in checklist("seized")}
     assert ck["tenant"] == "공매엔 없어요" and ck["trust"] == "해당 없음"
     assert {x["key"]: x["state"] for x in checklist("trust")}["trust"] == "전문가 확인 필요"
+
+
+def test_notice_rows():
+    from aucs_api.services.onbid_detail import notice_rows
+
+    rows = notice_rows(
+        {"bidDivNm": "전자입찰", "cptnMthodNm": "일반경쟁", "bidMthodNm": "최고가방식", "collbBidPsblYn": "N",
+         "evcRsbyTrgtCont": "낙찰자", "orgNm": "주식회사 무궁화신탁"},
+        {"onbidPbancNm": "제1차 공매", "pbancYmd": "20261012"},
+    )  # fmt: skip
+    d = {r["label"]: r["value"] for r in rows}
+    assert d["입찰 방식"] == "전자입찰 · 일반경쟁 · 최고가방식"
+    assert d["공고일"] == "2026-10-12" and d["공동 입찰"] == "안 돼요" and "대리 입찰" not in d

@@ -77,6 +77,17 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
     return d
 
 
+@router.get("/items/{item_id}/notice")
+def get_notice(item_id: str) -> dict[str, Any]:
+    """공매 공고문 보기(GM-01)."""
+    from aucs_api.services.onbid_detail import notice_page
+
+    d = notice_page(item_id) if item_id.startswith("OB-") else None
+    if d is None:
+        raise HTTPException(status_code=404, detail="없는 공매 물건")
+    return d
+
+
 @router.get("/items/{item_id}/bid-day")
 def get_bid_day(item_id: str) -> dict[str, Any]:
     d = item_calc.bid_day(item_id, date.today())

@@ -170,6 +170,12 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
         {d.area_m2 && <Row label={t.area} value={`${Math.round(d.area_m2 * 100) / 100}㎡`} />}
         {d.notice.name && <Row label={t.notice} value={d.notice.name} />}
         {d.notice.org && <Row label={t.org} value={d.notice.org} />}
+        <Link
+          href={`/item/${encodeURIComponent(d.item_id)}/notice`}
+          style={{ display: "inline-block", fontSize: 14, margin: "6px 0" }}
+        >
+          {copy.onbidNotice.link}
+        </Link>
         {d.building && <BuildingRows g={d.building} />}
       </div>
     );

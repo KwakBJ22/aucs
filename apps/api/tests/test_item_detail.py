@@ -187,9 +187,13 @@ def test_build_calc_onbid_lawsuit():
                                          "no_elevator_add_pct": 30, "no_elevator_from_floor": 3},
                             "repair": {"bands": [[999, [600_000, 1_000_000]]], "unknown": [100_000, 600_000]}},
     }  # fmt: skip
-    r = full(sido="서울특별시", address="서울 관악구", building_area_m2=30, sale_rate=None, new_item=True)
+    r = full(
+        sido="서울특별시", address="서울 관악구", building_area_m2=30, sale_rate=None, new_item=True
+    )
     base = build_calc(r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None)
-    ob = build_calc(r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None, extra_move_krw=5_000_000)
+    ob = build_calc(
+        r, tables, bid_krw=None, homes=0, first_time=False, loan_krw=None, extra_move_krw=5_000_000
+    )
     assert ob["move_out"]["mid_krw"] == base["move_out"]["mid_krw"] + 5_000_000
     assert ob["selected"]["cash_krw"] == base["selected"]["cash_krw"] + 5_000_000
 

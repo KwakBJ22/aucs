@@ -601,6 +601,13 @@ export const copy = {
     remove: "지우기",
     private: "나만 볼 수 있어요 · 남의 집 안이나 사람 얼굴은 찍지 마세요",
   },
+  onbidNotice: {
+    title: "공고문",
+    open: "온비드 공고 원문 ›",
+    link: "공고문 보기 ›",
+    checkOriginal:
+      "잔금 기한·특이 조건·현장 설명은 온비드 공고 원문에 있어요 · 물건관리번호를 복사해 온비드에서 찾아보세요",
+  },
   report: {
     title: "한 장 보고서",
     print: "인쇄·PDF로 저장",
