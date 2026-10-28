@@ -114,3 +114,14 @@ def test_result_code() -> None:
     items, total = _items({"response": {"body": {"items": {"item": [{"a": 1}]}, "totalCount": 1}}})
     assert items == [{"a": 1}] and total == 1
     assert _items({"resultCode": "00"}) == ([], None)
+
+
+def test_pnu_and_trust():
+    from aucs_workers.collectors.onbid_parse import kind_of, lot_from_pnu
+
+    assert lot_from_pnu("4127110300013090002") == "1309-2"
+    assert lot_from_pnu("4183032000203220000") == "산322"
+    assert lot_from_pnu("") is None
+    assert kind_of("기타일반재산", "0005", "주식회사 무궁화신탁") == "trust"
+    assert kind_of("기타일반재산", "0005", "농협은행주식회사") == "finance"
+    assert kind_of("압류재산", "0007", "한국자산관리공사") == "seized"

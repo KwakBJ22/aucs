@@ -166,7 +166,7 @@ _ITEM_COLS = [
 _ITEM = (
     f"insert into core.onbid_items ({', '.join(_ITEM_COLS)}, region_code, status_code, fetched_at, checked_at) values ("
     + ", ".join(f"%({c})s" for c in _ITEM_COLS)
-    + ", ref.region_code_for(null, %(address)s), 'active', now(), now())"
+    + ", ref.region_code_for(%(pnu_region)s, %(address)s), 'active', now(), now())"
     + " on conflict (item_id) do update set "
     + ", ".join(f"{c} = excluded.{c}" for c in _ITEM_COLS[2:])
     + ", region_code = excluded.region_code, status_code = 'active', fetched_at = now(), checked_at = now()"

@@ -49,13 +49,19 @@ def to_dt(v: Any) -> datetime | None:
         return None
 
 
-def kind_of(name: str | None, code: str | None = None) -> str:
-    """재산 종류: seized 압류 · trust 신탁 · public 국유·공유·수탁 · finance 금융기관 담보 · general 그 밖."""
-    n = name or ""
+_FINANCE_ORG = re.compile(r"은행|신용협동조합|신협|새마을금고|저축은행|캐피탈|보험")
+
+
+def kind_of(name: str | None, code: str | None = None, org: str | None = None) -> str:
+    """재산 종류: seized 압류 · trust 신탁 · public 국유·공유·수탁 · finance 금융기관 담보 · general 그 밖.
+    신탁사 물건은 온비드가 「기타일반재산」으로 줌(10/28 실측 853건) → 맡긴 곳(orgNm)으로 가려냄."""
+    n, o = name or "", org or ""
     if "압류" in n or code == "0007":
         return "seized"
-    if "신탁" in n:
+    if "신탁" in n or "신탁" in o:
         return "trust"
+    if "기타일반" in n and _FINANCE_ORG.search(o):
+        return "finance"
     if any(w in n for w in ("국유", "공유", "수탁")):
         return "public"
     if "금융" in n:
@@ -64,6 +70,15 @@ def kind_of(name: str | None, code: str | None = None) -> str:
 
 
 _LOT = re.compile(r"(?:^|\s)((?:산\s*)?\d{1,5}(?:-\d{1,5})?)(?=\s|$|,|번지|외)")
+
+
+def lot_from_pnu(pnu: Any) -> str | None:
+    """필지 번호(PNU 19자리: 법정동 10 + 산 1 + 본번 4 + 부번 4) → 「470-12」·「산12-3」."""
+    p = str(pnu or "")
+    if len(p) != 19 or not p.isdigit() or int(p[11:15]) == 0:
+        return None
+    lot = str(int(p[11:15])) + (f"-{int(p[15:19])}" if int(p[15:19]) else "")
+    return f"산{lot}" if p[10] == "2" else lot
 
 
 def lot_from(text: str | None, dong: str | None) -> str | None:
@@ -112,7 +127,7 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any] | None:
         "mng_no": str(mng),
         "cond_no": str(pick(r, "pbctCdtnNo", "pbctNo", "pbctNsq") or ""),
         "notice_no": pick(r, "onbidPbancNo", "pbancNo"),
-        "kind": kind_of(kind_name, pick(r, "prptDivCd")),
+        "kind": kind_of(kind_name, pick(r, "prptDivCd"), pick(r, "orgNm")),
         "kind_name": kind_name,
         "disposal": pick(r, "dspsMthodNm", "dpslMtdNm"),
         "title": title,
@@ -120,7 +135,10 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any] | None:
         "sido": sido,
         "sigungu": sgg,
         "dong": emd,
-        "lot_no": lot_from(addr, emd) or lot_from(str(title or ""), emd),
+        "lot_no": lot_from_pnu(pick(r, "ltnoPnu"))
+        or lot_from(addr, emd)
+        or lot_from(str(title or ""), emd),
+        "pnu_region": str(pick(r, "ltnoPnu") or "")[:10] or None,
         "usage_name": pick(r, "ctgrFullNm", "cltrUsgSclsCtgrNm", "cltrUsgMclsCtgrNm", "usgNm"),
         "land_m2": to_num(pick(r, "landSqms", "landArea", "lndSqms")),
         "building_m2": to_num(pick(r, "bldSqms", "bldgArea", "bldSqm")),
