@@ -60,7 +60,7 @@ where i.item_id = %s and i.display_policy = 'public'
 
 _LEASE_SQL = """
 select t.deposit_krw, t.monthly_rent_krw, t.area_m2 from core.trades t
-join core.items i on i.region_code = t.region_code and i.lot_no = t.lot_no
+join core.items i on t.region_code = left(i.region_code, 8) || '00' and i.lot_no = t.lot_no
 where i.item_id = %s and t.deal_kind = 'lease' and t.deal_date >= current_date - 366 and t.deposit_krw > 0
 """
 

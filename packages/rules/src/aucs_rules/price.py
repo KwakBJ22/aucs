@@ -71,3 +71,8 @@ def market_price(
             ]
             return RuleResult(value, status, f"price.level{level}", ev)
     return RuleResult(None, Status.UNKNOWN, "price.none", [])
+
+
+def trade_region(code: str) -> str:
+    """실거래 자료는 법정동을 읍·면까지만 씀(리 코드 끝 두 자리가 00). 리 주소 물건도 맞게(10/28)."""
+    return code[:8] + "00" if len(code) == 10 else code

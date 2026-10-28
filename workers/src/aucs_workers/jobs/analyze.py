@@ -18,7 +18,7 @@ import psycopg
 from aucs_rules import ENGINE_VERSION
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.costs import commercial_over_limit
-from aucs_rules.price import Trade, market_price
+from aucs_rules.price import Trade, market_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import signals, top_signal
 from aucs_rules.sale_rate import (
@@ -65,7 +65,7 @@ def load_market(
         """select deal_date, price_krw, area_m2, floor, build_year from core.trades
            where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
              and deal_date >= %s and price_krw > 0""",
-        (item["region_code"], kind, item["lot_no"], today - timedelta(days=730)),
+        (trade_region(item["region_code"]), kind, item["lot_no"], today - timedelta(days=730)),
     ).fetchall()
     lot = item["lot_no"]
     trades = [Trade(r[0], int(r[1]), float(r[2]), r[3], lot, r[4]) for r in rows]

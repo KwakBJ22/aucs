@@ -193,7 +193,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             # 같은 단지(같은 법정동·지번) 실거래 2년 — 추이(10/27)
             q_trades = c.execute(
                 """select t.deal_kind, t.deal_date, t.price_krw, t.deposit_krw, t.monthly_rent_krw, t.area_m2
-                   from core.trades t join core.items i on i.region_code = t.region_code and i.lot_no = t.lot_no
+                   from core.trades t join core.items i on t.region_code = left(i.region_code, 8) || '00' and i.lot_no = t.lot_no
                    where i.item_id = %s and t.deal_date >= %s""",
                 (item_id, today - timedelta(days=730)),
             )

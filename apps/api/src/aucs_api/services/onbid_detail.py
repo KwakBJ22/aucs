@@ -7,7 +7,7 @@ from typing import Any
 
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.fmt import won
-from aucs_rules.price import Trade, market_price
+from aucs_rules.price import Trade, market_price, trade_region
 
 from aucs_api.cache import memo
 from aucs_api.db import batch, connect
@@ -189,7 +189,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                 """select deal_date, price_krw, area_m2, floor, build_year from core.trades
                    where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
                      and deal_date >= %s and price_krw > 0""",
-                (r["region_code"], kind, r["lot_no"], today - timedelta(days=730)),
+                (trade_region(r["region_code"]), kind, r["lot_no"], today - timedelta(days=730)),
             ).fetchall()
     base = onbid_card({**r, "next_round": None}, today)
     app, mn = r["appraisal_krw"], r["min_price_krw"]
