@@ -66,3 +66,17 @@ def test_villa_signal_uses_register_first():
     assert not any(
         r == "risk.neighborhood_villa" for r, _ in ids({**guess, "villa_by_register": "clear"})
     )
+
+
+def test_same_unit() -> None:
+    from aucs_rules.building import ho_from_address, same_unit
+
+    a = "경기도 평택시 통복동 477 삼성아파트 제108동 제7층 제701호"
+    assert ho_from_address(a) == "701"
+    assert same_unit(a, "경기도 평택시 통복동 477 삼성 108동 7층701호")
+    assert not same_unit(a, "경기도 평택시 통복동 477 삼성아파트 제108동 제7층 제702호")
+    assert not same_unit(a, "경기도 평택시 통복동 477 삼성아파트 제109동 제7층 제701호")
+    assert not same_unit(a, "경기도 평택시 통복동 477")  # 한쪽만 호수 → 모름
+    assert same_unit(
+        "경기도 양평군 강상면 송학리 12-3", "경기도 양평군 강상면 송학리 12-3 외 1필지"
+    )

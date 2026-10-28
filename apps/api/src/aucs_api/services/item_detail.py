@@ -14,6 +14,7 @@ from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.docs import spec_sheet, spec_text
 from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
+from aucs_api.services.item_links import same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
 from aucs_api.services.item_worth import appraisal_gap, worth
 from aucs_api.services.items import card
@@ -220,4 +221,5 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     for q in out["questions"]:
         if q["key"] == "worth":
             q["body"]["complex"] = cx
+    out["same_house"] = same_house(item_id)
     return out

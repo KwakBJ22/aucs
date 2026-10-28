@@ -10,6 +10,7 @@ import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { useIsPc } from "@/lib/use-pc";
 import { DOT } from "@/components/item/shared";
+import { SameHouse } from "@/components/item/same-house";
 
 // 공매 상세(설계서 4절, 스토리보드 GM-ITEM-01·04·06). 경매와 같은 틀 — 결론 먼저, 다섯 질문은 눌러서.
 const t = copy.onbid;
@@ -289,6 +290,7 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
           </div>
         )}
         <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+        <SameHouse list={d.same_house} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
           <span className="chip gray">● {t.checkAnswer(d.check_left)}</span>
           {d.market_rate != null && (

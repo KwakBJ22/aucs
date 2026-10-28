@@ -37,3 +37,23 @@ def test_match_sql():
 def test_listing_gone_text():
     assert change_text("x", Change("listing", "listed", "gone"))[0] == "x 법원 목록에서 빠졌어요"
     assert "다시" in change_text("x", Change("listing", "gone", "listed"))[0]
+
+
+def test_onbid_match_sql():
+    from aucs_workers.jobs.notify import onbid_match_sql
+
+    assert onbid_match_sql({"source": "court"}) is None
+    sql, p = onbid_match_sql(
+        {"sigungu": ["강남구"], "max_cash": 5000, "usage": ["apt"], "exclude": ["share"]}
+    )  # type: ignore[misc]
+    assert "o.sigungu like g" in sql and "o.kind <> 'trust'" in sql
+    assert p == {"sigungu": ["강남구"], "max_cash": 5000, "usage_re": "(아파트)"}
+
+
+def test_change_text_onbid():
+    from aucs_workers.jobs.notify import Change, change_text
+
+    t, _ = change_text("강남구 아파트", Change("listing", "listed", "gone"), onbid=True)
+    assert "온비드" in t
+    t, _ = change_text("강남구 아파트", Change("result", None, "낙찰"), onbid=True)
+    assert t == "강남구 아파트 공매 낙찰"

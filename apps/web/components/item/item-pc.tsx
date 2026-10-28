@@ -12,6 +12,7 @@ import { Body } from "@/components/item/body";
 import { answerOf } from "@/components/item/checklist";
 import type { MyReg } from "@/components/item/registry";
 import { t, DOT } from "@/components/item/shared";
+import { SameHouse } from "@/components/item/same-house";
 
 export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
   const [copied, setCopied] = useState(false);
@@ -85,6 +86,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
         <p style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, margin: "14px 0 0" }}>
           {d.verdict}
         </p>
+        <SameHouse list={d.same_house} />
         {d.tags.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
             {d.tags.map((x) => (

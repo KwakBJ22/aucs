@@ -214,6 +214,30 @@ def save_items(
     return len(by), gone
 
 
+_LINK_SQL = """
+select o.item_id, coalesce(o.address, '') || ' ' || coalesce(o.title, ''), i.item_id, coalesce(i.address, '')
+from core.onbid_items o
+join core.items i on i.region_code = o.region_code and replace(i.lot_no, ' ', '') = o.lot_no
+where o.status_code = 'active' and o.lot_no is not null and i.sale_date >= current_date
+"""
+
+
+def link_same_house(conn: psycopg.Connection[Any]) -> int:
+    """같은 집이 법원 경매에도 나와 있으면 core.item_links 에 잇기. 지번이 같고 동·호수까지 맞을 때만."""
+    from aucs_rules.building import same_unit
+
+    rows = conn.execute(_LINK_SQL).fetchall()
+    pairs = {(r[2], r[0]) for r in rows if same_unit(r[1], r[3])}
+    with conn.cursor() as cur:
+        cur.execute("delete from core.item_links")
+        cur.executemany(
+            "insert into core.item_links (court_item_id, onbid_item_id) values (%s, %s) on conflict do nothing",
+            sorted(pairs),
+        )
+    conn.commit()
+    return len(pairs)
+
+
 def save_notices(conn: psycopg.Connection[Any], raw: list[dict[str, Any]]) -> int:
     n = 0
     with conn.cursor() as cur:
@@ -293,6 +317,7 @@ def main() -> None:
                             f"[물건] {len(raw):,}줄 → {n:,}건 · 목록에서 빠짐 {gone:,}건",
                             flush=True,
                         )
+                        print(f"[같은 집 경매] {link_same_house(conn):,}건", flush=True)
                     elif j == "notices":
                         raw = pages(client, key, "OnbidPbancListSrvc2/getPbancList2", {
                             "cltrTypeCd": "0001", "prptDivCd": PRPT_ALL,

@@ -132,6 +132,14 @@ export type Question = {
   tone: "green" | "gray" | "orange" | "red" | "blue";
   body: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
+export type SameHouse = {
+  source: Source;
+  item_id: string;
+  no: string;
+  date: string | null;
+  min_price_krw: number | null;
+};
+
 export type ItemDetail = ItemCard & {
   verdict: string;
   fatal: string | null;
@@ -150,6 +158,7 @@ export type ItemDetail = ItemCard & {
     why: string;
   }[];
   schedule: Schedule;
+  same_house?: SameHouse[];
   computed_at: string | null;
 };
 
@@ -202,6 +211,7 @@ export type OnbidDetail = ItemCard & {
   expected_basis: string;
   checklist: { key: string; label: string; state: string; what: string }[];
   check_left: number;
+  same_house?: SameHouse[];
   computed_at: string;
 };
 export const isOnbid = (d: { source?: string }): boolean => d.source === "onbid";

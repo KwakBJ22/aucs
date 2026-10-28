@@ -3,6 +3,7 @@
 1) 저장한 조건: 조건을 저장한 뒤 처음 들어온 물건만 '새 물건'으로 모아 한 통.
 2) 관심 물건: 매각기일·최저가·결과가 바뀌면 한 통씩. 처음 본 값은 기준으로만 적고 알리지 않음.
 3) 입찰 전 확인(실패 예방 3단계): 기일 7일 전 「명세서가 나왔어요」, 입찰일 아침(--morning) 「오늘 다시 볼 것」.
+5) 공매(온비드): 조건에 맞는 새 공매, 관심 공매의 최저가·목록·결과, 입찰 마감(전날 저녁·당일 아침).
 4) 낙찰 받은 물건: 대금기한·취득세·인도명령 마감 3일 전에 한 통씩(일정은 aucs_rules.schedule).
 같은 (사람, 물건, 종류, 새 값)은 app.alert_events 의 unique 로 한 번만.
 """
@@ -49,12 +50,21 @@ def watch_changes(prev: dict[str, str], cur: dict[str, str | None]) -> list[Chan
     return out
 
 
-def change_text(place: str, ch: Change) -> tuple[str, str]:
+def change_text(place: str, ch: Change, *, onbid: bool = False) -> tuple[str, str]:
     if ch.kind == "sale_date":
         return f"{place} 매각기일이 바뀌었어요", f"{ch.prev} → {ch.new}"
     if ch.kind == "min_price":
         a, b = int(ch.prev or 0), int(ch.new)
         return f"{place} 최저가가 {'내렸' if b < a else '올랐'}어요", f"{won(a)} → {won(b)}"
+    if ch.kind == "listing" and onbid:
+        if ch.new == "gone":
+            return (
+                f"{place} 온비드 목록에서 빠졌어요",
+                "취소·낙찰·수의계약 전환일 수 있어요 · 온비드에서 확인하세요",
+            )
+        return f"{place} 다시 온비드 목록에 올라왔어요", "입찰 기간과 최저가를 확인해 보세요"
+    if ch.kind == "result" and onbid:
+        return f"{place} 공매 {ch.new}", "입찰 결과를 확인해 보세요"
     if ch.kind == "listing":
         if ch.new == "gone":
             return (
@@ -127,6 +137,42 @@ def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return sql, p
 
 
+def onbid_match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
+    """저장한 조건을 공매 표(core.onbid_items o)에 맞춤. 「경매만」 조건이면 None."""
+    if filters.get("source") == "court":
+        return None
+    sql = "o.status_code = 'active' and o.disposal = '매각' and (o.bid_end is null or o.bid_end >= now())"
+    p: dict[str, Any] = {}
+    if filters.get("sigungu"):
+        sql += " and exists (select 1 from unnest(%(sigungu)s::text[]) g where o.sigungu like g || '%%')"
+        p["sigungu"] = list(filters["sigungu"])
+    if filters.get("max_cash"):
+        sql += " and o.min_price_krw / 10 <= %(max_cash)s"
+        p["max_cash"] = int(filters["max_cash"])
+    groups = [USAGE_GROUPS[g] for g in filters.get("usage") or [] if g in USAGE_GROUPS]
+    if groups:
+        sql += " and o.usage_name ~ %(usage_re)s"
+        p["usage_re"] = "|".join(f"({g})" for g in groups)
+    for key, col, op in (
+        ("failed_min", "o.failed_count", ">="),
+        ("price_max", "o.min_price_krw", "<="),
+        ("area_min", "o.building_m2", ">="),
+        ("area_max", "o.building_m2", "<="),
+    ):
+        if filters.get(key) is not None:
+            sql += f" and coalesce({col}, 0) {op} %({key})s"
+            p[key] = filters[key]
+    if filters.get("rate_max") is not None:
+        sql += " and o.min_price_krw * 100 <= %(rate_max)s * o.appraisal_krw"
+        p["rate_max"] = filters["rate_max"]
+    if filters.get("days_max") is not None:
+        sql += " and o.bid_end <= now() + make_interval(days => %(days_max)s)"
+        p["days_max"] = int(filters["days_max"])
+    if filters.get("exclude"):
+        sql += " and o.kind <> 'trust'"  # 신탁은 판정을 못 하니 피하고 싶은 것이 있으면 뺌
+    return sql, p
+
+
 def _event(
     conn: psycopg.Connection, uid: Any, item_id: str, kind: str, prev: str | None, new: str
 ) -> int | None:
@@ -169,6 +215,88 @@ def make_search_alerts(conn: psycopg.Connection) -> int:
                 "/home",
             )
             n += 1
+    return n
+
+
+def make_onbid_search_alerts(conn: psycopg.Connection) -> int:
+    n = 0
+    for sid, uid, name, filters, since in conn.execute(
+        "select search_id, user_id, name, filters, created_at from app.saved_searches where active"
+    ).fetchall():
+        m = onbid_match_sql(filters)
+        if m is None:
+            continue
+        cond, p = m
+        rows = conn.execute(
+            f"select o.item_id from core.onbid_items o where {cond} and o.first_seen_at > %(since)s",
+            {**p, "since": since},
+        ).fetchall()
+        fresh = [r[0] for r in rows if _event(conn, uid, r[0], "new_match", None, str(sid))]
+        if fresh:
+            _noti(
+                conn,
+                uid,
+                None,
+                f"{name}에 새 공매 {len(fresh)}건",
+                "온비드에 새로 올라온 물건이에요",
+                "/find",
+            )
+            n += 1
+    return n
+
+
+_ONBID_PLACE = "coalesce(o.sigungu, '') || ' ' || coalesce(o.usage_name, '')"
+
+
+def make_onbid_watch_alerts(conn: psycopg.Connection) -> int:
+    n = 0
+    rows = conn.execute(
+        f"""select w.user_id, o.item_id, {_ONBID_PLACE}, o.min_price_krw::text,
+                  (select r.result from core.onbid_results r where r.mng_no = o.mng_no
+                   order by r.opened_at desc limit 1),
+                  case when o.status_code = 'gone' then 'gone' else 'listed' end
+           from app.watch_items w join core.onbid_items o using (item_id)"""
+    ).fetchall()
+    for uid, item_id, place, min_price, result, listing in rows:
+        prev: dict[str, str] = dict(
+            conn.execute(
+                """select distinct on (kind) kind, new_value from app.alert_events
+                   where user_id = %s and item_id = %s and kind = any(%s) order by kind, created_at desc""",
+                (uid, item_id, list(WATCH_KINDS)),
+            ).fetchall()
+        )
+        cur = {"min_price": min_price, "result": result, "listing": listing}
+        for ch in watch_changes(prev, cur):
+            eid = _event(conn, uid, item_id, ch.kind, ch.prev, ch.new)
+            if eid and ch.prev is not None:
+                title, body = change_text(place.strip(), ch, onbid=True)
+                _noti(conn, uid, eid, title, body, f"/item/{item_id}")
+                n += 1
+    return n
+
+
+def make_onbid_close_alerts(conn: psycopg.Connection, *, morning: bool) -> int:
+    """관심 공매 입찰 마감. 저녁: 내일 마감 / 아침: 오늘 마감(온비드는 마감 시각까지 인터넷으로 냄)."""
+    days = 0 if morning else 1
+    n = 0
+    for uid, item_id, place, end_hm, end_day in conn.execute(
+        f"""select w.user_id, o.item_id, {_ONBID_PLACE},
+                  to_char(o.bid_end at time zone 'Asia/Seoul', 'HH24:MI'),
+                  (o.bid_end at time zone 'Asia/Seoul')::date::text
+           from app.watch_items w join core.onbid_items o using (item_id)
+           where o.status_code = 'active' and o.bid_end > now()
+             and (o.bid_end at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date + %s""",
+        (days,),
+    ).fetchall():
+        eid = _event(
+            conn, uid, item_id, "onbid_close_morning" if morning else "onbid_close", None, end_day
+        )
+        if not eid:
+            continue
+        when = "오늘" if morning else "내일"
+        _noti(conn, uid, eid, f"공매 입찰 마감 {when} {end_hm} · {place.strip()}",
+              "보증금은 마감 전에 가상계좌로 넣어야 입찰이 돼요", f"/item/{item_id}/onbid-bid")  # fmt: skip
+        n += 1
     return n
 
 
@@ -305,7 +433,9 @@ def main() -> None:
     a = ap.parse_args()
     if a.morning:
         with connect() as conn, run(conn, "notify_morning", "입찰일 아침 알림") as job:
-            m = make_bid_prep_alerts(conn, morning=True)
+            m = make_bid_prep_alerts(conn, morning=True) + make_onbid_close_alerts(
+                conn, morning=True
+            )
             conn.commit()
             p = 0 if a.no_push else send_pushes(conn)
             job.count = m
@@ -314,10 +444,15 @@ def main() -> None:
     with connect() as conn, run(conn, "notify", "알림") as job:
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
         b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
+        o = (
+            make_onbid_search_alerts(conn)
+            + make_onbid_watch_alerts(conn)
+            + make_onbid_close_alerts(conn, morning=False)
+        )
         conn.commit()
         p = 0 if a.no_push else send_pushes(conn)
-        job.count = s + w + b + d
-        print(f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 푸시 {p}")
+        job.count = s + w + b + d + o
+        print(f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 공매 {o} · 푸시 {p}")
 
 
 if __name__ == "__main__":

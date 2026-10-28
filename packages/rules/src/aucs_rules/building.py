@@ -50,6 +50,27 @@ def unit_from_address(address: str | None) -> dict[str, Any]:
     return {"dong": d.group(1) if d else None, "floor": floor}
 
 
+_HO = re.compile(r"(?:제\s*)?((?:지하?|B|비)?\s*\d{1,5})\s*호")
+
+
+def ho_from_address(address: str | None) -> str | None:
+    """「제7층 제701호」 → 「701」, 「지하1층 비01호」 → 「비01」. 마지막 「…호」를 씀."""
+    hits = _HO.findall(address or "")
+    return re.sub(r"\s", "", hits[-1]) if hits else None
+
+
+def same_unit(a: str | None, b: str | None) -> bool:
+    """두 주소가 같은 집(같은 지번 안)인지: 호수가 둘 다 있으면 동·호수가 같아야, 둘 다 없으면 같은 집으로 봄.
+    한쪽만 호수가 있으면 모름 → 잇지 않음(아파트는 한 지번에 수백 집이라 함부로 잇지 않음, 10/28)."""
+    ha, hb = ho_from_address(a), ho_from_address(b)
+    if (ha is None) != (hb is None):
+        return False
+    if ha is not None and ha.lstrip("0") != (hb or "").lstrip("0"):
+        return False
+    da, db = unit_from_address(a)["dong"], unit_from_address(b)["dong"]
+    return not (da and db and _key(da) != _key(db))
+
+
 def _key(s: Any) -> str:
     """동 이름 비교용: 「제304동」·「304동」·「304」 → 「304」."""
     return re.sub(r"(제|동|\s)", "", str(s or ""))

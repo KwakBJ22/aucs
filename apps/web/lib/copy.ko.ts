@@ -160,6 +160,13 @@ export const copy = {
     go: "온비드에서 입찰하기 ›",
     foot: "입찰은 온비드에서 직접 해요 · 옥스는 입찰을 대신하지 않아요",
   },
+  sameHouse: {
+    toCourt: "같은 집이 법원 경매에도 나와 있어요",
+    toOnbid: "같은 집이 공매(온비드)에도 나와 있어요",
+    sub: "먼저 팔리는 쪽에서 끝나요 · 두 곳 일정을 함께 보세요",
+    court: (no: string, date: string) => `경매 ${no} · 매각기일 ${date}`,
+    onbid: (no: string, date: string) => `공매 ${no} · 마감 ${date}`,
+  },
   onbid: {
     badge: (k: string) => `공매 · ${k}`,
     period: (a: string, b: string) => `입찰 ${a} ~ ${b}`,

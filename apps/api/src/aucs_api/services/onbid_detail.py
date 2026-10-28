@@ -10,6 +10,7 @@ from aucs_rules.price import Trade, market_price
 
 from aucs_api.cache import memo
 from aucs_api.db import batch, connect
+from aucs_api.services.item_links import same_house
 from aucs_api.services.onbid import KIND_KO, KST, onbid_card
 
 # 고정 문구(설계서 7절) — 법률이 걸린 문구는 검토 요청서에 올림
@@ -194,6 +195,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     todo = [x for x in ck if x["state"] not in ("확인 완료", "해당 없음")]
     return {
         **base,
+        "same_house": same_house(item_id),
         "title": r["title"],
         "address": r["address"],
         "kind_name": KIND_KO.get(r["kind"], r["kind_name"]),

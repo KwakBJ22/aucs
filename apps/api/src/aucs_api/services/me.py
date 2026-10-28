@@ -36,10 +36,36 @@ def watch_step(step: str | None, sale_date: Any, today: Any) -> str:
     return step if step in STEPS else "found"
 
 
+# 관심 담은 공매 물건(10/28) — 카드는 공매 카드, 단계는 입찰 마감일 기준
+_WATCH_ONBID_SQL = """
+select o.*, w.step, w.in_compare,
+       (o.bid_end at time zone 'Asia/Seoul')::date as sale_date_kst,
+       (select json_build_object('min_price_krw', n.min_price_krw, 'bid_end', n.bid_end)
+          from core.onbid_rounds n where n.item_id = o.item_id and n.bid_end > coalesce(o.bid_end, now())
+         order by n.bid_end limit 1) as next_round,
+       (select max(e.created_at) from app.alert_events e
+         where e.user_id = w.user_id and e.item_id = o.item_id and e.prev_value is not null) as changed_at
+from app.watch_items w join core.onbid_items o on o.item_id = w.item_id
+where w.user_id = %s
+"""
+
+
 def watch_list(uid: str, today: Any) -> list[dict[str, Any]]:
+    from aucs_api.services.onbid import onbid_card
+
     with connect() as c:
-        rows = c.execute(_WATCH_SQL, (uid,)).fetchall()
-    return [watch_card(r, today) for r in rows]
+        q_court, q_onbid = batch(c, [(_WATCH_SQL, (uid,)), (_WATCH_ONBID_SQL, (uid,))])
+        rows, orows = q_court.fetchall(), q_onbid.fetchall()
+    out = [watch_card(r, today) for r in rows]
+    for r in orows:
+        ch = r.get("changed_at")
+        out.append({
+            **onbid_card(r, today),
+            "step": watch_step(r["step"], r["sale_date_kst"], today),
+            "in_compare": r["in_compare"],
+            "changed": bool(ch and (today - ch.date()).days <= CHANGED_DAYS),
+        })  # fmt: skip
+    return sorted(out, key=lambda x: (x["sale_date"] is None, x["sale_date"] or ""))
 
 
 CHANGED_DAYS = 3  # 관심 목록 「바뀜」 표시: 최근 이만큼 안에 기일·최저가·결과가 바뀐 물건(WATCH-01)
@@ -255,8 +281,12 @@ def history_rows(rows: list[dict[str, Any]]) -> list[dict[str, str]]:
 def workspace(uid: str, item_id: str, today: Any) -> dict[str, Any] | None:
     with connect() as c:
         w = c.execute(
-            """select w.step, w.memo, w.checks, w.calcs, i.sale_date from app.watch_items w
-               join core.items i using (item_id) where w.user_id = %s and w.item_id = %s""",
+            """select w.step, w.memo, w.checks, w.calcs,
+                      coalesce(i.sale_date, (o.bid_end at time zone 'Asia/Seoul')::date) as sale_date
+               from app.watch_items w
+               left join core.items i on i.item_id = w.item_id
+               left join core.onbid_items o on o.item_id = w.item_id
+               where w.user_id = %s and w.item_id = %s""",
             (uid, item_id),
         ).fetchone()
         if not w:

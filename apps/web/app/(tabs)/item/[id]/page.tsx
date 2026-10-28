@@ -25,6 +25,7 @@ import { Body } from "@/components/item/body";
 import { answerOf } from "@/components/item/checklist";
 import { DocSheet } from "@/components/item/doc-sheet";
 import { OnbidItem } from "@/components/item/onbid-detail";
+import { SameHouse } from "@/components/item/same-house";
 import { ItemPc } from "@/components/item/item-pc";
 import { RegCtx, useMyRegistry } from "@/components/item/registry";
 import { t, DOT, DocCtx } from "@/components/item/shared";
@@ -128,6 +129,7 @@ export default function Item() {
               </span>
             </div>
             <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+            <SameHouse list={d.same_house} />
           </section>
 
           <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
