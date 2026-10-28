@@ -246,9 +246,8 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
       () => setCopied(false),
     );
   };
-  return (
-    <main className="page" style={pc ? { maxWidth: 760, margin: "0 auto" } : undefined}>
-      <PageHeader title="" back="history" right={<HeartButton id={d.item_id} />} />
+  const head = (
+    <>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       <section className="section">
         <div
@@ -298,7 +297,80 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
           )}
         </div>
       </section>
-
+    </>
+  );
+  const actions = (
+    <>
+      <section className="section" style={{ display: "flex", gap: 8 }}>
+        <button className="btn" onClick={copyNo} style={{ flex: 1 }}>
+          {copied ? t.copied : t.copyNo}
+        </button>
+        {d.bid_end && (d.d_day ?? -1) >= 0 && (
+          <Link
+            className="btn primary"
+            href={`/item/${encodeURIComponent(d.item_id)}/onbid-bid`}
+            style={{ flex: 1 }}
+          >
+            {copy.onbidBid.title}
+          </Link>
+        )}
+      </section>
+      <a
+        className="sub"
+        href={t.onbidUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: "block", textAlign: "center", fontSize: 13, padding: "4px 0 12px" }}
+      >
+        {t.openOnbid}
+      </a>
+      <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
+        {t.footer(d.computed_at.slice(0, 10))}
+      </p>
+    </>
+  );
+  // PC: 세 칸 — 왼쪽 요약·버튼(따라 내려옴) · 가운데 무엇을 사나·떠안는 것·확인할 것 · 오른쪽 얼마짜리·얼마가 드나
+  if (pc) {
+    const sec = (k: Question["key"]) => {
+      const q = qs.find((x) => x.key === k) ?? qs[0]!;
+      return (
+        <section key={k} className="section">
+          <div className="sub" style={{ margin: 0, fontSize: 13 }}>
+            <span
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: DOT[q.tone],
+                marginRight: 6,
+              }}
+            />
+            {t.q[k]}
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, margin: "2px 0 10px" }}>{q.answer}</div>
+          <Body k={k} d={d} />
+        </section>
+      );
+    };
+    return (
+      <main className="page">
+        <PageHeader title="" back="history" right={<HeartButton id={d.item_id} />} />
+        <div className="pc-grid g-26-44-30">
+          <div className="pc-sticky">
+            {head}
+            {actions}
+          </div>
+          <div>{(["buy", "hold", "check"] as const).map(sec)}</div>
+          <div>{(["worth", "cost"] as const).map(sec)}</div>
+        </div>
+      </main>
+    );
+  }
+  return (
+    <main className="page">
+      <PageHeader title="" back="history" right={<HeartButton id={d.item_id} />} />
+      {head}
       <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {qs.map((q) => (
           <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
@@ -346,32 +418,7 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
         ))}
       </section>
 
-      <section className="section" style={{ display: "flex", gap: 8 }}>
-        <button className="btn" onClick={copyNo} style={{ flex: 1 }}>
-          {copied ? t.copied : t.copyNo}
-        </button>
-        {d.bid_end && (d.d_day ?? -1) >= 0 && (
-          <Link
-            className="btn primary"
-            href={`/item/${encodeURIComponent(d.item_id)}/onbid-bid`}
-            style={{ flex: 1 }}
-          >
-            {copy.onbidBid.title}
-          </Link>
-        )}
-      </section>
-      <a
-        className="sub"
-        href={t.onbidUrl}
-        target="_blank"
-        rel="noreferrer"
-        style={{ display: "block", textAlign: "center", fontSize: 13, padding: "4px 0 12px" }}
-      >
-        {t.openOnbid}
-      </a>
-      <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
-        {t.footer(d.computed_at.slice(0, 10))}
-      </p>
+      {actions}
     </main>
   );
 }

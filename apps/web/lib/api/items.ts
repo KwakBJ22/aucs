@@ -214,7 +214,7 @@ export type OnbidDetail = ItemCard & {
   same_house?: SameHouse[];
   computed_at: string;
 };
-export const isOnbid = (d: { source?: string }): boolean => d.source === "onbid";
+export const isOnbid = (d: { source?: string }): d is OnbidDetail => d.source === "onbid";
 
 // DOC-01 원문 보기
 export type DocKind = "status_report" | "deliveries" | "spec_sheet";

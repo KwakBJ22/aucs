@@ -40,7 +40,10 @@ function cell(r: ProRow, k: ColKey): React.ReactNode {
   switch (k) {
     case "case":
       return (
-        <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
+        <Link
+          href={`/item/${encodeURIComponent(r.item_id)}`}
+          style={r.source === "onbid" ? { color: "var(--blue-text)" } : undefined}
+        >
           {r.court} {r.case_no}
           {r.item_no > 1 ? `-${r.item_no}` : ""}
         </Link>
@@ -165,6 +168,23 @@ function ProItems() {
 
       <section className="section pro-filters">
         <div className="pro-row">
+          <select
+            value={f.source ?? "all"}
+            onChange={(e) =>
+              set({
+                source:
+                  e.target.value === "all" ? undefined : (e.target.value as "court" | "onbid"),
+              })
+            }
+            style={sel}
+            aria-label={copy.find.sourceLabel}
+          >
+            {(["all", "court", "onbid"] as const).map((k) => (
+              <option key={k} value={k}>
+                {copy.find.source[k]}
+              </option>
+            ))}
+          </select>
           <select
             value={f.sido ?? ""}
             onChange={(e) => set({ sido: e.target.value || undefined, sigungu: undefined })}

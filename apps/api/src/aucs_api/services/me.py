@@ -359,15 +359,19 @@ def compare_get(uid: str) -> dict[str, Any]:
             c,
             [
                 (
-                    """select w.item_id from app.watch_items w join core.items i using (item_id)
-                   where w.user_id = %s and w.in_compare order by i.sale_date nulls last""",
+                    """select w.item_id from app.watch_items w
+                   left join core.items i using (item_id) left join core.onbid_items o using (item_id)
+                   where w.user_id = %s and w.in_compare and (i.item_id is not null or o.item_id is not null)
+                   order by coalesce(i.sale_date, (o.bid_end at time zone 'Asia/Seoul')::date) nulls last""",
                     (uid,),
                 ),
                 (
-                    """select e.item_id, e.reason, e.created_at::date::text as at, c2.case_no,
-                      coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
+                    """select e.item_id, e.reason, e.created_at::date::text as at, coalesce(c2.case_no, o.mng_no) as case_no,
+                      coalesce(i.gu, i.sigungu, o.sigungu, '') || ' '
+                        || coalesce(i.building_desc, i.usage_name, o.usage_name, '') as place
                from app.compare_exclusions e
                left join core.items i using (item_id) left join core.cases c2 on c2.case_id = i.case_id
+               left join core.onbid_items o on o.item_id = e.item_id
                where e.user_id = %s order by e.created_at desc limit 50""",
                     (uid,),
                 ),
@@ -448,11 +452,14 @@ def compare_full(uid: str, homes: int, first: bool, today: Any) -> dict[str, Any
     """비교함 화면 전부를 한 번에: 담은 물건마다 상세·계산·작업 공간(10/27 — 예전엔 물건 수 × 3번)."""
     from concurrent.futures import ThreadPoolExecutor
 
-    from aucs_api.services import item_calc, item_detail
+    from aucs_api.services import item_calc, item_detail, onbid_detail
 
     base = compare_get(uid)
 
     def one(item_id: str) -> dict[str, Any]:
+        if item_id.startswith("OB-"):  # 공매: 상세는 공매 것, 입찰가 계산은 아직 경매만
+            return {"id": item_id, "d": onbid_detail.detail(item_id, today), "calc": None,
+                    "w": workspace(uid, item_id, today)}  # fmt: skip
         return {
             "id": item_id,
             "d": item_detail.detail(item_id, today),

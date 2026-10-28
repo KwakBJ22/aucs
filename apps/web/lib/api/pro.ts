@@ -2,6 +2,7 @@
 import { apiBaseUrl, getJson } from "./client";
 
 export type ProFilter = {
+  source?: "all" | "court" | "onbid";
   sido?: string;
   sigungu?: string;
   usage?: string[];
@@ -18,6 +19,7 @@ export type ProFilter = {
 };
 export type ProRow = {
   item_id: string;
+  source: "court" | "onbid";
   court: string;
   case_no: string;
   item_no: number;
@@ -60,7 +62,9 @@ export function toQuery(f: ProFilter): URLSearchParams {
 }
 export function fromQuery(q: URLSearchParams): ProFilter {
   const n = (k: string) => (q.get(k) != null && q.get(k) !== "" ? Number(q.get(k)) : undefined);
+  const src = q.get("source");
   return {
+    source: src === "court" || src === "onbid" ? src : undefined,
     sido: q.get("sido") ?? undefined,
     sigungu: q.get("sigungu") ?? undefined,
     usage: q.getAll("usage"),
@@ -176,3 +180,34 @@ export const fetchMarket = (f: {
   usage?: string[];
   months?: number;
 }) => getJson<Market>(`/pro/market?${toQuery(f)}`);
+
+// 공매 시장(전국 입찰 결과). p50 = 최저가 대비, p50_app = 감정가 대비
+export type OnbidStat = Stat & { p50_app: number | null };
+export type OnbidMarket = {
+  basis: string;
+  by_sido: (OnbidStat & { sido: string | null })[];
+  by_bidders: (OnbidStat & { bidders: string })[];
+  by_failed: (OnbidStat & { failed: number })[];
+  by_month: (OnbidStat & { month: string })[];
+  by_usage: (OnbidStat & { usage: string })[];
+  cases: {
+    sale_date: string;
+    mng_no: string;
+    kind_name: string | null;
+    usage_name: string | null;
+    title: string | null;
+    building_m2: number | null;
+    appraisal_krw: number | null;
+    min_price_krw: number | null;
+    win_krw: number | null;
+    rate_min: number | null;
+    rate_appraisal: number | null;
+    bidders: number | null;
+  }[];
+};
+export const fetchOnbidMarket = (f: {
+  sido?: string;
+  sigungu?: string;
+  usage?: string[];
+  months?: number;
+}) => getJson<OnbidMarket>(`/pro/market?${toQuery({ ...f, source: "onbid" } as ProFilter)}`);

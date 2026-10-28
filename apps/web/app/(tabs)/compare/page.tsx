@@ -4,7 +4,7 @@ import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { type Calc, type ItemDetail } from "@/lib/api/items";
+import { isOnbid, type Calc, type ItemDetail, type OnbidDetail } from "@/lib/api/items";
 import { meApi, type Compare, type Workspace } from "@/lib/api/me";
 import { PageHeader } from "@/components/layout/page-header";
 import { useIsPc } from "@/lib/use-pc";
@@ -14,11 +14,31 @@ import { dday, won } from "@/lib/format";
 import { loadProfile } from "@/lib/profile";
 
 const t = copy.compare;
-type Col = { id: string; d: ItemDetail | null; calc: Calc | null; w: Workspace | null };
+type Col = {
+  id: string;
+  d: ItemDetail | OnbidDetail | null;
+  calc: Calc | null;
+  w: Workspace | null;
+};
+const ob = copy.onbid;
 const REASONS = ["budget", "assumed_unclear", "field_bad", "other"] as const;
 
-const answer = (d: ItemDetail | null, key: string) =>
-  d?.questions.find((q) => q.key === key)?.answer ?? "-";
+// 공매는 다섯 질문 대신 공매 상세 값으로 같은 줄을 채움
+const answer = (d: ItemDetail | OnbidDetail | null, key: string): string => {
+  if (!d) return "-";
+  if (isOnbid(d)) {
+    const solo = d.expected.find((e) => e.bucket === "혼자");
+    if (key === "hold") return ob.holdAnswer;
+    if (key === "worth")
+      return ob.worthAnswer(
+        d.market ? won(d.market.price_krw) : null,
+        solo?.price_krw ? won(solo.price_krw) : null,
+      );
+    if (key === "check") return ob.checkAnswer(d.check_left);
+    return "-";
+  }
+  return d.questions.find((q) => q.key === key)?.answer ?? "-";
+};
 
 // 비교함: 같은 기준으로 3~5개 나란히. 뺄 때 이유를 남김(다음 추천에서 덜 보여 줌)
 export default function ComparePage() {
@@ -66,12 +86,15 @@ export default function ComparePage() {
   };
 
   const marketRatio = (c: Col): number | null => {
-    const m = c.d?.questions.find((q) => q.key === "worth")?.body?.market?.price_krw as
-      number | undefined;
+    if (c.d && isOnbid(c.d)) return c.d.market_rate ?? null;
+    const m = (c.d as ItemDetail | null)?.questions.find((q) => q.key === "worth")?.body?.market
+      ?.price_krw as number | undefined;
     return m && c.d?.min_price_krw ? Math.round((c.d.min_price_krw * 100) / m) : null;
   };
   const failHit = (c: Col): number | null =>
-    c.d?.failure_table ? c.d.failure_table.filter((r) => r.state !== "신호 없음").length : null;
+    c.d && !isOnbid(c.d) && c.d.failure_table
+      ? c.d.failure_table.filter((r) => r.state !== "신호 없음").length
+      : null;
   // 줄마다 가장 나은 값(작을수록 좋은 것)을 연하게 표시
   const best = (f: (c: Col) => number | null | undefined): string | null => {
     const v = cols.map((c) => [c.id, f(c)] as const).filter(([, x]) => x != null) as [
@@ -89,7 +112,12 @@ export default function ComparePage() {
   }[] = [
     {
       label: t.rows.date,
-      cell: (c) => (c.d ? `${dday(c.d.d_day)} · ${c.d.sale_date?.slice(5) ?? ""}` : "-"),
+      cell: (c) =>
+        c.d
+          ? isOnbid(c.d)
+            ? `${dday(c.d.d_day)} · ${ob.closeShort(c.d.bid_end ?? null)}`
+            : `${dday(c.d.d_day)} · ${c.d.sale_date?.slice(5) ?? ""}`
+          : "-",
     },
     {
       label: t.rows.min,
@@ -128,8 +156,8 @@ export default function ComparePage() {
     },
     {
       label: t.rows.unknown,
-      cell: (c) => (c.d ? `${c.d.unknown_count}개` : "-"),
-      best: best((c) => c.d?.unknown_count),
+      cell: (c) => (c.d && !isOnbid(c.d) ? `${c.d.unknown_count}개` : "-"),
+      best: best((c) => (c.d && !isOnbid(c.d) ? c.d.unknown_count : null)),
       pcOnly: true,
     },
     {
@@ -184,10 +212,11 @@ export default function ComparePage() {
                   <th key={c.id}>
                     <Link href={`/item/${encodeURIComponent(c.id)}`} style={{ color: "inherit" }}>
                       <div className="sub">
-                        {c.d?.court} {c.d?.case_no}
+                        {c.d && isOnbid(c.d) ? ob.badge(c.d.kind_name ?? "") : c.d?.court}{" "}
+                        {c.d?.case_no}
                       </div>
                       <div style={{ fontWeight: 600 }}>
-                        {c.d?.place} {c.d?.building ?? c.d?.usage}
+                        {c.d?.place} {(c.d && !isOnbid(c.d) ? c.d.building : null) ?? c.d?.usage}
                       </div>
                     </Link>
                     {c.d?.fatal && <div className="fatal">{c.d.fatal}</div>}

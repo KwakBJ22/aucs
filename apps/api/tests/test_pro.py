@@ -16,5 +16,5 @@ def test_build_where_binds_everything():
 
 def test_csv_has_bom_and_header():
     out = to_csv([{"court": "수원", "case_no": "2025타경55580", "min_price_krw": 710500000}])
-    assert out.startswith("﻿법원,사건번호")
+    assert out.startswith("﻿법원·공매,사건번호")
     assert "710500000" in out

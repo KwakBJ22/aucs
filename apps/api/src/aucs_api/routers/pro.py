@@ -26,6 +26,7 @@ def get_pro_items(
     rate_max: Annotated[int | None, Query(ge=1, le=100)] = None,
     days_max: Annotated[int | None, Query(ge=0, le=60)] = None,
     q: Annotated[str | None, Query(max_length=40)] = None,
+    source: Annotated[str, Query(pattern="^(all|court|onbid)$")] = "all",
     sort: Annotated[str, Query(pattern="^(deadline|rate|appraisal|price|failed)$")] = "deadline",
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -68,8 +69,11 @@ def get_market(
     court: Annotated[str | None, Query(max_length=10)] = None,
     usage: Annotated[list[str] | None, Query()] = None,
     months: Annotated[int, Query(ge=1, le=12)] = 3,
+    source: Annotated[str, Query(pattern="^(court|onbid)$")] = "court",
 ) -> dict[str, Any]:
     today = date.today()
     f = {"sido": sido, "sigungu": sigungu, "court": court, "usage": usage,
          "since": today - timedelta(days=months * 31)}  # fmt: skip
+    if source == "onbid":
+        return pro.onbid_market(f)
     return pro.market(f, today)

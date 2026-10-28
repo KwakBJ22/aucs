@@ -10,6 +10,7 @@ from aucs_rules.progress import judge_progress
 
 from aucs_api.db import batch, connect
 from aucs_api.services.items import COURT_NAME
+from aucs_api.services.onbid import KIND_KO
 
 USAGE_GROUPS = {
     "apt": "아파트",
@@ -34,11 +35,11 @@ EXCLUDE_RULES = {
 # 초보자 안전 모드: 한 번에 빼는 7가지(05 화면 설계)
 SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"]
 SORTS = {
-    "deadline": "i.sale_date, i.item_id",
-    "rate": "i.min_price_krw::float / nullif(i.appraisal_krw, 0), i.sale_date",
-    "appraisal": "i.appraisal_krw desc nulls last",
-    "price": "i.min_price_krw nulls last",
-    "failed": "i.failed_count desc nulls last, i.sale_date",
+    "deadline": "u.sale_date, u.item_id",
+    "rate": "u.min_price_krw::float / nullif(u.appraisal_krw, 0), u.sale_date",
+    "appraisal": "u.appraisal_krw desc nulls last",
+    "price": "u.min_price_krw nulls last",
+    "failed": "u.failed_count desc nulls last, u.sale_date",
 }
 
 _BASE = """
@@ -101,6 +102,63 @@ def build_where(f: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
     return sql, p
 
 
+_ONBID_BASE = """
+from core.onbid_items o
+where o.display_policy = 'public' and o.status_code = 'active' and o.disposal = '매각'
+  and (o.bid_end at time zone 'Asia/Seoul')::date >= %(today)s
+"""
+_COURT_SEL = """select i.item_id, 'court' as source, c.court_code, c.case_no, i.item_no, i.usage_name, i.address,
+       i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.sale_date,
+       a.result -> 'signals' as signals, a.result -> 'market' as market, null::text as kind"""
+_ONBID_SEL = """select o.item_id, 'onbid', null, o.mng_no, 1, o.usage_name, coalesce(o.address, o.title),
+       coalesce(o.building_m2, o.land_m2), o.appraisal_krw, o.min_price_krw, o.failed_count,
+       (o.bid_end at time zone 'Asia/Seoul')::date, null::jsonb, null::jsonb, o.kind"""
+
+
+def onbid_where(f: dict[str, Any]) -> str | None:
+    """같은 조건을 공매 표에 맞춤(값 이름은 build_where 와 같음). 경매만 보거나 법원을 고르면 None."""
+    if f.get("source") == "court" or f.get("court"):
+        return None
+    sql = ""
+    if f.get("sido"):
+        sql += " and o.sido = %(sido)s"
+    if f.get("sigungu"):
+        sql += " and exists (select 1 from unnest(%(sigungu)s::text[]) g where o.sigungu like g || '%%')"
+    if f.get("usage") and [g for g in f["usage"] if g in USAGE_GROUPS]:
+        sql += " and o.usage_name ~ %(usage_re)s"
+    for key, col, op in (
+        ("failed_min", "o.failed_count", ">="),
+        ("failed_max", "o.failed_count", "<="),
+        ("app_min", "o.appraisal_krw", ">="),
+        ("app_max", "o.appraisal_krw", "<="),
+        ("price_max", "o.min_price_krw", "<="),
+        ("area_min", "o.building_m2", ">="),
+        ("area_max", "o.building_m2", "<="),
+    ):
+        if f.get(key) is not None:
+            sql += f" and coalesce({col}, 0) {op} %({key})s"
+    if f.get("rate_max") is not None:
+        sql += " and o.min_price_krw * 100 <= %(rate_max)s * o.appraisal_krw"
+    if f.get("days_max") is not None:
+        sql += " and (o.bid_end at time zone 'Asia/Seoul')::date <= %(today)s + %(days_max)s"
+    if f.get("exclude"):
+        sql += " and o.kind <> 'trust'"  # 신탁은 판정을 못 해 위험을 뺄 때 함께 뺌
+    if f.get("q"):
+        sql += " and (o.address ilike %(q)s or o.title ilike %(q)s or o.mng_no ilike %(q)s)"
+    return sql
+
+
+def union_sql(f: dict[str, Any], where: str) -> str:
+    """경매·공매를 한 표로(「함께 보기」가 기본)."""
+    parts = []
+    if f.get("source") != "onbid":
+        parts.append(f"{_COURT_SEL} {_BASE} {where}")
+    ow = onbid_where(f)
+    if ow is not None:
+        parts.append(f"{_ONBID_SEL} {_ONBID_BASE} {ow}")
+    return "(" + " union all ".join(parts) + ") u"
+
+
 def _row(r: dict[str, Any], today: date) -> dict[str, Any]:
     app, mn = r["appraisal_krw"], r["min_price_krw"]
     sig = [
@@ -111,7 +169,12 @@ def _row(r: dict[str, Any], today: date) -> dict[str, Any]:
     mkt = (r["market"] or {}).get("price_krw") if r["market"] else None
     return {
         "item_id": r["item_id"],
-        "court": COURT_NAME.get(r["court_code"], r["court_code"]),
+        "source": r["source"],
+        "court": (
+            f"공매·{KIND_KO.get(r['kind'], '')}".rstrip("·")
+            if r["source"] == "onbid"
+            else COURT_NAME.get(r["court_code"], r["court_code"])
+        ),
         "case_no": r["case_no"],
         "item_no": r["item_no"],
         "usage": r["usage_name"],
@@ -132,22 +195,23 @@ def _row(r: dict[str, Any], today: date) -> dict[str, Any]:
 def search(f: dict[str, Any], today: date, *, sort: str, page: int, limit: int) -> dict[str, Any]:
     where, p = build_where(f, today)
     p.update(limit=limit, offset=(page - 1) * limit)
-    sel = """select i.item_id, c.court_code, c.case_no, i.item_no, i.usage_name, i.address, i.building_area_m2,
-                    i.appraisal_krw, i.min_price_krw, i.failed_count, i.sale_date,
-                    a.result -> 'signals' as signals, a.result -> 'market' as market"""
+    u = union_sql(f, where)
     order = SORTS.get(sort, SORTS["deadline"])
     with connect() as c:
         q_rows, q_sum, q_all = batch(
             c,
             [
-                (f"{sel} {_BASE} {where} order by {order} limit %(limit)s offset %(offset)s", p),
+                (f"select * from {u} order by {order} limit %(limit)s offset %(offset)s", p),
                 (
-                    f"""select count(*) as n, coalesce(sum(i.appraisal_krw), 0) as app_sum,
-                       coalesce(avg(i.appraisal_krw), 0)::bigint as app_avg, coalesce(max(i.appraisal_krw), 0) as app_max,
-                       coalesce(sum(i.min_price_krw), 0) as min_sum {_BASE} {where}""",
+                    f"""select count(*) as n, coalesce(sum(u.appraisal_krw), 0) as app_sum,
+                       coalesce(avg(u.appraisal_krw), 0)::bigint as app_avg, coalesce(max(u.appraisal_krw), 0) as app_max,
+                       coalesce(sum(u.min_price_krw), 0) as min_sum from {u}""",
                     p,
                 ),
-                (f"select count(*) as n {_BASE}", {"today": today}),
+                (
+                    f"select count(*) as n from {union_sql({'source': f.get('source')}, '')}",
+                    {"today": today},
+                ),
             ],
         )
         rows, s, all_n = q_rows.fetchall(), q_sum.fetchone(), q_all.fetchone()
@@ -162,7 +226,7 @@ def search(f: dict[str, Any], today: date, *, sort: str, page: int, limit: int) 
 
 
 CSV_COLS = [
-    ("court", "법원"), ("case_no", "사건번호"), ("item_no", "물건번호"), ("usage", "용도"),
+    ("court", "법원·공매"), ("case_no", "사건번호"), ("item_no", "물건번호"), ("usage", "용도"),
     ("address", "소재지"), ("area_m2", "면적㎡"), ("appraisal_krw", "감정가"), ("min_price_krw", "최저가"),
     ("min_rate", "최저가율%"), ("failed_count", "유찰"), ("sale_date", "매각기일"), ("market_krw", "시세"),
     ("signal", "주요 신호"),
@@ -401,4 +465,78 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
             for r in rows
         ],
         "scorecard": dict(score or {}),
+    }
+
+
+# ── 공매 시장(전국, core.onbid_results) ─────────────────────────
+# 공매 낙찰가율은 최저가 대비(100%를 넘는 게 보통) — 경매 숫자와 섞지 않고 탭을 나눔.
+_O_MED = "round(percentile_cont(0.5) within group (order by s.rate_min)::numeric, 1)"
+_O_MED_APP = "round(percentile_cont(0.5) within group (order by s.rate_appraisal)::numeric, 1)"
+_O_USAGE = "coalesce(s.usage_s, s.usage_m, '')"
+_O_BIDDERS = (
+    "case when s.bidders <= 1 then '혼자' when s.bidders = 2 then '2명' "
+    "when s.bidders <= 4 then '3~4명' else '5명+' end"
+)
+
+
+def onbid_market_where(f: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    sql = (
+        " where s.result = '낙찰' and s.rate_min is not null and s.opened_at >= %(since)s"
+        " and coalesce(s.disposal, '매각') = '매각'"
+    )
+    p: dict[str, Any] = {"since": f["since"]}
+    if f.get("sido"):
+        sql += " and s.sido = %(sido)s"
+        p["sido"] = f["sido"]
+    if f.get("sigungu"):
+        sql += " and s.title like %(sgg)s"
+        p["sgg"] = f"% {f['sigungu']} %"
+    groups = [USAGE_GROUPS[g] for g in f.get("usage") or [] if g in USAGE_GROUPS]
+    if groups:
+        sql += f" and {_O_USAGE} ~ %(usage_re)s"
+        p["usage_re"] = "|".join(f"({g})" for g in groups)
+    return sql, p
+
+
+def onbid_market(f: dict[str, Any]) -> dict[str, Any]:
+    where, p = onbid_market_where(f)
+    case = " ".join(f"when {_O_USAGE} ~ '{v}' then '{k}'" for k, v in USAGE_GROUPS.items())
+    stat = f"count(*) as n, {_O_MED} as p50, {_O_MED_APP} as p50_app"
+    frm = f"from core.onbid_results s {where}"
+    with connect() as c:
+        qs = batch(
+            c,
+            [
+                (f"select s.sido, {stat} {frm} group by 1 order by 2 desc", p),
+                (f"select {_O_BIDDERS} as bidders, {stat} {frm} and s.bidders is not null"
+                 " group by 1 order by min(s.bidders)", p),
+                (f"select least(coalesce(s.failed_round, 0), 4)::int as failed, {stat} {frm} group by 1 order by 1", p),
+                (f"select to_char(s.opened_at at time zone 'Asia/Seoul', 'YYYY-MM') as month, {stat} {frm}"
+                 " group by 1 order by 1", p),
+                (f"select case {case} else 'etc' end as usage, {stat} {frm} group by 1 order by 2 desc", p),
+                (f"""select (s.opened_at at time zone 'Asia/Seoul')::date::text as sale_date, s.mng_no, s.kind_name,
+                           {_O_USAGE} as usage_name, s.title, s.building_m2, s.appraisal_krw, s.min_price_krw,
+                           s.win_krw, s.rate_min, s.rate_appraisal, s.bidders
+                    {frm} order by s.opened_at desc limit 100""", p),
+            ],
+        )  # fmt: skip
+        by_sido, by_bidders, by_failed, by_month, by_usage, rows = (q.fetchall() for q in qs)
+
+    def num(rs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {
+                k: (float(v) if k.startswith(("p50", "rate_")) and v is not None else v)
+                for k, v in r.items()
+            }
+            for r in rs
+        ]
+
+    return {
+        "basis": "최저가 대비",
+        "by_sido": num(by_sido),
+        "by_bidders": num(by_bidders),
+        "by_failed": num(by_failed),
+        "by_month": num(by_month),
+        "by_usage": num(by_usage),
+        "cases": num(rows),
     }

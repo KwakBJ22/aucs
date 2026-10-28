@@ -1,5 +1,5 @@
 import { ApiError, apiBaseUrl, clearMeCache, getMine } from "./client";
-import type { Calc, ItemCard, ItemDetail, Schedule } from "./items";
+import type { Calc, ItemCard, ItemDetail, OnbidDetail, Schedule } from "./items";
 
 export type WatchStep = "found" | "review" | "field" | "money" | "bid" | "result" | "after";
 export const WATCH_STEPS: WatchStep[] = [
@@ -169,7 +169,12 @@ export type Workspace = {
 };
 
 export type CompareFull = Compare & {
-  cols: { id: string; d: ItemDetail | null; calc: Calc | null; w: Workspace | null }[];
+  cols: {
+    id: string;
+    d: ItemDetail | OnbidDetail | null;
+    calc: Calc | null;
+    w: Workspace | null;
+  }[];
 };
 
 export type MockIn = {
