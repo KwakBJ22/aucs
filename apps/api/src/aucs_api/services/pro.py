@@ -110,9 +110,11 @@ where o.display_policy = 'public' and o.status_code = 'active' and o.disposal = 
 _COURT_SEL = """select i.item_id, 'court' as source, c.court_code, c.case_no, i.item_no, i.usage_name, i.address,
        i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.sale_date,
        a.result -> 'signals' as signals, a.result -> 'market' as market, null::text as kind"""
-_ONBID_SEL = """select o.item_id, 'onbid', null, o.mng_no, 1, o.usage_name, coalesce(o.address, o.title),
-       coalesce(o.building_m2, o.land_m2), o.appraisal_krw, o.min_price_krw, o.failed_count,
-       (o.bid_end at time zone 'Asia/Seoul')::date, null::jsonb, null::jsonb, o.kind"""
+_ONBID_SEL = """select o.item_id, 'onbid' as source, null::text as court_code, o.mng_no as case_no, 1 as item_no,
+       o.usage_name, coalesce(o.address, o.title) as address,
+       coalesce(o.building_m2, o.land_m2) as building_area_m2, o.appraisal_krw, o.min_price_krw, o.failed_count,
+       (o.bid_end at time zone 'Asia/Seoul')::date as sale_date, null::jsonb as signals, null::jsonb as market,
+       o.kind"""
 
 
 def onbid_where(f: dict[str, Any]) -> str | None:
