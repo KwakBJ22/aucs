@@ -35,15 +35,19 @@ _ITEM_COLS = [
 # 법원 지역 코드는 옛 코드가 섞여 있음 → 원래 값은 region_code_court 에 두고,
 # region_code 는 DB 함수가 주소의 동 이름으로 바로잡은 값 (0022)
 _VALUE = {"region_code": "ref.region_code_for(%(region_code_court)s, %(address)s)"}
+# 물건은 좌표가 있어 동 이름이 여러 구에 있거나 없을 때 좌표로 가려냄 (0023)
+_ITEM_VALUE = {
+    "region_code": "ref.region_code_for(%(region_code_court)s, %(address)s, %(lon)s::float, %(lat)s::float)"
+}
 
 
-def _val(c: str) -> str:
-    return _VALUE.get(c, f"%({c})s")
+def _val(c: str, extra: dict[str, str] | None = None) -> str:
+    return (extra or {}).get(c) or _VALUE.get(c, f"%({c})s")
 
 
 _ITEM = (
     f"insert into core.items ({', '.join(_ITEM_COLS)}, geom, fetched_at, checked_at) values ("
-    + ", ".join(_val(c) for c in _ITEM_COLS)
+    + ", ".join(_val(c, _ITEM_VALUE) for c in _ITEM_COLS)
     + ", case when %(lon)s::float is null then null else "
     "st_setsrid(st_makepoint(%(lon)s::float, %(lat)s::float), 4326)::geography end, now(), now())"
     " on conflict (item_id) do update set "
