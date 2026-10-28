@@ -212,6 +212,7 @@ export type OnbidDetail = ItemCard & {
   checklist: { key: string; label: string; state: string; what: string }[];
   check_left: number;
   same_house?: SameHouse[];
+  building?: import("@/components/item/building").Bldg | null;
   computed_at: string;
 };
 export const isOnbid = (d: { source?: string }): d is OnbidDetail => d.source === "onbid";

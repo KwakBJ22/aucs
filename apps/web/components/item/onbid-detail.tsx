@@ -11,6 +11,7 @@ import { dday, won } from "@/lib/format";
 import { useIsPc } from "@/lib/use-pc";
 import { DOT } from "@/components/item/shared";
 import { SameHouse } from "@/components/item/same-house";
+import { BuildingRows } from "@/components/item/building";
 
 // 공매 상세(설계서 4절, 스토리보드 GM-ITEM-01·04·06). 경매와 같은 틀 — 결론 먼저, 다섯 질문은 눌러서.
 const t = copy.onbid;
@@ -169,6 +170,7 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
         {d.area_m2 && <Row label={t.area} value={`${Math.round(d.area_m2 * 100) / 100}㎡`} />}
         {d.notice.name && <Row label={t.notice} value={d.notice.name} />}
         {d.notice.org && <Row label={t.org} value={d.notice.org} />}
+        {d.building && <BuildingRows g={d.building} />}
       </div>
     );
   if (k === "hold")

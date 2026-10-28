@@ -94,6 +94,13 @@ with t as (
   where i.sale_date >= current_date and i.status_code is distinct from 'gone'
     and length(i.region_code) = 10 and coalesce(i.lot_no, '') <> ''
     and coalesce(i.usage_name, '') <> all(%(land)s)
+  union all  -- 공매(10/28): 지번은 필지 번호에서, 토지는 뺌
+  select o.item_id, o.region_code, o.lot_no, o.usage_name, (o.bid_end at time zone 'Asia/Seoul')::date,
+         exists (select 1 from app.watch_items w where w.item_id = o.item_id)
+  from core.onbid_items o
+  where o.status_code = 'active' and o.disposal = '매각' and o.bid_end >= now()
+    and length(o.region_code) = 10 and coalesce(o.lot_no, '') <> ''
+    and coalesce(o.usage_name, '') !~ '^(전|답|임야|대지|잡종지|도로|과수원|목장용지|공장용지|하천|구거|유지|묘지|창고용지|주차장|학교용지|체육용지|광천지|염전|제방|종교용지|사적지|공원|수도용지|철도용지)$'
 )
 select region_code, lot_no, bool_or(usage_name ~ %(floor_re)s) as want_floor,
        bool_or(watched) as watched, min(sale_date) as first_date, array_agg(item_id) as items

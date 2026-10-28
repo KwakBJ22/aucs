@@ -5,11 +5,13 @@ import re
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.fmt import won
 from aucs_rules.price import Trade, market_price
 
 from aucs_api.cache import memo
 from aucs_api.db import batch, connect
+from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_links import same_house
 from aucs_api.services.onbid import KIND_KO, KST, onbid_card
 
@@ -139,6 +141,23 @@ def market_of(
     }
 
 
+def building_of(c: Any, r: dict[str, Any], today: date) -> dict[str, Any] | None:
+    """건축물대장(collectors/buildings 가 공매 물건도 받음) → 「무엇을 사나」 줄."""
+    p = parse_jibun(r["lot_no"])
+    if not p or not r["region_code"]:
+        return None
+    rows = c.execute(
+        "select kind, data from core.building_register where region_code = %s and lot_no = %s order by kind, seq",
+        (r["region_code"], lot_key(*p)),
+    ).fetchall()
+    titles = [x["data"] for x in rows if x["kind"] == "title"]
+    floors = [x["data"] for x in rows if x["kind"] == "floor"]
+    addr = r["address"] or r["title"]
+    return building_lines(
+        summarize(titles, floors, addr, f"{r['usage_name'] or ''} {r['title'] or ''}", today)
+    )
+
+
 def checklist(kind: str) -> list[dict[str, Any]]:
     """공매 체크리스트 6개(설계서 4절). 처음엔 건축물대장만 끝난 것으로 보지 않음(공매 물건은 아직 대장을 안 붙임)."""
     return [
@@ -162,6 +181,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         if not r:
             return None
         past = c.execute(_PAST_SQL, (r["mng_no"],)).fetchall()
+        bldg = building_of(c, r, today)
         kind = trade_type(r["usage_name"], r["title"])
         trades = []
         if kind and r["region_code"] and r["lot_no"]:
@@ -215,6 +235,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         else warnings[0],
         "warnings": warnings,
         "missing_docs": MISSING,
+        "building": bldg,
         "rounds": rv,
         "wait_line": (
             f"기다리면 {won((mn or 0) - nxt['min_price_krw'])} 원 싸지지만, 이번 주에 누가 먼저 사면 끝이에요"
