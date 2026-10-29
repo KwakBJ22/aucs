@@ -12,6 +12,7 @@ from aucs_api.cache import memo
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.docs import spec_sheet, spec_text
+from aucs_api.services.interest import interest
 from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
 from aucs_api.services.item_links import same_house
@@ -222,4 +223,5 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         if q["key"] == "worth":
             q["body"]["complex"] = cx
     out["same_house"] = same_house(item_id)
+    out["interest"] = interest(item_id)
     return out

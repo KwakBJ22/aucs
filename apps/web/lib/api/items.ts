@@ -132,6 +132,8 @@ export type Question = {
   tone: "green" | "gray" | "orange" | "red" | "blue";
   body: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
+// 관심도(경쟁 신호) — 적으면 서버가 비워 보냄
+export type Interest = { viewers_7d: number; watchers: number };
 export type SameHouse = {
   source: Source;
   item_id: string;
@@ -159,6 +161,7 @@ export type ItemDetail = ItemCard & {
   }[];
   schedule: Schedule;
   same_house?: SameHouse[];
+  interest?: Interest | null;
   computed_at: string | null;
 };
 
@@ -212,6 +215,7 @@ export type OnbidDetail = ItemCard & {
   checklist: { key: string; label: string; state: string; what: string }[];
   check_left: number;
   same_house?: SameHouse[];
+  interest?: Interest | null;
   building?: import("@/components/item/building").Bldg | null;
   computed_at: string;
 };

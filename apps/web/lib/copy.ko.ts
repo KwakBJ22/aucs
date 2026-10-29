@@ -609,6 +609,15 @@ export const copy = {
     checkOriginal:
       "잔금 기한·특이 조건·현장 설명은 온비드 공고 원문에 있어요 · 물건관리번호를 복사해 온비드에서 찾아보세요",
   },
+  interest: {
+    line: (viewers: number, watchers: number) =>
+      [
+        viewers ? `최근 7일 ${viewers}명이 봤어요` : "",
+        watchers ? `${watchers}명이 관심에 담았어요` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") + " · 경쟁이 붙을 수 있어요",
+  },
   report: {
     title: "한 장 보고서",
     print: "인쇄·PDF로 저장",

@@ -11,6 +11,7 @@ from aucs_rules.price import Trade, market_price, trade_region
 
 from aucs_api.cache import memo
 from aucs_api.db import batch, connect
+from aucs_api.services.interest import interest
 from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_links import same_house
 from aucs_api.services.onbid import KIND_KO, KST, onbid_card
@@ -219,6 +220,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     return {
         **base,
         "same_house": same_house(item_id),
+        "interest": interest(item_id),
         "title": r["title"],
         "address": r["address"],
         "kind_name": KIND_KO.get(r["kind"], r["kind_name"]),

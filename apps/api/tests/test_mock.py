@@ -29,3 +29,11 @@ def test_group_of():
     assert group_of("아파트") == "아파트"
     assert group_of("연립주택,다세대,빌라") == "다세대|연립|빌라"
     assert group_of("대지") is None
+
+
+def test_interest_shown():
+    from aucs_api.services.interest import shown
+
+    assert shown(1, 1) is None
+    assert shown(3, 0) == {"viewers_7d": 3, "watchers": 0}
+    assert shown(0, 2) == {"viewers_7d": 0, "watchers": 2}
