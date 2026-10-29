@@ -132,6 +132,10 @@ export type Question = {
   tone: "green" | "gray" | "orange" | "red" | "blue";
   body: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
+// 관할 법원 평균 응찰자 수(회원 기록, 5건부터 avg)
+export type CourtBidders = { n: number; avg: number | null; median: number | null; min_n: number };
+export const fetchCourtBidders = (id: string) =>
+  getJson<CourtBidders>(`/items/${encodeURIComponent(id)}/court-bidders`);
 // 관심도(경쟁 신호) — 적으면 서버가 비워 보냄
 export type Interest = { viewers_7d: number; watchers: number };
 export type SameHouse = {
@@ -162,6 +166,7 @@ export type ItemDetail = ItemCard & {
   schedule: Schedule;
   same_house?: SameHouse[];
   interest?: Interest | null;
+  court_bidders?: CourtBidders | null;
   computed_at: string | null;
 };
 

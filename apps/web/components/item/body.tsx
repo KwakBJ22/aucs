@@ -116,6 +116,12 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   if (q.key === "worth")
     return (
       <>
+        {d.court_bidders?.avg != null && (
+          <Row
+            label={copy.me.courtBidders}
+            value={copy.me.courtBiddersValue(d.court_bidders.avg, d.court_bidders.n)}
+          />
+        )}
         {b.range_krw && (
           <>
             <Row

@@ -77,6 +77,14 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
     return d
 
 
+@router.get("/items/{item_id}/court-bidders")
+def get_court_bidders(item_id: str) -> dict[str, Any]:
+    """관할 법원 평균 응찰자 수(회원 기록, 5건부터)."""
+    from aucs_api.services.court_stats import court_bidders
+
+    return court_bidders(item_id) or {"n": 0, "avg": None, "median": None, "min_n": 5}
+
+
 @router.get("/items/{item_id}/notice")
 def get_notice(item_id: str) -> dict[str, Any]:
     """공매 공고문 보기(GM-01)."""

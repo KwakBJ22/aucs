@@ -18,6 +18,7 @@ import { useIsPc } from "@/lib/use-pc";
 import { dday } from "@/lib/format";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
+import { fetchCourtBidders, type CourtBidders } from "@/lib/api/items";
 import { won } from "@/lib/format";
 
 const t = copy.me;
@@ -28,6 +29,7 @@ const md = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10
 function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; token: string }) {
   const [outcome, setOutcome] = useState<string | null>(null);
   const [f, setF] = useState({ my: "", win: "", second: "", n: "", pay: "" });
+  const [done, setDone] = useState<CourtBidders | null>(null);
   const bid = outcome === "won" || outcome === "lost";
   const save = () => {
     const b: BidIn = {
@@ -40,8 +42,30 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
       bidder_count: num(f.n),
       pay_date: f.pay || null,
     };
-    meApi.saveBid(token, b).then(onSaved);
+    // 남기면 바로 이 법원 응찰자 수부터 보여 줌(기록이 쌓이는 보람)
+    meApi
+      .saveBid(token, b)
+      .then(() => fetchCourtBidders(x.item_id))
+      .then(setDone)
+      .catch(onSaved);
   };
+  if (done)
+    return (
+      <div className="py-12 px-0">
+        <div className="fw-6">{t.thanks}</div>
+        <div className="bg-panel r-14 p-12 mt-8 fs-md">
+          {done.avg != null ? t.thanksBidders(done.avg, done.n) : t.thanksWait(done.n, done.min_n)}
+        </div>
+        <div className="d-flex jc-between ai-center mt-10">
+          <Link href="/pro/market" className="fs-md">
+            {t.toScore}
+          </Link>
+          <button className="chip gray b-0 mh-36" onClick={onSaved}>
+            {t.ok}
+          </button>
+        </div>
+      </div>
+    );
   const input = (k: keyof typeof f, label: string, type = "text") => (
     <label className="d-block fs-sm mt-8">
       <span className="sub m-0">{label}</span>

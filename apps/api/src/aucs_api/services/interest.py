@@ -1,6 +1,5 @@
 """관심도(경쟁 신호): 최근 7일 이 물건을 본 사람·관심에 담은 사람 수. 적으면 내보내지 않음(한두 명은 누군지 짐작될 수 있어서)."""
 
-
 from aucs_api.db import connect
 
 MIN_VIEWERS = 3

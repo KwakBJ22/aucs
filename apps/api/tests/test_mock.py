@@ -37,3 +37,11 @@ def test_interest_shown():
     assert shown(1, 1) is None
     assert shown(3, 0) == {"viewers_7d": 3, "watchers": 0}
     assert shown(0, 2) == {"viewers_7d": 0, "watchers": 2}
+
+
+def test_court_bidders_summary():
+    from aucs_api.services.court_stats import summarize
+
+    assert summarize([3, 4])["avg"] is None
+    s = summarize([1, 2, 3, 4, 10])
+    assert s["avg"] == 4.0 and s["median"] == 3 and s["n"] == 5

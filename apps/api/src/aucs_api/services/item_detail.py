@@ -11,6 +11,7 @@ from aucs_rules.schedule import after_sale
 from aucs_api.cache import memo
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
+from aucs_api.services.court_stats import court_bidders
 from aucs_api.services.docs import spec_sheet, spec_text
 from aucs_api.services.interest import interest
 from aucs_api.services.item_buy import building_lines
@@ -224,4 +225,5 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             q["body"]["complex"] = cx
     out["same_house"] = same_house(item_id)
     out["interest"] = interest(item_id)
+    out["court_bidders"] = court_bidders(item_id)
     return out
