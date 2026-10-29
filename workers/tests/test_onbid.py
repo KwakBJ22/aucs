@@ -125,3 +125,16 @@ def test_pnu_and_trust():
     assert kind_of("기타일반재산", "0005", "주식회사 무궁화신탁") == "trust"
     assert kind_of("기타일반재산", "0005", "농협은행주식회사") == "finance"
     assert kind_of("압류재산", "0007", "한국자산관리공사") == "seized"
+
+
+def test_region_row():
+    from aucs_workers.collectors.regions import rows_of, to_row
+
+    d = {"StanReginCd": [{"head": []}, {"row": [
+        {"region_cd": "4159810400", "locatadd_nm": "경기도 화성시 동탄구 오산동"},
+        {"region_cd": "4159800000", "locatadd_nm": "경기도 화성시 동탄구"},
+        {"region_cd": "4183032021", "locatadd_nm": "경기도 양평군 강하면 항금리"},
+    ]}]}  # fmt: skip
+    rows = [x for x in map(to_row, rows_of(d)) if x]
+    assert rows == [{"region_code": "4159810400", "sido": "경기도", "sigungu": "화성시 동탄구",
+                     "eupmyeondong": "오산동", "sigungu_code": "41598", "full_name": "경기도 화성시 동탄구 오산동"}]  # fmt: skip
