@@ -20,15 +20,26 @@ while ($true) {
       -WorkingDirectory $root -NoNewWindow -PassThru `
       -RedirectStandardOutput "$root\logs\server_api_out.log" -RedirectStandardError "$root\logs\server_api_run.log"
     $watch = @("$root\apps\api\src", "$root\packages\rules\src")
-    function Get-Stamp { (Get-ChildItem $watch -Recurse -Filter *.py -ErrorAction SilentlyContinue | Measure-Object LastWriteTime -Maximum).Maximum }
+    # 10/29: 가장 늦은 수정 시각만 보면 새 파일(복사로 옛 시각)·지운 파일을 놓침 → 파일 수 + 수정 시각 합으로 비교, .env 도 봄
+    function Get-Stamp {
+      $f = @(Get-ChildItem $watch -Recurse -Filter *.py -ErrorAction SilentlyContinue) + @(Get-Item "$root\.env" -ErrorAction SilentlyContinue)
+      "{0}|{1}" -f $f.Count, ($f | ForEach-Object { $_.LastWriteTimeUtc.Ticks } | Measure-Object -Sum).Sum
+    }
     $stamp = Get-Stamp
     while (-not $p.HasExited) {
       Start-Sleep -Seconds 2
       $now = Get-Stamp
-      if ($now -gt $stamp) {
+      if ($now -ne $stamp) {
         Start-Sleep -Seconds 1  # 여러 파일을 한꺼번에 고칠 때 잠깐 기다림
         "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 코드 바뀜 — API 다시 켬" | Out-File -Append -Encoding utf8 $log
         taskkill /PID $p.Id /T /F 2>&1 | Out-Null
+        # 끈 뒤에도 8100 을 쥔 프로그램이 남으면 새로 켤 때 「주소 사용 중」으로 바로 꺼짐 → 비워질 때까지(최대 10초) 기다리고, 남으면 끔
+        for ($i = 0; $i -lt 10; $i++) {
+          $held = Get-NetTCPConnection -LocalPort 8100 -State Listen -ErrorAction SilentlyContinue
+          if (-not $held) { break }
+          Start-Sleep -Seconds 1
+        }
+        if ($held) { $held | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } }
         break
       }
     }
