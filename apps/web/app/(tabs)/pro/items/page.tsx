@@ -50,8 +50,12 @@ function cell(r: ProRow, k: ColKey): React.ReactNode {
       );
     case "usage":
       return r.usage;
-    case "address":
-      return r.address;
+    case "address": // 시·도는 빼고 두 줄까지(전체는 마우스를 올리면)
+      return (
+        <span className="clamp2" title={r.address ?? ""}>
+          {(r.address ?? "").replace(/^(서울특별시|경기도)\s+/, "")}
+        </span>
+      );
     case "area":
       return r.area_m2 ? `${Math.round(r.area_m2)}㎡` : "";
     case "appraisal":
@@ -74,7 +78,9 @@ function cell(r: ProRow, k: ColKey): React.ReactNode {
       return r.market_krw ? won(r.market_krw) : "";
     case "signal":
       return r.signal ? (
-        <span style={{ color: r.fatal ? "var(--red)" : "var(--orange)" }}>{r.signal}</span>
+        <span className="clamp2" style={{ color: r.fatal ? "var(--red)" : "var(--orange)" }}>
+          {r.signal}
+        </span>
       ) : (
         ""
       );
@@ -414,7 +420,12 @@ function ProItems() {
                   style={{ cursor: pc ? "pointer" : undefined }}
                 >
                   {cols.map((c) => (
-                    <td key={c} className={c === "address" ? "td-addr" : undefined}>
+                    <td
+                      key={c}
+                      className={
+                        c === "address" ? "td-addr" : c === "signal" ? "td-sig" : undefined
+                      }
+                    >
                       {cell(r, c)}
                     </td>
                   ))}

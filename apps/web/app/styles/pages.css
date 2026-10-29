@@ -653,6 +653,11 @@
 
 /* 전체 물건 표: 주소는 넓게 두 줄까지 */
 .pro-table td.td-addr {
-  min-width: 320px;
-  max-width: 420px;
+  min-width: 200px;
+  max-width: 360px;
+}
+.pro-table td.td-sig {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 200px;
 }
