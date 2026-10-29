@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { track } from "@/lib/track";
+import { InstallHint, shouldShowInstallHint } from "@/components/install-hint";
 
 type WatchState = { ids: Set<string>; token: string | null; toggle: (id: string) => Promise<void> };
 const Ctx = createContext<WatchState>({ ids: new Set(), token: null, toggle: async () => {} });
@@ -13,6 +14,7 @@ export function WatchProvider({ children }: { children: React.ReactNode }) {
   const { session } = useSession();
   const token = session?.access_token ?? null;
   const [ids, setIds] = useState<Set<string>>(new Set());
+  const [hint, setHint] = useState(false); // 처음 관심 담을 때 한 번: 홈 화면에 추가 안내
 
   useEffect(() => {
     if (!token) return;
@@ -35,13 +37,21 @@ export function WatchProvider({ children }: { children: React.ReactNode }) {
         else n.add(id);
         return n;
       });
-      if (!on) track("watch_add", id);
+      if (!on) {
+        track("watch_add", id);
+        if (shouldShowInstallHint()) setHint(true);
+      }
       await (on ? meApi.removeWatch(token, id) : meApi.addWatch(token, id));
     },
     [ids, token],
   );
 
-  return <Ctx.Provider value={{ ids, token, toggle }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ ids, token, toggle }}>
+      {children}
+      {hint && <InstallHint onClose={() => setHint(false)} />}
+    </Ctx.Provider>
+  );
 }
 
 export const useWatch = () => useContext(Ctx);

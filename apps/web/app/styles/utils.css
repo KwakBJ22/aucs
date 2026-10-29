@@ -534,3 +534,4 @@
 .w-full {
   width: 100% !important;
 }
+.pos-fixed { position: fixed !important; }
