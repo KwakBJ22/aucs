@@ -267,6 +267,23 @@ export default function Me() {
               {line}
             </div>
           ))}
+          {(x.similar?.length ?? 0) > 0 && (
+            <div className="bg-panel r-14 p-12 mt-8">
+              <div className="fs-sm fw-7 mb-4">{copy.mock.similar}</div>
+              {x.similar?.map((s) => (
+                <Link
+                  key={s.item_id}
+                  href={`/item/${encodeURIComponent(s.item_id)}`}
+                  className="line-row c-inherit fs-md"
+                >
+                  <span className="ellipsis minw-0">
+                    {s.place} <span className="sub">{md(s.sale_date)}</span>
+                  </span>
+                  <b className="nowrap">{won(s.min_price_krw)} ›</b>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       ))}
     </>,

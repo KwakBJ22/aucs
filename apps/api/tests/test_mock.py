@@ -21,3 +21,11 @@ def test_review_waiting_and_failed():
         review({"decision": "bid", "bid_krw": 500_000_000}, "failed", None)[1]
         == "내 금액 5억이면 낙찰됐을 거예요"
     )
+
+
+def test_group_of():
+    from aucs_api.services.mock import group_of
+
+    assert group_of("아파트") == "아파트"
+    assert group_of("연립주택,다세대,빌라") == "다세대|연립|빌라"
+    assert group_of("대지") is None

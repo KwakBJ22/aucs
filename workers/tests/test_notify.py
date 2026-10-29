@@ -57,3 +57,16 @@ def test_change_text_onbid():
     assert "온비드" in t
     t, _ = change_text("강남구 아파트", Change("result", None, "낙찰"), onbid=True)
     assert t == "강남구 아파트 공매 낙찰"
+
+
+def test_mock_text():
+    from aucs_workers.jobs.notify import mock_text
+
+    assert (
+        mock_text("강남구 A", 500_000_000, "bid", "sold", 480_000_000)[0]
+        == "강남구 A 내 금액이면 낙찰이었어요"
+    )
+    t = mock_text("강남구 A", 450_000_000, "bid", "sold", 480_000_000)
+    assert t[0] == "강남구 A 3,000만원 모자랐어요"
+    assert mock_text("강남구 A", None, "skip", "failed", None) is None
+    assert "낙찰됐을" in mock_text("강남구 A", 300_000_000, "bid", "failed", None)[1]

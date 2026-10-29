@@ -303,6 +303,51 @@ def make_onbid_close_alerts(conn: psycopg.Connection, *, morning: bool) -> int:
     return n
 
 
+def mock_text(
+    place: str, bid: int | None, decision: str, result: str, win: int | None
+) -> tuple[str, str] | None:
+    """모의입찰 결과 알림 문구 (순수 함수). 결과가 매각·유찰일 때만."""
+    if result == "failed":
+        if decision == "bid" and bid:
+            return f"{place} 유찰됐어요", f"내 금액 {won(bid)}이었다면 낙찰됐을 거예요"
+        return None
+    if result != "sold" or not win:
+        return None
+    if decision == "skip":
+        return f"{place} {won(win)}에 팔렸어요", "안 들어간 판단을 내 분석 노트에서 돌아봐요"
+    if bid and bid >= win:
+        return f"{place} 내 금액이면 낙찰이었어요", f"낙찰가 {won(win)} · 내 금액 {won(bid)}"
+    if bid:
+        return (
+            f"{place} {won(win - bid)} 모자랐어요",
+            f"낙찰가 {won(win)} · 비슷한 물건을 내 분석 노트에 모아 뒀어요",
+        )
+    return None
+
+
+def make_mock_alerts(conn: psycopg.Connection) -> int:
+    """「내 모의입찰가라면 낙찰됐을까」 — 결과가 나온 다음 날 한 통(2주 안 결과만)."""
+    n = 0
+    for uid, item_id, sale_date, decision, bid, result, win, place in conn.execute(
+        """select m.user_id, m.item_id, m.sale_date::text, m.decision, m.bid_krw, r.result, r.winning_bid_krw,
+                  coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '')
+           from app.mock_bids m
+           join core.items i using (item_id)
+           join lateral (select result, winning_bid_krw from core.sale_results s
+                         where s.item_id = m.item_id and s.sale_date = m.sale_date
+                         order by fetched_at desc limit 1) r on true
+           where m.sale_date < current_date and m.sale_date >= current_date - 14"""
+    ).fetchall():
+        txt = mock_text(place.strip(), bid, decision, result, win)
+        if not txt:
+            continue
+        eid = _event(conn, uid, item_id, "mock_result", None, sale_date)
+        if eid:
+            _noti(conn, uid, eid, txt[0], txt[1], "/me")
+            n += 1
+    return n
+
+
 def make_watch_alerts(conn: psycopg.Connection) -> int:
     n = 0
     rows = conn.execute(
@@ -448,7 +493,8 @@ def main() -> None:
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
         b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
         o = (
-            make_onbid_search_alerts(conn)
+            make_mock_alerts(conn)
+            + make_onbid_search_alerts(conn)
             + make_onbid_watch_alerts(conn)
             + make_onbid_close_alerts(conn, morning=False)
         )

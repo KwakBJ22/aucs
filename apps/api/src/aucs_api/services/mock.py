@@ -69,6 +69,7 @@ def listing(uid: str, today: date) -> list[dict[str, Any]]:
         rows = c.execute(
             """select m.mock_id, m.item_id, m.sale_date, m.decision, m.bid_krw, m.max_krw, m.reason,
                       coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place,
+                      i.sigungu, i.usage_name,
                       r.result, r.winning_bid_krw, r.address
                from app.mock_bids m
                left join core.items i using (item_id)
@@ -81,6 +82,13 @@ def listing(uid: str, today: date) -> list[dict[str, Any]]:
     out = []
     for r in rows:
         res = r["result"] if r["sale_date"] <= today else None
+        sigungu, usage = r.pop("sigungu", None), r.pop("usage_name", None)
+        lost = (
+            res == "sold"
+            and r["winning_bid_krw"]
+            and r["decision"] == "bid"
+            and (r["bid_krw"] or 0) < r["winning_bid_krw"]
+        )
         addr = r.pop("address", None) or ""
         place = (r["place"] or "").strip() or " ".join(addr.split()[1:4])  # 지난 물건은 주소로
         out.append(
@@ -89,6 +97,40 @@ def listing(uid: str, today: date) -> list[dict[str, Any]]:
                 "place": place,
                 "sale_date": r["sale_date"].isoformat(),
                 "review": review(r, res, r["winning_bid_krw"]),
+                "similar": similar(sigungu, usage, r["max_krw"] or r["bid_krw"], today)
+                if lost
+                else [],
             }
         )
     return out
+
+
+_GROUPS = ("아파트", "오피스텔", "다세대|연립|빌라", "단독|다가구", "상가|근린|사무|업무")
+
+
+def group_of(usage: str | None) -> str | None:
+    """종류 묶음(비슷한 물건 찾기용). (순수 함수)"""
+    import re
+
+    return next((g for g in _GROUPS if usage and re.search(g, usage)), None)
+
+
+def similar(
+    sigungu: str | None, usage: str | None, cap: int | None, today: date
+) -> list[dict[str, Any]]:
+    """떨어진 물건과 같은 구·같은 종류, 내 금액(상한) 안에서 시작하는 진행 물건 3개."""
+    g = group_of(usage)
+    if not sigungu or not g or not cap:
+        return []
+    with connect() as c:
+        rows = c.execute(
+            """select i.item_id, coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place,
+                      i.sale_date::text as sale_date, i.min_price_krw
+               from core.items i
+               where i.sigungu = %s and i.usage_name ~ %s and i.sale_date >= %s
+                 and i.status_code is distinct from 'gone' and i.display_policy = 'public'
+                 and i.min_price_krw between %s and %s
+               order by i.sale_date, i.min_price_krw desc limit 3""",
+            (sigungu, g, today, int(cap * 0.5), cap),
+        ).fetchall()
+    return [{**x, "place": (x["place"] or "").strip()} for x in rows]

@@ -189,6 +189,8 @@ export type Mock = MockIn & {
   sale_date: string;
   place: string | null;
   review: string[];
+  // 떨어졌을 때: 같은 구·같은 종류, 내 금액(상한) 안에서 시작하는 진행 물건
+  similar?: { item_id: string; place: string; sale_date: string; min_price_krw: number }[];
 };
 
 export const meApi = {
