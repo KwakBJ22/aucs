@@ -9,17 +9,19 @@
     "format": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "pnpm typecheck && pnpm lint && pnpm format && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm format && pnpm test",
+    "e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "next": "15.3.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "@supabase/supabase-js": "^2.50.0"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@next/env": "15.3.4",
+    "@playwright/test": "1.56.1",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
