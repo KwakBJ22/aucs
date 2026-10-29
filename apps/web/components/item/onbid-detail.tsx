@@ -308,38 +308,43 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
       </section>
     </>
   );
+  const live = Boolean(d.bid_end && (d.d_day ?? -1) >= 0);
+  const linkStyle = {
+    border: 0,
+    background: "none",
+    color: "var(--blue)",
+    fontSize: 14,
+    padding: 0,
+  };
+  // 주 버튼 하나(폭 가득) + 덜 중요한 일은 아래 글자 링크(08-look 5절)
   const actions = (
     <>
-      <section className="section" style={{ display: "flex", gap: 8 }}>
-        <button className="btn" onClick={copyNo} style={{ flex: 1 }}>
-          {copied ? t.copied : t.copyNo}
-        </button>
-        <Link
-          className="btn"
-          href={`/item/${encodeURIComponent(d.item_id)}/report`}
-          style={{ flex: 1 }}
-        >
-          {copy.report.open}
-        </Link>
-        {d.bid_end && (d.d_day ?? -1) >= 0 && (
-          <Link
-            className="btn primary"
-            href={`/item/${encodeURIComponent(d.item_id)}/onbid-bid`}
-            style={{ flex: 1 }}
-          >
+      <section className="section">
+        {live && (
+          <Link className="btn primary" href={`/item/${encodeURIComponent(d.item_id)}/onbid-bid`}>
             {copy.onbidBid.title}
           </Link>
         )}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 16,
+            flexWrap: "wrap",
+            marginTop: live ? 14 : 0,
+          }}
+        >
+          <button onClick={copyNo} style={linkStyle}>
+            {copied ? t.copied : t.copyNo}
+          </button>
+          <Link href={`/item/${encodeURIComponent(d.item_id)}/report`} style={{ fontSize: 14 }}>
+            {copy.report.open}
+          </Link>
+          <a href={t.onbidUrl} target="_blank" rel="noreferrer" style={{ fontSize: 14 }}>
+            {t.openOnbid}
+          </a>
+        </div>
       </section>
-      <a
-        className="sub"
-        href={t.onbidUrl}
-        target="_blank"
-        rel="noreferrer"
-        style={{ display: "block", textAlign: "center", fontSize: 13, padding: "4px 0 12px" }}
-      >
-        {t.openOnbid}
-      </a>
       <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
         {t.footer(d.computed_at.slice(0, 10))}
       </p>
