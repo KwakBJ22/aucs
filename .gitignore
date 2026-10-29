@@ -19,3 +19,7 @@ coverage/
 logs/
 .next-fast/
 scripts/web-mode.txt
+
+# DB 백업·복구 시험 도구(10/29, 받아서 씀)
+tools/pgsql/
+tools/pgsql.zip

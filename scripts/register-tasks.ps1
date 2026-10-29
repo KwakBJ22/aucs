@@ -2,7 +2,7 @@
 # 10/28 정리: 예전 register-tasks-2~5 를 이 파일 하나로 합침.
 #   켜 둠: 아침_묶음 매일 07:00(매각결과→물건→분석→서류→분석→알림) · 입찰일_아침 매일 07:30
 #          관심_바로_준비 09:05~21:05 매시(10/29, 관심 담은 뒤 서류·건축물대장·분석)
-#          실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
+#          DB_백업 매주 일요일 12:00(10/29, backup-db.ps1) · 실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
 #   꺼 둠(지우지 않음): \Aucs\ 매각결과·물건·서류보관·분석·알림(아침 묶음으로 바뀜, 10/18)
 #                      \Auction\ 경매레이더 수집 5개(옥스로 넘김, 10/17)
 #   다시 켜기 예: Enable-ScheduledTask -TaskPath '\Aucs\' -TaskName '물건'
@@ -20,6 +20,9 @@ schtasks /Create /TN "\Aucs\입찰일_아침" /SC DAILY /ST 07:30 /TR "$tr morni
 Write-Host "등록: \Aucs\입찰일_아침 — 매일 07:30"
 schtasks /Create /TN "\Aucs\관심_바로_준비" /SC DAILY /ST 09:05 /RI 60 /DU 12:00 /TR "$tr watched" /F | Out-Null; Set-Opts '관심_바로_준비' 1
 Write-Host "등록: \Aucs\관심_바로_준비 — 09:05~21:05 매시(관심 담은 뒤 서류·건축물대장)"
+$bk = Join-Path $PSScriptRoot 'backup-db.ps1'
+schtasks /Create /TN "\Aucs\DB_백업" /SC WEEKLY /D SUN /ST 12:00 /TR "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$bk`"" /F | Out-Null; Set-Opts 'DB_백업' 2
+Write-Host "등록: \Aucs\DB_백업 — 매주 일요일 12:00(D:\Auction\backup, 최근 8개)"
 schtasks /Create /TN "\Aucs\실거래" /SC MONTHLY /D 2 /ST 10:00 /TR "$tr trades" /F | Out-Null; Set-Opts '실거래' 3
 Write-Host "등록: \Aucs\실거래 — 매월 2일 10:00"
 schtasks /Create /TN "\Aucs\정비사업" /SC MONTHLY /M JAN,APR,JUL,OCT /D 3 /ST 11:00 /TR "$tr redev" /F | Out-Null; Set-Opts '정비사업' 1
