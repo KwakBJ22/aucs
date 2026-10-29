@@ -47,6 +47,8 @@ export const copy = {
     errorTitle: "자료를 불러오지 못했어요",
     errorSub: "인터넷 연결을 확인하고 다시 시도해 주세요",
     retry: "다시 시도",
+    crashTitle: "이 화면에서 문제가 생겼어요",
+    crashSub: "저희에게 자동으로 알려졌어요 · 다시 해 보시거나 다른 메뉴로 가 주세요",
   },
   footer: {
     links: [
@@ -1191,6 +1193,10 @@ export const copy = {
     flags: "자료 공개 설정",
     rules: "기준표",
     rulesEmpty: "아직 넣지 않았어요",
+    errors: "오류 (최근 7일)",
+    errorsEmpty: "없어요",
+    errorSide: { web: "화면", api: "API" } as Record<string, string>,
+    errorLine: (n: number, devices: number) => `${n}번 · 기기 ${devices}대`,
     statusName: { ok: "정상", failed: "오류", stopped: "멈춤", running: "도는 중" } as Record<
       string,
       string

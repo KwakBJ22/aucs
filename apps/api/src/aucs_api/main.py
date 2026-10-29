@@ -1,12 +1,16 @@
 """옥스 API 시작점. 실행: uv run uvicorn aucs_api.main:app --port 8100"""
 
-from fastapi import FastAPI
+import traceback
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from aucs_api import settings
 from aucs_api.cache import PublicCache
 from aucs_api.db import warm
-from aucs_api.routers import admin, events, health, items, me, pro
+from aucs_api.routers import admin, errors, events, health, items, me, pro
+from aucs_api.services import errors as error_log
 
 app = FastAPI(title="옥스 API", on_startup=[warm])
 app.add_middleware(PublicCache)  # CORS보다 안쪽(먼저 추가)
@@ -24,3 +28,14 @@ app.include_router(items.router)
 app.include_router(me.router)
 app.include_router(pro.router)
 app.include_router(events.router)
+app.include_router(errors.router)
+
+
+@app.exception_handler(Exception)
+async def on_error(request: Request, exc: Exception) -> JSONResponse:
+    """못 잡은 오류: ops.errors 에 남기고(관리자 「오류」) 화면에는 짧은 말만."""
+    error_log.save(
+        "api", f"{type(exc).__name__}: {exc}", path=f"{request.method} {request.url.path}",
+        stack="".join(traceback.format_exception(exc))[-4000:],
+    )  # fmt: skip
+    return JSONResponse({"detail": "잠시 문제가 생겼어요. 다시 해 주세요"}, status_code=500)

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from aucs_api.auth.admin import require_admin
-from aucs_api.services import admin
+from aucs_api.services import admin, errors
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
 
@@ -52,3 +52,9 @@ def put_flag(key: str, body: FlagIn) -> dict[str, Any]:
 @router.get("/rule-tables")
 def get_rule_tables() -> list[dict[str, Any]]:
     return admin.rule_tables()
+
+
+@router.get("/errors")
+def get_errors() -> list[dict[str, Any]]:
+    """최근 7일 오류(같은 내용끼리 묶음)."""
+    return errors.recent()

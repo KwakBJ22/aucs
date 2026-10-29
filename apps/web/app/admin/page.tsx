@@ -5,6 +5,7 @@ import {
   adminApi,
   formatBytes,
   type AdminStatus,
+  type ErrorRow,
   type Flag,
   type Review,
   type RuleRow,
@@ -37,19 +38,22 @@ export default function AdminPage() {
   const [review, setReview] = useState<Review | null>(null);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [rules, setRules] = useState<RuleRow[]>([]);
+  const [errs, setErrs] = useState<ErrorRow[]>([]);
 
   const load = useCallback(async (k: string) => {
     try {
-      const [s, r, f, ru] = await Promise.all([
+      const [s, r, f, ru, er] = await Promise.all([
         adminApi.status(k),
         adminApi.review(k),
         adminApi.flags(k),
         adminApi.rules(k),
+        adminApi.errors(k).catch(() => [] as ErrorRow[]),
       ]);
       setStatus(s);
       setReview(r);
       setFlags(f);
       setRules(ru);
+      setErrs(er);
       setError("");
       setToken(k);
       try {
@@ -123,6 +127,30 @@ export default function AdminPage() {
           <p className="fs-md" style={{ color: dbUsed > 0.9 ? "#d64545" : "#6b7280" }}>
             {t.db} {formatBytes(status.counts.db_bytes)} / {formatBytes(status.db_limit_bytes)}
           </p>
+        )}
+      </section>
+
+      <section style={box}>
+        <h2 className="fs-lg mt-0">{t.errors}</h2>
+        {errs.length === 0 ? (
+          <p className="sub fs-md">{t.errorsEmpty}</p>
+        ) : (
+          errs.map((e) => (
+            <details key={`${e.side}-${e.message}`} className="fs-md py-6">
+              <summary>
+                <b style={{ color: "#d64545" }}>{t.errorSide[e.side] ?? e.side}</b> {e.message}{" "}
+                <span className="sub">
+                  · {t.errorLine(e.n, e.devices)} · {e.path ?? ""} ·{" "}
+                  {new Date(e.last_at).toLocaleString("ko-KR")}
+                </span>
+              </summary>
+              {e.stack && (
+                <pre className="fs-xs oy-auto" style={{ maxHeight: 240, whiteSpace: "pre-wrap" }}>
+                  {e.stack}
+                </pre>
+              )}
+            </details>
+          ))
         )}
       </section>
 

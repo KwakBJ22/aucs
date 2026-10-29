@@ -29,6 +29,15 @@ export type Review = {
   signals: { item_id: string; title: string; sale_date: string }[];
   reports?: { report_id: number; item_id: string; section: string; note: string; at: string }[];
 };
+export type ErrorRow = {
+  side: string;
+  message: string;
+  n: number;
+  devices: number;
+  last_at: string;
+  path: string | null;
+  stack: string | null;
+};
 export type RuleRow = {
   rule_key: string;
   valid_from: string;
@@ -53,6 +62,7 @@ export const adminApi = {
   review: (t: string) => call<Review>(t, "/review"),
   flags: (t: string) => call<Flag[]>(t, "/flags"),
   rules: (t: string) => call<RuleRow[]>(t, "/rule-tables"),
+  errors: (t: string) => call<ErrorRow[]>(t, "/errors"),
   closeReport: (t: string, id: number, status: "fixed" | "rejected") =>
     call<{ ok: boolean }>(t, `/reports/${id}`, { method: "PUT", body: JSON.stringify({ status }) }),
   setFlag: (t: string, key: string, enabled: boolean) =>
