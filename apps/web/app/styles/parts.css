@@ -244,3 +244,14 @@
     padding: 18px 16px;
   }
 }
+
+/* 화면 아래에 붙는 주 버튼(휴대폰, 아래 탭 바로 위) */
+.cta-bar {
+  position: sticky;
+  bottom: 88px;
+  z-index: 5;
+  margin-top: 8px;
+}
+.cta-bar .btn {
+  box-shadow: 0 6px 20px rgba(31, 94, 234, 0.25);
+}

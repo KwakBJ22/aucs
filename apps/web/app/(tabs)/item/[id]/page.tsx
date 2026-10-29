@@ -120,7 +120,7 @@ export default function Item() {
             </div>
             <div className="fs-3xl fw-7 mt-6">
               {won(d.min_price_krw)}{" "}
-              <span className="fs-md fw-5 c-muted">
+              <span className="fs-md fw-5 c-muted d-inline-block">
                 {copy.card.ofAppraisal} {d.min_rate}%
                 {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
               </span>
@@ -181,6 +181,14 @@ export default function Item() {
           <p className="sub pt-0 pb-24 px-18 fs-xs">
             {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
           </p>
+          {/* 주 버튼 하나, 화면 아래에 붙임(08-look 5절) — 입찰가 계산·모의입찰로 감 */}
+          {(d.d_day ?? -1) >= 0 && (
+            <div className="cta-bar">
+              <Link href={`/item/${encodeURIComponent(d.item_id)}/calc`} className="btn primary">
+                {t.bidTry}
+              </Link>
+            </div>
+          )}
           {doc && <DocSheet id={d.item_id} kind={doc} onClose={() => setDoc(null)} />}
         </main>
       </DocCtx.Provider>
