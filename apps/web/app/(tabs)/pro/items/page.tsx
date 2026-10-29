@@ -414,7 +414,9 @@ function ProItems() {
                   style={{ cursor: pc ? "pointer" : undefined }}
                 >
                   {cols.map((c) => (
-                    <td key={c}>{cell(r, c)}</td>
+                    <td key={c} className={c === "address" ? "td-addr" : undefined}>
+                      {cell(r, c)}
+                    </td>
                   ))}
                 </tr>
               ))}

@@ -312,7 +312,9 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
     };
     return (
       <main className="page">
-        <PageHeader title="" back="history" right={<HeartButton id={d.item_id} />} />
+        <div className="d-flex jc-end pt-12">
+          <HeartButton id={d.item_id} />
+        </div>
         <div className="pc-grid g-26-44-30">
           <div className="pc-sticky">
             {head}

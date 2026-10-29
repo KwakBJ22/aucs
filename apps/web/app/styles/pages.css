@@ -398,10 +398,13 @@
   gap: 14px;
 }
 .f-label {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
-  margin-bottom: 6px;
+  margin: 20px 0 8px;
   display: block;
+}
+.f-label:first-child {
+  margin-top: 12px;
 }
 .f-input {
   width: 100%;
@@ -646,4 +649,10 @@
 .compare-table tbody tr:nth-child(even) > *,
 .pro-table tbody tr:nth-child(even) td {
   background: var(--panel);
+}
+
+/* 전체 물건 표: 주소는 넓게 두 줄까지 */
+.pro-table td.td-addr {
+  min-width: 320px;
+  max-width: 420px;
 }
