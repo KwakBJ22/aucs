@@ -230,7 +230,7 @@ function ProItems() {
           {Object.entries(t.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`${`chip ${f.usage?.includes(k) ? "green" : "gray"}`} b-0 mh-30`}
+              className={`chip ${f.usage?.includes(k) ? "green" : "gray"} b-0 mh-30`}
 
               onClick={() => toggle("usage", k)}
             >
@@ -302,7 +302,7 @@ function ProItems() {
           {Object.entries(t.excludes).map(([k, v]) => (
             <button
               key={k}
-              className={`${`chip ${f.exclude?.includes(k) ? "orange" : "gray"}`} b-0 mh-30`}
+              className={`chip ${f.exclude?.includes(k) ? "orange" : "gray"} b-0 mh-30`}
 
               onClick={() => toggle("exclude", k)}
             >

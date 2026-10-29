@@ -66,7 +66,7 @@ export function ItemCard({ c }: { c: Card }) {
         <div className="fs-md fw-6 mt-2 ellipsis">
           {c.place} {c.building ?? c.usage} {c.area_m2 ? `${Math.round(c.area_m2)}㎡` : ""}
         </div>
-        <div className="fs-lg fw-7 mt-2">
+        <div className="fs-lg fw-7 mt-2 ellipsis">
           {won(c.min_price_krw)}{" "}
           <span className="fs-xs fw-5 c-muted">
             {c.min_rate != null ? `${c.min_rate}%` : ""}

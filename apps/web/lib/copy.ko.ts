@@ -225,7 +225,7 @@ export const copy = {
     sortRate: "최저가율 낮은 순",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
     mapSoon: "지도는 카카오 지도 키를 받으면 붙여요",
-    searchPlaceholder: "사건번호·물건관리번호·단지·동네",
+    searchPlaceholder: "번호·단지·동네로 찾기",
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
     sourceLabel: "경매·공매",
     status: { active: "진행 중", sold: "매각됨", withdrawn: "취하·변경", all: "전체" } as Record<
@@ -1014,7 +1014,7 @@ export const copy = {
     title: "입찰가 계산",
     numbers: "이 물건 숫자",
     loginForSaved: "로그인하고 관심에 담으면 계산을 5개까지 저장해 비교할 수 있어요",
-    savedNone: "아직 저장한 계산이 없어요 · 왼쪽에서 「작업 공간에 저장」",
+    savedNone: "아직 저장한 계산이 없어요 · 계산 상자에서 「작업 공간에 저장」",
     open: "계산 화면 크게 보기",
   },
   plans: {

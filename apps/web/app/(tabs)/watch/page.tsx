@@ -37,22 +37,21 @@ function StepRow({
               {t.changed}
             </span>
           )}
-          <button className="chip green b-0 mh-32" onClick={() => setOpen(true)}>
-            {t.steps[c.step]} ▾
-          </button>
-          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray mh-32">
-            {copy.ws.open} ›
-          </Link>
+          {/* 칩 둘까지 + 나머지는 글자 링크(08-look 5절) */}
           {c.step === "result" ? (
-            <Link href="/me" className="chip gray mh-32">
+            <Link href="/me" className="chip green mh-32">
               {t.resultShort} ›
             </Link>
           ) : (
-            <button
-              className={`${`chip ${c.in_compare ? "green" : "gray"}`} b-0 mh-32`}
-
-              onClick={onCompare}
-            >
+            <button className="chip green b-0 mh-32" onClick={() => setOpen(true)}>
+              {t.steps[c.step]} ▾
+            </button>
+          )}
+          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray mh-32">
+            {copy.ws.open} ›
+          </Link>
+          {c.step !== "result" && (
+            <button className="link-btn pt-0" onClick={onCompare}>
               {c.in_compare ? copy.compare.added : copy.compare.add}
             </button>
           )}
@@ -63,7 +62,7 @@ function StepRow({
           {choices.map((s) => (
             <button
               key={s}
-              className={`${`chip ${s === c.step ? "green" : "gray"}`} b-0 mh-36`}
+              className={`chip ${s === c.step ? "green" : "gray"} b-0 mh-36`}
 
               onClick={() => {
                 setOpen(false);
@@ -156,7 +155,7 @@ export default function Watch() {
       right={
         <div className="d-flex gap-6">
           <button
-            className={`${`chip ${recent ? "green" : "gray"}`} b-0 mh-32`}
+            className={`chip ${recent ? "green" : "gray"} b-0 mh-32`}
 
             onClick={() => setRecent(recent ? null : loadRecent())}
           >
@@ -240,7 +239,7 @@ export default function Watch() {
                           <td>{won(c.min_price_krw)}</td>
                           <td>
                             <button
-                              className={`${`chip ${c.in_compare ? "green" : "gray"}`} b-0`}
+                              className={`chip ${c.in_compare ? "green" : "gray"} b-0`}
 
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -311,7 +310,7 @@ export default function Watch() {
       {list && list.length > 0 && (
         <div className="d-flex gap-6 ox-auto pb-4">
           <button
-            className={`${`chip ${only === null ? "green" : "gray"}`} b-0 mh-32 nowrap`}
+            className={`chip ${only === null ? "green" : "gray"} b-0 mh-32 nowrap`}
 
             onClick={() => {
               setOnly(null);
@@ -322,7 +321,7 @@ export default function Watch() {
           </button>
           {nChanged > 0 && (
             <button
-              className={`${`chip ${onlyChanged ? "green" : "orange"}`} b-0 mh-32 nowrap`}
+              className={`chip ${onlyChanged ? "green" : "orange"} b-0 mh-32 nowrap`}
 
               onClick={() => setOnlyChanged(!onlyChanged)}
               title={t.changedHint}
@@ -333,7 +332,7 @@ export default function Watch() {
           {WATCH_STEPS.filter((s) => count(s) > 0).map((s) => (
             <button
               key={s}
-              className={`${`chip ${only === s ? "green" : "gray"}`} b-0 mh-32 nowrap`}
+              className={`chip ${only === s ? "green" : "gray"} b-0 mh-32 nowrap`}
 
               onClick={() => setOnly(only === s ? null : s)}
             >

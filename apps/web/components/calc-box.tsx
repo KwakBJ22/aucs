@@ -152,7 +152,7 @@ export function CalcBox({ id }: { id: string }) {
         {c.homes.map((label, i) => (
           <button
             key={label}
-            className={`${`chip ${homes === i ? "green" : "gray"}`} mh-36 b-0`}
+            className={`chip ${homes === i ? "green" : "gray"} mh-36 b-0`}
 
             onClick={() => pickHomes(i)}
           >
@@ -378,14 +378,14 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
       <div className="sub">{m.hint}</div>
       <div className="d-flex gap-6 mt-8">
         <button
-          className={`${`chip ${!skip ? "green" : "gray"}`} b-0 mh-36`}
+          className={`chip ${!skip ? "green" : "gray"} b-0 mh-36`}
 
           onClick={() => setSkip(false)}
         >
           {m.bid} · {won(bid)}
         </button>
         <button
-          className={`${`chip ${skip ? "green" : "gray"}`} b-0 mh-36`}
+          className={`chip ${skip ? "green" : "gray"} b-0 mh-36`}
 
           onClick={() => setSkip(true)}
         >

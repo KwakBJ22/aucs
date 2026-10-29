@@ -63,7 +63,7 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
         {Object.entries(t.outcome).map(([k, v]) => (
           <button
             key={k}
-            className={`${`chip ${outcome === k ? "green" : "gray"}`} mh-36 b-0`}
+            className={`chip ${outcome === k ? "green" : "gray"} mh-36 b-0`}
 
             onClick={() => setOutcome(k)}
           >

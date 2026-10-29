@@ -225,3 +225,22 @@
 .quiet-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* 휴대폰: 카드 왼쪽 판은 목록 아이콘 크기(42px), 좁은 폰은 좌우 여백을 조금 줄임 */
+@media (max-width: 1023px) {
+  .thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 400px) {
+  .page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .section {
+    padding: 18px 16px;
+  }
+}
