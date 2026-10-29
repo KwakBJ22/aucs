@@ -1,6 +1,7 @@
 """사건 서류 데이터 수집: 사건내역·기일·문건송달·현황조사·물건상세 (화면과 같은 요청, 로그인 없음).
 
-    uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트·다세대·오피스텔)
+    uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트·다세대·오피스텔, 관심 물건 먼저)
+    uv run python -m aucs_workers.collectors.court_docs --watched        # 관심에 담은 뒤 아직 서류를 안 받은 물건만(낮에 매시)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
@@ -59,6 +60,26 @@ def archive_due(sale_date: date, last_fetched: date | None, today: date) -> tupl
     return last_fetched is None or last_fetched <= sale_date, 100 - left
 
 
+WATCHED_SQL = """
+select c.court_code, c.case_no
+from app.watch_items w
+join core.items i using (item_id) join core.cases c using (case_id)
+where i.sale_date between %(from)s and %(to)s and i.status_code is distinct from 'gone'
+group by c.case_id, c.court_code, c.case_no
+having coalesce((select max(fetched_at) from raw.court_doc_raw r where r.case_id = c.case_id), '-infinity')
+       < max(w.created_at)
+order by min(i.sale_date)
+"""
+
+
+def watched_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """관심에 담은 뒤 아직 서류를 안 받은 사건(용도 상관없이, 기일 60일 안). 「관심 담으면 바로 준비」(16)."""
+    rows = conn.execute(
+        WATCHED_SQL, {"from": today - timedelta(days=7), "to": today + timedelta(days=60)}
+    ).fetchall()
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
+
+
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     rows = conn.execute(
         """select c.court_code, c.case_no, min(i.sale_date),
@@ -75,7 +96,9 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
         if need and court in COURTS:
             todo.append((rank, court, case_no))
     todo.sort()
-    return [(c, n) for _, c, n in todo[:ARCHIVE_MAX]]
+    first = watched_targets(conn, today)  # 관심 물건 먼저
+    rest = [(c, n) for _, c, n in todo if (c, n) not in set(first)]
+    return (first + rest)[:ARCHIVE_MAX]
 
 
 def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str, dict[str, Any]]:
@@ -164,13 +187,21 @@ def main() -> None:
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--archive", action="store_true")
+    ap.add_argument("--watched", action="store_true", help="관심에 담은 뒤 아직 안 받은 서류만")
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"))
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
     polite = Polite(daily_limit=ARCHIVE_MAX * 12)
     with connect() as conn, run(conn, "court_docs", "사건 서류 보관") as job:
-        targets = [tuple(a.case)] if a.case else archive_targets(conn, date.today())
+        if a.case:
+            targets = [tuple(a.case)]
+        elif a.watched:
+            targets = watched_targets(conn, date.today())
+        else:
+            targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
+        if not targets:
+            return
         with sync_playwright() as p:
             browser = p.chromium.launch(channel="chrome", headless=not a.show)
             page = browser.new_page()
