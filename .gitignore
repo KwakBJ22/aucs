@@ -17,3 +17,5 @@ coverage/
 
 # 서버·작업 기록 (10/28)
 logs/
+.next-fast/
+scripts/web-mode.txt

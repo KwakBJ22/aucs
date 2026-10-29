@@ -18,6 +18,8 @@ const publicEnv = Object.fromEntries(
 
 const nextConfig: NextConfig = {
   env: publicEnv,
+  // 「빠른 보기」(scripts/web-mode.ps1 fast)는 개발 화면과 다른 폴더에 만들어 서로 건드리지 않음
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // 같은 와이파이의 휴대폰에서 개발 화면을 열 때 허용할 주소
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
 };

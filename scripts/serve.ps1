@@ -44,15 +44,36 @@ while ($true) {
     if (-not $node) { $node = "$env:ProgramFiles\nodejs\node.exe" }
     # 10/27: 터보팩으로 켜서 화면 첫 열기(옮겨 엮기)를 빠르게 함(예전 상세 화면 첫 열기 약 30초).
     #        터보팩으로 켠 뒤 1분 안에 꺼지면 다음부터는 예전 방식으로 켬.
-    $nextArgs = @('node_modules\next\dist\bin\next', 'dev', '-p', '3000')
-    if (-not $script:noTurbo) { $nextArgs += '--turbopack' }
+    # 10/29: 「빠른 보기」 — scripts\web-mode.txt 가 fast 면 미리 만들어(build) 실제 서비스 방식(start)으로 켬.
+    #        화면 첫 열기가 몇 초 → 1초 안쪽. 코드를 고치면 web-mode.ps1 fast 로 다시 만들어야 반영됨.
+    $mode = if (Test-Path "$root\scripts\web-mode.txt") { (Get-Content "$root\scripts\web-mode.txt" -Raw).Trim() } else { 'dev' }
+    if ($mode -eq 'fast') {
+      $env:NEXT_DIST_DIR = '.next-fast'
+      "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 빠른 보기: 만드는 중(1~2분)" | Out-File -Append -Encoding utf8 $log
+      $b = Start-Process -FilePath $node -ArgumentList 'node_modules\next\dist\bin\next', 'build' `
+        -WorkingDirectory "$root\apps\web" -NoNewWindow -PassThru -Wait `
+        -RedirectStandardOutput "$root\logs\server_web_build.log" -RedirectStandardError "$root\logs\server_web_build_err.log"
+      if ($b.ExitCode -eq 0) {
+        "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 빠른 보기: 다 만듦 — 켬" | Out-File -Append -Encoding utf8 $log
+        $nextArgs = @('node_modules\next\dist\bin\next', 'start', '-p', '3000')
+      } else {
+        "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 빠른 보기 만들기 실패 — 개발 방식으로 켬 (logs\server_web_build_err.log)" | Out-File -Append -Encoding utf8 $log
+        Remove-Item Env:NEXT_DIST_DIR -ErrorAction SilentlyContinue
+        $mode = 'dev'
+      }
+    }
+    if ($mode -ne 'fast') {
+      Remove-Item Env:NEXT_DIST_DIR -ErrorAction SilentlyContinue
+      $nextArgs = @('node_modules\next\dist\bin\next', 'dev', '-p', '3000')
+      if (-not $script:noTurbo) { $nextArgs += '--turbopack' }
+    }
     $started = Get-Date
     $p = Start-Process -FilePath $node -ArgumentList $nextArgs `
       -WorkingDirectory "$root\apps\web" -NoNewWindow -PassThru `
       -RedirectStandardOutput "$root\logs\server_web_run.log" -RedirectStandardError "$root\logs\server_web_err.log"
     $p.WaitForExit()
     "[$(Get-Date -Format 'MM-dd HH:mm:ss')] next 끝남(코드 $($p.ExitCode)) — 오류는 server_web_err.log" | Out-File -Append -Encoding utf8 $log
-    if (-not $script:noTurbo -and ((Get-Date) - $started).TotalSeconds -lt 60) {
+    if ($mode -ne 'fast' -and -not $script:noTurbo -and ((Get-Date) - $started).TotalSeconds -lt 60) {
       $script:noTurbo = $true
       "[$(Get-Date -Format 'MM-dd HH:mm:ss')] 터보팩으로 바로 꺼짐 — 예전 방식으로 켬" | Out-File -Append -Encoding utf8 $log
     }
