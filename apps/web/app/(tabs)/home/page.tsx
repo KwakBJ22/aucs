@@ -261,7 +261,8 @@ export default function Home() {
       key={c.item_id}
       href={`/item/${encodeURIComponent(c.item_id)}`}
       style={{
-        border: "1px solid var(--line)",
+        border: 0,
+        background: "var(--panel)",
         borderRadius: 14,
         padding: 12,
         color: "inherit",
@@ -286,7 +287,8 @@ export default function Home() {
               fontWeight: 600,
               padding: "1px 6px",
               borderRadius: 5,
-              border: "1px solid var(--text)",
+              border: 0,
+              background: "var(--gray-chip)",
               color: "var(--text)",
             }}
           >
@@ -444,7 +446,7 @@ export default function Home() {
               <h2 style={{ marginBottom: 8 }}>{t.calendar}</h2>
               {cal.length === 0 && <p className="sub">{t.calendarEmpty}</p>}
               {cal.map(([day, list]) => (
-                <div key={day} style={{ padding: "8px 0", borderTop: "1px solid var(--line)" }}>
+                <div key={day} style={{ padding: "8px 0" }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
                     {day.slice(5).replace("-", "/")}
                   </div>

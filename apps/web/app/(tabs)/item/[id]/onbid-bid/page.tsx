@@ -108,7 +108,6 @@ export default function OnbidBid() {
               gap: 10,
               alignItems: "center",
               padding: "10px 0",
-              borderBottom: i < 2 ? "1px solid var(--line)" : undefined,
               fontSize: 15,
               minHeight: 44,
             }}
@@ -138,9 +137,9 @@ export default function OnbidBid() {
               fontSize: 24,
               fontWeight: 700,
               padding: "10px 12px",
-              border: "2px solid var(--blue)",
-              borderRadius: 12,
-              background: "transparent",
+              border: 0,
+              borderRadius: 14,
+              background: "var(--panel)",
               color: "inherit",
             }}
           />

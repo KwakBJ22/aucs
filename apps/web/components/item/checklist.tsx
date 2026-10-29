@@ -126,7 +126,7 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
         ))}
       </div>
       {todo.map((x) => (
-        <div key={x.key} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+        <div key={x.key} style={{ padding: "8px 0" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
             <b style={{ fontSize: 14 }}>

@@ -214,7 +214,7 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
   return (
     <div>
       {d.checklist.map((x) => (
-        <div key={x.key} style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
+        <div key={x.key} style={{ padding: "10px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
             <span style={{ fontSize: 15, fontWeight: 600 }}>{x.label}</span>
             <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
@@ -271,7 +271,8 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
               fontWeight: 600,
               padding: "1px 6px",
               borderRadius: 5,
-              border: "1px solid var(--text)",
+              border: 0,
+              background: "var(--gray-chip)",
             }}
           >
             {t.badge(d.kind_name ?? "")}
@@ -388,7 +389,7 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
       {head}
       <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
         {qs.map((q) => (
-          <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
+          <div key={q.key} style={{}}>
             <button
               onClick={() => setOpen(open === q.key ? null : q.key)}
               style={{

@@ -49,12 +49,12 @@ export default function Login() {
                   display: "block",
                   width: "100%",
                   height: 52,
-                  borderRadius: 12,
-                  border: "1px solid var(--line)",
+                  borderRadius: 14,
+                  border: 0,
                   padding: "0 14px",
                   fontSize: 16,
                   margin: "6px 0 12px",
-                  background: "var(--bg)",
+                  background: "var(--panel)",
                   color: "var(--text)",
                 }}
               />

@@ -24,7 +24,8 @@ function SourceBadge({ c }: { c: Card }) {
         fontWeight: 600,
         padding: "1px 6px",
         borderRadius: 5,
-        border: "1px solid var(--text)",
+        border: 0,
+        background: "var(--gray-chip)",
         flexShrink: 0,
       }}
     >

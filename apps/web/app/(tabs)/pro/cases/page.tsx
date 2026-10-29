@@ -60,7 +60,6 @@ function Detail({ d }: { d: CaseDetail }) {
             display: "block",
             fontSize: 14,
             padding: "6px 0",
-            borderTop: "1px solid var(--line)",
           }}
         >
           {i.item_no}. {i.usage_name} · {won(i.min_price_krw)}{" "}
@@ -93,7 +92,6 @@ function Detail({ d }: { d: CaseDetail }) {
             display: "flex",
             gap: 8,
             padding: "7px 0",
-            borderTop: "1px solid var(--line)",
             fontSize: 14,
           }}
         >
@@ -196,9 +194,9 @@ function Cases() {
           style={{
             fontSize: 14,
             padding: "4px 8px",
-            border: "1px solid var(--line)",
-            borderRadius: 8,
-            background: "var(--surface)",
+            border: 0,
+            borderRadius: 14,
+            background: "var(--panel)",
             color: "var(--text)",
           }}
         />
@@ -219,7 +217,6 @@ function Cases() {
                 background: c.case_id === id ? "var(--blue-soft)" : "none",
                 borderRadius: 10,
                 padding: "8px 8px",
-                borderBottom: "1px solid var(--line)",
               }}
             >
               <div className="sub">

@@ -26,7 +26,6 @@ export default function Guide() {
               display: "flex",
               gap: 12,
               padding: "12px 0",
-              borderTop: i ? "1px solid var(--line)" : 0,
             }}
           >
             <div
@@ -63,7 +62,7 @@ export default function Guide() {
       <section className="section">
         <h2>{t.wordsTitle}</h2>
         {t.words.map(([w, body]) => (
-          <div key={w} style={{ borderTop: "1px solid var(--line)" }}>
+          <div key={w} style={{}}>
             <button
               onClick={() => setOpen(open === w ? null : w)}
               style={{
@@ -90,10 +89,7 @@ export default function Guide() {
       <section className="section">
         <h2>{t.mistakesTitle}</h2>
         {t.mistakes.map((m) => (
-          <div
-            key={m}
-            style={{ fontSize: 14, padding: "8px 0", borderTop: "1px solid var(--line)" }}
-          >
+          <div key={m} style={{ fontSize: 14, padding: "8px 0" }}>
             ◆ {m}
           </div>
         ))}

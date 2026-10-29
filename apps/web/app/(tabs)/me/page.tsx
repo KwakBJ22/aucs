@@ -56,14 +56,15 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
           width: "100%",
           fontSize: 16,
           padding: "8px 10px",
-          border: "1px solid var(--line)",
-          borderRadius: 8,
+          border: 0,
+          background: "var(--panel)",
+          borderRadius: 14,
         }}
       />
     </label>
   );
   return (
-    <div style={{ padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
+    <div style={{ padding: "12px 0" }}>
       <div style={{ fontWeight: 600 }}>
         {x.place} <span className="sub">· {md(x.sale_date)}</span>
       </div>
@@ -102,7 +103,7 @@ function WonCard({ b }: { b: Bid }) {
   const s = b.schedule!;
   const rng = (a: [string, string]) => `${md(a[0])} ~ ${md(a[1])}`;
   return (
-    <div style={{ padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
+    <div style={{ padding: "12px 0" }}>
       <Link href={`/item/${b.item_id}`} style={{ fontWeight: 600, color: "inherit" }}>
         {b.place}
       </Link>
@@ -268,7 +269,7 @@ export default function Me() {
     <>
       {mocks.length === 0 && <p className="sub">{t.mockEmpty}</p>}
       {mocks.map((x) => (
-        <div key={x.mock_id} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
+        <div key={x.mock_id} style={{ padding: "10px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
             <Link
               href={`/item/${encodeURIComponent(x.item_id)}`}

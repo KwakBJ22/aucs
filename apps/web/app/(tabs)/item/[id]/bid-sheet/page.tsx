@@ -92,9 +92,9 @@ function Sheet() {
                   width: "100%",
                   fontSize: 22,
                   padding: "10px 12px",
-                  border: "1px solid var(--line)",
-                  borderRadius: 10,
-                  background: "var(--surface)",
+                  border: 0,
+                  borderRadius: 14,
+                  background: "var(--panel)",
                   color: "var(--text)",
                 }}
               />

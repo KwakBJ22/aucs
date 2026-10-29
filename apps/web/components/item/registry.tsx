@@ -229,10 +229,10 @@ export function RegistryBox() {
     );
   const lad = u?.ladder;
   return (
-    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+    <div style={{ marginTop: 12, paddingTop: 10 }}>
       {u?.status === "processing" && <ReadingBar sending={sending} startedAt={startedAt} />}
       {blocked && addr && (
-        <div style={{ border: "1px solid var(--amber)", borderRadius: 12, padding: 12 }}>
+        <div style={{ background: "var(--orange-soft)", borderRadius: 16, padding: 14 }}>
           <b style={{ color: "var(--amber)", fontSize: 15 }}>
             {addr.result === "unit_differs" && addr.registry_unit && addr.item_unit
               ? r.addrUnit(addr.registry_unit, addr.item_unit)
@@ -347,9 +347,9 @@ export function RegistryBox() {
                       fontSize: 13,
                       margin: "0 0 6px",
                       padding: "6px 8px",
-                      borderRadius: 8,
-                      border: "1px solid var(--line)",
-                      background: "none",
+                      borderRadius: 14,
+                      border: 0,
+                      background: "var(--panel)",
                       color: "var(--blue)",
                     }}
                   >

@@ -134,7 +134,7 @@ export default function Item() {
 
           <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
             {d.questions.map((q) => (
-              <div key={q.key} style={{ borderBottom: "1px solid var(--line)" }}>
+              <div key={q.key} style={{}}>
                 <button
                   onClick={() => setOpen(open === q.key ? null : q.key)}
                   style={{

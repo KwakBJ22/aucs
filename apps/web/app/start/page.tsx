@@ -102,11 +102,11 @@ export default function Start() {
             placeholder={t.regionSearch}
             style={{
               height: 48,
-              borderRadius: 12,
-              border: "1px solid var(--line)",
+              borderRadius: 14,
+              border: 0,
               padding: "0 14px",
               fontSize: 16,
-              background: "var(--bg)",
+              background: "var(--panel)",
               color: "var(--text)",
             }}
           />
@@ -133,8 +133,10 @@ export default function Start() {
                     minHeight: 40,
                     padding: "0 12px",
                     borderRadius: 20,
-                    border: on ? "2px solid var(--blue)" : "1px solid var(--line)",
-                    background: on ? "var(--blue-soft)" : "var(--surface)",
+                    border: 0,
+                    background: on ? "var(--blue-soft)" : "var(--panel)",
+                    color: on ? "var(--blue-text)" : "var(--text)",
+                    fontWeight: on ? 700 : 400,
                     fontSize: 14,
                   }}
                 >
@@ -180,9 +182,9 @@ export default function Start() {
                 style={{
                   flexGrow: 1,
                   height: 40,
-                  borderRadius: 10,
-                  border: "1px solid var(--line)",
-                  background: "var(--surface)",
+                  borderRadius: 14,
+                  border: 0,
+                  background: "var(--panel)",
                   fontSize: 14,
                 }}
               >
@@ -253,8 +255,9 @@ export default function Start() {
                   padding: 20,
                   borderRadius: 16,
                   textAlign: "left",
-                  border: purpose === p ? "2px solid var(--blue)" : "1px solid var(--line)",
+                  border: 0,
                   background: purpose === p ? "var(--blue-soft)" : "var(--surface)",
+                  color: purpose === p ? "var(--blue-text)" : "var(--text)",
                 }}
               >
                 <span style={{ fontSize: 18, fontWeight: 700 }}>{t.purposes[p][0]}</span>

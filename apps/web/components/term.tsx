@@ -24,19 +24,17 @@ function Sheet({ word, text, onClose }: { word: string; text: string; onClose: (
         aria-modal="true"
         aria-label={word}
         onClick={(e) => e.stopPropagation()}
-        className="term-sheet"
+        className="term-sheet sheet"
         style={{
           position: "absolute",
           left: 0,
           right: 0,
           bottom: 0,
-          background: "var(--bg, #fff)",
-          borderRadius: "16px 16px 0 0",
-          padding: "18px 20px 28px",
           maxWidth: 560,
           margin: "0 auto",
         }}
       >
+        <div className="sheet-handle" />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <b style={{ fontSize: 17 }}>{word}</b>
           <button

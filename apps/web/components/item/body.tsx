@@ -41,10 +41,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
       <>
         {b.tenants.length === 0 && <p className="sub">{t.tenantsNone}</p>}
         {b.tenants.map((x: Record<string, string | number | null>, i: number) => (
-          <div
-            key={i}
-            style={{ padding: "6px 0", fontSize: 14, borderBottom: "1px solid var(--line)" }}
-          >
+          <div key={i} style={{ padding: "6px 0", fontSize: 14 }}>
             <b>{x.name ?? "임차인"}</b> {x.part ?? ""}
             <div className="sub" style={{ margin: 0 }}>
               {[
@@ -74,7 +71,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
               <tbody>
                 {d.failure_table.map((r) => (
-                  <tr key={r.code} style={{ borderTop: "1px solid var(--line, #e5e5e5)" }}>
+                  <tr key={r.code} style={{}}>
                     <td style={{ padding: "4px 6px", whiteSpace: "nowrap", opacity: 0.6 }}>
                       {r.code}
                     </td>

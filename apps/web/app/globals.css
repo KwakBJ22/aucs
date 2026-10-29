@@ -17,6 +17,14 @@
   --orange-soft: #fff3e3;
   --amber: #b25e00;
   --red: #c23b32;
+  --panel: #f2f3f5;
+  --band: #eef0f3;
+  --red-soft: #fdecea;
+  --r-panel: 16px;
+  --fs-xl: 24px;
+  --fs-lg: 18px;
+  --fs-base: 16px;
+  --fs-sm: 13px;
   --kakao: #fee500;
   --kakao-text: #191600;
 }
@@ -39,6 +47,9 @@
     --orange-soft: #3a2a14;
     --amber: #ffb766;
     --red: #ff6b61;
+    --panel: #23272e;
+    --band: #0a0c0f;
+    --red-soft: #3a1714;
   }
 }
 * {
@@ -72,7 +83,7 @@ button {
 .page {
   max-width: 480px;
   margin: 0 auto;
-  padding: 4px 16px 96px;
+  padding: 4px 20px 96px;
 }
 .topbar {
   display: flex;
@@ -88,12 +99,12 @@ button {
 .section {
   background: var(--surface);
   border-radius: 18px;
-  padding: 18px;
+  padding: 20px;
   margin: 12px 0;
 }
 .section h2 {
   margin: 0 0 4px;
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 .sub {
@@ -156,6 +167,62 @@ button {
   background: var(--blue);
   color: #fff;
 }
+.btn {
+  background: var(--panel);
+  color: var(--text);
+}
+.btn.secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+.btn.soft {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.btn-pair {
+  display: flex;
+  gap: 8px;
+}
+.btn-pair > * {
+  flex: 1 1 0;
+}
+/* 구역 사이 띠(화면 끝까지) */
+.band {
+  height: 10px;
+  background: var(--band);
+  margin: 16px -20px;
+}
+/* 아래에서 올라오는 창 · 잠깐 뜨는 알림 (08-look 5절) */
+.sheet {
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  padding: 10px 20px 28px;
+}
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--band);
+  margin: 0 auto 14px;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 24px;
+  background: rgba(40, 44, 52, 0.88);
+  color: #fff;
+  font-size: 14px;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
 .btn.kakao {
   background: var(--kakao);
   color: var(--kakao-text);
@@ -172,7 +239,7 @@ button {
   bottom: 0;
   height: 76px;
   background: var(--surface);
-  border-top: 1px solid var(--line);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   padding-bottom: 14px;
@@ -196,13 +263,10 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
+  min-height: 56px;
+  padding: 16px 0;
   color: var(--text);
   font-size: 15px;
-}
-.menu-row:last-child {
-  border-bottom: 0;
 }
 
 /* PC 전문가 보기: 넓은 화면에서만 */
@@ -279,7 +343,6 @@ button {
     top: 0;
     z-index: 20;
     background: var(--surface);
-    border-bottom: 1px solid var(--line);
   }
   .ph-top {
     height: 64px;
@@ -412,7 +475,7 @@ button {
     display: flex;
     align-items: stretch;
     gap: 2%;
-    border-top: 1px solid var(--line);
+    background: var(--panel);
     font-size: 14px;
   }
   .ph-sub a {
@@ -429,7 +492,7 @@ button {
   .pc-footer {
     display: block;
     background: var(--surface);
-    border-top: 1px solid var(--line);
+    margin-top: 24px;
     padding: 28px 2.5% 24px;
     color: var(--muted);
     font-size: 13px;
@@ -460,7 +523,6 @@ button {
   .pf-note {
     margin-top: 18px;
     padding-top: 12px;
-    border-top: 1px solid var(--line);
     font-size: 12px;
     color: var(--faint);
   }
@@ -574,8 +636,7 @@ button {
 .compare-table td {
   text-align: left;
   vertical-align: top;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 12px;
   min-width: 180px;
 }
 .compare-table th:first-child,
@@ -618,7 +679,7 @@ button {
 .pro-table td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
+
   white-space: nowrap;
 }
 .pro-table th {
@@ -838,15 +899,15 @@ button {
   align-items: center;
   justify-content: center;
   height: 42px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border-radius: 14px;
+  border: 0;
+  background: var(--panel);
   color: var(--text);
   font-size: 14px;
   font-weight: 600;
 }
 .pc-act:hover {
-  background: var(--bg);
+  background: var(--band);
 }
 
 /* 작업 공간 */
@@ -890,10 +951,10 @@ button {
   width: 100%;
   margin-top: 8px;
   font-size: 16px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
+  padding: 14px;
+  border: 0;
+  border-radius: var(--r-panel);
+  background: var(--panel);
   color: var(--text);
   resize: vertical;
 }
@@ -901,9 +962,8 @@ button {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-  min-height: 44px;
+  padding: 12px 0;
+  min-height: 48px;
 }
 .check-row input {
   width: 20px;
@@ -914,8 +974,8 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 48px;
   padding: 10px 0;
-  border-top: 1px solid var(--line);
 }
 
 /* PC 관심 보드 */
@@ -945,10 +1005,10 @@ button {
 }
 .board-card {
   text-align: left;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 10px;
   color: var(--text);
 }
 .board-card.on {
@@ -973,11 +1033,11 @@ button {
 .f-input {
   width: 100%;
   min-width: 0;
-  height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
+  height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel);
   color: var(--text);
   font-size: 15px;
 }
@@ -990,13 +1050,12 @@ button {
   min-height: 34px;
   padding: 0 12px;
   border-radius: 17px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 0;
+  background: var(--panel);
   color: var(--text);
   font-size: 13px;
 }
 .pills button.on {
-  border-color: var(--blue);
   background: var(--blue-soft);
   color: var(--blue-text);
   font-weight: 700;
@@ -1080,8 +1139,7 @@ button {
 .report {
   background: #fff;
   color: #111;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 20px;
   font-size: 13px;
   line-height: 1.5;
@@ -1209,4 +1267,10 @@ button {
   .pc-side {
     display: none !important;
   }
+}
+
+/* 선 대신 줄무늬(08-look) */
+.compare-table tbody tr:nth-child(even) > *,
+.pro-table tbody tr:nth-child(even) td {
+  background: var(--panel);
 }

@@ -39,7 +39,6 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
         display: "flex",
         gap: 10,
         padding: "10px 0",
-        borderTop: "1px solid var(--line)",
         minHeight: 44,
       }}
     >

@@ -43,9 +43,9 @@ function ProMarket() {
   const sel = {
     fontSize: 14,
     padding: "6px 8px",
-    border: "1px solid var(--line)",
-    borderRadius: 8,
-    background: "var(--surface)",
+    border: 0,
+    borderRadius: 14,
+    background: "var(--panel)",
     color: "var(--text)",
   };
   const sc = m?.scorecard;

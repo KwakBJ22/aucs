@@ -49,7 +49,7 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
       </button>
     );
   return (
-    <div style={{ marginTop: 12, borderTop: "1px dashed var(--line)", paddingTop: 10 }}>
+    <div style={{ marginTop: 12, paddingTop: 10 }}>
       <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
       {r.jeonse && (
         <Row
@@ -158,8 +158,9 @@ export function CalcBox({ id }: { id: string }) {
           width: "100%",
           fontSize: 16,
           padding: "8px 10px",
-          border: "1px solid var(--line)",
-          borderRadius: 8,
+          border: 0,
+          background: "var(--panel)",
+          borderRadius: 14,
         }}
       />
     </label>
@@ -168,7 +169,7 @@ export function CalcBox({ id }: { id: string }) {
   const over = d?.cap_krw != null && s != null && s.bid_krw > d.cap_krw;
   const myCash = prof?.cash ?? null;
   return (
-    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+    <div style={{ marginTop: 12, paddingTop: 12 }}>
       <div style={{ fontSize: 14, fontWeight: 600 }}>{c.homesQ}</div>
       <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
         {c.homes.map((label, i) => (
@@ -219,8 +220,8 @@ export function CalcBox({ id }: { id: string }) {
                     flex: 1,
                     padding: "8px 4px",
                     borderRadius: 8,
-                    border: `1px solid ${s.bid_krw === x.bid_krw ? "var(--green)" : "var(--line)"}`,
-                    background: "none",
+                    border: 0,
+                    background: s.bid_krw === x.bid_krw ? "var(--green-soft)" : "var(--panel)",
                     color: "inherit",
                     fontSize: 12,
                   }}
@@ -282,8 +283,9 @@ export function CalcBox({ id }: { id: string }) {
                   width: "100%",
                   fontSize: 16,
                   padding: "8px 10px",
-                  border: "1px solid var(--line)",
-                  borderRadius: 8,
+                  border: 0,
+                  background: "var(--panel)",
+                  borderRadius: 14,
                 }}
               />
             )}
@@ -421,9 +423,9 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
     width: "100%",
     fontSize: 16,
     padding: "8px 10px",
-    border: "1px solid var(--line)",
-    borderRadius: 8,
-    background: "var(--surface)",
+    border: 0,
+    borderRadius: 14,
+    background: "var(--panel)",
     color: "var(--text)",
   };
   const save = () =>
@@ -438,7 +440,7 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
       .then(() => setDone(true))
       .catch(() => {});
   return (
-    <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+    <div style={{ marginTop: 12, paddingTop: 10 }}>
       <div style={{ fontWeight: 600, fontSize: 14 }}>{m.title}</div>
       <div className="sub">{m.hint}</div>
       <div style={{ display: "flex", gap: 6, marginTop: 8 }}>

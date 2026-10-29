@@ -167,10 +167,7 @@ export default function FieldPage() {
           <section className="section">
             <h2>{t.askTitle}</h2>
             {t.ask.map((q) => (
-              <div
-                key={q}
-                style={{ fontSize: 14, padding: "6px 0", borderTop: "1px solid var(--line)" }}
-              >
+              <div key={q} style={{ fontSize: 14, padding: "6px 0" }}>
                 {q}
               </div>
             ))}
@@ -200,7 +197,6 @@ export default function FieldPage() {
                     display: "flex",
                     gap: 10,
                     padding: "10px 0",
-                    borderTop: "1px solid var(--line)",
                     minHeight: 44,
                   }}
                 >

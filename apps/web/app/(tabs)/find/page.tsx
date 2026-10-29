@@ -46,7 +46,7 @@ function save(key: string, v: string): void {
 // 끝난 사건 한 줄 (매각·취하·변경)
 function ResultRow({ r }: { r: ResultCard }) {
   const body = (
-    <div style={{ padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
+    <div style={{ padding: "12px 0" }}>
       <div className="sub" style={{ margin: 0 }}>
         <b style={{ color: r.result === "매각" ? "var(--blue)" : "var(--muted)" }}>{r.result}</b> ·{" "}
         {r.sale_date} · {r.court} {r.case_no}
@@ -202,9 +202,9 @@ export default function Find() {
             minWidth: 0,
             fontSize: 16,
             padding: "10px 12px",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            background: "transparent",
+            border: 0,
+            borderRadius: 14,
+            background: "var(--panel)",
             color: "inherit",
           }}
         />
@@ -215,9 +215,9 @@ export default function Find() {
           style={{
             fontSize: 15,
             padding: "0 8px",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            background: "transparent",
+            border: 0,
+            borderRadius: 14,
+            background: "var(--panel)",
             color: "inherit",
           }}
         >
@@ -235,9 +235,10 @@ export default function Find() {
               left: 0,
               right: 0,
               zIndex: 5,
-              background: "var(--bg)",
-              border: "1px solid var(--line)",
-              borderRadius: 10,
+              background: "var(--surface)",
+              boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+              border: 0,
+              borderRadius: 14,
               padding: "6px 0",
               marginTop: 4,
             }}

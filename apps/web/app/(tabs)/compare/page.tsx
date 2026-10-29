@@ -295,7 +295,6 @@ export default function ComparePage() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "8px 0",
-                borderTop: "1px solid var(--line)",
                 fontSize: 14,
               }}
             >

@@ -157,10 +157,7 @@ export function DocSheet({
             <>
               <DocH>{c.tenants}</DocH>
               {sr.tenants.map((x, i) => (
-                <div
-                  key={i}
-                  style={{ fontSize: 14, padding: "6px 0", borderBottom: "1px solid var(--line)" }}
-                >
+                <div key={i} style={{ fontSize: 14, padding: "6px 0" }}>
                   <b>{x.name ?? "임차인"}</b> {x.part ?? ""} {x.use ?? ""}
                   <div className="sub" style={{ margin: 0 }}>
                     {[
