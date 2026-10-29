@@ -225,7 +225,8 @@ export const copy = {
     sortRate: "최저가율 낮은 순",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
     mapSoon: "지도는 카카오 지도 키를 받으면 붙여요",
-    searchPlaceholder: "번호·단지·동네로 찾기",
+    searchPlaceholder: "수지 30평대 7억 이하",
+    talkLabel: "알아들은 조건",
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
     sourceLabel: "경매·공매",
     status: { active: "진행 중", sold: "매각됨", withdrawn: "취하·변경", all: "전체" } as Record<

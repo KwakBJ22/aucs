@@ -8,7 +8,9 @@ import { ItemCard } from "@/components/item-card";
 import { PickPanel } from "@/components/pick-panel";
 import { FindFilters, filterSummary } from "@/components/find-filters";
 import { PageHeader } from "@/components/layout/page-header";
+import { dropPart, parseTalk, type Talk } from "@/lib/talk";
 import {
+  fetchRegions,
   fetchItems,
   type FindFilter,
   type FindStatus,
@@ -79,6 +81,8 @@ export default function Find() {
   const [recent, setRecent] = useState<string[]>([]);
   const [list, setList] = useState<ItemList | null>(null);
   const [regions, setRegions] = useState<string[]>([]);
+  const [regionNames, setRegionNames] = useState<string[]>([]);
+  const [talk, setTalk] = useState<Talk | null>(null); // 말로 찾기로 알아들은 조건(칩)
   const [filter, setFilter] = useState<FindFilter>({});
   const [condOpen, setCondOpen] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -109,9 +113,23 @@ export default function Find() {
   }, []);
 
   useEffect(() => {
+    fetchRegions()
+      .then((r) => setRegionNames(r.map((x) => x.sigungu)))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
     const h = setTimeout(() => setQuery(q.trim()), 350);
     return () => clearTimeout(h);
   }, [q]);
+  // 말로 찾기: 「수지 30평대 7억 이하」 → 조건 칩, 남은 말만 검색어로
+  useEffect(() => {
+    if (!query || !regionNames.length) return;
+    const tk = parseTalk(query, regionNames);
+    if (!tk) return;
+    setTalk(tk);
+    setQ(tk.rest);
+    setQuery(tk.rest);
+  }, [query, regionNames]);
 
   useEffect(() => {
     if (!prefsReady) return; // 예전엔 빈 조건으로 한 번, 기억한 조건으로 또 한 번 불렀음(10/27)
@@ -120,14 +138,14 @@ export default function Find() {
     const p = loadProfile();
     setRegions(p?.regions ?? []);
     fetchItems({
-      sigungu: p?.regions,
-      maxCash: p?.cash,
+      sigungu: talk?.sigungu ?? p?.regions,
+      maxCash: talk?.filter.price_max ? undefined : p?.cash,
       sort,
       limit: 100,
       q: query || undefined,
       status,
-      filter,
-      source,
+      filter: talk ? { ...filter, ...talk.filter } : filter,
+      source: talk?.source ?? source,
     })
       .then((r) => {
         if (stale) return;
@@ -145,7 +163,7 @@ export default function Find() {
     return () => {
       stale = true;
     };
-  }, [sort, status, source, query, filter, prefsReady, tries]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sort, status, source, query, filter, prefsReady, tries, talk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeFilter = (f: FindFilter) => {
     setFilter(f);
@@ -236,6 +254,20 @@ export default function Find() {
           </div>
         )}
       </div>
+      {talk && (
+        <div className="d-flex gap-6 f-wrap ai-center mt-10" aria-label={t.talkLabel}>
+          <span className="sub m-0 fs-xs">{t.talkLabel}</span>
+          {talk.parts.map((p) => (
+            <button
+              key={p.key}
+              className="chip b-0 mh-32 bg-blue-soft c-blue-text"
+              onClick={() => setTalk(dropPart(talk, p.key))}
+            >
+              {p.label} ×
+            </button>
+          ))}
+        </div>
+      )}
       {status !== "sold" && status !== "withdrawn" && (
         <div className="pills mt-10" role="group" aria-label={t.sourceLabel}>
           {(["all", "court", "onbid"] as const).map((s) => (
@@ -247,7 +279,7 @@ export default function Find() {
       )}
       {!query && (
         <div className="d-flex gap-8 f-wrap mt-10">
-          {regions.map((r) => (
+          {(talk?.sigungu ? [] : regions).map((r) => (
             <span key={r} className="chip gray fs-sm py-6 px-10">
               {r}
             </span>
