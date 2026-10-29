@@ -144,7 +144,6 @@ export default function OnbidBid() {
             {t.steps[1]}{" "}
             <button
               className="chip gray b-0 mh-28"
-
               onClick={() =>
                 navigator.clipboard?.writeText(d.case_no).then(
                   () => setCopied(true),

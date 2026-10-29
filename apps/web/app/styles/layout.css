@@ -355,3 +355,46 @@
     display: none;
   }
 }
+
+@media (min-width: 1024px) {
+  /* 화면 제목·설명과 본문 사이 여백(08-look 3절) */
+  .topbar {
+    padding: 16px 0 4px;
+  }
+  .tb-sub {
+    margin: 0 0 20px;
+    font-size: var(--fs-md);
+  }
+  .topbar + :not(.tb-sub) {
+    margin-top: 16px;
+  }
+  .section h2 + .f-label,
+  .section .f-label + * + .f-label {
+    margin-top: 16px;
+  }
+  /* PC 본문: 이름 옆에 값(눈이 멀리 오가지 않게) */
+  .kv-left .kv {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+  .kv-left .kv-v {
+    text-align: left;
+  }
+  /* 물건 상세 오른쪽 칸: 주 버튼 하나 + 나머지는 목록 줄 */
+  .pc-actions .pc-act {
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 4px;
+    border-radius: 0;
+    background: none;
+    font-weight: 500;
+  }
+  .pc-actions .pc-act::after {
+    content: "›";
+    color: var(--faint);
+  }
+  .pc-actions .pc-act:hover {
+    background: none;
+    color: var(--blue);
+  }
+}

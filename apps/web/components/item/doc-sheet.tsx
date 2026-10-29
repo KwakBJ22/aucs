@@ -30,7 +30,6 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
     return (
       <button
         className="chip gray b-0 mh-40 mt-24"
-
         onClick={() => (session ? setOpen(true) : (window.location.href = "/login"))}
       >
         {r.open}

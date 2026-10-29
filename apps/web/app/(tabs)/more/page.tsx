@@ -110,11 +110,7 @@ export default function More() {
         ),
       )}
       {session && (
-        <button
-          className="menu-row w-full b-0 bg-none ta-left"
-
-          onClick={() => void signOut()}
-        >
+        <button className="menu-row w-full b-0 bg-none ta-left" onClick={() => void signOut()}>
           <span>{t.logout}</span>
           <span />
         </button>

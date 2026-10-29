@@ -31,6 +31,18 @@ function OnbidLine({ c }: { c: Card }) {
   return <div className="sub m-0 fs-xs">{t.noNextRound}</div>;
 }
 
+// 카드 왼쪽 판 글자(사진이 없어 종류로)
+function kindLabel(u: string | null): string {
+  const s = u ?? "";
+  if (/아파트/.test(s)) return "아파트";
+  if (/오피스텔/.test(s)) return "오피스텔";
+  if (/다세대|연립|빌라/.test(s)) return "빌라";
+  if (/단독|다가구/.test(s)) return "주택";
+  if (/상가|근린|업무|사무|판매|점포/.test(s)) return "상가";
+  if (/대지|임야|전답|토지|잡종|^전$|^답$/.test(s)) return "땅";
+  return "기타";
+}
+
 export function ItemCard({ c }: { c: Card }) {
   const urgent = c.d_day != null && c.d_day <= 7;
   const onbid = c.source === "onbid";
@@ -39,10 +51,10 @@ export function ItemCard({ c }: { c: Card }) {
       href={`/item/${encodeURIComponent(c.item_id)}`}
       className="d-flex gap-12 py-12 px-0 c-inherit"
     >
-      <div className="r-12 bg-gray-chip f-none" style={{ width: 72, height: 72 }} />
+      <div className="thumb">{kindLabel(c.usage)}</div>
       <div className="f-1 minw-0">
         <div className="sub d-flex jc-between gap-8 ai-center">
-          <span className="nowrap" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span className="ellipsis">
             <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
               {onbid && !c.bid_end ? t.undecided : dday(c.d_day)}
               {onbid && c.bid_end ? ` ${t.closes}` : ""}
@@ -51,10 +63,7 @@ export function ItemCard({ c }: { c: Card }) {
           </span>
           {onbid && <SourceBadge c={c} />}
         </div>
-        <div
-          className="fs-md fw-6 mt-2 nowrap"
-          style={{ overflow: "hidden", textOverflow: "ellipsis" }}
-        >
+        <div className="fs-md fw-6 mt-2 ellipsis">
           {c.place} {c.building ?? c.usage} {c.area_m2 ? `${Math.round(c.area_m2)}㎡` : ""}
         </div>
         <div className="fs-lg fw-7 mt-2">

@@ -168,7 +168,6 @@ export default function FieldPage() {
             ))}
             <button
               className="chip gray b-0 mh-36 mt-8"
-
               onClick={() =>
                 navigator.clipboard?.writeText(askText).then(() => {
                   setCopied(true);

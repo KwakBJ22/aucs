@@ -343,11 +343,7 @@ function ProItems() {
 
       <div className="d-flex jc-between ai-center my-8 mx-0">
         <div className="pos-relative">
-          <button
-            className="chip gray b-0 mh-30"
-
-            onClick={() => setColOpen(!colOpen)}
-          >
+          <button className="chip gray b-0 mh-30" onClick={() => setColOpen(!colOpen)}>
             {t.colPick} ›
           </button>
           {colOpen && (
@@ -367,7 +363,6 @@ function ProItems() {
         <div className="d-flex gap-6 ai-center">
           <button
             className="chip gray b-0 mh-30"
-
             disabled={page <= 1}
             onClick={() => set({ page: page - 1 })}
           >
@@ -378,7 +373,6 @@ function ProItems() {
           </span>
           <button
             className="chip gray b-0 mh-30"
-
             disabled={page >= pages}
             onClick={() => set({ page: page + 1 })}
           >
@@ -387,7 +381,7 @@ function ProItems() {
         </div>
       </div>
 
-      <div className={pc ? "pc-grid g-58-42" : ""}>
+      <div className={pc && pick ? "pc-grid g-58-42" : ""}>
         <section className="section p-0 ox-auto">
           <table className="pro-table">
             <thead>
@@ -427,9 +421,15 @@ function ProItems() {
             </tbody>
           </table>
         </section>
-        {pc && (
-          <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
-            <PickPanel id={pick ?? data?.rows[0]?.item_id ?? null} />
+        {pc && pick && (
+          <div
+            className="pc-sticky oy-auto quiet-scroll"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
+            <button className="link-btn mb-8" onClick={() => setPick(null)}>
+              {t.pickClose}
+            </button>
+            <PickPanel id={pick} />
           </div>
         )}
       </div>

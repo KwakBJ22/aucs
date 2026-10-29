@@ -469,6 +469,7 @@ export const copy = {
       share: (all: string) => `진행 물건 ${all}건 중`,
     },
     colPick: "열 고르기",
+    pickClose: "× 닫고 표 넓게",
     cols: {
       case: "사건·공매번호",
       usage: "용도",

@@ -123,7 +123,6 @@ function Sheet() {
             )}
             <button
               className="btn primary mt-12"
-
               disabled={!canPrint}
               onClick={() => window.print()}
             >

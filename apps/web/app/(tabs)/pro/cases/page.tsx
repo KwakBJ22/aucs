@@ -69,11 +69,7 @@ function Detail({ d }: { d: CaseDetail }) {
       </div>
       <div className="d-flex jc-between ai-center">
         <b className="fs-base">{t.flow}</b>
-        <button
-          className="chip gray b-0 mh-30"
-
-          onClick={() => setAll(!all)}
-        >
+        <button className="chip gray b-0 mh-30" onClick={() => setAll(!all)}>
           {all ? t.importantOnly : t.showAll(d.events.length)}
         </button>
       </div>

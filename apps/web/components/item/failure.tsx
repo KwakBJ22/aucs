@@ -19,11 +19,7 @@ export function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_tab
           <span className="sub d-block">{r.why}</span>
         </div>
       ))}
-      <button
-        className="cond-row bg-bg mt-6"
-
-        onClick={() => setOpen(!open)}
-      >
+      <button className="cond-row bg-bg mt-6" onClick={() => setOpen(!open)}>
         <span className="fs-md">{t.failFold(none, need)}</span>
         <span className="sub">{open ? "▴" : "›"}</span>
       </button>

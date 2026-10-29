@@ -37,11 +37,7 @@ function StepRow({
               {t.changed}
             </span>
           )}
-          <button
-            className="chip green b-0 mh-32"
-
-            onClick={() => setOpen(true)}
-          >
+          <button className="chip green b-0 mh-32" onClick={() => setOpen(true)}>
             {t.steps[c.step]} ▾
           </button>
           <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray mh-32">
@@ -211,11 +207,7 @@ export default function Watch() {
             <section className="section mt-0">
               <div className="d-flex jc-between ai-center">
                 <h2>{t.boardTitle}</h2>
-                <button
-                  className="chip gray b-0 mh-32"
-
-                  onClick={() => setAsTable(!asTable)}
-                >
+                <button className="chip gray b-0 mh-32" onClick={() => setAsTable(!asTable)}>
                   {asTable ? t.asBoard : t.asTable}
                 </button>
               </div>
@@ -286,7 +278,10 @@ export default function Watch() {
               )}
               <div className="sub mt-8">{t.boardHint}</div>
             </section>
-            <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
+            <div
+              className="pc-sticky oy-auto quiet-scroll"
+              style={{ maxHeight: "calc(100vh - 140px)" }}
+            >
               {pick && (
                 <WorkspacePanel
                   key={pick}

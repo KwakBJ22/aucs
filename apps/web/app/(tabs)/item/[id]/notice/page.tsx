@@ -47,7 +47,6 @@ export default function NoticePage() {
             <div className="d-flex gap-8 mt-12">
               <button
                 className="btn f-1"
-
                 onClick={() =>
                   navigator.clipboard?.writeText(d.mng_no).then(
                     () => setCopied(true),

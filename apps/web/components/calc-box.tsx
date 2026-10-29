@@ -16,9 +16,9 @@ const t = copy.item;
 
 export function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
-    <div className="d-flex jc-between gap-12 py-6 px-0 fs-md">
+    <div className="kv">
       <span className="sub m-0">{typeof label === "string" ? <Termed text={label} /> : label}</span>
-      <span className="ta-right">{value}</span>
+      <span className="kv-v">{value}</span>
     </div>
   );
 }
@@ -30,11 +30,7 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
   const [open, setOpen] = useState(start);
   if (!open)
     return (
-      <button
-        className="chip gray b-0 mh-36 mt-10 d-inline-flex"
-
-        onClick={() => setOpen(true)}
-      >
+      <button className="chip gray b-0 mh-36 mt-10 d-inline-flex" onClick={() => setOpen(true)}>
         {c.open} ›
       </button>
     );
@@ -352,11 +348,7 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
   if (done) return <div className="sub mt-8">{m.saved}</div>;
   if (!open)
     return (
-      <button
-        className="chip gray b-0 mh-36 mt-10 ml-6"
-
-        onClick={() => setOpen(true)}
-      >
+      <button className="chip gray b-0 mh-36 mt-10 ml-6" onClick={() => setOpen(true)}>
         {m.open} ›
       </button>
     );

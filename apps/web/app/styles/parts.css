@@ -187,3 +187,41 @@
   color: var(--text);
   font-size: 15px;
 }
+
+/* 이름·값 한 줄(Row). 휴대폰은 양 끝, PC 본문(.kv-left 안)은 이름 옆에 값 */
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: var(--fs-md);
+}
+.kv-v {
+  text-align: right;
+}
+/* 물건 카드 왼쪽 판(사진 대신 종류 글자) */
+.thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 칸 안 스크롤: 막대를 숨김(바퀴·끌기는 그대로) */
+.quiet-scroll {
+  scrollbar-width: none;
+}
+.quiet-scroll::-webkit-scrollbar {
+  display: none;
+}

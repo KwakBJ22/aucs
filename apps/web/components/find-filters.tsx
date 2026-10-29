@@ -163,11 +163,7 @@ export function FindFilters({
         )}
       </div>
       <div className="d-flex gap-8 f-wrap">
-        <button
-          className="chip gray b-0 mh-36"
-
-          onClick={() => onChange({})}
-        >
+        <button className="chip gray b-0 mh-36" onClick={() => onChange({})}>
           {t.condReset}
         </button>
         {onSave && (

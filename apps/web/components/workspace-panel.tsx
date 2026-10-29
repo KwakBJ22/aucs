@@ -202,11 +202,7 @@ export function WorkspacePanel({
                   {x.cash_krw ? t.cashNeed(won(x.cash_krw)) : ""} · {x.saved_at}
                 </span>
               </span>
-              <button
-                className="chip gray b-0 mh-32"
-
-                onClick={() => removeCalc(x.bid_krw)}
-              >
+              <button className="chip gray b-0 mh-32" onClick={() => removeCalc(x.bid_krw)}>
                 {t.remove}
               </button>
             </div>

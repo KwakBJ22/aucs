@@ -235,11 +235,7 @@ export function RegistryBox() {
             </div>
           )}
           {!pc && (
-            <button
-              className="cond-row bg-bg"
-
-              onClick={() => setLadOpen(!ladOpen)}
-            >
+            <button className="cond-row bg-bg" onClick={() => setLadOpen(!ladOpen)}>
               <span>
                 <b>
                   {r.foldTitle(

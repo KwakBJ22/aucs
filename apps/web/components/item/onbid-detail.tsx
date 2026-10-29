@@ -318,8 +318,8 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
             {head}
             {actions}
           </div>
-          <div>{(["buy", "hold", "check"] as const).map(sec)}</div>
-          <div>{(["worth", "cost"] as const).map(sec)}</div>
+          <div className="kv-left">{(["buy", "hold", "check"] as const).map(sec)}</div>
+          <div className="kv-left">{(["worth", "cost"] as const).map(sec)}</div>
         </div>
       </main>
     );

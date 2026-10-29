@@ -254,7 +254,6 @@ export default function ComparePage() {
                           <button
                             key={r}
                             className="chip gray b-0 mh-36"
-
                             onClick={() => exclude(c.id, r)}
                           >
                             {t.reasons[r]}
@@ -262,11 +261,7 @@ export default function ComparePage() {
                         ))}
                       </div>
                     ) : (
-                      <button
-                        className="chip gray b-0 mh-36"
-
-                        onClick={() => setAsking(c.id)}
-                      >
+                      <button className="chip gray b-0 mh-36" onClick={() => setAsking(c.id)}>
                         {t.drop}
                       </button>
                     )}
@@ -296,11 +291,7 @@ export default function ComparePage() {
                   {e.at}
                 </span>
               </span>
-              <button
-                className="chip gray b-0 mh-32"
-
-                onClick={() => undo(e.item_id)}
-              >
+              <button className="chip gray b-0 mh-32" onClick={() => undo(e.item_id)}>
                 {t.undo}
               </button>
             </div>

@@ -307,7 +307,7 @@ export default function Find() {
         <PageHeader title={t.title} sub={regions.join(" · ")} />
         <div className="pc-grid g-18-34-48">
           <section
-            className="section pc-sticky mt-0 oy-auto"
+            className="section pc-sticky mt-0 oy-auto quiet-scroll"
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             <h2>{t.cond}</h2>
@@ -378,7 +378,10 @@ export default function Find() {
               <ResultRow key={r.result_id} r={r} />
             ))}
           </section>
-          <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
+          <div
+            className="pc-sticky oy-auto quiet-scroll"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
+          >
             <section className="section map-box mt-0">
               <span className="sub">{t.mapSoon}</span>
             </section>

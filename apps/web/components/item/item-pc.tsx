@@ -55,7 +55,6 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             </span>
             <button
               className="chip gray b-0 mh-28"
-
               onClick={() => {
                 navigator.clipboard?.writeText(d.case_no).then(() => setCopied(true));
               }}
@@ -106,7 +105,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             {t.rounds}
           </a>
         </nav>
-        <div>
+        <div className="kv-left">
           {d.questions.map((q) => (
             <section key={q.key} id={`q-${q.key}`} className="section q-sec">
               <div className="sub m-0">{q.title}</div>

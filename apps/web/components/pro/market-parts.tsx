@@ -8,8 +8,17 @@ import { won } from "@/lib/format";
 
 const t = copy.proMarket;
 
-export function StatTable({ title, rows }: { title: string; rows: (Stat & { label: string })[] }) {
+export function StatTable({
+  title,
+  rows,
+  from = 0,
+}: {
+  title: string;
+  rows: (Stat & { label: string })[];
+  from?: number; // 막대 시작 값(공매는 최저가 대비라 80%부터 봐야 차이가 보임)
+}) {
   const max = Math.max(100, ...rows.map((r) => r.p50));
+  const w = (v: number) => Math.max(2, ((v - from) * 100) / (max - from));
   return (
     <section className="section m-0">
       <h2 className="fs-base">{title}</h2>
@@ -18,13 +27,13 @@ export function StatTable({ title, rows }: { title: string; rows: (Stat & { labe
         <div
           key={r.label}
           className="d-grid gap-8 ai-center fs-sm py-4 px-0"
-          style={{ gridTemplateColumns: "88px 1fr 64px" }}
+          style={{ gridTemplateColumns: "128px 1fr 72px" }}
         >
-          <span>{r.label}</span>
+          <span className="ellipsis">{r.label}</span>
           <span className="bg-gray-chip r-4 pos-relative" style={{ height: 10 }}>
             <span
               className="pos-absolute bg-blue r-4"
-              style={{ inset: 0, width: `${(r.p50 * 100) / max}%` }}
+              style={{ inset: 0, width: `${w(r.p50)}%` }}
             />
           </span>
           <span className="ta-right">
@@ -56,10 +65,12 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
       <div className="note blue mt-4 mb-12 mx-0">{o.basis}</div>
       <div className="pc-grid g-2x2" style={{ rowGap: 12 }}>
         <StatTable
+          from={80}
           title={o.byBidders}
           rows={m.by_bidders.map((r) => ({ ...r, label: r.bidders }))}
         />
         <StatTable
+          from={80}
           title={o.byUsage}
           rows={m.by_usage.map((r) => ({
             ...r,
@@ -67,10 +78,12 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
           }))}
         />
         <StatTable
+          from={80}
           title={o.bySido}
           rows={m.by_sido.map((r) => ({ ...r, label: r.sido ?? t.etc }))}
         />
         <StatTable
+          from={80}
           title={t.byFailed}
           rows={m.by_failed.map((r) => ({ ...r, label: t.failed(r.failed) }))}
         />

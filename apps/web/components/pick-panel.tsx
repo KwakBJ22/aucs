@@ -77,7 +77,7 @@ export function PickPanel({ id }: { id: string | null }) {
       <div className="fs-2xl fw-7">
         {won(d.min_price_krw)}{" "}
         <span className="sub">
-          {d.min_rate}% · 감정가 {won(d.appraisal_krw)}
+          {d.appraisal_krw ? `${d.min_rate}% · 감정가 ${won(d.appraisal_krw)}` : ""}
         </span>
       </div>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
@@ -101,7 +101,6 @@ export function PickPanel({ id }: { id: string | null }) {
         {session && (
           <button
             className="pc-act f-1"
-
             onClick={() =>
               meApi
                 .addCompare(session.access_token, d.item_id)

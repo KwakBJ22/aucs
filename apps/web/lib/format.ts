@@ -10,8 +10,9 @@ export function won(n: number | null | undefined): string {
   }
   const eok = Math.floor(man / 10_000);
   const rest = man % 10_000;
-  if (eok && rest) return `${eok}억 ${rest.toLocaleString("ko-KR")}만`;
-  if (eok) return `${eok}억`;
+  const e = eok.toLocaleString("ko-KR");
+  if (eok && rest) return `${e}억 ${rest.toLocaleString("ko-KR")}만`;
+  if (eok) return `${e}억`;
   return `${rest.toLocaleString("ko-KR")}만`;
 }
 

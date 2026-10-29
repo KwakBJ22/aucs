@@ -253,11 +253,7 @@ export default function Me() {
             <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="c-inherit fw-6 fs-md">
               {x.place} <span className="sub">{md(x.sale_date)}</span>
             </Link>
-            <button
-              className="chip gray b-0 mh-28"
-
-              onClick={() => dropMock(x.mock_id)}
-            >
+            <button className="chip gray b-0 mh-28" onClick={() => dropMock(x.mock_id)}>
               {copy.mock.remove}
             </button>
           </div>
