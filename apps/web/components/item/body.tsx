@@ -1,5 +1,6 @@
 "use client";
 
+import { copy } from "@/lib/copy.ko";
 import { CalcBox, Row } from "@/components/calc-box";
 import type { ItemDetail, Question } from "@/lib/api/items";
 import { won } from "@/lib/format";
