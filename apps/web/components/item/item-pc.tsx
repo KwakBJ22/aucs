@@ -47,15 +47,15 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
       <PageHeader
         title={`${d.place} ${d.building ?? d.usage ?? ""}`}
         sub={
-          <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span className="d-inline-flex gap-10 ai-center f-wrap">
             <span>
               {d.court} {d.case_no}
               {d.dept_name ? ` · ${d.dept_name}` : ""}
               {d.sale_place ? ` · ${d.sale_place}` : ""}
             </span>
             <button
-              className="chip gray"
-              style={{ border: 0, minHeight: 28 }}
+              className="chip gray b-0 mh-28"
+
               onClick={() => {
                 navigator.clipboard?.writeText(d.case_no).then(() => setCopied(true));
               }}
@@ -65,7 +65,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
           </span>
         }
         right={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="d-flex ai-center gap-8">
             <WsLink id={d.item_id} />
             <HeartButton id={d.item_id} />
           </div>
@@ -76,19 +76,15 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
         <div className="band-grid">
           {stats.map(([k, v]) => (
             <div key={k}>
-              <div className="sub" style={{ margin: 0 }}>
-                {k}
-              </div>
-              <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{v}</div>
+              <div className="sub m-0">{k}</div>
+              <div className="fs-lg fw-7 mt-2">{v}</div>
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.5, margin: "14px 0 0" }}>
-          {d.verdict}
-        </p>
+        <p className="fs-lg fw-6 lh-15 mt-14 mb-0 mx-0">{d.verdict}</p>
         <SameHouse list={d.same_house} />
         {d.tags.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+          <div className="d-flex gap-6 f-wrap mt-10">
             {d.tags.map((x) => (
               <span key={x.label} className={`chip ${x.ok ? "green" : "gray"}`}>
                 {x.label}
@@ -106,17 +102,15 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             </a>
           ))}
           <a href="#q-rounds">
-            <span className="toc-dot" style={{ background: "var(--faint)" }} />
+            <span className="toc-dot bg-faint" />
             {t.rounds}
           </a>
         </nav>
         <div>
           {d.questions.map((q) => (
             <section key={q.key} id={`q-${q.key}`} className="section q-sec">
-              <div className="sub" style={{ margin: 0 }}>
-                {q.title}
-              </div>
-              <h2 style={{ display: "flex", gap: 8, alignItems: "baseline", margin: "4px 0 12px" }}>
+              <div className="sub m-0">{q.title}</div>
+              <h2 className="d-flex gap-8 ai-baseline mt-4 mb-12 mx-0">
                 <span className="toc-dot" style={{ background: DOT[q.tone] }} />
                 {answerOf(q, reg.u)}
               </h2>
@@ -125,7 +119,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
           ))}
           <section id="q-rounds" className="section q-sec">
             <h2>{t.rounds}</h2>
-            <table className="pro-table" style={{ marginTop: 8 }}>
+            <table className="pro-table mt-8">
               <thead>
                 <tr>
                   <th>{t.pc.date}</th>
@@ -144,17 +138,11 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
               </tbody>
             </table>
           </section>
-          <p className="sub" style={{ fontSize: 12 }}>
-            {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
-          </p>
+          <p className="sub fs-xs">{t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}</p>
         </div>
         <aside className="section pc-sticky pc-actions">
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{t.pc.actions}</div>
-          <Link
-            href={`/item/${id}/calc`}
-            className="btn primary"
-            style={{ height: 46, fontSize: 15 }}
-          >
+          <div className="fs-base fw-7">{t.pc.actions}</div>
+          <Link href={`/item/${id}/calc`} className="btn primary fs-base" style={{ height: 46 }}>
             {t.bidTry}
           </Link>
           <Link href={`/item/${id}/bid-sheet`} className="pc-act">
@@ -170,7 +158,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
           <Link href={`/item/${id}/report`} className="pc-act">
             {copy.report.open}
           </Link>
-          <div className="sub" style={{ fontSize: 12 }}>
+          <div className="sub fs-xs">
             {t.pc.basis(d.computed_at ? d.computed_at.slice(0, 16).replace("T", " ") : "-")}
           </div>
         </aside>

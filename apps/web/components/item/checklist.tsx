@@ -89,19 +89,19 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
   const flow = b.flow as FlowStep[];
   return (
     <>
-      <div style={{ display: "flex", overflowX: "auto", gap: 0, padding: "4px 0 12px" }}>
+      <div className="d-flex ox-auto gap-0 pt-4 pb-12 px-0">
         {flow.map((f, i) => (
-          <div
-            key={f.key}
-            style={{ flex: "0 0 auto", minWidth: 64, textAlign: "center", fontSize: 11 }}
-          >
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <span style={{ flex: 1, height: 2, background: i ? "var(--line)" : "transparent" }} />
+          <div key={f.key} className="ta-center fs-xs" style={{ flex: "0 0 auto", minWidth: 64 }}>
+            <div className="d-flex ai-center">
               <span
+                className="f-1"
+                style={{ height: 2, background: i ? "var(--line)" : "transparent" }}
+              />
+              <span
+                className="r-4"
                 style={{
                   width: 10,
                   height: 10,
-                  borderRadius: 5,
                   background: f.done
                     ? "var(--green)"
                     : f.key === "now"
@@ -110,15 +110,17 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
                 }}
               />
               <span
+                className="f-1"
                 style={{
-                  flex: 1,
                   height: 2,
                   background: i < flow.length - 1 ? "var(--line)" : "transparent",
                 }}
               />
             </div>
-            <div style={{ marginTop: 4, fontWeight: f.key === "now" ? 700 : 400 }}>{f.label}</div>
-            <div className="sub" style={{ margin: 0, fontSize: 11 }}>
+            <div className="mt-4" style={{ fontWeight: f.key === "now" ? 700 : 400 }}>
+              {f.label}
+            </div>
+            <div className="sub m-0 fs-xs">
               {f.date ? flowDate(f.date) : "-"}
               {f.estimated && f.date ? ` ${t.flowGuess}` : ""}
             </div>
@@ -126,14 +128,14 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
         ))}
       </div>
       {todo.map((x) => (
-        <div key={x.key} style={{ padding: "8px 0" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div key={x.key} className="py-8 px-0">
+          <div className="d-flex gap-8 ai-center">
             <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
-            <b style={{ fontSize: 14 }}>
+            <b className="fs-md">
               <Termed text={x.label} />
             </b>
           </div>
-          <div className="sub" style={{ margin: "2px 0 0", fontSize: 12 }}>
+          <div className="sub mt-2 mb-0 mx-0 fs-xs">
             {x.what}
             {x.hint ? ` · ${x.hint}` : ""}
           </div>
@@ -142,23 +144,16 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
       {done.length > 0 && (
         <button
           onClick={() => setShowDone(!showDone)}
-          style={{
-            border: 0,
-            background: "none",
-            color: "var(--muted)",
-            fontSize: 13,
-            padding: "10px 0",
-            minHeight: 44,
-          }}
+          className="b-0 bg-none c-muted fs-sm py-10 px-0 mh-44"
         >
           ✓ {t.doneFold(done.length)} {showDone ? "⌃" : "›"}
         </button>
       )}
       {showDone &&
         done.map((x) => (
-          <div key={x.key} style={{ fontSize: 13, padding: "4px 0" }}>
-            <span style={{ color: "var(--green)" }}>✓</span> {x.label}
-            <span className="sub" style={{ margin: 0 }}>
+          <div key={x.key} className="fs-sm py-4 px-0">
+            <span className="c-green">✓</span> {x.label}
+            <span className="sub m-0">
               {" "}
               · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
               {x.note ? ` · ${x.note}` : ""}
@@ -166,31 +161,20 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
             {(x.key === "status_report" || x.key === "deliveries" || x.key === "spec_sheet") && (
               <button
                 onClick={() => openDoc(x.key as DocKind)}
-                style={{
-                  border: 0,
-                  background: "none",
-                  color: "var(--blue)",
-                  fontSize: 13,
-                  padding: "0 0 0 6px",
-                }}
+                className="b-0 bg-none c-blue fs-sm py-0 pl-6 pr-0"
               >
                 {t.doc.open}
               </button>
             )}
           </div>
         ))}
-      {b.events.length > 0 && (
-        <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10 }}>{t.events}</div>
-      )}
+      {b.events.length > 0 && <div className="fs-md fw-6 mt-10">{t.events}</div>}
       {b.events
         .slice(0, 6)
         .map((e: { date: string; category: string; after_deadline: boolean }, i: number) => (
-          <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>
-            <span className="sub" style={{ margin: 0 }}>
-              {e.date}
-            </span>{" "}
-            {e.category}
-            {e.after_deadline && <b style={{ color: "var(--amber)" }}> · {t.afterDeadline}</b>}
+          <div key={i} className="fs-sm py-4 px-0">
+            <span className="sub m-0">{e.date}</span> {e.category}
+            {e.after_deadline && <b className="c-amber"> · {t.afterDeadline}</b>}
           </div>
         ))}
     </>

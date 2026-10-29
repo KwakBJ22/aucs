@@ -9,9 +9,11 @@ const color: Record<HealthState, string> = {
 
 export function HealthRow({ label, state }: { label: string; state: HealthState }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0" }}>
+    <div className="d-flex jc-between py-12 px-0">
       <span>{label}</span>
-      <span style={{ color: color[state], fontWeight: 600 }}>{copy.health[state]}</span>
+      <span className="fw-6" style={{ color: color[state] }}>
+        {copy.health[state]}
+      </span>
     </div>
   );
 }

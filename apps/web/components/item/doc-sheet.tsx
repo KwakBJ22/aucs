@@ -7,12 +7,14 @@ import { useSession } from "@/lib/auth";
 import { t } from "@/components/item/shared";
 
 export function DocH({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 14, fontWeight: 700, margin: "16px 0 6px" }}>{children}</div>;
+  return <div className="fs-md fw-7 mt-16 mb-6 mx-0">{children}</div>;
 }
 
 export function DocP({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{children}</p>
+    <p className="fs-md lh-16 m-0" style={{ whiteSpace: "pre-wrap" }}>
+      {children}
+    </p>
   );
 }
 
@@ -23,17 +25,12 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [state, setState] = useState<"" | "sending" | "sent" | "fail">("");
-  if (state === "sent")
-    return (
-      <p className="sub" style={{ marginTop: 24 }}>
-        {r.thanks}
-      </p>
-    );
+  if (state === "sent") return <p className="sub mt-24">{r.thanks}</p>;
   if (!open)
     return (
       <button
-        className="chip gray"
-        style={{ border: 0, minHeight: 40, marginTop: 24 }}
+        className="chip gray b-0 mh-40 mt-24"
+
         onClick={() => (session ? setOpen(true) : (window.location.href = "/login"))}
       >
         {r.open}
@@ -48,8 +45,8 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
       .catch(() => setState("fail"));
   };
   return (
-    <section className="section" style={{ marginTop: 24 }}>
-      <label style={{ display: "block", fontSize: 14, fontWeight: 600 }}>
+    <section className="section mt-24">
+      <label className="d-block fs-md fw-6">
         {r.label}
         <textarea
           value={note}
@@ -57,18 +54,11 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
           rows={3}
           placeholder={r.placeholder}
           onChange={(e) => setNote(e.target.value)}
-          style={{ display: "block", width: "100%", marginTop: 6, fontSize: 15, padding: 8 }}
+          className="d-block w-full mt-6 fs-base p-8"
         />
       </label>
-      <p className="sub" style={{ margin: "6px 0" }}>
-        {state === "fail" ? r.fail : r.hint}
-      </p>
-      <button
-        className="btn"
-        disabled={!note.trim() || state === "sending"}
-        onClick={send}
-        style={{ minHeight: 44 }}
-      >
+      <p className="sub my-6 mx-0">{state === "fail" ? r.fail : r.hint}</p>
+      <button className="btn mh-44" disabled={!note.trim() || state === "sending"} onClick={send}>
         {r.send}
       </button>
     </section>
@@ -100,31 +90,18 @@ export function DocSheet({
     <div
       role="dialog"
       aria-label={c.names[kind]}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        background: "var(--bg, #fff)",
-        overflowY: "auto",
-        padding: "0 16px 32px",
-      }}
+      className="bg-bg oy-auto pt-0 pb-32 px-16"
+      style={{ position: "fixed", inset: 0, zIndex: 50 }}
     >
-      <div className="topbar" style={{ position: "sticky", top: 0, background: "var(--bg, #fff)" }}>
-        <b style={{ fontSize: 17 }}>{c.names[kind]}</b>
-        <button
-          onClick={onClose}
-          style={{ border: 0, background: "none", fontSize: 15, minWidth: 44, minHeight: 44 }}
-        >
+      <div className="topbar pos-sticky bg-bg" style={{ top: 0 }}>
+        <b className="fs-lg">{c.names[kind]}</b>
+        <button onClick={onClose} className="b-0 bg-none fs-base mh-44" style={{ minWidth: 44 }}>
           {c.close}
         </button>
       </div>
       {docs === undefined && <p className="sub">{c.loading}</p>}
       {docs !== undefined && !cur && <p className="sub">{c.none}</p>}
-      {cur && (
-        <p className="sub" style={{ fontSize: 12, marginTop: 0 }}>
-          {c.from(cur.fetched_at)}
-        </p>
-      )}
+      {cur && <p className="sub fs-xs mt-0">{c.from(cur.fetched_at)}</p>}
       {kind === "status_report" && sr && (
         <>
           {sr.exam_at && (
@@ -157,9 +134,9 @@ export function DocSheet({
             <>
               <DocH>{c.tenants}</DocH>
               {sr.tenants.map((x, i) => (
-                <div key={i} style={{ fontSize: 14, padding: "6px 0" }}>
+                <div key={i} className="fs-md py-6 px-0">
                   <b>{x.name ?? "임차인"}</b> {x.part ?? ""} {x.use ?? ""}
-                  <div className="sub" style={{ margin: 0 }}>
+                  <div className="sub m-0">
                     {[
                       x.move_in && `전입 ${x.move_in}`,
                       x.fixed && `확정 ${x.fixed}`,
@@ -198,32 +175,17 @@ export function DocSheet({
       )}
       {kind === "deliveries" && dl && (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="d-flex jc-between ai-center">
             <DocH>{c.filings}</DocH>
-            <button
-              onClick={() => setAll(!all)}
-              style={{
-                border: 0,
-                background: "none",
-                color: "var(--blue)",
-                fontSize: 13,
-                minHeight: 44,
-              }}
-            >
+            <button onClick={() => setAll(!all)} className="b-0 bg-none c-blue fs-sm mh-44">
               {all ? c.keyOnly : c.all}
             </button>
           </div>
           {dl.filings
             .filter((x) => all || x.key)
             .map((x, i) => (
-              <div
-                key={i}
-                style={{ fontSize: 13, padding: "4px 0", fontWeight: x.key ? 600 : 400 }}
-              >
-                <span className="sub" style={{ margin: 0 }}>
-                  {x.date ?? "-"}
-                </span>{" "}
-                {x.text}
+              <div key={i} className="fs-sm py-4 px-0" style={{ fontWeight: x.key ? 600 : 400 }}>
+                <span className="sub m-0">{x.date ?? "-"}</span> {x.text}
                 {x.result ? ` · ${x.result}` : ""}
               </div>
             ))}
@@ -232,11 +194,8 @@ export function DocSheet({
             <>
               <DocH>{c.sends}</DocH>
               {dl.sends.map((x, i) => (
-                <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>
-                  <span className="sub" style={{ margin: 0 }}>
-                    {x.date ?? "-"}
-                  </span>{" "}
-                  {x.text}
+                <div key={i} className="fs-sm py-4 px-0">
+                  <span className="sub m-0">{x.date ?? "-"}</span> {x.text}
                   {x.result ? ` · ${x.result}` : ""}
                 </div>
               ))}

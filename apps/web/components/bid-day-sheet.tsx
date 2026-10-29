@@ -34,27 +34,19 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
   const color = d.state === "ok" || d.state === "soon" ? "var(--green)" : "var(--red)";
   const mapUrl = `https://map.kakao.com/?q=${encodeURIComponent(d.court_full)}`;
   const Check = ({ k, label, sub }: { k: string; label: string; sub?: string }) => (
-    <label
-      style={{
-        display: "flex",
-        gap: 10,
-        padding: "10px 0",
-        minHeight: 44,
-      }}
-    >
+    <label className="d-flex gap-10 py-10 px-0 mh-44">
       <input
         type="checkbox"
         checked={Boolean(done[k])}
         onChange={() => tick(k)}
-        style={{ width: 20, height: 20, flexShrink: 0 }}
+        className="f-none"
+        style={{ width: 20, height: 20 }}
       />
       <span>
-        <span style={{ fontWeight: 600, opacity: done[k] ? 0.5 : 1 }}>{label}</span>
-        {sub && (
-          <span className="sub" style={{ display: "block" }}>
-            {sub}
-          </span>
-        )}
+        <span className="fw-6" style={{ opacity: done[k] ? 0.5 : 1 }}>
+          {label}
+        </span>
+        {sub && <span className="sub d-block">{sub}</span>}
       </span>
     </label>
   );
@@ -72,35 +64,25 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
           {d.court} {d.case_no}
           {d.item_no > 1 ? ` · ${t.itemNo(d.item_no)}` : ""}
         </div>
-        <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>
-          {d.time ? t.at(d.time) : t.timeUnknown}
-        </div>
-        <div style={{ marginTop: 4 }}>
+        <div className="fs-2xl fw-7 mt-4">{d.time ? t.at(d.time) : t.timeUnknown}</div>
+        <div className="mt-4">
           {d.court_full} · {d.place}
         </div>
-        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="chip gray"
-            style={{ minHeight: 36 }}
-          >
+        <div className="d-flex gap-6 mt-10 f-wrap">
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="chip gray mh-36">
             {t.map} ›
           </a>
           {d.tel && (
-            <a href={`tel:${d.tel}`} className="chip gray" style={{ minHeight: 36 }}>
+            <a href={`tel:${d.tel}`} className="chip gray mh-36">
               {t.call(d.tel)}
             </a>
           )}
         </div>
-        <div className="sub" style={{ marginTop: 8 }}>
-          {t.timeNote}
-        </div>
+        <div className="sub mt-8">{t.timeNote}</div>
       </section>
       <section className="section">
         <h2>{t.deposit}</h2>
-        <div style={{ fontSize: 26, fontWeight: 700 }}>{won(d.deposit_krw)}</div>
+        <div className="fs-3xl fw-7">{won(d.deposit_krw)}</div>
         <div className="sub">
           {t.depositSub(d.deposit_rate_pct, won(d.min_price_krw), d.resale)}
         </div>
@@ -118,11 +100,7 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
           <Check key={k} k={k} label={label} sub={sub} />
         ))}
         {!wide && (
-          <Link
-            href={`/item/${encodeURIComponent(id)}/bid-sheet`}
-            className="btn primary"
-            style={{ marginTop: 12 }}
-          >
+          <Link href={`/item/${encodeURIComponent(id)}/bid-sheet`} className="btn primary mt-12">
             {t.toSheet}
           </Link>
         )}

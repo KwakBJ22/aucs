@@ -36,8 +36,8 @@ export function PageHeader({
         {back === "history" ? (
           <button
             aria-label="뒤로"
-            className="tb-back"
-            style={{ border: 0, background: "none" }}
+            className="tb-back b-0 bg-none"
+
             onClick={() => router.back()}
           >
             {arrow}
@@ -48,7 +48,7 @@ export function PageHeader({
           </Link>
         ) : null}
         {title ? <h1 className="brand">{title}</h1> : null}
-        <span style={{ flexGrow: 1 }} />
+        <span className="f-1" />
         {right}
       </div>
       {sub && <div className="tb-sub sub">{sub}</div>}

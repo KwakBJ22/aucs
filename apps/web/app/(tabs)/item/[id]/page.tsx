@@ -73,9 +73,7 @@ export default function Item() {
   if (d === null)
     return (
       <main className="page">
-        <p className="sub" style={{ padding: 24 }}>
-          {t.notFound}
-        </p>
+        <p className="sub p-24">{t.notFound}</p>
       </main>
     );
   if (isOnbid(d)) return <OnbidItem d={d as unknown as OnbidDetail} />; // 공매(10/28)
@@ -97,7 +95,7 @@ export default function Item() {
             title=""
             back="history"
             right={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="d-flex ai-center gap-8">
                 <WsLink id={d.item_id} />
                 <HeartButton id={d.item_id} />
               </div>
@@ -107,8 +105,7 @@ export default function Item() {
           {d.d_day != null && d.d_day <= 1 && d.d_day >= 0 && (
             <Link
               href={`/item/${encodeURIComponent(d.item_id)}/bid-day`}
-              className="chip orange"
-              style={{ minHeight: 36, marginTop: 8, display: "inline-flex" }}
+              className="chip orange mh-36 mt-8 d-inline-flex"
             >
               {copy.bidDay.title} ›
             </Link>
@@ -118,60 +115,41 @@ export default function Item() {
               <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
               {d.sale_date} · {d.court} {d.case_no}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+            <div className="fs-base fw-6 mt-4">
               {d.place} {d.building ?? d.usage}
             </div>
-            <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
+            <div className="fs-3xl fw-7 mt-6">
               {won(d.min_price_krw)}{" "}
-              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
+              <span className="fs-md fw-5 c-muted">
                 {copy.card.ofAppraisal} {d.min_rate}%
                 {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
               </span>
             </div>
-            <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+            <p className="fs-base lh-15 mt-12 mb-0 mx-0">{d.verdict}</p>
             <SameHouse list={d.same_house} />
           </section>
 
-          <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <section className="section pt-0 pb-0">
             {d.questions.map((q) => (
               <div key={q.key} style={{}}>
                 <button
                   onClick={() => setOpen(open === q.key ? null : q.key)}
-                  style={{
-                    width: "100%",
-                    border: 0,
-                    background: "none",
-                    textAlign: "left",
-                    padding: "14px 0",
-                    minHeight: 44,
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "flex-start",
-                    color: "inherit",
-                  }}
+                  className="w-full b-0 bg-none ta-left py-14 px-0 mh-44 d-flex gap-10 ai-start c-inherit"
                 >
                   <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      background: DOT[q.tone],
-                      marginTop: 7,
-                      flexShrink: 0,
-                    }}
+                    className="r-4 mt-6 f-none"
+                    style={{ width: 8, height: 8, background: DOT[q.tone] }}
                   />
-                  <span style={{ flexGrow: 1 }}>
-                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
-                      {q.title}
-                    </span>
-                    <span style={{ fontSize: 15, fontWeight: 600 }}>{answerOf(q, reg.u)}</span>
+                  <span className="f-1">
+                    <span className="sub d-block m-0 fs-sm">{q.title}</span>
+                    <span className="fs-base fw-6">{answerOf(q, reg.u)}</span>
                   </span>
-                  <span aria-hidden="true" style={{ color: "var(--faint)" }}>
+                  <span aria-hidden="true" className="c-faint">
                     {open === q.key ? "⌃" : "›"}
                   </span>
                 </button>
                 {open === q.key && (
-                  <div style={{ padding: "0 0 14px 18px" }}>
+                  <div className="pt-0 pb-14 pl-18 pr-0">
                     <Body q={q} d={d} />
                   </div>
                 )}
@@ -191,9 +169,7 @@ export default function Item() {
                 }
               />
             )}
-            {d.rounds.length > 0 && (
-              <div style={{ fontSize: 14, fontWeight: 600, margin: "10px 0 2px" }}>{t.rounds}</div>
-            )}
+            {d.rounds.length > 0 && <div className="fs-md fw-6 mt-10 mb-2 mx-0">{t.rounds}</div>}
             {d.rounds.map((r) => (
               <Row
                 key={r.sale_date}
@@ -202,7 +178,7 @@ export default function Item() {
               />
             ))}
           </section>
-          <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
+          <p className="sub pt-0 pb-24 px-18 fs-xs">
             {t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}
           </p>
           {doc && <DocSheet id={d.item_id} kind={doc} onClose={() => setDoc(null)} />}

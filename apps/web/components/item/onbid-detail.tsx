@@ -36,18 +36,15 @@ const STATE_CHIP: Record<string, string> = {
 function Rounds({ d }: { d: OnbidDetail }) {
   return (
     <div>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{t.rounds}</div>
+      <div className="fs-md fw-7 mb-4">{t.rounds}</div>
       {d.rounds.length === 0 && <p className="sub">{t.noRounds}</p>}
       {d.rounds.map((r, i) => (
         <div
           key={i}
-          className="line-row"
+          className="line-row fs-md r-8 py-8 px-6"
           style={{
-            fontSize: 14,
             color: r.label === "지난" ? "var(--muted)" : "inherit",
             background: r.label === "이번" ? "var(--blue-soft)" : undefined,
-            borderRadius: 8,
-            padding: "8px 6px",
           }}
         >
           <span>
@@ -67,22 +64,9 @@ function Rounds({ d }: { d: OnbidDetail }) {
         </div>
       ))}
       {d.wait_line && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: "10px 12px",
-            borderRadius: 10,
-            background: "var(--orange-soft)",
-            color: "var(--orange)",
-            fontSize: 14,
-          }}
-        >
-          {d.wait_line}
-        </div>
+        <div className="mt-8 py-10 px-12 r-10 bg-orange-soft c-orange fs-md">{d.wait_line}</div>
       )}
-      <p className="sub" style={{ fontSize: 12, marginTop: 6 }}>
-        {t.roundsNote}
-      </p>
+      <p className="sub fs-xs mt-6">{t.roundsNote}</p>
     </div>
   );
 }
@@ -91,22 +75,20 @@ function Worth({ d }: { d: OnbidDetail }) {
   const m = d.market;
   const mn = d.min_price_krw ?? 0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="d-flex f-col gap-14">
       <Rounds d={d} />
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{t.marketTitle}</div>
+        <div className="fs-md fw-7 mb-4">{t.marketTitle}</div>
         {m ? (
           <>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>
+            <div className="fs-base fw-6">
               {m.price_krw > mn ? t.marketLine(won(m.price_krw - mn)) : t.marketAbove}
             </div>
-            <div className="sub" style={{ fontSize: 13 }}>
+            <div className="sub fs-sm">
               {won(m.price_krw)} · {t.marketBand(won(m.lo_krw), won(m.hi_krw), m.n)}
             </div>
             {d.appraisal_vs_market != null && d.appraisal_vs_market > 110 && (
-              <div className="note blue" style={{ marginTop: 8, fontSize: 13 }}>
-                {t.appraisalHigh(d.appraisal_vs_market)}
-              </div>
+              <div className="note blue mt-8 fs-sm">{t.appraisalHigh(d.appraisal_vs_market)}</div>
             )}
           </>
         ) : (
@@ -114,22 +96,14 @@ function Worth({ d }: { d: OnbidDetail }) {
         )}
       </div>
       <div>
-        <div style={{ fontSize: 14, fontWeight: 700 }}>{t.expectTitle}</div>
-        <div className="sub" style={{ fontSize: 12 }}>
-          {t.expectSub}
-        </div>
+        <div className="fs-md fw-7">{t.expectTitle}</div>
+        <div className="sub fs-xs">{t.expectSub}</div>
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto auto",
-            columnGap: 12,
-            rowGap: 6,
-            fontSize: 14,
-            marginTop: 8,
-          }}
+          className="d-grid fs-md mt-8"
+          style={{ gridTemplateColumns: "1fr auto auto", columnGap: 12, rowGap: 6 }}
         >
           {t.expectCols.map((h) => (
-            <span key={h} className="sub" style={{ fontSize: 12, margin: 0, textAlign: "right" }}>
+            <span key={h} className="sub fs-xs m-0 ta-right">
               {h}
             </span>
           ))}
@@ -137,9 +111,7 @@ function Worth({ d }: { d: OnbidDetail }) {
             <ExpectRow key={e.bucket} e={e} />
           ))}
         </div>
-        <p className="sub" style={{ fontSize: 12, marginTop: 6 }}>
-          {d.expected_basis}
-        </p>
+        <p className="sub fs-xs mt-6">{d.expected_basis}</p>
       </div>
     </div>
   );
@@ -149,13 +121,11 @@ function ExpectRow({ e }: { e: OnbidDetail["expected"][number] }) {
   const few = e.p50 == null;
   return (
     <>
-      <span style={{ fontWeight: 600, color: few ? "var(--muted)" : undefined }}>
+      <span className="fw-6" style={{ color: few ? "var(--muted)" : undefined }}>
         {e.bucket} <span className="sub">({e.share ?? "-"}%)</span>
       </span>
-      <span style={{ textAlign: "right" }}>{few ? "—" : `${e.p50}%`}</span>
-      <span
-        style={{ textAlign: "right", fontWeight: 700, color: few ? "var(--muted)" : undefined }}
-      >
+      <span className="ta-right">{few ? "—" : `${e.p50}%`}</span>
+      <span className="ta-right fw-7" style={{ color: few ? "var(--muted)" : undefined }}>
         {few ? `${t.fewSample} (${e.n}건)` : won(e.price_krw)}
       </span>
     </>
@@ -172,7 +142,7 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
         {d.notice.org && <Row label={t.org} value={d.notice.org} />}
         <Link
           href={`/item/${encodeURIComponent(d.item_id)}/notice`}
-          style={{ display: "inline-block", fontSize: 14, margin: "6px 0" }}
+          className="d-inline-block fs-md my-6 mx-0"
         >
           {copy.onbidNotice.link}
         </Link>
@@ -181,24 +151,22 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
     );
   if (k === "hold")
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="d-flex f-col gap-10">
         {d.warnings.map((w) => (
-          <div key={w} style={{ fontSize: 14 }}>
+          <div key={w} className="fs-md">
             ◆ {w}
           </div>
         ))}
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{t.missingTitle}</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div className="fs-md fw-7 mb-6">{t.missingTitle}</div>
+          <div className="d-flex gap-6 f-wrap">
             {d.missing_docs.map((x) => (
               <span key={x} className="chip gray">
                 {x}
               </span>
             ))}
           </div>
-          <p className="sub" style={{ fontSize: 13, marginTop: 8 }}>
-            {t.missingWhy}
-          </p>
+          <p className="sub fs-sm mt-8">{t.missingWhy}</p>
         </div>
       </div>
     );
@@ -214,14 +182,12 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
   return (
     <div>
       {d.checklist.map((x) => (
-        <div key={x.key} style={{ padding: "10px 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{x.label}</span>
+        <div key={x.key} className="py-10 px-0">
+          <div className="d-flex jc-between gap-8">
+            <span className="fs-base fw-6">{x.label}</span>
             <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
           </div>
-          <div className="sub" style={{ fontSize: 12, margin: 0 }}>
-            {x.what}
-          </div>
+          <div className="sub fs-xs m-0">{x.what}</div>
         </div>
       ))}
     </div>
@@ -258,48 +224,34 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
     <>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       <section className="section">
-        <div
-          className="sub"
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
-        >
+        <div className="sub d-flex gap-8 f-wrap ai-center">
           <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
             {d.bid_end ? `${dday(d.d_day)} ${copy.card.closes} · ${when(d.bid_end)}` : t.undecided}
           </b>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "1px 6px",
-              borderRadius: 5,
-              border: 0,
-              background: "var(--gray-chip)",
-            }}
-          >
+          <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip">
             {t.badge(d.kind_name ?? "")}
           </span>
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+        <div className="fs-base fw-6 mt-4">
           {d.place} {d.usage ?? ""}
         </div>
-        <div className="sub" style={{ fontSize: 13, margin: 0 }}>
-          {d.case_no}
-        </div>
-        <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6 }}>
+        <div className="sub fs-sm m-0">{d.case_no}</div>
+        <div className="fs-3xl fw-7 mt-6">
           {won(d.min_price_krw)}{" "}
-          <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>
+          <span className="fs-md fw-5 c-muted">
             {d.min_rate != null ? `${copy.card.ofAppraisal} ${d.min_rate}%` : ""}
             {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
           </span>
         </div>
         {d.bid_end && (
-          <div className="sub" style={{ fontSize: 13, margin: "4px 0 0" }}>
+          <div className="sub fs-sm mt-4 mb-0 mx-0">
             {t.period(when(d.bid_start), when(d.bid_end))}
             {d.open_at ? ` · ${t.opens(when(d.open_at, false))}` : ""}
           </div>
         )}
-        <p style={{ fontSize: 16, lineHeight: 1.5, margin: "12px 0 0" }}>{d.verdict}</p>
+        <p className="fs-base lh-15 mt-12 mb-0 mx-0">{d.verdict}</p>
         <SameHouse list={d.same_house} />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+        <div className="d-flex gap-6 f-wrap mt-8">
           <span className="chip gray">● {t.checkAnswer(d.check_left)}</span>
           {d.market_rate != null && (
             <span className="chip blue">◆ {t.ofMarket(d.market_rate)}</span>
@@ -325,29 +277,19 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
             {copy.onbidBid.title}
           </Link>
         )}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 16,
-            flexWrap: "wrap",
-            marginTop: live ? 14 : 0,
-          }}
-        >
+        <div className="d-flex jc-center gap-16 f-wrap" style={{ marginTop: live ? 14 : 0 }}>
           <button onClick={copyNo} style={linkStyle}>
             {copied ? t.copied : t.copyNo}
           </button>
-          <Link href={`/item/${encodeURIComponent(d.item_id)}/report`} style={{ fontSize: 14 }}>
+          <Link href={`/item/${encodeURIComponent(d.item_id)}/report`} className="fs-md">
             {copy.report.open}
           </Link>
-          <a href={t.onbidUrl} target="_blank" rel="noreferrer" style={{ fontSize: 14 }}>
+          <a href={t.onbidUrl} target="_blank" rel="noreferrer" className="fs-md">
             {t.openOnbid}
           </a>
         </div>
       </section>
-      <p className="sub" style={{ padding: "0 18px 24px", fontSize: 12 }}>
-        {t.footer(d.computed_at.slice(0, 10))}
-      </p>
+      <p className="sub pt-0 pb-24 px-18 fs-xs">{t.footer(d.computed_at.slice(0, 10))}</p>
     </>
   );
   // PC: 세 칸 — 왼쪽 요약·버튼(따라 내려옴) · 가운데 무엇을 사나·떠안는 것·확인할 것 · 오른쪽 얼마짜리·얼마가 드나
@@ -356,20 +298,14 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
       const q = qs.find((x) => x.key === k) ?? qs[0]!;
       return (
         <section key={k} className="section">
-          <div className="sub" style={{ margin: 0, fontSize: 13 }}>
+          <div className="sub m-0 fs-sm">
             <span
-              style={{
-                display: "inline-block",
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                background: DOT[q.tone],
-                marginRight: 6,
-              }}
+              className="d-inline-block r-4 mr-6"
+              style={{ width: 8, height: 8, background: DOT[q.tone] }}
             />
             {t.q[k]}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, margin: "2px 0 10px" }}>{q.answer}</div>
+          <div className="fs-base fw-7 mt-2 mb-10 mx-0">{q.answer}</div>
           <Body k={k} d={d} />
         </section>
       );
@@ -392,46 +328,27 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
     <main className="page">
       <PageHeader title="" back="history" right={<HeartButton id={d.item_id} />} />
       {head}
-      <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+      <section className="section pt-0 pb-0">
         {qs.map((q) => (
           <div key={q.key} style={{}}>
             <button
               onClick={() => setOpen(open === q.key ? null : q.key)}
-              style={{
-                width: "100%",
-                border: 0,
-                background: "none",
-                textAlign: "left",
-                padding: "14px 0",
-                minHeight: 44,
-                display: "flex",
-                gap: 10,
-                alignItems: "flex-start",
-                color: "inherit",
-              }}
+              className="w-full b-0 bg-none ta-left py-14 px-0 mh-44 d-flex gap-10 ai-start c-inherit"
             >
               <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: DOT[q.tone],
-                  marginTop: 7,
-                  flexShrink: 0,
-                }}
+                className="r-4 mt-6 f-none"
+                style={{ width: 8, height: 8, background: DOT[q.tone] }}
               />
-              <span style={{ flexGrow: 1 }}>
-                <span className="sub" style={{ display: "block", margin: 0, fontSize: 13 }}>
-                  {t.q[q.key]}
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{q.answer}</span>
+              <span className="f-1">
+                <span className="sub d-block m-0 fs-sm">{t.q[q.key]}</span>
+                <span className="fs-base fw-6">{q.answer}</span>
               </span>
-              <span aria-hidden="true" style={{ color: "var(--faint)" }}>
+              <span aria-hidden="true" className="c-faint">
                 {open === q.key ? "⌃" : "›"}
               </span>
             </button>
             {open === q.key && (
-              <div style={{ padding: "0 0 14px 18px" }}>
+              <div className="pt-0 pb-14 pl-18 pr-0">
                 <Body k={q.key} d={d} />
               </div>
             )}

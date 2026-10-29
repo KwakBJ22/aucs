@@ -16,19 +16,9 @@ const t = copy.item;
 
 export function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 12,
-        padding: "6px 0",
-        fontSize: 14,
-      }}
-    >
-      <span className="sub" style={{ margin: 0 }}>
-        {typeof label === "string" ? <Termed text={label} /> : label}
-      </span>
-      <span style={{ textAlign: "right" }}>{value}</span>
+    <div className="d-flex jc-between gap-12 py-6 px-0 fs-md">
+      <span className="sub m-0">{typeof label === "string" ? <Termed text={label} /> : label}</span>
+      <span className="ta-right">{value}</span>
     </div>
   );
 }
@@ -41,16 +31,16 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
   if (!open)
     return (
       <button
-        className="chip gray"
-        style={{ border: 0, minHeight: 36, marginTop: 10, display: "inline-flex" }}
+        className="chip gray b-0 mh-36 mt-10 d-inline-flex"
+
         onClick={() => setOpen(true)}
       >
         {c.open} ›
       </button>
     );
   return (
-    <div style={{ marginTop: 12, paddingTop: 10 }}>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
+    <div className="mt-12 pt-10">
+      <div className="fs-md fw-6">{c.title}</div>
       {r.jeonse && (
         <Row
           label={c.jeonse(won(r.jeonse.deposit_krw), r.jeonse_n)}
@@ -74,7 +64,7 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
           />
         </>
       )}
-      <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
+      <div className="sub mt-4 mb-0 mx-0 fs-xs">
         {r.no_loan_reason ? c.noLoan : c.withLoan(r.rate_pct)} · {c.basis}
       </div>
     </div>
@@ -144,24 +134,15 @@ export function CalcBox({ id }: { id: string }) {
     saveProfile({ ...p, [k]: v });
   };
   const manInput = (label: string, set: (n: number | null) => void) => (
-    <label style={{ display: "block", fontSize: 13, marginTop: 6 }}>
-      <span className="sub" style={{ margin: 0 }}>
-        {label}
-      </span>
+    <label className="d-block fs-sm mt-6">
+      <span className="sub m-0">{label}</span>
       <input
         inputMode="numeric"
         onChange={(e) => {
           const n = Number(e.target.value.replace(/[^0-9]/g, ""));
           set(n ? n * 10_000 : null);
         }}
-        style={{
-          width: "100%",
-          fontSize: 16,
-          padding: "8px 10px",
-          border: 0,
-          background: "var(--panel)",
-          borderRadius: 14,
-        }}
+        className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
       />
     </label>
   );
@@ -169,21 +150,21 @@ export function CalcBox({ id }: { id: string }) {
   const over = d?.cap_krw != null && s != null && s.bid_krw > d.cap_krw;
   const myCash = prof?.cash ?? null;
   return (
-    <div style={{ marginTop: 12, paddingTop: 12 }}>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>{c.homesQ}</div>
-      <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+    <div className="mt-12 pt-12">
+      <div className="fs-md fw-6">{c.homesQ}</div>
+      <div className="d-flex gap-6 mt-6 f-wrap">
         {c.homes.map((label, i) => (
           <button
             key={label}
-            className={`chip ${homes === i ? "green" : "gray"}`}
-            style={{ minHeight: 36, border: 0 }}
+            className={`${`chip ${homes === i ? "green" : "gray"}`} mh-36 b-0`}
+
             onClick={() => pickHomes(i)}
           >
             {label}
           </button>
         ))}
         {homes === 0 && (
-          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
+          <label className="fs-sm d-flex ai-center gap-4">
             <input
               type="checkbox"
               checked={first}
@@ -193,7 +174,7 @@ export function CalcBox({ id }: { id: string }) {
           </label>
         )}
         {homes === 1 && (
-          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
+          <label className="fs-sm d-flex ai-center gap-4">
             <input
               type="checkbox"
               checked={selling}
@@ -203,34 +184,23 @@ export function CalcBox({ id }: { id: string }) {
           </label>
         )}
       </div>
-      {homes === 1 && selling && (
-        <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
-          {c.sellingHint}
-        </div>
-      )}
+      {homes === 1 && selling && <div className="sub mt-4 mb-0 mx-0 fs-xs">{c.sellingHint}</div>}
       {d && s && (
         <>
           {d.cases.length > 0 && (
-            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+            <div className="d-flex gap-6 mt-12">
               {d.cases.map((x) => (
                 <button
                   key={x.key}
                   onClick={() => setBid(x.bid_krw)}
+                  className="f-1 py-8 px-4 r-8 b-0 c-inherit fs-xs"
                   style={{
-                    flex: 1,
-                    padding: "8px 4px",
-                    borderRadius: 8,
-                    border: 0,
                     background: s.bid_krw === x.bid_krw ? "var(--green-soft)" : "var(--panel)",
-                    color: "inherit",
-                    fontSize: 12,
                   }}
                 >
-                  <b style={{ fontSize: 13 }}>{c.cases[x.key]}</b>
+                  <b className="fs-sm">{c.cases[x.key]}</b>
                   <div>{won(x.bid_krw)}</div>
-                  <div className="sub" style={{ margin: 0 }}>
-                    {c.chance(x.chance)}
-                  </div>
+                  <div className="sub m-0">{c.chance(x.chance)}</div>
                 </button>
               ))}
             </div>
@@ -242,12 +212,12 @@ export function CalcBox({ id }: { id: string }) {
             step={d.slider.step}
             value={s.bid_krw}
             onChange={(e) => setBid(Number(e.target.value))}
-            style={{ width: "100%", marginTop: 12 }}
+            className="w-full mt-12"
             aria-label={t.bidTry}
           />
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{won(s.bid_krw)}</div>
+          <div className="fs-2xl fw-7">{won(s.bid_krw)}</div>
           {chk && (
-            <div style={{ fontSize: 13 }}>
+            <div className="fs-sm">
               {chk.korean}
               {chk.level !== "ok" && (
                 <div style={{ color: chk.level === "block" ? "var(--red)" : "var(--amber)" }}>
@@ -256,7 +226,7 @@ export function CalcBox({ id }: { id: string }) {
               )}
             </div>
           )}
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-8">
             <Row
               label={`${c.loan} · ${c.region[d.cls]} ${s.loan.pct}%`}
               value={
@@ -264,7 +234,7 @@ export function CalcBox({ id }: { id: string }) {
                   − {won(s.loan_krw)}{" "}
                   <button
                     onClick={() => setEditLoan(!editLoan)}
-                    style={{ border: 0, background: "none", color: "var(--blue)", fontSize: 13 }}
+                    className="b-0 bg-none c-blue fs-sm"
                   >
                     {c.loanEdit}
                   </button>
@@ -279,22 +249,12 @@ export function CalcBox({ id }: { id: string }) {
                   const n = Number(e.target.value.replace(/[^0-9]/g, ""));
                   setLoan(e.target.value ? n : null);
                 }}
-                style={{
-                  width: "100%",
-                  fontSize: 16,
-                  padding: "8px 10px",
-                  border: 0,
-                  background: "var(--panel)",
-                  borderRadius: 14,
-                }}
+                className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
               />
             )}
-            <div className="sub" style={{ margin: 0, fontSize: 12 }}>
+            <div className="sub m-0 fs-xs">
               {s.loan.by_dsr && s.dsr ? c.byDsr(s.dsr.rate_pct) : (s.loan.note ?? c.loanHint)}{" "}
-              <button
-                onClick={() => setDsrOpen(!dsrOpen)}
-                style={{ border: 0, background: "none", color: "var(--blue)", fontSize: 12 }}
-              >
+              <button onClick={() => setDsrOpen(!dsrOpen)} className="b-0 bg-none c-blue fs-xs">
                 {c.dsrOpen}
               </button>
             </div>
@@ -320,7 +280,7 @@ export function CalcBox({ id }: { id: string }) {
                 value={
                   <>
                     + {won(s.move_out_krw)}
-                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
+                    <span className="sub d-block m-0 fs-xs">
                       {c.range(won(d.move_out.low_krw), won(d.move_out.high_krw))}
                       {d.move_out.stairs ? ` · ${c.stairs}` : ""}
                     </span>
@@ -334,7 +294,7 @@ export function CalcBox({ id }: { id: string }) {
                 value={
                   <>
                     + {won(s.repair_krw)}
-                    <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
+                    <span className="sub d-block m-0 fs-xs">
                       {c.range(won(d.repair.low_krw), won(d.repair.high_krw))}
                       {d.repair.basis === "unknown_age" ? ` · ${c.ageUnknown}` : ""}
                     </span>
@@ -342,29 +302,17 @@ export function CalcBox({ id }: { id: string }) {
                 }
               />
             )}
-            <Row
-              label={<b>{c.cash}</b>}
-              value={<b style={{ fontSize: 18 }}>{won(s.cash_krw)}</b>}
-            />
+            <Row label={<b>{c.cash}</b>} value={<b className="fs-lg">{won(s.cash_krw)}</b>} />
             {myCash && (
               <div
-                style={{
-                  fontSize: 13,
-                  textAlign: "right",
-                  color: s.cash_krw > myCash ? "var(--amber)" : "var(--muted)",
-                }}
+                className="fs-sm ta-right"
+                style={{ color: s.cash_krw > myCash ? "var(--amber)" : "var(--muted)" }}
               >
                 {c.vsCash(s.cash_krw > myCash, won(Math.abs(s.cash_krw - myCash)))}
               </div>
             )}
             {d.cap_krw != null && (
-              <div
-                style={{
-                  fontSize: 13,
-                  marginTop: 6,
-                  color: over ? "var(--red)" : "var(--muted)",
-                }}
-              >
+              <div className="fs-sm mt-6" style={{ color: over ? "var(--red)" : "var(--muted)" }}>
                 ◆ {c.cap(won(d.cap_krw))}
               </div>
             )}
@@ -373,15 +321,13 @@ export function CalcBox({ id }: { id: string }) {
             <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
             <Link
               href={`/item/${encodeURIComponent(id)}/bid-sheet?bid=${s.bid_krw}`}
-              className="chip gray"
-              style={{ minHeight: 36, marginTop: 10, marginLeft: 6, display: "inline-flex" }}
+              className="chip gray mh-36 mt-10 ml-6 d-inline-flex"
             >
               {copy.bidDay.toSheet} ›
             </Link>
             <Link
               href={`/item/${encodeURIComponent(id)}/report?bid=${s.bid_krw}`}
-              className="chip gray"
-              style={{ minHeight: 36, marginTop: 10, marginLeft: 6, display: "inline-flex" }}
+              className="chip gray mh-36 mt-10 ml-6 d-inline-flex"
             >
               {copy.report.open} ›
             </Link>
@@ -403,17 +349,12 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
   const [reason, setReason] = useState("");
   const [done, setDone] = useState(false);
   if (!session) return null;
-  if (done)
-    return (
-      <div className="sub" style={{ marginTop: 8 }}>
-        {m.saved}
-      </div>
-    );
+  if (done) return <div className="sub mt-8">{m.saved}</div>;
   if (!open)
     return (
       <button
-        className="chip gray"
-        style={{ border: 0, minHeight: 36, marginTop: 10, marginLeft: 6 }}
+        className="chip gray b-0 mh-36 mt-10 ml-6"
+
         onClick={() => setOpen(true)}
       >
         {m.open} ›
@@ -440,26 +381,26 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
       .then(() => setDone(true))
       .catch(() => {});
   return (
-    <div style={{ marginTop: 12, paddingTop: 10 }}>
-      <div style={{ fontWeight: 600, fontSize: 14 }}>{m.title}</div>
+    <div className="mt-12 pt-10">
+      <div className="fw-6 fs-md">{m.title}</div>
       <div className="sub">{m.hint}</div>
-      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+      <div className="d-flex gap-6 mt-8">
         <button
-          className={`chip ${!skip ? "green" : "gray"}`}
-          style={{ border: 0, minHeight: 36 }}
+          className={`${`chip ${!skip ? "green" : "gray"}`} b-0 mh-36`}
+
           onClick={() => setSkip(false)}
         >
           {m.bid} · {won(bid)}
         </button>
         <button
-          className={`chip ${skip ? "green" : "gray"}`}
-          style={{ border: 0, minHeight: 36 }}
+          className={`${`chip ${skip ? "green" : "gray"}`} b-0 mh-36`}
+
           onClick={() => setSkip(true)}
         >
           {m.skip}
         </button>
       </div>
-      <label style={{ display: "block", fontSize: 13, marginTop: 8 }}>
+      <label className="d-block fs-sm mt-8">
         <span className="sub">{m.max}</span>
         <input
           inputMode="numeric"
@@ -468,7 +409,7 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
           style={field}
         />
       </label>
-      <label style={{ display: "block", fontSize: 13, marginTop: 8 }}>
+      <label className="d-block fs-sm mt-8">
         <span className="sub">{m.reason}</span>
         <input
           value={reason}
@@ -477,7 +418,7 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
           style={field}
         />
       </label>
-      <button className="btn primary" style={{ height: 44, marginTop: 10 }} onClick={save}>
+      <button className="btn primary mt-10" style={{ height: 44 }} onClick={save}>
         {m.save}
       </button>
     </div>
@@ -492,9 +433,9 @@ function SaveBid({ id, bid, cash }: { id: string; bid: number; cash: number }) {
   const done = saved === bid;
   return (
     <button
-      className="chip gray"
+      className="chip gray b-0 mh-36 mt-10"
       disabled={done}
-      style={{ border: 0, minHeight: 36, marginTop: 10 }}
+
       onClick={() =>
         meApi
           .addCalc(token, id, bid, cash)

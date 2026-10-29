@@ -21,7 +21,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             value={`${b.area_m2.toFixed(1)}㎡ (${Math.round(b.area_m2 / 3.3058)}평)`}
           />
         )}
-        {b.is_share && <Row label="" value={<b style={{ color: "var(--red)" }}>{t.share}</b>} />}
+        {b.is_share && <Row label="" value={<b className="c-red">{t.share}</b>} />}
         {b.building && <BuildingRows g={b.building} />}
         {b.redev && (
           <Row
@@ -41,9 +41,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
       <>
         {b.tenants.length === 0 && <p className="sub">{t.tenantsNone}</p>}
         {b.tenants.map((x: Record<string, string | number | null>, i: number) => (
-          <div key={i} style={{ padding: "6px 0", fontSize: 14 }}>
+          <div key={i} className="py-6 px-0 fs-md">
             <b>{x.name ?? "임차인"}</b> {x.part ?? ""}
-            <div className="sub" style={{ margin: 0 }}>
+            <div className="sub m-0">
               {[
                 x.move_in && `${t.moveIn} ${x.move_in}`,
                 x.fixed && `${t.fixed} ${x.fixed}`,
@@ -60,26 +60,25 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           <FailMobile rows={d.failure_table} />
         ) : (
           d.failure_types.length > 0 && (
-            <div className="sub" style={{ marginTop: 8 }}>
+            <div className="sub mt-8">
               {t.failureTypes}: {d.failure_types.map((x) => x.title).join(" · ")}
             </div>
           )
         )}
         {d.failure_table && (
-          <div className="pc-only" style={{ marginTop: 12 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{t.failureTable}</div>
-            <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+          <div className="pc-only mt-12">
+            <div className="fw-6 fs-md mb-4">{t.failureTable}</div>
+            <table className="w-full fs-sm" style={{ borderCollapse: "collapse" }}>
               <tbody>
                 {d.failure_table.map((r) => (
                   <tr key={r.code} style={{}}>
-                    <td style={{ padding: "4px 6px", whiteSpace: "nowrap", opacity: 0.6 }}>
+                    <td className="py-4 px-6 nowrap" style={{ opacity: 0.6 }}>
                       {r.code}
                     </td>
-                    <td style={{ padding: "4px 6px" }}>{r.title}</td>
+                    <td className="py-4 px-6">{r.title}</td>
                     <td
+                      className="py-4 px-6 nowrap"
                       style={{
-                        padding: "4px 6px",
-                        whiteSpace: "nowrap",
                         fontWeight: r.state === "신호 없음" ? 400 : 600,
                         color:
                           r.state === "걸림"
@@ -92,16 +91,12 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
                     >
                       {r.state}
                     </td>
-                    <td className="sub" style={{ padding: "4px 6px" }}>
-                      {r.why}
-                    </td>
+                    <td className="sub py-4 px-6">{r.why}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="sub" style={{ marginTop: 4 }}>
-              {t.failureTableNote}
-            </div>
+            <div className="sub mt-4">{t.failureTableNote}</div>
           </div>
         )}
         {b.signals
@@ -109,11 +104,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           .map((s: { rule_id: string; title: string; level: string }) => (
             <div
               key={s.rule_id}
-              style={{
-                fontSize: 14,
-                padding: "6px 0",
-                color: s.level === "fatal" ? "var(--red)" : "var(--amber)",
-              }}
+              className="fs-md py-6 px-0"
+              style={{ color: s.level === "fatal" ? "var(--red)" : "var(--amber)" }}
             >
               ◆ {s.title}
             </div>
@@ -138,7 +130,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             {b.market && (
               <>
                 <Row label={t.market(b.market.n)} value={<b>{won(b.market.price_krw)}</b>} />
-                <div className="sub" style={{ margin: 0, fontSize: 12 }}>
+                <div className="sub m-0 fs-xs">
                   {t.recentTrades}{" "}
                   {b.market.recent
                     .slice(0, 3)
@@ -151,7 +143,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
               </>
             )}
             {b.notes.map((n: string) => (
-              <div key={n} style={{ fontSize: 14, color: "var(--amber)", padding: "2px 0" }}>
+              <div key={n} className="fs-md c-amber py-2 px-0">
                 ◆ {n}
               </div>
             ))}
@@ -164,10 +156,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
     return (
       <>
         <Row label={t.deposit} value={<b>{won(b.deposit_krw)}</b>} />
-        <p style={{ fontSize: 14, margin: "8px 0 4px" }}>{b.schedule_line}</p>
-        <div className="sub" style={{ margin: "8px 0 2px" }}>
-          {t.deadlines}
-        </div>
+        <p className="fs-md mt-8 mb-4 mx-0">{b.schedule_line}</p>
+        <div className="sub mt-8 mb-2 mx-0">{t.deadlines}</div>
         {b.deadlines.map((x: { key: string; label: string; short: string }) => (
           <Row key={x.key} label={x.label} value={x.short} />
         ))}

@@ -12,17 +12,11 @@ export function SameHouse({ list }: { list?: Twin[] }) {
   if (!list || list.length === 0) return null;
   const toCourt = list[0]?.source === "court";
   return (
-    <div className="note blue" style={{ marginTop: 10 }}>
+    <div className="note blue mt-10">
       <b>{toCourt ? t.toCourt : t.toOnbid}</b>
-      <div className="sub" style={{ fontSize: 13, margin: "2px 0 6px" }}>
-        {t.sub}
-      </div>
+      <div className="sub fs-sm mt-2 mb-6 mx-0">{t.sub}</div>
       {list.map((x) => (
-        <Link
-          key={x.item_id}
-          href={`/item/${x.item_id}`}
-          style={{ display: "block", fontSize: 14, padding: "4px 0" }}
-        >
+        <Link key={x.item_id} href={`/item/${x.item_id}`} className="d-block fs-md py-4 px-0">
           {(x.source === "court" ? t.court : t.onbid)(x.no, x.date ?? "-")}
           {x.min_price_krw ? ` · 최저 ${won(x.min_price_krw)}` : ""} ›
         </Link>

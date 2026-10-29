@@ -18,17 +18,7 @@ function Chip({ c }: { c: Card }) {
 // 공매는 출처 칩(테두리)만 — 상태 색(초록·회색·주황)과 섞지 않음. 확인 상태는 상세에서.
 function SourceBadge({ c }: { c: Card }) {
   return (
-    <span
-      style={{
-        fontSize: 11,
-        fontWeight: 600,
-        padding: "1px 6px",
-        borderRadius: 5,
-        border: 0,
-        background: "var(--gray-chip)",
-        flexShrink: 0,
-      }}
-    >
+    <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip f-none">
       {c.kind === "trust" ? t.trust : t.onbid}
     </span>
   );
@@ -37,16 +27,8 @@ function SourceBadge({ c }: { c: Card }) {
 function OnbidLine({ c }: { c: Card }) {
   if (c.top_signal) return <Chip c={c} />;
   if (c.next_round)
-    return (
-      <div style={{ fontSize: 12, color: "var(--blue)" }}>
-        {t.nextRound(won(c.next_round.min_price_krw))}
-      </div>
-    );
-  return (
-    <div className="sub" style={{ margin: 0, fontSize: 12 }}>
-      {t.noNextRound}
-    </div>
-  );
+    return <div className="fs-xs c-blue">{t.nextRound(won(c.next_round.min_price_krw))}</div>;
+  return <div className="sub m-0 fs-xs">{t.noNextRound}</div>;
 }
 
 export function ItemCard({ c }: { c: Card }) {
@@ -55,23 +37,12 @@ export function ItemCard({ c }: { c: Card }) {
   return (
     <Link
       href={`/item/${encodeURIComponent(c.item_id)}`}
-      style={{ display: "flex", gap: 12, padding: "12px 0", color: "inherit" }}
+      className="d-flex gap-12 py-12 px-0 c-inherit"
     >
-      <div
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: 12,
-          background: "var(--gray-chip)",
-          flexShrink: 0,
-        }}
-      />
-      <div style={{ flexGrow: 1, minWidth: 0 }}>
-        <div
-          className="sub"
-          style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}
-        >
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <div className="r-12 bg-gray-chip f-none" style={{ width: 72, height: 72 }} />
+      <div className="f-1 minw-0">
+        <div className="sub d-flex jc-between gap-8 ai-center">
+          <span className="nowrap" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
             <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
               {onbid && !c.bid_end ? t.undecided : dday(c.d_day)}
               {onbid && c.bid_end ? ` ${t.closes}` : ""}
@@ -81,29 +52,21 @@ export function ItemCard({ c }: { c: Card }) {
           {onbid && <SourceBadge c={c} />}
         </div>
         <div
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            marginTop: 2,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
+          className="fs-md fw-6 mt-2 nowrap"
+          style={{ overflow: "hidden", textOverflow: "ellipsis" }}
         >
           {c.place} {c.building ?? c.usage} {c.area_m2 ? `${Math.round(c.area_m2)}㎡` : ""}
         </div>
-        <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+        <div className="fs-lg fw-7 mt-2">
           {won(c.min_price_krw)}{" "}
-          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--muted)" }}>
+          <span className="fs-xs fw-5 c-muted">
             {c.min_rate != null ? `${c.min_rate}%` : ""}
             {c.failed_count ? ` · ${t.failed(c.failed_count)}` : ""}
           </span>
         </div>
-        <div style={{ marginTop: 6 }}>{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
+        <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
         {!onbid && c.below_appraisal_krw > 0 && (
-          <div style={{ fontSize: 12, color: "var(--blue)", marginTop: 6 }}>
-            {t.belowAppraisal(won(c.below_appraisal_krw))}
-          </div>
+          <div className="fs-xs c-blue mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
         )}
       </div>
       <HeartButton id={c.item_id} />

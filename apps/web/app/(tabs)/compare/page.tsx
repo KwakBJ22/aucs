@@ -203,19 +203,19 @@ export default function ComparePage() {
         </section>
       )}
       {cols.length > 0 && (
-        <section className="section" style={{ padding: 0, overflowX: "auto" }}>
+        <section className="section p-0 ox-auto">
           <table className="compare-table">
             <thead>
               <tr>
                 <th />
                 {cols.map((c) => (
                   <th key={c.id}>
-                    <Link href={`/item/${encodeURIComponent(c.id)}`} style={{ color: "inherit" }}>
+                    <Link href={`/item/${encodeURIComponent(c.id)}`} className="c-inherit">
                       <div className="sub">
                         {c.d && isOnbid(c.d) ? ob.badge(c.d.kind_name ?? "") : c.d?.court}{" "}
                         {c.d?.case_no}
                       </div>
-                      <div style={{ fontWeight: 600 }}>
+                      <div className="fw-6">
                         {c.d?.place} {(c.d && !isOnbid(c.d) ? c.d.building : null) ?? c.d?.usage}
                       </div>
                     </Link>
@@ -223,7 +223,7 @@ export default function ComparePage() {
                   </th>
                 ))}
                 {Array.from({ length: blank }, (_, i) => (
-                  <th key={`b${i}`} className="sub" style={{ fontWeight: 400 }}>
+                  <th key={`b${i}`} className="sub fw-4">
                     <Link href="/watch">{t.addMore} ›</Link>
                   </th>
                 ))}
@@ -248,13 +248,13 @@ export default function ComparePage() {
                 {cols.map((c) => (
                   <td key={c.id}>
                     {asking === c.id ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div className="d-flex f-col gap-6">
                         <span className="sub">{t.why}</span>
                         {REASONS.map((r) => (
                           <button
                             key={r}
-                            className="chip gray"
-                            style={{ border: 0, minHeight: 36 }}
+                            className="chip gray b-0 mh-36"
+
                             onClick={() => exclude(c.id, r)}
                           >
                             {t.reasons[r]}
@@ -263,8 +263,8 @@ export default function ComparePage() {
                       </div>
                     ) : (
                       <button
-                        className="chip gray"
-                        style={{ border: 0, minHeight: 36 }}
+                        className="chip gray b-0 mh-36"
+
                         onClick={() => setAsking(c.id)}
                       >
                         {t.drop}
@@ -288,26 +288,17 @@ export default function ComparePage() {
         <section className="section">
           <h2>{t.excluded}</h2>
           {data.excluded.map((e) => (
-            <div
-              key={e.item_id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "8px 0",
-                fontSize: 14,
-              }}
-            >
+            <div key={e.item_id} className="d-flex jc-between ai-center py-8 px-0 fs-md">
               <span>
                 {e.place}
-                <span className="sub" style={{ display: "block" }}>
+                <span className="sub d-block">
                   {e.case_no} · {t.reasons[e.reason as (typeof REASONS)[number]] ?? e.reason} ·{" "}
                   {e.at}
                 </span>
               </span>
               <button
-                className="chip gray"
-                style={{ border: 0, minHeight: 32 }}
+                className="chip gray b-0 mh-32"
+
                 onClick={() => undo(e.item_id)}
               >
                 {t.undo}

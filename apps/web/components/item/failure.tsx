@@ -11,43 +11,37 @@ export function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_tab
   const need = rows.filter((r) => r.state === "확인 필요").length;
   const none = rows.filter((r) => r.state === "신호 없음").length;
   return (
-    <div className="m-block" style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.failHead(rows.length, hit.length)}</div>
+    <div className="m-block mt-10">
+      <div className="fs-md fw-7">{t.failHead(rows.length, hit.length)}</div>
       {hit.map((r) => (
-        <div key={r.code} style={{ fontSize: 14, padding: "6px 0", color: "var(--red)" }}>
+        <div key={r.code} className="fs-md py-6 px-0 c-red">
           ◆ {r.title}
-          <span className="sub" style={{ display: "block" }}>
-            {r.why}
-          </span>
+          <span className="sub d-block">{r.why}</span>
         </div>
       ))}
       <button
-        className="cond-row"
-        style={{ background: "var(--bg)", marginTop: 6 }}
+        className="cond-row bg-bg mt-6"
+
         onClick={() => setOpen(!open)}
       >
-        <span style={{ fontSize: 14 }}>{t.failFold(none, need)}</span>
+        <span className="fs-md">{t.failFold(none, need)}</span>
         <span className="sub">{open ? "▴" : "›"}</span>
       </button>
       {open &&
         rows
           .filter((r) => r.state !== "걸림")
           .map((r) => (
-            <div key={r.code} className="line-row" style={{ fontSize: 13 }}>
+            <div key={r.code} className="line-row fs-sm">
               <span>{r.title}</span>
               <span
-                style={{
-                  color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)",
-                  whiteSpace: "nowrap",
-                }}
+                className="nowrap"
+                style={{ color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)" }}
               >
                 {r.state}
               </span>
             </div>
           ))}
-      <div className="sub" style={{ fontSize: 12 }}>
-        {t.failureTableNote}
-      </div>
+      <div className="sub fs-xs">{t.failureTableNote}</div>
     </div>
   );
 }

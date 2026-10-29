@@ -28,16 +28,12 @@ const h1 = {
 
 function Progress({ step }: { step: number }) {
   return (
-    <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
+    <div className="d-flex gap-6 mb-24">
       {[1, 2, 3].map((n) => (
         <div
           key={n}
-          style={{
-            flexGrow: 1,
-            height: 4,
-            borderRadius: 2,
-            background: n <= step ? "var(--blue)" : "var(--line)",
-          }}
+          className="f-1 r-4"
+          style={{ height: 4, background: n <= step ? "var(--blue)" : "var(--line)" }}
         />
       ))}
     </div>
@@ -75,16 +71,7 @@ export default function Start() {
       {step > 1 && (
         <button
           onClick={() => setStep(step - 1)}
-          style={{
-            border: 0,
-            background: "none",
-            textAlign: "left",
-            color: "var(--muted)",
-            fontSize: 14,
-            padding: 0,
-            marginBottom: 8,
-            minHeight: 44,
-          }}
+          className="b-0 bg-none ta-left c-muted fs-md p-0 mb-8 mh-44"
         >
           {t.back} {t.step(step)}
         </button>
@@ -93,33 +80,17 @@ export default function Start() {
       {step === 1 && (
         <>
           <h1 style={h1}>{t.regionTitle}</h1>
-          <p className="sub" style={{ fontSize: 15, margin: "0 0 16px" }}>
-            {t.regionHint}
-          </p>
+          <p className="sub fs-base mt-0 mb-16 mx-0">{t.regionHint}</p>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.regionSearch}
-            style={{
-              height: 48,
-              borderRadius: 14,
-              border: 0,
-              padding: "0 14px",
-              fontSize: 16,
-              background: "var(--panel)",
-              color: "var(--text)",
-            }}
+            className="r-14 b-0 py-0 px-14 fs-base bg-panel c-text"
+            style={{ height: 48 }}
           />
           <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              marginTop: 14,
-              overflowY: "auto",
-              flexGrow: 1,
-              alignContent: "flex-start",
-            }}
+            className="d-flex f-wrap gap-8 mt-14 oy-auto f-1"
+            style={{ alignContent: "flex-start" }}
           >
             {shown.map((r) => {
               const on = picked.includes(r.sigungu);
@@ -129,27 +100,19 @@ export default function Start() {
                   onClick={() =>
                     setPicked(on ? picked.filter((x) => x !== r.sigungu) : [...picked, r.sigungu])
                   }
+                  className="mh-40 py-0 px-12 r-20 b-0 fs-md"
                   style={{
-                    minHeight: 40,
-                    padding: "0 12px",
-                    borderRadius: 20,
-                    border: 0,
                     background: on ? "var(--blue-soft)" : "var(--panel)",
                     color: on ? "var(--blue-text)" : "var(--text)",
                     fontWeight: on ? 700 : 400,
-                    fontSize: 14,
                   }}
                 >
-                  {r.sigungu} <span style={{ color: "var(--muted)", fontSize: 12 }}>{r.items}</span>
+                  {r.sigungu} <span className="c-muted fs-xs">{r.items}</span>
                 </button>
               );
             })}
           </div>
-          {picked.length > 0 && (
-            <div style={{ fontSize: 13, color: "var(--green)", margin: "12px 0" }}>
-              {t.count(count)}
-            </div>
-          )}
+          {picked.length > 0 && <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>}
           <button className="btn primary" disabled={!picked.length} onClick={() => setStep(2)}>
             {t.next}
           </button>
@@ -159,47 +122,30 @@ export default function Start() {
       {step === 2 && (
         <>
           <h1 style={h1}>{t.cashTitle}</h1>
-          <p className="sub" style={{ fontSize: 15, margin: "0 0 24px" }}>
-            {t.cashHint}
-          </p>
+          <p className="sub fs-base mt-0 mb-24 mx-0">{t.cashHint}</p>
           <div
-            style={{
-              fontSize: 34,
-              fontWeight: 700,
-              borderBottom: "2px solid var(--blue)",
-              paddingBottom: 10,
-              minHeight: 56,
-            }}
+            className="fw-7 pb-10 mh-56"
+            style={{ fontSize: 34, borderBottom: "2px solid var(--blue)" }}
           >
             {cash ? won(cash) : ""}
-            {!cash && <span style={{ color: "var(--faint)", fontSize: 22 }}>0{t.cashUnit}</span>}
+            {!cash && <span className="c-faint fs-2xl">0{t.cashUnit}</span>}
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <div className="d-flex gap-8 mt-16">
             {[1000, 5000, 10000].map((add) => (
               <button
                 key={add}
                 onClick={() => setMan(String((Number(man) || 0) + add))}
-                style={{
-                  flexGrow: 1,
-                  height: 40,
-                  borderRadius: 14,
-                  border: 0,
-                  background: "var(--panel)",
-                  fontSize: 14,
-                }}
+                className="f-1 r-14 b-0 bg-panel fs-md"
+                style={{ height: 40 }}
               >
                 +{won(add * 10_000)}
               </button>
             ))}
           </div>
-          <div style={{ flexGrow: 1 }} />
+          <div className="f-1" />
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-              gap: 4,
-              marginBottom: 12,
-            }}
+            className="d-grid gap-4 mb-12"
+            style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
           >
             {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "⌫"].map((k) => (
               <button
@@ -208,7 +154,8 @@ export default function Start() {
                 onClick={() =>
                   setMan(k === "⌫" ? man.slice(0, -1) : (man + k).replace(/^0+/, "").slice(0, 7))
                 }
-                style={{ height: 52, border: 0, background: "transparent", fontSize: 22 }}
+                className="b-0 bg-none fs-2xl"
+                style={{ height: 52 }}
               >
                 {k}
               </button>
@@ -222,14 +169,7 @@ export default function Start() {
               setMan("");
               setStep(3);
             }}
-            style={{
-              border: 0,
-              background: "none",
-              color: "var(--muted)",
-              fontSize: 14,
-              marginTop: 12,
-              minHeight: 44,
-            }}
+            className="b-0 bg-none c-muted fs-md mt-12 mh-44"
           >
             {t.unsure}
           </button>
@@ -239,35 +179,24 @@ export default function Start() {
       {step === 3 && (
         <>
           <h1 style={h1}>{t.purposeTitle}</h1>
-          <p className="sub" style={{ fontSize: 15, margin: "0 0 24px" }}>
-            {t.purposeHint}
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <p className="sub fs-base mt-0 mb-24 mx-0">{t.purposeHint}</p>
+          <div className="d-flex f-col gap-12">
             {(Object.keys(t.purposes) as Purpose[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPurpose(p)}
+                className="d-flex f-col ai-start gap-4 p-20 r-16 ta-left b-0"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 4,
-                  padding: 20,
-                  borderRadius: 16,
-                  textAlign: "left",
-                  border: 0,
                   background: purpose === p ? "var(--blue-soft)" : "var(--surface)",
                   color: purpose === p ? "var(--blue-text)" : "var(--text)",
                 }}
               >
-                <span style={{ fontSize: 18, fontWeight: 700 }}>{t.purposes[p][0]}</span>
-                <span className="sub" style={{ fontSize: 14 }}>
-                  {t.purposes[p][1]}
-                </span>
+                <span className="fs-lg fw-7">{t.purposes[p][0]}</span>
+                <span className="sub fs-md">{t.purposes[p][1]}</span>
               </button>
             ))}
           </div>
-          <div style={{ flexGrow: 1 }} />
+          <div className="f-1" />
           <button className="btn primary" onClick={finish}>
             {t.done}
           </button>

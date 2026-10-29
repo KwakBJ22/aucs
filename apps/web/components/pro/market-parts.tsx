@@ -11,41 +11,23 @@ const t = copy.proMarket;
 export function StatTable({ title, rows }: { title: string; rows: (Stat & { label: string })[] }) {
   const max = Math.max(100, ...rows.map((r) => r.p50));
   return (
-    <section className="section" style={{ margin: 0 }}>
-      <h2 style={{ fontSize: 15 }}>{title}</h2>
+    <section className="section m-0">
+      <h2 className="fs-base">{title}</h2>
       {rows.length === 0 && <div className="sub">{t.none}</div>}
       {rows.map((r) => (
         <div
           key={r.label}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "88px 1fr 64px",
-            gap: 8,
-            alignItems: "center",
-            fontSize: 13,
-            padding: "4px 0",
-          }}
+          className="d-grid gap-8 ai-center fs-sm py-4 px-0"
+          style={{ gridTemplateColumns: "88px 1fr 64px" }}
         >
           <span>{r.label}</span>
-          <span
-            style={{
-              background: "var(--gray-chip)",
-              borderRadius: 4,
-              height: 10,
-              position: "relative",
-            }}
-          >
+          <span className="bg-gray-chip r-4 pos-relative" style={{ height: 10 }}>
             <span
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: `${(r.p50 * 100) / max}%`,
-                background: "var(--blue)",
-                borderRadius: 4,
-              }}
+              className="pos-absolute bg-blue r-4"
+              style={{ inset: 0, width: `${(r.p50 * 100) / max}%` }}
             />
           </span>
-          <span style={{ textAlign: "right" }}>
+          <span className="ta-right">
             <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}</span>
           </span>
         </div>
@@ -71,9 +53,7 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
   const o = t.onbid;
   return (
     <>
-      <div className="note blue" style={{ margin: "4px 0 12px" }}>
-        {o.basis}
-      </div>
+      <div className="note blue mt-4 mb-12 mx-0">{o.basis}</div>
       <div className="pc-grid g-2x2" style={{ rowGap: 12 }}>
         <StatTable
           title={o.byBidders}
@@ -95,9 +75,9 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
           rows={m.by_failed.map((r) => ({ ...r, label: t.failed(r.failed) }))}
         />
       </div>
-      <section className="section" style={{ padding: 0, overflowX: "auto", marginTop: 12 }}>
-        <div style={{ padding: "14px 14px 0" }}>
-          <h2 style={{ fontSize: 15 }}>{t.cases}</h2>
+      <section className="section p-0 ox-auto mt-12">
+        <div className="pt-14 pb-0 px-14">
+          <h2 className="fs-base">{t.cases}</h2>
         </div>
         <table className="pro-table">
           <thead>
@@ -131,9 +111,7 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
           </tbody>
         </table>
       </section>
-      <div className="sub" style={{ marginTop: 8 }}>
-        {o.note}
-      </div>
+      <div className="sub mt-8">{o.note}</div>
     </>
   );
 }

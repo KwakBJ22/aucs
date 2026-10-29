@@ -87,13 +87,13 @@ export default function OnbidBid() {
     <main className="page narrow">
       <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
       <section className="section">
-        <div className="sub" style={{ margin: 0 }}>
+        <div className="sub m-0">
           {d.bid_end ? t.closesAt(when(d.bid_end)) : copy.onbid.undecided}
         </div>
-        <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+        <div className="fs-3xl fw-7 mt-4">
           {d.d_day != null ? t.left(dday(d.d_day), d.d_day) : ""}
         </div>
-        <div style={{ fontSize: 15, marginTop: 4 }}>
+        <div className="fs-base mt-4">
           {d.place} {d.usage ?? ""} · {d.case_no}
         </div>
       </section>
@@ -101,17 +101,7 @@ export default function OnbidBid() {
       <section className="section">
         <h2>{t.readyTitle}</h2>
         {items.map((label, i) => (
-          <label
-            key={i}
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              padding: "10px 0",
-              fontSize: 15,
-              minHeight: 44,
-            }}
-          >
+          <label key={i} className="d-flex gap-10 ai-center py-10 px-0 fs-base mh-44">
             <input
               type="checkbox"
               checked={ready[i]}
@@ -125,48 +115,36 @@ export default function OnbidBid() {
 
       <section className="section">
         <h2>{t.bidTitle}</h2>
-        <label style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
+        <label className="d-flex ai-baseline gap-6 mt-8">
           <input
             inputMode="numeric"
             value={bidMan}
             onChange={(e) => setBidMan(e.target.value.replace(/[^0-9]/g, ""))}
             aria-label={t.bidLabel}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              fontSize: 24,
-              fontWeight: 700,
-              padding: "10px 12px",
-              border: 0,
-              borderRadius: 14,
-              background: "var(--panel)",
-              color: "inherit",
-            }}
+            className="f-1 minw-0 fs-2xl fw-7 py-10 px-12 b-0 r-14 bg-panel c-inherit"
           />
           <span className="sub">{t.man}</span>
         </label>
         {chk && (
           <>
-            <div style={{ fontSize: 13, marginTop: 6 }}>{chk.korean}</div>
-            <div style={{ fontSize: 14, marginTop: 6, color: levelColor, fontWeight: 600 }}>
+            <div className="fs-sm mt-6">{chk.korean}</div>
+            <div className="fs-md mt-6 fw-6" style={{ color: levelColor }}>
               {chk.message}
             </div>
           </>
         )}
-        <p className="sub" style={{ fontSize: 12, marginTop: 8 }}>
-          {t.bidNote}
-        </p>
+        <p className="sub fs-xs mt-8">{t.bidNote}</p>
       </section>
 
       <section className="section">
         <h2>{t.stepsTitle}</h2>
-        <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6, fontSize: 14 }}>
+        <ol className="m-0 pl-20 lh-16 fs-md">
           <li>{t.steps[0]}</li>
           <li>
             {t.steps[1]}{" "}
             <button
-              className="chip gray"
-              style={{ border: 0, minHeight: 28 }}
+              className="chip gray b-0 mh-28"
+
               onClick={() =>
                 navigator.clipboard?.writeText(d.case_no).then(
                   () => setCopied(true),
@@ -186,9 +164,7 @@ export default function OnbidBid() {
       <a className="btn primary" href={copy.onbid.onbidUrl} target="_blank" rel="noreferrer">
         {t.go}
       </a>
-      <p className="sub" style={{ textAlign: "center", fontSize: 12, margin: "10px 0 24px" }}>
-        {t.foot}
-      </p>
+      <p className="sub ta-center fs-xs mt-10 mb-24 mx-0">{t.foot}</p>
     </main>
   );
 }

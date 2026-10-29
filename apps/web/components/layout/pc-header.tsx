@@ -83,7 +83,7 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
             </nav>
           </>
         )}
-        <span style={{ flexGrow: 1 }} />
+        <span className="f-1" />
         {!admin && (
           <form onSubmit={search} className="ph-search" role="search">
             <svg

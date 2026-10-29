@@ -159,7 +159,7 @@ function ProItems() {
       <PageHeader
         title={t.title}
         right={
-          <a href={proCsvUrl(f)} className="chip gray" style={{ minHeight: 32 }}>
+          <a href={proCsvUrl(f)} className="chip gray mh-32">
             {t.csv}
           </a>
         }
@@ -230,8 +230,8 @@ function ProItems() {
           {Object.entries(t.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${f.usage?.includes(k) ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 30 }}
+              className={`${`chip ${f.usage?.includes(k) ? "green" : "gray"}`} b-0 mh-30`}
+
               onClick={() => toggle("usage", k)}
             >
               {v}
@@ -302,8 +302,8 @@ function ProItems() {
           {Object.entries(t.excludes).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${f.exclude?.includes(k) ? "orange" : "gray"}`}
-              style={{ border: 0, minHeight: 30 }}
+              className={`${`chip ${f.exclude?.includes(k) ? "orange" : "gray"}`} b-0 mh-30`}
+
               onClick={() => toggle("exclude", k)}
             >
               {v}
@@ -341,44 +341,22 @@ function ProItems() {
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          margin: "8px 0",
-        }}
-      >
-        <div style={{ position: "relative" }}>
+      <div className="d-flex jc-between ai-center my-8 mx-0">
+        <div className="pos-relative">
           <button
-            className="chip gray"
-            style={{ border: 0, minHeight: 30 }}
+            className="chip gray b-0 mh-30"
+
             onClick={() => setColOpen(!colOpen)}
           >
             {t.colPick} ›
           </button>
           {colOpen && (
             <div
-              className="section"
-              style={{
-                position: "absolute",
-                zIndex: 5,
-                margin: 0,
-                padding: 10,
-                boxShadow: "0 4px 16px rgba(0,0,0,.15)",
-              }}
+              className="section pos-absolute m-0 p-10"
+              style={{ zIndex: 5, boxShadow: "0 4px 16px rgba(0,0,0,.15)" }}
             >
               {ALL_COLS.map((c) => (
-                <label
-                  key={c}
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    fontSize: 14,
-                    padding: "3px 0",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <label key={c} className="d-flex gap-6 fs-md py-2 px-0 nowrap">
                   <input type="checkbox" checked={cols.includes(c)} onChange={() => toggleCol(c)} />
                   {t.cols[c]}
                 </label>
@@ -386,10 +364,10 @@ function ProItems() {
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div className="d-flex gap-6 ai-center">
           <button
-            className="chip gray"
-            style={{ border: 0, minHeight: 30 }}
+            className="chip gray b-0 mh-30"
+
             disabled={page <= 1}
             onClick={() => set({ page: page - 1 })}
           >
@@ -399,8 +377,8 @@ function ProItems() {
             {page} / {pages}
           </span>
           <button
-            className="chip gray"
-            style={{ border: 0, minHeight: 30 }}
+            className="chip gray b-0 mh-30"
+
             disabled={page >= pages}
             onClick={() => set({ page: page + 1 })}
           >
@@ -410,7 +388,7 @@ function ProItems() {
       </div>
 
       <div className={pc ? "pc-grid g-58-42" : ""}>
-        <section className="section" style={{ padding: 0, overflowX: "auto" }}>
+        <section className="section p-0 ox-auto">
           <table className="pro-table">
             <thead>
               <tr>
@@ -450,10 +428,7 @@ function ProItems() {
           </table>
         </section>
         {pc && (
-          <div
-            className="pc-sticky"
-            style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
-          >
+          <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
             <PickPanel id={pick ?? data?.rows[0]?.item_id ?? null} />
           </div>
         )}

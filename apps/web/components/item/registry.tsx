@@ -110,24 +110,17 @@ export function ReadingBar({ sending, startedAt }: { sending: boolean; startedAt
   const r = t.reg;
   return (
     <div role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+      <div className="d-flex jc-between fs-md">
         <b>{r.reading}</b>
-        <span className="sub" style={{ margin: 0 }}>
-          {r.left(Math.round(EXPECT_SEC - sec))}
-        </span>
+        <span className="sub m-0">{r.left(Math.round(EXPECT_SEC - sec))}</span>
       </div>
-      <div style={{ height: 8, borderRadius: 4, background: "var(--line)", marginTop: 8 }}>
+      <div className="r-4 bg-line mt-8" style={{ height: 8 }}>
         <div
-          style={{
-            width: `${pct}%`,
-            height: 8,
-            borderRadius: 4,
-            background: "var(--blue)",
-            transition: "width .5s linear",
-          }}
+          className="r-4 bg-blue"
+          style={{ width: `${pct}%`, height: 8, transition: "width .5s linear" }}
         />
       </div>
-      <div style={{ display: "flex", gap: 12, fontSize: 12, marginTop: 6 }}>
+      <div className="d-flex gap-12 fs-xs mt-6">
         {r.steps.map((s, i) => (
           <span
             key={s}
@@ -146,18 +139,10 @@ export function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["pay
   const [open, setOpen] = useState(false);
   const r = t.reg;
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className="mt-8">
       <button
         onClick={() => setOpen(!open)}
-        style={{
-          border: 0,
-          background: "none",
-          padding: "8px 0",
-          minHeight: 44,
-          fontSize: 14,
-          fontWeight: 600,
-          color: "inherit",
-        }}
+        className="b-0 bg-none py-8 px-0 mh-44 fs-md fw-6 c-inherit"
       >
         {r.payTitle(won(p.price_krw))} {open ? "⌃" : "›"}
       </button>
@@ -166,45 +151,28 @@ export function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["pay
           {p.rows.map((x, i) => (
             <div
               key={i}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 8,
-                fontSize: 13,
-                padding: "3px 0",
-                color: x.paid_krw ? "inherit" : "var(--muted)",
-              }}
+              className="d-flex jc-between gap-8 fs-sm py-2 px-0"
+              style={{ color: x.paid_krw ? "inherit" : "var(--muted)" }}
             >
               <span>
                 {i + 1}. {x.name}
               </span>
-              <span style={{ whiteSpace: "nowrap" }}>
+              <span className="nowrap">
                 {won(x.paid_krw)}
                 {x.claim_krw && x.claim_krw > x.paid_krw ? ` / ${won(x.claim_krw)}` : ""}
               </span>
             </div>
           ))}
           {p.surplus_krw > 0 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: 13,
-                padding: "3px 0",
-              }}
-            >
+            <div className="d-flex jc-between fs-sm py-2 px-0">
               <span>{r.payLeft}</span>
               <span>{won(p.surplus_krw)}</span>
             </div>
           )}
           {p.unknown.length > 0 && (
-            <p style={{ fontSize: 12, color: "var(--amber)", margin: "6px 0 0" }}>
-              {r.payUnknown(p.unknown.join(", "))}
-            </p>
+            <p className="fs-xs c-amber mt-6 mb-0 mx-0">{r.payUnknown(p.unknown.join(", "))}</p>
           )}
-          <p className="sub" style={{ fontSize: 12, margin: "4px 0 0" }}>
-            {r.payNote}
-          </p>
+          <p className="sub fs-xs mt-4 mb-0 mx-0">{r.payNote}</p>
         </>
       )}
     </div>
@@ -221,64 +189,42 @@ export function RegistryBox() {
   const addr = u?.status === "parsed" ? u.address : undefined;
   const blocked =
     !!addr && !addr.ok && (addr.result === "different" || addr.result === "unit_differs");
-  if (!token)
-    return (
-      <p className="sub" style={{ marginTop: 10 }}>
-        {r.needLogin}
-      </p>
-    );
+  if (!token) return <p className="sub mt-10">{r.needLogin}</p>;
   const lad = u?.ladder;
   return (
-    <div style={{ marginTop: 12, paddingTop: 10 }}>
+    <div className="mt-12 pt-10">
       {u?.status === "processing" && <ReadingBar sending={sending} startedAt={startedAt} />}
       {blocked && addr && (
-        <div style={{ background: "var(--orange-soft)", borderRadius: 16, padding: 14 }}>
-          <b style={{ color: "var(--amber)", fontSize: 15 }}>
+        <div className="bg-orange-soft r-16 p-14">
+          <b className="c-amber fs-base">
             {addr.result === "unit_differs" && addr.registry_unit && addr.item_unit
               ? r.addrUnit(addr.registry_unit, addr.item_unit)
               : r.addrDiff}
           </b>
-          <div style={{ fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
+          <div className="fs-sm mt-8 lh-15">
             <div>
-              <span className="sub" style={{ margin: 0 }}>
-                {r.addrReg}
-              </span>{" "}
-              {addr.registry}
+              <span className="sub m-0">{r.addrReg}</span> {addr.registry}
             </div>
             <div>
-              <span className="sub" style={{ margin: 0 }}>
-                {r.addrItem}
-              </span>{" "}
-              {addr.item}
+              <span className="sub m-0">{r.addrItem}</span> {addr.item}
             </div>
           </div>
-          <button
-            onClick={accept}
-            style={{
-              border: 0,
-              background: "none",
-              color: "var(--muted)",
-              fontSize: 13,
-              padding: "10px 0 0",
-              minHeight: 44,
-            }}
-          >
+          <button onClick={accept} className="b-0 bg-none c-muted fs-sm pt-10 pb-0 px-0 mh-44">
             {r.addrStill} ›
           </button>
         </div>
       )}
       {lad && addr?.result === "unknown" && (
-        <p style={{ fontSize: 13, color: "var(--amber)", margin: "0 0 6px" }}>{r.addrUnknown}</p>
+        <p className="fs-sm c-amber mt-0 mb-6 mx-0">{r.addrUnknown}</p>
       )}
-      {u?.status === "failed" && <p style={{ color: "var(--amber)", fontSize: 14 }}>{r.failed}</p>}
+      {u?.status === "failed" && <p className="c-amber fs-md">{r.failed}</p>}
       {lad && (
         <>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{lad.line}</div>
+          <div className="fs-base fw-7">{lad.line}</div>
           {lad.spec_check && (
             <div
+              className="fs-xs mt-4"
               style={{
-                fontSize: 12,
-                marginTop: 4,
                 color: lad.spec_check.same ? "var(--muted)" : "var(--amber)",
                 fontWeight: lad.spec_check.same ? 400 : 600,
               }}
@@ -290,8 +236,8 @@ export function RegistryBox() {
           )}
           {!pc && (
             <button
-              className="cond-row"
-              style={{ background: "var(--bg)" }}
+              className="cond-row bg-bg"
+
               onClick={() => setLadOpen(!ladOpen)}
             >
               <span>
@@ -302,7 +248,7 @@ export function RegistryBox() {
                   )}
                 </b>
                 {lad.base && (
-                  <span className="sub" style={{ display: "block" }}>
+                  <span className="sub d-block">
                     {r.foldBase(lad.base.name, lad.base.date ?? "")}
                   </span>
                 )}
@@ -310,30 +256,24 @@ export function RegistryBox() {
               <span className="sub">{ladOpen ? "▴" : "›"}</span>
             </button>
           )}
-          <div style={{ marginTop: 6, display: pc || ladOpen ? "block" : "none" }}>
+          <div className="mt-6" style={{ display: pc || ladOpen ? "block" : "none" }}>
             {lad.rows.map((x) => (
               <div key={`${x.section}${x.rank_no}`}>
                 {x.is_base && lad.base && (
-                  <div style={{ fontSize: 12, color: "var(--blue)", padding: "6px 0" }}>
+                  <div className="fs-xs c-blue py-6 px-0">
                     {r.baseLine(lad.base.name, lad.base.date ?? "")}
                   </div>
                 )}
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    fontSize: 13,
-                    padding: "4px 0",
-                    color: x.judgment === "소멸" ? "var(--muted)" : "inherit",
-                  }}
+                  className="d-flex jc-between gap-8 fs-sm py-4 px-0"
+                  style={{ color: x.judgment === "소멸" ? "var(--muted)" : "inherit" }}
                 >
                   <span>
                     {x.date ?? "-"} · {x.name}
-                    {x.mark ? <span style={{ color: "var(--muted)" }}> ({x.mark})</span> : null}
+                    {x.mark ? <span className="c-muted"> ({x.mark})</span> : null}
                     {x.holder ? ` · ${x.holder}` : ""}
                   </span>
-                  <span style={{ whiteSpace: "nowrap", color: JUDGE_COLOR[x.judgment] }}>
+                  <span className="nowrap" style={{ color: JUDGE_COLOR[x.judgment] }}>
                     {x.amount_krw ? `${won(x.amount_krw)} · ` : ""}
                     {x.judgment}
                   </span>
@@ -343,15 +283,7 @@ export function RegistryBox() {
                     aria-label={r.fixTitle}
                     value=""
                     onChange={(e) => e.target.value && fix(x.section, x.rank_no, e.target.value)}
-                    style={{
-                      fontSize: 13,
-                      margin: "0 0 6px",
-                      padding: "6px 8px",
-                      borderRadius: 14,
-                      border: 0,
-                      background: "var(--panel)",
-                      color: "var(--blue)",
-                    }}
+                    className="fs-sm mt-0 mb-6 mx-0 py-6 px-8 r-14 b-0 bg-panel c-blue"
                   >
                     <option value="">{r.fixTitle}</option>
                     {(u.choices?.[x.section] ?? []).map((n) => (
@@ -366,9 +298,9 @@ export function RegistryBox() {
           </div>
           {lad.tenants.length > 0 && (
             <>
-              <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{r.tenants}</div>
+              <div className="fs-md fw-6 mt-8">{r.tenants}</div>
               {lad.tenants.map((x, i) => (
-                <div key={i} style={{ fontSize: 13, padding: "3px 0" }}>
+                <div key={i} className="fs-sm py-2 px-0">
                   {x.name ?? "임차인"} · 전입 {x.move_in ?? "-"}
                   {x.deposit_krw ? ` · ${won(x.deposit_krw)}` : ""} —{" "}
                   <b style={{ color: x.power ? "var(--red)" : "inherit" }}>{x.verdict}</b>
@@ -381,32 +313,23 @@ export function RegistryBox() {
       )}
       {u?.status !== "processing" && (
         <>
-          <label
-            className="btn"
-            style={{ display: "block", textAlign: "center", marginTop: 10, cursor: "pointer" }}
-          >
+          <label className="btn d-block ta-center mt-10 cur-pointer">
             {u ? r.reupload : r.upload}
             <input
               type="file"
               accept="application/pdf"
-              style={{ display: "none" }}
+              className="d-none"
               onChange={(e) => {
                 pick(e.target.files?.[0]);
                 e.target.value = "";
               }}
             />
           </label>
-          <p className="sub" style={{ fontSize: 12, marginBottom: 0 }}>
-            {r.hint}
-          </p>
+          <p className="sub fs-xs mb-0">{r.hint}</p>
         </>
       )}
-      {err && <p style={{ color: "var(--red)", fontSize: 13 }}>{err}</p>}
-      {u && (
-        <p className="sub" style={{ fontSize: 12 }}>
-          {r.keep(u.delete_after)}
-        </p>
-      )}
+      {err && <p className="c-red fs-sm">{err}</p>}
+      {u && <p className="sub fs-xs">{r.keep(u.delete_after)}</p>}
     </div>
   );
 }
@@ -416,14 +339,7 @@ export function HoldDocLink() {
   return (
     <button
       onClick={() => openDoc("status_report")}
-      style={{
-        border: 0,
-        background: "none",
-        color: "var(--blue)",
-        fontSize: 13,
-        padding: "8px 0",
-        minHeight: 44,
-      }}
+      className="b-0 bg-none c-blue fs-sm py-8 px-0 mh-44"
     >
       {t.doc.openSr}
     </button>

@@ -143,14 +143,8 @@ export default function Home() {
     <Link
       href="/notifications"
       aria-label={copy.noti.title}
-      className="m-only"
-      style={{
-        minWidth: 44,
-        minHeight: 44,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-      }}
+      className="m-only mh-44 d-flex ai-center jc-end"
+      style={{ minWidth: 44 }}
     >
       <svg
         width="22"
@@ -165,7 +159,7 @@ export default function Home() {
       </svg>
     </Link>
   ) : (
-    <Link href="/login" className="m-only" style={{ fontSize: 14, fontWeight: 600 }}>
+    <Link href="/login" className="m-only fs-md fw-6">
       {t.login}
     </Link>
   );
@@ -173,16 +167,7 @@ export default function Home() {
   const loginBanner = !token && (
     <Link
       href="/login"
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        background: "var(--blue-soft)",
-        borderRadius: 14,
-        padding: "12px 14px",
-        color: "var(--blue-text)",
-        fontSize: 14,
-        fontWeight: 600,
-      }}
+      className="d-flex jc-between bg-blue-soft r-14 py-12 px-14 c-blue-text fs-md fw-6"
     >
       <span>{t.loginBanner}</span>
       <span aria-hidden="true">›</span>
@@ -191,8 +176,8 @@ export default function Home() {
 
   const todayBlock = token && (todo.length > 0 || toRecord.length > 0) && (
     <section className="section">
-      <h2 style={{ marginBottom: 8 }}>
-        {t.today} <span style={{ color: "var(--blue)" }}>{todo.length + toRecord.length}</span>
+      <h2 className="mb-8">
+        {t.today} <span className="c-blue">{todo.length + toRecord.length}</span>
       </h2>
       {todo.map((w) => (
         <Link
@@ -204,10 +189,9 @@ export default function Home() {
           }
           className="menu-row"
         >
-          <span style={{ minWidth: 0 }}>
-            <b style={{ color: "var(--red)" }}>{dday(w.d_day)}</b> · {w.place}{" "}
-            {w.building ?? w.usage}
-            <span className="sub" style={{ display: "block" }}>
+          <span className="minw-0">
+            <b className="c-red">{dday(w.d_day)}</b> · {w.place} {w.building ?? w.usage}
+            <span className="sub d-block">
               {t.todoLine(copy.watch.steps[w.step] ?? "", w.d_day ?? 9)}
             </span>
           </span>
@@ -216,11 +200,9 @@ export default function Home() {
       ))}
       {toRecord.map((w) => (
         <Link key={w.item_id} href="/me" className="menu-row">
-          <span style={{ minWidth: 0 }}>
+          <span className="minw-0">
             {w.place} {w.building ?? w.usage}
-            <span className="sub" style={{ display: "block" }}>
-              {t.record}
-            </span>
+            <span className="sub d-block">{t.record}</span>
           </span>
           <span className="sub">›</span>
         </Link>
@@ -230,9 +212,9 @@ export default function Home() {
 
   const changesBlock = token && changes.length > 0 && (
     <section className="section">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div className="d-flex jc-between ai-baseline">
         <h2>
-          {t.changes} <span style={{ color: "var(--blue)" }}>{unread || ""}</span>
+          {t.changes} <span className="c-blue">{unread || ""}</span>
         </h2>
         <Link href="/notifications" className="sub">
           {t.allNoti} ›
@@ -240,17 +222,11 @@ export default function Home() {
       </div>
       {changes.map((n) => (
         <Link key={n.noti_id} href={n.link ?? "/notifications"} className="menu-row">
-          <span style={{ minWidth: 0 }}>
+          <span className="minw-0">
             <span style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</span>
-            {n.body && (
-              <span className="sub" style={{ display: "block" }}>
-                {n.body}
-              </span>
-            )}
+            {n.body && <span className="sub d-block">{n.body}</span>}
           </span>
-          <span className="sub" style={{ whiteSpace: "nowrap" }}>
-            {n.created_at.slice(5, 10).replace("-", "/")}
-          </span>
+          <span className="sub nowrap">{n.created_at.slice(5, 10).replace("-", "/")}</span>
         </Link>
       ))}
     </section>
@@ -260,117 +236,71 @@ export default function Home() {
     <Link
       key={c.item_id}
       href={`/item/${encodeURIComponent(c.item_id)}`}
-      style={{
-        border: 0,
-        background: "var(--panel)",
-        borderRadius: 14,
-        padding: 12,
-        color: "inherit",
-      }}
+      className="b-0 bg-panel r-14 p-12 c-inherit"
     >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: "var(--red)",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="fs-xs fw-7 c-red d-flex jc-between">
         <span>
           {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
         </span>
         {c.source === "onbid" && (
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              padding: "1px 6px",
-              borderRadius: 5,
-              border: 0,
-              background: "var(--gray-chip)",
-              color: "var(--text)",
-            }}
-          >
+          <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip c-text">
             {c.kind === "trust" ? copy.card.trust : copy.card.onbid}
           </span>
         )}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 600, marginTop: 6 }}>{c.place}</div>
-      <div
-        className="sub"
-        style={{
-          fontSize: 12,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
+      <div className="fs-md fw-6 mt-6">{c.place}</div>
+      <div className="sub fs-xs nowrap" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
         {c.building ?? c.usage}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8 }}>{won(c.min_price_krw)}</div>
-      <div className="sub" style={{ fontSize: 12 }}>
+      <div className="fs-base fw-7 mt-8">{won(c.min_price_krw)}</div>
+      <div className="sub fs-xs">
         {copy.card.ofAppraisal} {c.min_rate}%
       </div>
     </Link>
   );
   const closingBlock = closing.length > 0 && (
     <section className="section">
-      <h2 style={{ marginBottom: 12 }}>{t.closing}</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+      <h2 className="mb-12">{t.closing}</h2>
+      <div className="d-grid gap-10" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
         {closing.map(smallCard)}
       </div>
     </section>
   );
   const onbidBlock = onbidClosing.length > 0 && (
     <section className="section">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2 style={{ marginBottom: 12 }}>{t.onbidClosing}</h2>
-        <Link href="/find" className="sub" style={{ fontSize: 13 }}>
+      <div className="d-flex jc-between ai-baseline">
+        <h2 className="mb-12">{t.onbidClosing}</h2>
+        <Link href="/find" className="sub fs-sm">
           {t.onbidAll}
         </Link>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+      <div className="d-grid gap-10" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
         {onbidClosing.map(smallCard)}
       </div>
-      <div className="sub" style={{ fontSize: 12, marginTop: 10 }}>
-        {t.onbidClosingSub}
-      </div>
+      <div className="sub fs-xs mt-10">{t.onbidClosingSub}</div>
     </section>
   );
 
   const forMeBlock = (
     <section className="section">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div className="d-flex jc-between ai-baseline">
         <h2>
-          {t.forMe} <span style={{ color: "var(--blue)" }}>{mine?.total ?? ""}</span>
+          {t.forMe} <span className="c-blue">{mine?.total ?? ""}</span>
         </h2>
         <Link href="/start" className="sub">
           {t.changeAnswers}
         </Link>
       </div>
-      <div className="sub" style={{ marginBottom: 4 }}>
-        {summary}
-      </div>
+      <div className="sub mb-4">{summary}</div>
       {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       <button
-        className="btn"
-        style={{
-          background: "var(--blue-soft)",
-          color: "var(--blue-text)",
-          margin: "8px 0 4px",
-          height: 44,
-          fontSize: 14,
-        }}
+        className="btn bg-blue-soft c-blue-text mt-8 mb-4 mx-0 fs-md"
+        style={{ height: 44 }}
         onClick={() => void turnOnAlert(profile)}
       >
         {copy.alert.button}
       </button>
-      {alertMsg && (
-        <p className="sub" style={{ margin: "0 0 4px" }}>
-          {alertMsg}
-        </p>
-      )}
+      {alertMsg && <p className="sub mt-0 mb-4 mx-0">{alertMsg}</p>}
       {shown && shown.items.length === 0 && <p className="sub">{t.empty}</p>}
       <div className={pc ? "card-grid" : ""}>
         {shown?.items.slice(0, pc ? 8 : 5).map((c) => (
@@ -378,16 +308,7 @@ export default function Home() {
         ))}
       </div>
       {mine && mine.total > 5 && (
-        <Link
-          href="/find"
-          style={{
-            display: "block",
-            textAlign: "center",
-            padding: "12px 0 0",
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
+        <Link href="/find" className="d-block ta-center pt-12 pb-0 px-0 fs-md fw-6">
           {copy.find.total(mine.total)} 모두 보기 ›
         </Link>
       )}
@@ -396,16 +317,8 @@ export default function Home() {
 
   const whyBlock = !token && (
     <section className="section">
-      <h2 style={{ marginBottom: 8 }}>{t.whyTitle}</h2>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          fontSize: 14,
-          lineHeight: 1.45,
-        }}
-      >
+      <h2 className="mb-8">{t.whyTitle}</h2>
+      <div className="d-flex f-col gap-10 fs-md" style={{ lineHeight: 1.45 }}>
         {t.why.map(([a, b]) => (
           <div key={a}>
             <b>{a}</b> · {b}
@@ -443,24 +356,18 @@ export default function Home() {
           </div>
           <div>
             <section className="section">
-              <h2 style={{ marginBottom: 8 }}>{t.calendar}</h2>
+              <h2 className="mb-8">{t.calendar}</h2>
               {cal.length === 0 && <p className="sub">{t.calendarEmpty}</p>}
               {cal.map(([day, list]) => (
-                <div key={day} style={{ padding: "8px 0" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>
-                    {day.slice(5).replace("-", "/")}
-                  </div>
+                <div key={day} className="py-8 px-0">
+                  <div className="fw-7 fs-md">{day.slice(5).replace("-", "/")}</div>
                   {list.map((x) => (
                     <Link
                       key={x.id}
                       href={`/item/${encodeURIComponent(x.id)}`}
-                      style={{ display: "block", fontSize: 14, color: "inherit", padding: "2px 0" }}
+                      className="d-block fs-md c-inherit py-2 px-0"
                     >
-                      {x.mine && (
-                        <span className="chip green" style={{ marginRight: 6 }}>
-                          {t.mine}
-                        </span>
-                      )}
+                      {x.mine && <span className="chip green mr-6">{t.mine}</span>}
                       {x.label}
                     </Link>
                   ))}
@@ -490,7 +397,7 @@ export default function Home() {
                 <h2>{t.courtRate}</h2>
                 <div className="sub">{t.courtRateSub}</div>
                 {market.by_court.slice(0, 6).map((r) => (
-                  <div key={r.court_code} className="line-row" style={{ fontSize: 14 }}>
+                  <div key={r.court_code} className="line-row fs-md">
                     <span>{r.court}</span>
                     <span>
                       <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}건</span>

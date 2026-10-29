@@ -15,8 +15,8 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main style={{ maxWidth: 420, margin: "0 auto", padding: "32px 20px" }}>
-      <h1 style={{ fontSize: 28, margin: "0 0 24px" }}>{copy.appName}</h1>
+    <main className="my-0 mx-auto py-32 px-20" style={{ maxWidth: 420 }}>
+      <h1 className="fs-3xl mt-0 mb-24 mx-0">{copy.appName}</h1>
       <HealthRow label={copy.health.api} state={api} />
       <HealthRow label={copy.health.db} state={db} />
     </main>

@@ -81,12 +81,10 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
   const top = Math.max(...cx.quarters.map((x) => x.price_krw), 1);
   const low = Math.min(...cx.quarters.map((x) => x.price_krw));
   return (
-    <div style={{ marginTop: 10 }}>
+    <div className="mt-10">
       {cx.auctions.length > 0 && (
         <>
-          <div className="sub" style={{ margin: "8px 0 2px" }}>
-            {c.auctions(cx.auctions.length)}
-          </div>
+          <div className="sub mt-8 mb-2 mx-0">{c.auctions(cx.auctions.length)}</div>
           {cx.auctions.slice(0, pc ? 8 : 2).map((a) => (
             <Row
               key={a.case_no + a.date}
@@ -94,7 +92,7 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
               value={
                 <>
                   <b>{won(a.price_krw)}</b>{" "}
-                  <span className="sub" style={{ margin: 0 }}>
+                  <span className="sub m-0">
                     {[a.rate != null ? c.rate(a.rate) : null, a.failed ? c.failed(a.failed) : null]
                       .filter(Boolean)
                       .join(" · ")}
@@ -113,8 +111,8 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
               <b>{won(tr.recent_krw)}</b>
               {tr.change_pct != null && (
                 <span
-                  className="sub"
-                  style={{ margin: 0, color: tr.change_pct >= 0 ? "var(--red)" : "var(--blue)" }}
+                  className="sub m-0"
+                  style={{ color: tr.change_pct >= 0 ? "var(--red)" : "var(--blue)" }}
                 >
                   {" "}
                   {c.change(tr.change_pct)}
@@ -141,30 +139,25 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
         <div
           role="img"
           aria-label={c.chart}
-          style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 64, marginTop: 8 }}
+          className="d-flex ai-end gap-6 mt-8"
+          style={{ height: 64 }}
         >
           {cx.quarters.map((x) => (
-            <div key={x.q} style={{ flex: 1, textAlign: "center", fontSize: 11 }}>
+            <div key={x.q} className="f-1 ta-center fs-xs">
               <div
                 title={`${x.q} ${won(x.price_krw)} (${x.n}건)`}
+                className="bg-blue-soft"
                 style={{
                   height: 8 + (40 * (x.price_krw - low)) / Math.max(top - low, 1),
-                  background: "var(--blue-soft)",
                   borderTop: "2px solid var(--blue)",
                 }}
               />
-              <span className="sub" style={{ margin: 0, fontSize: 11 }}>
-                {x.q.replace("분기", "")}
-              </span>
+              <span className="sub m-0 fs-xs">{x.q.replace("분기", "")}</span>
             </div>
           ))}
         </div>
       )}
-      {!tr.area_match && (
-        <div className="sub" style={{ margin: "4px 0 0", fontSize: 12 }}>
-          {c.allAreas}
-        </div>
-      )}
+      {!tr.area_match && <div className="sub mt-4 mb-0 mx-0 fs-xs">{c.allAreas}</div>}
     </div>
   );
 }

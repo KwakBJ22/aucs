@@ -94,18 +94,14 @@ export function WorkspacePanel({
   return (
     <>
       {d && (
-        <Link
-          href={`/item/${eid}`}
-          className="section"
-          style={{ display: "block", color: "inherit" }}
-        >
+        <Link href={`/item/${eid}`} className="section d-block c-inherit">
           <div className="sub">
-            <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.court} {d.case_no}
+            <b className="c-amber">{dday(d.d_day)}</b> · {d.court} {d.case_no}
           </div>
-          <div style={{ fontWeight: 600, marginTop: 4 }}>
+          <div className="fw-6 mt-4">
             {d.place} {d.building ?? d.usage}
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>
+          <div className="fs-2xl fw-7 mt-4">
             {won(d.min_price_krw)} <span className="sub">{t.toDetail} ›</span>
           </div>
           {d.fatal && <div className="fatal">{d.fatal}</div>}
@@ -114,12 +110,12 @@ export function WorkspacePanel({
 
       <section className="section">
         <h2>{copy.watch.stepNow}</h2>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+        <div className="d-flex gap-6 f-wrap mt-8">
           {(w.step === "result" ? (["result", "after"] as WatchStep[]) : MOVABLE).map((s) => (
             <button
               key={s}
-              className={`chip ${s === w.step ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 36 }}
+              className={`${`chip ${s === w.step ? "green" : "gray"}`} b-0 mh-36`}
+
               disabled={s === "result"}
               onClick={() => setStep(s)}
             >
@@ -127,7 +123,7 @@ export function WorkspacePanel({
             </button>
           ))}
         </div>
-        <Link href={`/watch/${eid}/field`} className="menu-row" style={{ marginTop: 6 }}>
+        <Link href={`/watch/${eid}/field`} className="menu-row mt-6">
           <span>{t.fieldRow}</span>
           <span className="sub">›</span>
         </Link>
@@ -153,7 +149,7 @@ export function WorkspacePanel({
         <section className="section">
           <h2>
             {t.memo}{" "}
-            <span className="sub" style={{ fontWeight: 400 }}>
+            <span className="sub fw-4">
               {memoState === "saving" ? t.saving : memoState === "saved" ? t.saved : ""}
             </span>
           </h2>
@@ -179,8 +175,10 @@ export function WorkspacePanel({
               <label key={c.key} className="check-row">
                 <input type="checkbox" checked={on} onChange={() => toggleCheck(c.key)} />
                 <span>
-                  <span style={{ fontWeight: 600, opacity: on ? 0.6 : 1 }}>{c.label}</span>
-                  <span className="sub" style={{ display: "block" }}>
+                  <span className="fw-6" style={{ opacity: on ? 0.6 : 1 }}>
+                    {c.label}
+                  </span>
+                  <span className="sub d-block">
                     {on ? t.checkedOn(w.checks[c.key] ?? "") : c.what}
                   </span>
                 </span>
@@ -200,13 +198,13 @@ export function WorkspacePanel({
             <div key={x.bid_krw} className="line-row">
               <span>
                 <b>{won(x.bid_krw)}</b>
-                <span className="sub" style={{ display: "block" }}>
+                <span className="sub d-block">
                   {x.cash_krw ? t.cashNeed(won(x.cash_krw)) : ""} · {x.saved_at}
                 </span>
               </span>
               <button
-                className="chip gray"
-                style={{ border: 0, minHeight: 32 }}
+                className="chip gray b-0 mh-32"
+
                 onClick={() => removeCalc(x.bid_krw)}
               >
                 {t.remove}
@@ -221,7 +219,7 @@ export function WorkspacePanel({
           <h2>{t.history}</h2>
           {w.history.length === 0 && <div className="sub">{t.historyEmpty}</div>}
           {w.history.map((h, i) => (
-            <div key={i} className="line-row" style={{ fontSize: 14 }}>
+            <div key={i} className="line-row fs-md">
               <span>
                 <span className="sub">{h.at}</span> · {h.what} {h.change}
               </span>

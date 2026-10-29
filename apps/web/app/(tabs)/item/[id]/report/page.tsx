@@ -91,14 +91,12 @@ function Report() {
     <main className="page report-page">
       <div className="no-print">
         <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
-        <div style={{ display: "flex", gap: 8, margin: "0 0 12px" }}>
-          <button className="btn primary" onClick={() => window.print()} style={{ flex: 1 }}>
+        <div className="d-flex gap-8 mt-0 mb-12 mx-0">
+          <button className="btn primary f-1" onClick={() => window.print()}>
             {t.print}
           </button>
         </div>
-        <p className="sub" style={{ fontSize: 13 }}>
-          {t.printHint}
-        </p>
+        <p className="sub fs-sm">{t.printHint}</p>
       </div>
 
       <article className="report">
@@ -170,12 +168,12 @@ function Report() {
                   {cash.map(([k, v]) => (
                     <tr key={k}>
                       <th>{k}</th>
-                      <td style={{ textAlign: "right" }}>{v < 0 ? `− ${won(-v)}` : won(v)}</td>
+                      <td className="ta-right">{v < 0 ? `− ${won(-v)}` : won(v)}</td>
                     </tr>
                   ))}
                   <tr className="report-sum">
                     <th>{t.cashTotal}</th>
-                    <td style={{ textAlign: "right" }}>{won(s.cash_krw)}</td>
+                    <td className="ta-right">{won(s.cash_krw)}</td>
                   </tr>
                 </tbody>
               </table>

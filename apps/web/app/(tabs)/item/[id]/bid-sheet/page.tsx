@@ -78,7 +78,7 @@ function Sheet() {
           <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
           <section className="section">
             <div className="sub">{t.hint}</div>
-            <label style={{ display: "block", marginTop: 10 }}>
+            <label className="d-block mt-10">
               <span className="sub">{t.amount}</span>
               <input
                 inputMode="numeric"
@@ -88,24 +88,15 @@ function Sheet() {
                   setText(v);
                   setBid(v ? Number(v) * 10_000 : null);
                 }}
-                style={{
-                  width: "100%",
-                  fontSize: 22,
-                  padding: "10px 12px",
-                  border: 0,
-                  borderRadius: 14,
-                  background: "var(--panel)",
-                  color: "var(--text)",
-                }}
+                className="w-full fs-2xl py-10 px-12 b-0 r-14 bg-panel c-text"
               />
             </label>
             {chk && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{chk.korean}</div>
+              <div className="mt-10">
+                <div className="fs-lg fw-7">{chk.korean}</div>
                 <div
+                  className="fs-md mt-4"
                   style={{
-                    fontSize: 14,
-                    marginTop: 4,
                     color:
                       chk.level === "block"
                         ? "var(--red)"
@@ -127,22 +118,18 @@ function Sheet() {
                     {t.sure(won(bid))}
                   </label>
                 )}
-                <div className="sub" style={{ marginTop: 6 }}>
-                  {t.deposit(won(chk.deposit_krw), chk.resale)}
-                </div>
+                <div className="sub mt-6">{t.deposit(won(chk.deposit_krw), chk.resale)}</div>
               </div>
             )}
             <button
-              className="btn primary"
-              style={{ marginTop: 12 }}
+              className="btn primary mt-12"
+
               disabled={!canPrint}
               onClick={() => window.print()}
             >
               {t.print}
             </button>
-            <div className="sub" style={{ marginTop: 6 }}>
-              {t.printHint}
-            </div>
+            <div className="sub mt-6">{t.printHint}</div>
           </section>
           <section className="section">
             <h2>{t.checkTitle}</h2>
@@ -153,7 +140,7 @@ function Sheet() {
               [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
               [true, t.checks.privacy],
             ].map(([ok, label]) => (
-              <div key={String(label)} className="line-row" style={{ fontSize: 14 }}>
+              <div key={String(label)} className="line-row fs-md">
                 <span>{label as string}</span>
                 <b style={{ color: ok ? "var(--green)" : "var(--faint)" }}>{ok ? "✓" : "—"}</b>
               </div>
@@ -166,7 +153,7 @@ function Sheet() {
         </div>
 
         <section className="section print-area">
-          <h2 style={{ textAlign: "center", fontSize: 20 }}>{t.formTitle}</h2>
+          <h2 className="ta-center fs-xl">{t.formTitle}</h2>
           <table className="bid-form">
             <tbody>
               <tr>
@@ -197,24 +184,20 @@ function Sheet() {
               </tr>
             </tbody>
           </table>
-          <div className="sub" style={{ marginTop: 10 }}>
+          <div className="sub mt-10">
             {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
           </div>
           <Digits v={bid} />
-          <div className="sub" style={{ marginTop: 10 }}>
-            {t.f.deposit}
-          </div>
+          <div className="sub mt-10">{t.f.deposit}</div>
           <Digits v={dep} />
-          <div style={{ fontSize: 14, marginTop: 10 }}>{t.f.method}</div>
-          <div style={{ fontSize: 14, marginTop: 16, textAlign: "right" }}>{t.f.sign}</div>
-          <div className="sub" style={{ marginTop: 12 }}>
-            {t.f.note}
-          </div>
+          <div className="fs-md mt-10">{t.f.method}</div>
+          <div className="fs-md mt-16 ta-right">{t.f.sign}</div>
+          <div className="sub mt-12">{t.f.note}</div>
         </section>
       </div>
       {pc && (
-        <div className="no-print" style={{ marginTop: 20 }}>
-          <h2 style={{ fontSize: 20 }}>{copy.bidDay.title}</h2>
+        <div className="no-print mt-20">
+          <h2 className="fs-xl">{copy.bidDay.title}</h2>
           <div className="sub">{t.dayHint}</div>
           <BidDaySheet id={id} wide />
         </div>

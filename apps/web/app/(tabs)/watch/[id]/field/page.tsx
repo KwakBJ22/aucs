@@ -120,31 +120,27 @@ export default function FieldPage() {
         <div>
           {d && (
             <section className="section">
-              <div style={{ fontWeight: 600 }}>
+              <div className="fw-6">
                 {d.place} {d.building ?? d.usage}
               </div>
               <div className="sub">{d.address}</div>
               {dist != null && (
                 <div
-                  style={{
-                    marginTop: 6,
-                    fontWeight: 700,
-                    color: dist < 300 ? "var(--green)" : "var(--muted)",
-                  }}
+                  className="mt-6 fw-7"
+                  style={{ color: dist < 300 ? "var(--green)" : "var(--muted)" }}
                 >
                   {dist < 300
                     ? t.near
                     : t.far(dist >= 1000 ? `${(dist / 1000).toFixed(1)}km` : `${dist}m`)}
                 </div>
               )}
-              <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+              <div className="d-flex gap-6 mt-10 f-wrap">
                 {d.address && (
                   <a
                     href={mapQ(d.address)}
                     target="_blank"
                     rel="noreferrer"
-                    className="chip gray"
-                    style={{ minHeight: 36 }}
+                    className="chip gray mh-36"
                   >
                     {t.route} ›
                   </a>
@@ -154,8 +150,7 @@ export default function FieldPage() {
                     href={mapQ(`${name} 관리사무소`)}
                     target="_blank"
                     rel="noreferrer"
-                    className="chip gray"
-                    style={{ minHeight: 36 }}
+                    className="chip gray mh-36"
                   >
                     {t.office} ›
                   </a>
@@ -167,13 +162,13 @@ export default function FieldPage() {
           <section className="section">
             <h2>{t.askTitle}</h2>
             {t.ask.map((q) => (
-              <div key={q} style={{ fontSize: 14, padding: "6px 0" }}>
+              <div key={q} className="fs-md py-6 px-0">
                 {q}
               </div>
             ))}
             <button
-              className="chip gray"
-              style={{ border: 0, minHeight: 36, marginTop: 8 }}
+              className="chip gray b-0 mh-36 mt-8"
+
               onClick={() =>
                 navigator.clipboard?.writeText(askText).then(() => {
                   setCopied(true);
@@ -191,15 +186,7 @@ export default function FieldPage() {
               const key = `field_${k}`;
               const on = Boolean(w?.checks[key]);
               return (
-                <label
-                  key={k}
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    padding: "10px 0",
-                    minHeight: 44,
-                  }}
-                >
+                <label key={k} className="d-flex gap-10 py-10 px-0 mh-44">
                   <input
                     type="checkbox"
                     checked={on}
@@ -207,10 +194,10 @@ export default function FieldPage() {
                     style={{ width: 20, height: 20 }}
                   />
                   <span>
-                    <span style={{ fontWeight: 600, opacity: on ? 0.5 : 1 }}>{label}</span>
-                    <span className="sub" style={{ display: "block" }}>
-                      {sub}
+                    <span className="fw-6" style={{ opacity: on ? 0.5 : 1 }}>
+                      {label}
                     </span>
+                    <span className="sub d-block">{sub}</span>
                   </span>
                 </label>
               );
@@ -220,19 +207,18 @@ export default function FieldPage() {
         <div>
           <section className="section">
             <h2>{t.media}</h2>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="d-flex gap-8 f-wrap">
               <button
-                className="btn primary"
-                style={{ height: 48, flex: 1 }}
+                className="btn primary f-1"
+                style={{ height: 48 }}
                 onClick={() => photoInput.current?.click()}
               >
                 {t.photo}
               </button>
               <button
-                className="btn"
+                className="btn f-1"
                 style={{
                   height: 48,
-                  flex: 1,
                   background: rec ? "var(--red)" : "var(--gray-chip)",
                   color: rec ? "#fff" : "var(--text)",
                 }}
@@ -253,11 +239,7 @@ export default function FieldPage() {
                 e.target.value = "";
               }}
             />
-            {busy && (
-              <div className="sub" style={{ marginTop: 6 }}>
-                {busy}
-              </div>
-            )}
+            {busy && <div className="sub mt-6">{busy}</div>}
             <div className="field-grid">
               {files.map((f) =>
                 f.kind === "photo" ? (
@@ -274,16 +256,14 @@ export default function FieldPage() {
                   <div key={f.path} className="field-voice">
                     <audio controls src={f.url} />
                     <span className="sub">{f.at}</span>
-                    <button className="chip gray" style={{ border: 0 }} onClick={() => del(f)}>
+                    <button className="chip gray b-0" onClick={() => del(f)}>
                       {t.remove}
                     </button>
                   </div>
                 ),
               )}
             </div>
-            <div className="sub" style={{ marginTop: 6 }}>
-              {t.private}
-            </div>
+            <div className="sub mt-6">{t.private}</div>
           </section>
         </div>
       </div>

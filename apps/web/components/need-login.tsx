@@ -7,11 +7,9 @@ export function NeedLogin({ title }: { title: string }) {
       <div className="topbar">
         <div className="brand">{title}</div>
       </div>
-      <section className="section" style={{ textAlign: "center", padding: "32px 18px" }}>
+      <section className="section ta-center py-32 px-18">
         <h2>{copy.needLogin.title}</h2>
-        <p className="sub" style={{ margin: "8px 0 20px" }}>
-          {copy.needLogin.body}
-        </p>
+        <p className="sub mt-8 mb-20 mx-0">{copy.needLogin.body}</p>
         <Link href="/login" className="btn kakao">
           {copy.home.kakao}
         </Link>

@@ -1,0 +1,189 @@
+/* 부품: 화면 틀·구역(section)·칩·버튼·아래 창·알림·목록 줄 */
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 4px 20px 96px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 8px 4px 0;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+}
+.section {
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 20px;
+  margin: 12px 0;
+}
+.section h2 {
+  margin: 0 0 4px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.chip.green {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.chip.gray {
+  background: var(--gray-chip);
+  color: var(--gray-text);
+}
+.chip.orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+.chip.blue {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.note.blue {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  line-height: 1.5;
+}
+.fatal {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 17px;
+  font-weight: 600;
+  width: 100%;
+}
+.btn.primary {
+  background: var(--blue);
+  color: #fff;
+}
+.btn {
+  background: var(--panel);
+  color: var(--text);
+}
+.btn.secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+.btn.soft {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.btn-pair {
+  display: flex;
+  gap: 8px;
+}
+.btn-pair > * {
+  flex: 1 1 0;
+}
+/* 구역 사이 띠(화면 끝까지) */
+.band {
+  height: 10px;
+  background: var(--band);
+  margin: 16px -20px;
+}
+/* 아래에서 올라오는 창 · 잠깐 뜨는 알림 (08-look 5절) */
+.sheet {
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  padding: 10px 20px 28px;
+}
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--band);
+  margin: 0 auto 14px;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 24px;
+  background: rgba(40, 44, 52, 0.88);
+  color: #fff;
+  font-size: 14px;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.btn.kakao {
+  background: var(--kakao);
+  color: var(--kakao-text);
+  height: 52px;
+  font-size: 15px;
+}
+.btn:disabled {
+  opacity: 0.4;
+}
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  background: var(--surface);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding-bottom: 14px;
+  z-index: 10;
+}
+.tabbar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--faint);
+  font-size: 11px;
+  min-height: 44px;
+}
+.tabbar a.on {
+  color: var(--blue);
+  font-weight: 700;
+}
+.menu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 56px;
+  padding: 16px 0;
+  color: var(--text);
+  font-size: 15px;
+}

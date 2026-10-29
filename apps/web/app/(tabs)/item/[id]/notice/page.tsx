@@ -32,10 +32,10 @@ export default function NoticePage() {
       ) : (
         <>
           <section className="section">
-            <div className="sub" style={{ margin: 0 }}>
+            <div className="sub m-0">
               {d.mng_no} · {d.kind_name}
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>{d.title}</div>
+            <div className="fs-base fw-6 mt-4">{d.title}</div>
           </section>
           <section className="section">
             {d.rows.map((r) => (
@@ -44,10 +44,10 @@ export default function NoticePage() {
           </section>
           <section className="section">
             <div className="note blue">{t.checkOriginal}</div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <div className="d-flex gap-8 mt-12">
               <button
-                className="btn"
-                style={{ flex: 1 }}
+                className="btn f-1"
+
                 onClick={() =>
                   navigator.clipboard?.writeText(d.mng_no).then(
                     () => setCopied(true),
@@ -58,11 +58,10 @@ export default function NoticePage() {
                 {copied ? copy.onbid.copied : copy.onbid.copyNo}
               </button>
               <a
-                className="btn primary"
+                className="btn primary f-1"
                 href={copy.onbid.onbidUrl}
                 target="_blank"
                 rel="noreferrer"
-                style={{ flex: 1 }}
               >
                 {t.open}
               </a>

@@ -15,16 +15,14 @@ export default function Login() {
   return (
     <main className="page narrow">
       <PageHeader title="" back="/home" />
-      <section className="section" style={{ padding: "28px 18px" }}>
-        <h2 style={{ fontSize: 22 }}>{t.title}</h2>
+      <section className="section py-28 px-18">
+        <h2 className="fs-2xl">{t.title}</h2>
         {session ? (
           <>
-            <p className="sub" style={{ fontSize: 15 }}>
-              {t.loggedIn(session.user.email ?? "")}
-            </p>
+            <p className="sub fs-base">{t.loggedIn(session.user.email ?? "")}</p>
             <button
-              className="btn"
-              style={{ background: "var(--gray-chip)" }}
+              className="btn bg-gray-chip"
+
               onClick={() => void signOut()}
             >
               {t.logout}
@@ -32,31 +30,19 @@ export default function Login() {
           </>
         ) : (
           <>
-            <button className="btn kakao" disabled style={{ margin: "16px 0 8px" }}>
+            <button className="btn kakao mt-16 mb-8 mx-0" disabled>
               {copy.home.kakao}
             </button>
-            <p className="sub" style={{ textAlign: "center", margin: "0 0 20px" }}>
-              {t.kakaoSoon}
-            </p>
-            <label className="sub" style={{ fontSize: 14 }}>
+            <p className="sub ta-center mt-0 mb-20 mx-0">{t.kakaoSoon}</p>
+            <label className="sub fs-md">
               {t.emailLabel}
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  height: 52,
-                  borderRadius: 14,
-                  border: 0,
-                  padding: "0 14px",
-                  fontSize: 16,
-                  margin: "6px 0 12px",
-                  background: "var(--panel)",
-                  color: "var(--text)",
-                }}
+                className="d-block w-full r-14 b-0 py-0 px-14 fs-base mt-6 mb-12 mx-0 bg-panel c-text"
+                style={{ height: 52 }}
               />
             </label>
             <button
@@ -66,7 +52,7 @@ export default function Login() {
             >
               {t.send}
             </button>
-            {msg && <p style={{ fontSize: 14, color: "var(--green)", marginTop: 12 }}>{msg}</p>}
+            {msg && <p className="fs-md c-green mt-12">{msg}</p>}
           </>
         )}
       </section>

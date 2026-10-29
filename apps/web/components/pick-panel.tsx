@@ -64,50 +64,44 @@ export function PickPanel({ id }: { id: string | null }) {
     : d.questions;
   return (
     <section className="section">
-      <div className="sub" style={{ margin: 0 }}>
-        <b style={{ color: "var(--amber)" }}>{dday(d.d_day)}</b> · {d.sale_date} ·{" "}
+      <div className="sub m-0">
+        <b className="c-amber">{dday(d.d_day)}</b> · {d.sale_date} ·{" "}
         {isOnbid(d) ? copy.onbid.badge(d.kind_name ?? "") : d.court} {d.case_no}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <h2 style={{ marginTop: 4 }}>
+      <div className="d-flex jc-between gap-8">
+        <h2 className="mt-4">
           {d.place} {(isOnbid(d) ? null : d.building) ?? d.usage}
         </h2>
         <HeartButton id={d.item_id} />
       </div>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>
+      <div className="fs-2xl fw-7">
         {won(d.min_price_krw)}{" "}
         <span className="sub">
           {d.min_rate}% · 감정가 {won(d.appraisal_krw)}
         </span>
       </div>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
-      <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }}>{d.verdict}</p>
+      <p className="fs-base fw-6 lh-15">{d.verdict}</p>
       {qs.map((q) => (
         <Link key={q.key} href={`/item/${eid}#q-${q.key}`} className="menu-row">
-          <span style={{ display: "flex", gap: 8, alignItems: "baseline", minWidth: 0 }}>
+          <span className="d-flex gap-8 ai-baseline minw-0">
             <span className="toc-dot" style={{ background: TONE[q.tone] ?? "var(--faint)" }} />
             <span>
-              <span className="sub" style={{ display: "block", margin: 0, fontSize: 12 }}>
-                {q.title}
-              </span>
+              <span className="sub d-block m-0 fs-xs">{q.title}</span>
               {q.answer}
             </span>
           </span>
           <span className="sub">›</span>
         </Link>
       ))}
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Link
-          href={`/item/${eid}`}
-          className="btn primary"
-          style={{ height: 44, fontSize: 15, flex: 2 }}
-        >
+      <div className="d-flex gap-8 mt-12">
+        <Link href={`/item/${eid}`} className="btn primary fs-base" style={{ height: 44, flex: 2 }}>
           {t.toDetail}
         </Link>
         {session && (
           <button
-            className="pc-act"
-            style={{ flex: 1 }}
+            className="pc-act f-1"
+
             onClick={() =>
               meApi
                 .addCompare(session.access_token, d.item_id)

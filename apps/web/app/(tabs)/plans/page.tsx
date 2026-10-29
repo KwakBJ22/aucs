@@ -32,46 +32,37 @@ export default function Plans() {
           {t.yearly}
         </button>
       </div>
-      <div className="pc-grid g-4" style={{ marginTop: 12 }}>
+      <div className="pc-grid g-4 mt-12">
         {t.list.map((p) => (
           <section
             key={p.key}
-            className="section"
-            style={{ outline: pick === p.key ? "2px solid var(--blue)" : undefined, marginTop: 0 }}
+            className="section mt-0"
+            style={{ outline: pick === p.key ? "2px solid var(--blue)" : undefined }}
             onClick={() => setPick(p.key)}
           >
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
-            >
+            <div className="d-flex jc-between ai-baseline">
               <h2>{p.name}</h2>
               {p.tag && <span className="chip green">{p.tag}</span>}
             </div>
-            <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+            <div className="fs-3xl fw-7 mt-4">
               {yearly && p.yearly ? p.yearly : p.price}
-              <span className="sub" style={{ fontSize: 14, fontWeight: 400 }}>
-                {" "}
-                {yearly && p.yearly ? t.perYear : p.per}
-              </span>
+              <span className="sub fs-md fw-4"> {yearly && p.yearly ? t.perYear : p.per}</span>
             </div>
             <div className="sub">{p.what}</div>
             {p.items.map((x) => (
-              <div key={x} className="line-row" style={{ fontSize: 14 }}>
+              <div key={x} className="line-row fs-md">
                 <span>{x}</span>
-                <b style={{ color: "var(--green)" }}>✓</b>
+                <b className="c-green">✓</b>
               </div>
             ))}
             {p.key === "one" ? (
-              <Link
-                href="/find"
-                className="btn"
-                style={{ background: "var(--gray-chip)", height: 46, fontSize: 15, marginTop: 12 }}
-              >
+              <Link href="/find" className="btn bg-gray-chip fs-base mt-12" style={{ height: 46 }}>
                 {t.toFind}
               </Link>
             ) : p.key !== "free" ? (
               <button
-                className="btn primary"
-                style={{ height: 46, fontSize: 15, marginTop: 12 }}
+                className="btn primary fs-base mt-12"
+                style={{ height: 46 }}
                 disabled
                 title={t.payLater}
               >
@@ -84,13 +75,11 @@ export default function Plans() {
       <section className="section">
         <h2>{t.refundTitle}</h2>
         {t.refund.map((x) => (
-          <div key={x} className="sub" style={{ padding: "4px 0" }}>
+          <div key={x} className="sub py-4 px-0">
             {x}
           </div>
         ))}
-        <div className="sub" style={{ marginTop: 8, fontWeight: 600 }}>
-          {t.payLater}
-        </div>
+        <div className="sub mt-8 fw-6">{t.payLater}</div>
       </section>
     </main>
   );

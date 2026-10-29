@@ -46,23 +46,21 @@ function save(key: string, v: string): void {
 // 끝난 사건 한 줄 (매각·취하·변경)
 function ResultRow({ r }: { r: ResultCard }) {
   const body = (
-    <div style={{ padding: "12px 0" }}>
-      <div className="sub" style={{ margin: 0 }}>
+    <div className="py-12 px-0">
+      <div className="sub m-0">
         <b style={{ color: r.result === "매각" ? "var(--blue)" : "var(--muted)" }}>{r.result}</b> ·{" "}
         {r.sale_date} · {r.court} {r.case_no}
       </div>
-      <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2 }}>
+      <div className="fs-base fw-6 mt-2">
         {r.place} {r.building ?? r.usage}
       </div>
       {r.winning_bid_krw ? (
-        <div style={{ fontSize: 14, marginTop: 2 }}>
-          {t.sold(won(r.winning_bid_krw), r.sale_rate)}
-        </div>
+        <div className="fs-md mt-2">{t.sold(won(r.winning_bid_krw), r.sale_rate)}</div>
       ) : null}
     </div>
   );
   return r.item_id ? (
-    <Link href={`/item/${r.item_id}`} style={{ color: "inherit", textDecoration: "none" }}>
+    <Link href={`/item/${r.item_id}`} className="c-inherit td-none">
       {body}
     </Link>
   ) : (
@@ -183,7 +181,7 @@ export default function Find() {
 
   const searchBox = (
     <>
-      <div style={{ display: "flex", gap: 8, position: "relative" }}>
+      <div className="d-flex gap-8 pos-relative">
         <input
           type="search"
           value={q}
@@ -197,29 +195,13 @@ export default function Find() {
               remember(q.trim());
             }
           }}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            fontSize: 16,
-            padding: "10px 12px",
-            border: 0,
-            borderRadius: 14,
-            background: "var(--panel)",
-            color: "inherit",
-          }}
+          className="f-1 minw-0 fs-base py-10 px-12 b-0 r-14 bg-panel c-inherit"
         />
         <select
           value={status}
           onChange={(e) => pickStatus(e.target.value as FindStatus)}
           aria-label="상태"
-          style={{
-            fontSize: 15,
-            padding: "0 8px",
-            border: 0,
-            borderRadius: 14,
-            background: "var(--panel)",
-            color: "inherit",
-          }}
+          className="fs-base py-0 px-8 b-0 r-14 bg-panel c-inherit"
         >
           {Object.entries(t.status).map(([k, v]) => (
             <option key={k} value={k}>
@@ -229,23 +211,16 @@ export default function Find() {
         </select>
         {focus && !q && recent.length > 0 && (
           <div
+            className="pos-absolute bg-surface b-0 r-14 py-6 px-0 mt-4"
             style={{
-              position: "absolute",
               top: "100%",
               left: 0,
               right: 0,
               zIndex: 5,
-              background: "var(--surface)",
               boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-              border: 0,
-              borderRadius: 14,
-              padding: "6px 0",
-              marginTop: 4,
             }}
           >
-            <div className="sub" style={{ margin: "0 12px 4px", fontSize: 12 }}>
-              {t.recent}
-            </div>
+            <div className="sub mt-0 mb-4 mx-12 fs-xs">{t.recent}</div>
             {recent.map((w) => (
               <button
                 key={w}
@@ -253,16 +228,7 @@ export default function Find() {
                   setQ(w);
                   setQuery(w);
                 }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  border: 0,
-                  background: "none",
-                  color: "inherit",
-                  padding: "8px 12px",
-                  fontSize: 15,
-                }}
+                className="d-block w-full ta-left b-0 bg-none c-inherit py-8 px-12 fs-base"
               >
                 {w}
               </button>
@@ -271,7 +237,7 @@ export default function Find() {
         )}
       </div>
       {status !== "sold" && status !== "withdrawn" && (
-        <div className="pills" role="group" aria-label={t.sourceLabel} style={{ marginTop: 10 }}>
+        <div className="pills mt-10" role="group" aria-label={t.sourceLabel}>
           {(["all", "court", "onbid"] as const).map((s) => (
             <button key={s} className={source === s ? "on" : ""} onClick={() => pickSource(s)}>
               {t.source[s]}
@@ -280,9 +246,9 @@ export default function Find() {
         </div>
       )}
       {!query && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+        <div className="d-flex gap-8 f-wrap mt-10">
           {regions.map((r) => (
-            <span key={r} className="chip gray" style={{ fontSize: 13, padding: "6px 10px" }}>
+            <span key={r} className="chip gray fs-sm py-6 px-10">
               {r}
             </span>
           ))}
@@ -292,12 +258,8 @@ export default function Find() {
               <button
                 key={s}
                 onClick={() => setSort(s)}
-                className="chip"
+                className="chip fs-sm py-6 px-10 b-0 mh-32"
                 style={{
-                  fontSize: 13,
-                  padding: "6px 10px",
-                  border: 0,
-                  minHeight: 32,
                   background: sort === s ? "var(--blue)" : "var(--gray-chip)",
                   color: sort === s ? "#fff" : "var(--gray-text)",
                 }}
@@ -345,15 +307,15 @@ export default function Find() {
         <PageHeader title={t.title} sub={regions.join(" · ")} />
         <div className="pc-grid g-18-34-48">
           <section
-            className="section pc-sticky"
-            style={{ marginTop: 0, maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+            className="section pc-sticky mt-0 oy-auto"
+            style={{ maxHeight: "calc(100vh - 140px)" }}
           >
             <h2>{t.cond}</h2>
             {filters}
           </section>
-          <section className="section" style={{ marginTop: 0 }}>
+          <section className="section mt-0">
             {searchBox}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div className="d-flex jc-between ai-center">
               {countLine}
               <div className="pills">
                 <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>
@@ -366,7 +328,7 @@ export default function Find() {
             </div>
             {empty && <p className="sub">{t.noResult}</p>}
             {asTable ? (
-              <div style={{ overflowX: "auto" }}>
+              <div className="ox-auto">
                 <table className="pro-table">
                   <thead>
                     <tr>
@@ -382,8 +344,7 @@ export default function Find() {
                       <tr
                         key={c.item_id}
                         onClick={() => setPick(c.item_id)}
-                        className={pick === c.item_id ? "row-on" : ""}
-                        style={{ cursor: "pointer" }}
+                        className={`${pick === c.item_id ? "row-on" : ""} cur-pointer`}
                       >
                         <td>{dday(c.d_day)}</td>
                         <td>
@@ -417,11 +378,8 @@ export default function Find() {
               <ResultRow key={r.result_id} r={r} />
             ))}
           </section>
-          <div
-            className="pc-sticky"
-            style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
-          >
-            <section className="section map-box" style={{ marginTop: 0 }}>
+          <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
+            <section className="section map-box mt-0">
               <span className="sub">{t.mapSoon}</span>
             </section>
             <PickPanel id={pick} />
@@ -442,9 +400,7 @@ export default function Find() {
       </button>
       {condOpen && <section className="section">{filters}</section>}
       {countLine}
-      <section className="section" style={{ paddingTop: 6, paddingBottom: 6 }}>
-        {results}
-      </section>
+      <section className="section pt-6 pb-6">{results}</section>
     </main>
   );
 }

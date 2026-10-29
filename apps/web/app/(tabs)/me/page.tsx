@@ -43,37 +43,28 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
     meApi.saveBid(token, b).then(onSaved);
   };
   const input = (k: keyof typeof f, label: string, type = "text") => (
-    <label style={{ display: "block", fontSize: 13, marginTop: 8 }}>
-      <span className="sub" style={{ margin: 0 }}>
-        {label}
-      </span>
+    <label className="d-block fs-sm mt-8">
+      <span className="sub m-0">{label}</span>
       <input
         type={type}
         inputMode={type === "text" ? "numeric" : undefined}
         value={f[k]}
         onChange={(e) => setF({ ...f, [k]: e.target.value })}
-        style={{
-          width: "100%",
-          fontSize: 16,
-          padding: "8px 10px",
-          border: 0,
-          background: "var(--panel)",
-          borderRadius: 14,
-        }}
+        className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
       />
     </label>
   );
   return (
-    <div style={{ padding: "12px 0" }}>
-      <div style={{ fontWeight: 600 }}>
+    <div className="py-12 px-0">
+      <div className="fw-6">
         {x.place} <span className="sub">· {md(x.sale_date)}</span>
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+      <div className="d-flex gap-6 f-wrap mt-8">
         {Object.entries(t.outcome).map(([k, v]) => (
           <button
             key={k}
-            className={`chip ${outcome === k ? "green" : "gray"}`}
-            style={{ minHeight: 36, border: 0 }}
+            className={`${`chip ${outcome === k ? "green" : "gray"}`} mh-36 b-0`}
+
             onClick={() => setOutcome(k)}
           >
             {v}
@@ -90,7 +81,7 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
         </>
       )}
       {outcome && (
-        <button className="btn primary" style={{ marginTop: 10, width: "100%" }} onClick={save}>
+        <button className="btn primary mt-10 w-full" onClick={save}>
           {t.save}
         </button>
       )}
@@ -103,33 +94,25 @@ function WonCard({ b }: { b: Bid }) {
   const s = b.schedule!;
   const rng = (a: [string, string]) => `${md(a[0])} ~ ${md(a[1])}`;
   return (
-    <div style={{ padding: "12px 0" }}>
-      <Link href={`/item/${b.item_id}`} style={{ fontWeight: 600, color: "inherit" }}>
+    <div className="py-12 px-0">
+      <Link href={`/item/${b.item_id}`} className="fw-6 c-inherit">
         {b.place}
       </Link>
-      <div className="sub" style={{ margin: 0 }}>
+      <div className="sub m-0">
         {b.case_no} · {won(b.my_bid_krw)}
       </div>
       {[md(s.summary.pay), rng(s.summary.move_out), rng(s.summary.forced)].map((v, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontSize: 14,
-            padding: "4px 0",
-          }}
-        >
+        <div key={i} className="d-flex jc-between fs-md py-4 px-0">
           <span>{t.summary[i]}</span>
           <b>{v}</b>
         </div>
       ))}
       {s.pay_estimated && <div className="sub">{t.payGuess}</div>}
-      <div style={{ marginTop: 6 }}>
+      <div className="mt-6">
         {s.rows
           .filter((r) => r.deadline && r.key !== "pay")
           .map((r) => (
-            <div key={r.key} style={{ fontSize: 13, color: "var(--amber)" }}>
+            <div key={r.key} className="fs-sm c-amber">
               ◆ {r.label} {r.short}
             </div>
           ))}
@@ -183,12 +166,8 @@ export default function Me() {
   const box = (title: string, hint: string | null, children: React.ReactNode, show: boolean) =>
     show || pc ? (
       <section className="section">
-        <h2 style={{ fontSize: 16, margin: 0 }}>{title}</h2>
-        {hint && (
-          <p className="sub" style={{ margin: "4px 0 0" }}>
-            {hint}
-          </p>
-        )}
+        <h2 className="fs-base m-0">{title}</h2>
+        {hint && <p className="sub mt-4 mb-0 mx-0">{hint}</p>}
         {children}
       </section>
     ) : null;
@@ -209,12 +188,12 @@ export default function Me() {
           }
           className="menu-row"
         >
-          <span style={{ minWidth: 0 }}>
+          <span className="minw-0">
             <b style={{ color: w.d_day != null && w.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
               {dday(w.d_day)}
             </b>{" "}
             {w.sale_date?.slice(5).replace("-", "/")} · {w.place} {w.building ?? w.usage}
-            <span className="sub" style={{ display: "block" }}>
+            <span className="sub d-block">
               {copy.watch.steps[w.step]} · {w.court} {w.case_no}
             </span>
           </span>
@@ -234,7 +213,7 @@ export default function Me() {
       ))}
       {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
       {d && d.history.length > 0 && (
-        <table className="pro-table" style={{ marginTop: 8 }}>
+        <table className="pro-table mt-8">
           <thead>
             <tr>
               <th>{t.cols.place}</th>
@@ -269,17 +248,14 @@ export default function Me() {
     <>
       {mocks.length === 0 && <p className="sub">{t.mockEmpty}</p>}
       {mocks.map((x) => (
-        <div key={x.mock_id} style={{ padding: "10px 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <Link
-              href={`/item/${encodeURIComponent(x.item_id)}`}
-              style={{ color: "inherit", fontWeight: 600, fontSize: 14 }}
-            >
+        <div key={x.mock_id} className="py-10 px-0">
+          <div className="d-flex jc-between gap-8">
+            <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="c-inherit fw-6 fs-md">
               {x.place} <span className="sub">{md(x.sale_date)}</span>
             </Link>
             <button
-              className="chip gray"
-              style={{ border: 0, minHeight: 28 }}
+              className="chip gray b-0 mh-28"
+
               onClick={() => dropMock(x.mock_id)}
             >
               {copy.mock.remove}
@@ -291,7 +267,7 @@ export default function Me() {
             {x.reason ? ` · ${x.reason}` : ""}
           </div>
           {x.review.map((line) => (
-            <div key={line} style={{ fontSize: 14, marginTop: 2 }}>
+            <div key={line} className="fs-md mt-2">
               {line}
             </div>
           ))}

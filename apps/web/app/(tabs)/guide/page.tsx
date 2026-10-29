@@ -13,42 +13,23 @@ export default function Guide() {
   return (
     <main className="page">
       <PageHeader title={t.title} back="/more" />
-      <div className="sub" style={{ fontSize: 15, margin: "0 4px 8px" }}>
-        {t.sub}
-      </div>
+      <div className="sub fs-base mt-0 mb-8 mx-4">{t.sub}</div>
 
       <section className="section">
         <h2>{t.stepsTitle}</h2>
         {t.steps.map(([name, body, href, where], i) => (
-          <div
-            key={name}
-            style={{
-              display: "flex",
-              gap: 12,
-              padding: "12px 0",
-            }}
-          >
+          <div key={name} className="d-flex gap-12 py-12 px-0">
             <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                background: "var(--blue-soft)",
-                color: "var(--blue-text)",
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
+              className="r-14 bg-blue-soft c-blue-text fw-7 d-flex ai-center jc-center f-none"
+              style={{ width: 28, height: 28 }}
             >
               {i + 1}
             </div>
             <div>
-              <div style={{ fontWeight: 700 }}>{name}</div>
-              <div style={{ fontSize: 14, marginTop: 2 }}>{body}</div>
+              <div className="fw-7">{name}</div>
+              <div className="fs-md mt-2">{body}</div>
               {href ? (
-                <Link href={href} className="sub" style={{ color: "var(--blue)" }}>
+                <Link href={href} className="sub c-blue">
                   {where} ›
                 </Link>
               ) : (
@@ -65,23 +46,11 @@ export default function Guide() {
           <div key={w} style={{}}>
             <button
               onClick={() => setOpen(open === w ? null : w)}
-              style={{
-                width: "100%",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: 0,
-                background: "none",
-                padding: "12px 0",
-                fontSize: 15,
-                fontWeight: 600,
-                textAlign: "left",
-                minHeight: 44,
-              }}
+              className="w-full d-flex jc-between ai-center b-0 bg-none py-12 px-0 fs-base fw-6 ta-left mh-44"
             >
               {w} <span className="sub">{open === w ? "⌃" : "⌄"}</span>
             </button>
-            {open === w && <div style={{ fontSize: 14, paddingBottom: 12 }}>{body}</div>}
+            {open === w && <div className="fs-md pb-12">{body}</div>}
           </div>
         ))}
       </section>
@@ -89,14 +58,12 @@ export default function Guide() {
       <section className="section">
         <h2>{t.mistakesTitle}</h2>
         {t.mistakes.map((m) => (
-          <div key={m} style={{ fontSize: 14, padding: "8px 0" }}>
+          <div key={m} className="fs-md py-8 px-0">
             ◆ {m}
           </div>
         ))}
       </section>
-      <div className="sub" style={{ margin: "0 4px" }}>
-        {t.note}
-      </div>
+      <div className="sub my-0 mx-4">{t.note}</div>
     </main>
   );
 }

@@ -24,27 +24,17 @@ function Sheet({ word, text, onClose }: { word: string; text: string; onClose: (
         aria-modal="true"
         aria-label={word}
         onClick={(e) => e.stopPropagation()}
-        className="term-sheet sheet"
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          maxWidth: 560,
-          margin: "0 auto",
-        }}
+        className="term-sheet sheet pos-absolute my-0 mx-auto"
+        style={{ left: 0, right: 0, bottom: 0, maxWidth: 560 }}
       >
         <div className="sheet-handle" />
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <b style={{ fontSize: 17 }}>{word}</b>
-          <button
-            onClick={onClose}
-            style={{ border: 0, background: "none", minWidth: 44, minHeight: 44, fontSize: 15 }}
-          >
+        <div className="d-flex jc-between ai-center">
+          <b className="fs-lg">{word}</b>
+          <button onClick={onClose} className="b-0 bg-none mh-44 fs-base" style={{ minWidth: 44 }}>
             {copy.terms.close}
           </button>
         </div>
-        <p style={{ fontSize: 16, lineHeight: 1.6, margin: "6px 0 12px" }}>{text}</p>
+        <p className="fs-base lh-16 mt-6 mb-12 mx-0">{text}</p>
         <Link href="/guide" className="sub" onClick={onClose}>
           {copy.terms.more} ›
         </Link>
@@ -66,12 +56,9 @@ export function Term({ word, children }: { word: string; children?: React.ReactN
           e.stopPropagation();
           setOpen(true);
         }}
+        className="b-0 bg-none p-0 c-inherit"
         style={{
-          border: 0,
-          background: "none",
-          padding: 0,
           font: "inherit",
-          color: "inherit",
           textDecoration: "underline dotted",
           textUnderlineOffset: 3,
           cursor: "help",

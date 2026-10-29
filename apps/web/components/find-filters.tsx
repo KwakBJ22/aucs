@@ -83,7 +83,7 @@ export function FindFilters({
       </div>
       <div className="f-block">
         <div className="f-label">{t.area}</div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div className="d-flex gap-6 ai-center">
           <input
             aria-label="최소 면적"
             type="number"
@@ -131,9 +131,7 @@ export function FindFilters({
         <label className="switch-row">
           <span>
             <b>{t.safe}</b>
-            <span className="sub" style={{ display: "block" }}>
-              {t.safeSub}
-            </span>
+            <span className="sub d-block">{t.safeSub}</span>
           </span>
           <input
             type="checkbox"
@@ -151,7 +149,7 @@ export function FindFilters({
           {t.avoid} {own ? "▴" : "›"}
         </button>
         {own && (
-          <div className="pills" style={{ marginTop: 6 }}>
+          <div className="pills mt-6">
             {Object.entries(t.avoids).map(([k, v]) => (
               <button
                 key={k}
@@ -164,16 +162,16 @@ export function FindFilters({
           </div>
         )}
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div className="d-flex gap-8 f-wrap">
         <button
-          className="chip gray"
-          style={{ border: 0, minHeight: 36 }}
+          className="chip gray b-0 mh-36"
+
           onClick={() => onChange({})}
         >
           {t.condReset}
         </button>
         {onSave && (
-          <button className="chip green" style={{ border: 0, minHeight: 36 }} onClick={onSave}>
+          <button className="chip green b-0 mh-36" onClick={onSave}>
             {t.saveCond}
           </button>
         )}

@@ -43,12 +43,12 @@ export default function CalcPage() {
         sub={d ? `${d.court} ${d.case_no} · ${d.place} ${d.building ?? d.usage ?? ""}` : undefined}
       />
       <div className="pc-grid g-60-40">
-        <section className="section" style={{ marginTop: 0 }}>
+        <section className="section mt-0">
           <CalcBox id={id} />
         </section>
         <div className="pc-sticky">
           {d && (
-            <section className="section" style={{ marginTop: 0 }}>
+            <section className="section mt-0">
               <h2>{t.numbers}</h2>
               <Row label={copy.item.pc.sale} value={`${dday(d.d_day)} ${d.sale_date ?? ""}`} />
               <Row label={copy.item.pc.appraisal} value={won(d.appraisal_krw)} />
@@ -60,9 +60,7 @@ export default function CalcPage() {
               {range && (
                 <Row label={copy.item.rangeLabel} value={`${won(range[0])} ~ ${won(range[1])}`} />
               )}
-              <div className="sub" style={{ marginTop: 6 }}>
-                {worth?.answer}
-              </div>
+              <div className="sub mt-6">{worth?.answer}</div>
             </section>
           )}
           <section className="section">
@@ -70,7 +68,7 @@ export default function CalcPage() {
             {!session && <p className="sub">{t.loginForSaved}</p>}
             {session && (!w || w.calcs.length === 0) && <p className="sub">{t.savedNone}</p>}
             {w?.calcs.map((x) => (
-              <div key={x.bid_krw} className="line-row" style={{ fontSize: 14 }}>
+              <div key={x.bid_krw} className="line-row fs-md">
                 <b>{won(x.bid_krw)}</b>
                 <span className="sub">
                   {x.cash_krw ? copy.ws.cashNeed(won(x.cash_krw)) : ""} · {x.saved_at}

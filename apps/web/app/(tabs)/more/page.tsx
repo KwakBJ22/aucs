@@ -34,17 +34,13 @@ export default function More() {
         <>
           <h2>{t.hello}</h2>
           <div className="sub">{session.user.email}</div>
-          <div className="chip gray" style={{ marginTop: 8 }}>
-            {t.plan}
-          </div>
+          <div className="chip gray mt-8">{t.plan}</div>
         </>
       ) : (
         <>
           <h2>{t.title}</h2>
-          <div className="sub" style={{ fontSize: 14 }}>
-            {t.sub}
-          </div>
-          <Link href="/login" className="btn kakao" style={{ marginTop: 14 }}>
+          <div className="sub fs-md">{t.sub}</div>
+          <Link href="/login" className="btn kakao mt-14">
             {copy.home.kakao}
           </Link>
         </>
@@ -87,7 +83,7 @@ export default function More() {
       <h2>{t.alerts}</h2>
       {searches.length === 0 && <p className="sub">{t.alertsNone}</p>}
       {searches.map((x) => (
-        <div key={x.search_id} className="line-row" style={{ fontSize: 14 }}>
+        <div key={x.search_id} className="line-row fs-md">
           <span>{x.name}</span>
           <span className="sub">{x.delivery === "instant" ? t.instant : t.daily}</span>
         </div>
@@ -99,7 +95,7 @@ export default function More() {
     </section>
   );
   const menu = (
-    <section className="section" id="menu" style={{ padding: "4px 18px" }}>
+    <section className="section py-4 px-18" id="menu">
       {t.items.map(([name, href]) =>
         href ? (
           <Link key={name} href={href} className="menu-row">
@@ -115,8 +111,8 @@ export default function More() {
       )}
       {session && (
         <button
-          className="menu-row"
-          style={{ width: "100%", border: 0, background: "none", textAlign: "left" }}
+          className="menu-row w-full b-0 bg-none ta-left"
+
           onClick={() => void signOut()}
         >
           <span>{t.logout}</span>
@@ -131,7 +127,7 @@ export default function More() {
       <main className="page">
         <PageHeader title={t.pcTitle} />
         <div className="pc-grid g-20-80">
-          <nav className="section toc pc-sticky" style={{ marginTop: 0 }}>
+          <nav className="section toc pc-sticky mt-0">
             {t.toc.map(([label, href]) => (
               <a key={href} href={href}>
                 {label}

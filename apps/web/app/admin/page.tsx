@@ -70,18 +70,18 @@ export default function AdminPage() {
 
   if (!token) {
     return (
-      <main style={{ maxWidth: 420, margin: "0 auto", padding: "32px 20px" }}>
-        <h1 style={{ fontSize: 24 }}>{t.title}</h1>
+      <main className="my-0 mx-auto py-32 px-20" style={{ maxWidth: 420 }}>
+        <h1 className="fs-2xl">{t.title}</h1>
         <label>
           {t.tokenLabel}
           <input
             type="password"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            style={{ display: "block", width: "100%", padding: 12, margin: "8px 0", fontSize: 16 }}
+            className="d-block w-full p-12 my-8 mx-0 fs-base"
           />
         </label>
-        <button onClick={() => void load(input)} style={{ padding: "12px 20px", fontSize: 16 }}>
+        <button onClick={() => void load(input)} className="py-12 px-20 fs-base">
           {t.tokenSave}
         </button>
         {error && <p style={{ color: "#d64545" }}>{error}</p>}
@@ -91,12 +91,12 @@ export default function AdminPage() {
 
   const dbUsed = status ? status.counts.db_bytes / status.db_limit_bytes : 0;
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
-      <h1 style={{ fontSize: 24 }}>{t.title}</h1>
+    <main className="my-0 mx-auto py-24 px-16" style={{ maxWidth: 960 }}>
+      <h1 className="fs-2xl">{t.title}</h1>
 
       <section style={box}>
-        <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.jobs}</h2>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <h2 className="fs-lg mt-0">{t.jobs}</h2>
+        <table className="w-full fs-md" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr>
               <th style={th}>{t.job}</th>
@@ -120,7 +120,7 @@ export default function AdminPage() {
           </tbody>
         </table>
         {status && (
-          <p style={{ fontSize: 14, color: dbUsed > 0.9 ? "#d64545" : "#6b7280" }}>
+          <p className="fs-md" style={{ color: dbUsed > 0.9 ? "#d64545" : "#6b7280" }}>
             {t.db} {formatBytes(status.counts.db_bytes)} / {formatBytes(status.db_limit_bytes)}
           </p>
         )}
@@ -128,8 +128,8 @@ export default function AdminPage() {
 
       {status?.metrics && (
         <section style={box}>
-          <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.metrics}</h2>
-          <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+          <h2 className="fs-lg mt-0">{t.metrics}</h2>
+          <ul className="pl-18 fs-md">
             {t.metricRows(status.metrics).map((line) => (
               <li key={line}>{line}</li>
             ))}
@@ -138,15 +138,15 @@ export default function AdminPage() {
       )}
 
       <section style={box}>
-        <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.review}</h2>
+        <h2 className="fs-lg mt-0">{t.review}</h2>
         {review &&
           review.fields.length + review.signals.length + (review.reports?.length ?? 0) === 0 && (
             <p>{t.reviewEmpty}</p>
           )}
         {(review?.reports?.length ?? 0) > 0 && (
           <>
-            <b style={{ fontSize: 14 }}>{t.reportsTitle}</b>
-            <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+            <b className="fs-md">{t.reportsTitle}</b>
+            <ul className="pl-18 fs-md">
               {review?.reports?.map((r) => (
                 <li key={r.report_id}>
                   {r.at} · <a href={`/item/${encodeURIComponent(r.item_id)}`}>{r.item_id}</a> ·{" "}
@@ -160,7 +160,7 @@ export default function AdminPage() {
                           .then(() => load(token))
                           .catch(() => {})
                       }
-                      style={{ marginLeft: 6, fontSize: 12, padding: "2px 8px" }}
+                      className="ml-6 fs-xs py-2 px-8"
                     >
                       {t.reportAction[st]}
                     </button>
@@ -170,7 +170,7 @@ export default function AdminPage() {
             </ul>
           </>
         )}
-        <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+        <ul className="pl-18 fs-md">
           {review?.signals.map((s) => (
             <li key={`${s.item_id}-${s.title}`}>
               {s.sale_date} · {s.item_id} · {s.title}
@@ -185,12 +185,9 @@ export default function AdminPage() {
       </section>
 
       <section style={box}>
-        <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.flags}</h2>
+        <h2 className="fs-lg mt-0">{t.flags}</h2>
         {flags.map((f) => (
-          <label
-            key={f.flag_key}
-            style={{ display: "flex", gap: 12, alignItems: "center", minHeight: 44 }}
-          >
+          <label key={f.flag_key} className="d-flex gap-12 ai-center mh-44">
             <input
               type="checkbox"
               checked={f.enabled}
@@ -205,9 +202,9 @@ export default function AdminPage() {
       </section>
 
       <section style={box}>
-        <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.rules}</h2>
+        <h2 className="fs-lg mt-0">{t.rules}</h2>
         {rules.length === 0 && <p>{t.rulesEmpty}</p>}
-        <ul style={{ paddingLeft: 18, fontSize: 14 }}>
+        <ul className="pl-18 fs-md">
           {rules.map((r) => (
             <li key={`${r.rule_key}-${r.valid_from}`}>
               {r.rule_key} · {r.valid_from}~{r.valid_to ?? ""} · {r.basis}

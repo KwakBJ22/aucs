@@ -29,36 +29,32 @@ function StepRow({
   const [open, setOpen] = useState(false);
   const choices = c.step === "result" ? (["after"] as WatchStep[]) : MOVABLE;
   return (
-    <div style={{ padding: "0 0 12px 84px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div className="pt-0 pb-12 pl-48 pr-0 d-flex gap-6 f-wrap">
       {!open ? (
         <>
           {c.changed && (
-            <span className="chip orange" title={t.changedHint} style={{ minHeight: 32 }}>
+            <span className="chip orange mh-32" title={t.changedHint}>
               {t.changed}
             </span>
           )}
           <button
-            className="chip green"
-            style={{ border: 0, minHeight: 32 }}
+            className="chip green b-0 mh-32"
+
             onClick={() => setOpen(true)}
           >
             {t.steps[c.step]} ▾
           </button>
-          <Link
-            href={`/watch/${encodeURIComponent(c.item_id)}`}
-            className="chip gray"
-            style={{ minHeight: 32 }}
-          >
+          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray mh-32">
             {copy.ws.open} ›
           </Link>
           {c.step === "result" ? (
-            <Link href="/me" className="chip gray" style={{ minHeight: 32 }}>
+            <Link href="/me" className="chip gray mh-32">
               {t.resultShort} ›
             </Link>
           ) : (
             <button
-              className={`chip ${c.in_compare ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 32 }}
+              className={`${`chip ${c.in_compare ? "green" : "gray"}`} b-0 mh-32`}
+
               onClick={onCompare}
             >
               {c.in_compare ? copy.compare.added : copy.compare.add}
@@ -67,14 +63,12 @@ function StepRow({
         </>
       ) : (
         <>
-          <div className="sub" style={{ width: "100%", margin: 0 }}>
-            {t.moveHint}
-          </div>
+          <div className="sub w-full m-0">{t.moveHint}</div>
           {choices.map((s) => (
             <button
               key={s}
-              className={`chip ${s === c.step ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 36 }}
+              className={`${`chip ${s === c.step ? "green" : "gray"}`} b-0 mh-36`}
+
               onClick={() => {
                 setOpen(false);
                 if (s !== c.step) onMove(s);
@@ -93,29 +87,23 @@ function StepRow({
 function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () => void }) {
   return (
     <button className={`board-card${on ? " on" : ""}`} onClick={onPick}>
-      <span className="sub" style={{ margin: 0, fontSize: 12 }}>
+      <span className="sub m-0 fs-xs">
         <b style={{ color: c.d_day != null && c.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
           {dday(c.d_day)}
         </b>{" "}
         · {c.court}
         {c.changed && (
-          <b style={{ color: "var(--amber)" }} title={t.changedHint}>
+          <b className="c-amber" title={t.changedHint}>
             {" "}
             · {t.changed}
           </b>
         )}
       </span>
-      <span className="clamp2" style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+      <span className="clamp2 fs-sm fw-6 mt-2">
         {c.building?.split(" ")[0] ?? c.usage} <span className="sub">{c.place}</span>
       </span>
-      <span style={{ fontSize: 15, fontWeight: 700, display: "block", marginTop: 4 }}>
-        {won(c.min_price_krw)}
-      </span>
-      {c.in_compare && (
-        <span className="chip green" style={{ marginTop: 6 }}>
-          {copy.compare.added}
-        </span>
-      )}
+      <span className="fs-base fw-7 d-block mt-4">{won(c.min_price_krw)}</span>
+      {c.in_compare && <span className="chip green mt-6">{copy.compare.added}</span>}
     </button>
   );
 }
@@ -170,15 +158,15 @@ export default function Watch() {
       title={t.title}
       sub={list ? t.summary(list.length, inCompare) : undefined}
       right={
-        <div style={{ display: "flex", gap: 6 }}>
+        <div className="d-flex gap-6">
           <button
-            className={`chip ${recent ? "green" : "gray"}`}
-            style={{ border: 0, minHeight: 32 }}
+            className={`${`chip ${recent ? "green" : "gray"}`} b-0 mh-32`}
+
             onClick={() => setRecent(recent ? null : loadRecent())}
           >
             {t.recent}
           </button>
-          <Link href="/compare" className="chip gray" style={{ minHeight: 32 }}>
+          <Link href="/compare" className="chip gray mh-32">
             {copy.compare.title} {inCompare} ›
           </Link>
         </div>
@@ -194,7 +182,7 @@ export default function Watch() {
         <Link
           key={r.id}
           href={`/item/${encodeURIComponent(r.id)}`}
-          style={{ display: "block", padding: "10px 0", fontSize: 14, color: "inherit" }}
+          className="d-block py-10 px-0 fs-md c-inherit"
         >
           {r.label} ›
         </Link>
@@ -216,29 +204,23 @@ export default function Watch() {
         {header}
         {recentBox}
         {errorBox}
-        {msg && (
-          <div className="sub" style={{ color: "var(--amber)" }}>
-            {msg}
-          </div>
-        )}
+        {msg && <div className="sub c-amber">{msg}</div>}
         {empty}
         {list && list.length > 0 && (
           <div className="pc-grid g-60-40">
-            <section className="section" style={{ marginTop: 0 }}>
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
+            <section className="section mt-0">
+              <div className="d-flex jc-between ai-center">
                 <h2>{t.boardTitle}</h2>
                 <button
-                  className="chip gray"
-                  style={{ border: 0, minHeight: 32 }}
+                  className="chip gray b-0 mh-32"
+
                   onClick={() => setAsTable(!asTable)}
                 >
                   {asTable ? t.asBoard : t.asTable}
                 </button>
               </div>
               {asTable ? (
-                <div style={{ overflowX: "auto", marginTop: 8 }}>
+                <div className="ox-auto mt-8">
                   <table className="pro-table">
                     <thead>
                       <tr>
@@ -254,8 +236,7 @@ export default function Watch() {
                         <tr
                           key={c.item_id}
                           onClick={() => setPick(c.item_id)}
-                          className={pick === c.item_id ? "row-on" : ""}
-                          style={{ cursor: "pointer" }}
+                          className={`${pick === c.item_id ? "row-on" : ""} cur-pointer`}
                         >
                           <td>{t.steps[c.step]}</td>
                           <td>
@@ -267,8 +248,8 @@ export default function Watch() {
                           <td>{won(c.min_price_krw)}</td>
                           <td>
                             <button
-                              className={`chip ${c.in_compare ? "green" : "gray"}`}
-                              style={{ border: 0 }}
+                              className={`${`chip ${c.in_compare ? "green" : "gray"}`} b-0`}
+
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleCompare(c);
@@ -303,14 +284,9 @@ export default function Watch() {
                   ))}
                 </div>
               )}
-              <div className="sub" style={{ marginTop: 8 }}>
-                {t.boardHint}
-              </div>
+              <div className="sub mt-8">{t.boardHint}</div>
             </section>
-            <div
-              className="pc-sticky"
-              style={{ maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
-            >
+            <div className="pc-sticky oy-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
               {pick && (
                 <WorkspacePanel
                   key={pick}
@@ -336,16 +312,12 @@ export default function Watch() {
       {header}
       {recentBox}
       {errorBox}
-      {msg && (
-        <div className="sub" style={{ color: "var(--amber)", marginBottom: 6 }}>
-          {msg}
-        </div>
-      )}
+      {msg && <div className="sub c-amber mb-6">{msg}</div>}
       {list && list.length > 0 && (
-        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        <div className="d-flex gap-6 ox-auto pb-4">
           <button
-            className={`chip ${only === null ? "green" : "gray"}`}
-            style={{ border: 0, minHeight: 32, whiteSpace: "nowrap" }}
+            className={`${`chip ${only === null ? "green" : "gray"}`} b-0 mh-32 nowrap`}
+
             onClick={() => {
               setOnly(null);
               setOnlyChanged(false);
@@ -355,8 +327,8 @@ export default function Watch() {
           </button>
           {nChanged > 0 && (
             <button
-              className={`chip ${onlyChanged ? "green" : "orange"}`}
-              style={{ border: 0, minHeight: 32, whiteSpace: "nowrap" }}
+              className={`${`chip ${onlyChanged ? "green" : "orange"}`} b-0 mh-32 nowrap`}
+
               onClick={() => setOnlyChanged(!onlyChanged)}
               title={t.changedHint}
             >
@@ -366,8 +338,8 @@ export default function Watch() {
           {WATCH_STEPS.filter((s) => count(s) > 0).map((s) => (
             <button
               key={s}
-              className={`chip ${only === s ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 32, whiteSpace: "nowrap" }}
+              className={`${`chip ${only === s ? "green" : "gray"}`} b-0 mh-32 nowrap`}
+
               onClick={() => setOnly(only === s ? null : s)}
             >
               {t.steps[s]} {count(s)}
@@ -378,7 +350,7 @@ export default function Watch() {
       {empty}
       {shownList &&
         groups.map((s) => (
-          <section key={s} className="section" style={{ paddingTop: 12, paddingBottom: 0 }}>
+          <section key={s} className="section pt-12 pb-0">
             <h2>
               {t.steps[s]} <span className="sub">{count(s)}</span>
             </h2>

@@ -52,7 +52,7 @@ function ProMarket() {
   return (
     <main className="page pro-page">
       <PageHeader title={t.title} />
-      <div className="pills" role="group" style={{ marginBottom: 8 }}>
+      <div className="pills mb-8" role="group">
         {(["court", "onbid"] as const).map((k) => (
           <button
             key={k}
@@ -66,7 +66,7 @@ function ProMarket() {
         ))}
       </div>
       {!onbid && (
-        <nav className="seg" style={{ marginBottom: 4 }}>
+        <nav className="seg mb-4">
           <a href="#region">{t.tabRegion}</a>
           <a href="#cases">{t.cases}</a>
           <a href="#score">{t.score}</a>
@@ -106,8 +106,8 @@ function ProMarket() {
           {Object.entries(copy.pro.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${usage.includes(k) ? "green" : "gray"}`}
-              style={{ border: 0, minHeight: 30 }}
+              className={`${`chip ${usage.includes(k) ? "green" : "gray"}`} b-0 mh-30`}
+
               onClick={() =>
                 setUsage(usage.includes(k) ? usage.filter((x) => x !== k) : [...usage, k])
               }
@@ -123,13 +123,13 @@ function ProMarket() {
       ) : (
         <>
           <section className="section q-sec" id="score">
-            <h2 style={{ fontSize: 15 }}>{t.score}</h2>
+            <h2 className="fs-base">{t.score}</h2>
             {!sc ? (
               <div className="sub">{copy.pro.loading}</div>
             ) : sc.n < MIN_SCORE ? (
               <div className="sub">{t.scoreWait(sc.n, MIN_SCORE)}</div>
             ) : (
-              <div style={{ fontSize: 15 }}>
+              <div className="fs-base">
                 {t.scoreLine(Math.round((sc.inside * 100) / sc.n), sc.n)}{" "}
                 <span className="sub">
                   {t.scoreSplit(
@@ -139,18 +139,12 @@ function ProMarket() {
                 </span>
               </div>
             )}
-            <div className="sub" style={{ marginTop: 4 }}>
-              {t.scoreNote}
-            </div>
+            <div className="sub mt-4">{t.scoreNote}</div>
             {m && m.misses.length > 0 && (
               <>
-                <div style={{ fontSize: 14, fontWeight: 700, marginTop: 12 }}>{t.misses}</div>
+                <div className="fs-md fw-7 mt-12">{t.misses}</div>
                 {m.misses.map((r) => (
-                  <div
-                    key={`${r.court}${r.case_no}${r.sale_date}`}
-                    className="line-row"
-                    style={{ fontSize: 14 }}
-                  >
+                  <div key={`${r.court}${r.case_no}${r.sale_date}`} className="line-row fs-md">
                     <span>
                       {r.item_id ? (
                         <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
@@ -196,13 +190,9 @@ function ProMarket() {
             </div>
           )}
 
-          <section
-            className="section q-sec"
-            id="cases"
-            style={{ padding: 0, overflowX: "auto", marginTop: 12 }}
-          >
-            <div style={{ padding: "14px 14px 0" }}>
-              <h2 style={{ fontSize: 15 }}>{t.cases}</h2>
+          <section className="section q-sec p-0 ox-auto mt-12" id="cases">
+            <div className="pt-14 pb-0 px-14">
+              <h2 className="fs-base">{t.cases}</h2>
             </div>
             <table className="pro-table">
               <thead>
@@ -239,9 +229,7 @@ function ProMarket() {
               </tbody>
             </table>
           </section>
-          <div className="sub" style={{ marginTop: 8 }}>
-            {t.note}
-          </div>
+          <div className="sub mt-8">{t.note}</div>
         </>
       )}
     </main>

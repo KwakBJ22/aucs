@@ -14,16 +14,8 @@ export function HeartButton({ id }: { id: string }) {
         e.stopPropagation();
         void toggle(id);
       }}
-      style={{
-        border: 0,
-        background: "none",
-        padding: 4,
-        minWidth: 44,
-        minHeight: 44,
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "flex-end",
-      }}
+      className="b-0 bg-none p-4 mh-44 d-flex ai-start jc-end"
+      style={{ minWidth: 44 }}
     >
       <svg
         width="20"

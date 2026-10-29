@@ -6,11 +6,9 @@ import { copy } from "@/lib/copy.ko";
 export function LoadError({ onRetry }: { onRetry: () => void }) {
   return (
     <section className="section" role="alert">
-      <b style={{ fontSize: 15 }}>{copy.states.errorTitle}</b>
-      <p className="sub" style={{ margin: "4px 0 10px" }}>
-        {copy.states.errorSub}
-      </p>
-      <button className="chip gray" style={{ border: 0, minHeight: 40 }} onClick={onRetry}>
+      <b className="fs-base">{copy.states.errorTitle}</b>
+      <p className="sub mt-4 mb-10 mx-0">{copy.states.errorSub}</p>
+      <button className="chip gray b-0 mh-40" onClick={onRetry}>
         {copy.states.retry}
       </button>
     </section>

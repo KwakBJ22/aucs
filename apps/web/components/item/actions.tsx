@@ -11,7 +11,7 @@ export function WsLink({ id }: { id: string }) {
   const { ids } = useWatch();
   if (!ids.has(id)) return null;
   return (
-    <Link href={`/watch/${encodeURIComponent(id)}`} className="chip gray" style={{ minHeight: 32 }}>
+    <Link href={`/watch/${encodeURIComponent(id)}`} className="chip gray mh-32">
       {copy.ws.open} ›
     </Link>
   );
