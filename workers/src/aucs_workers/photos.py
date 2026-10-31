@@ -22,6 +22,7 @@ BUCKET = "item-photos"
 MAX = 12
 SIDE = 960
 _client: httpx.Client | None = None
+_warned = False
 
 
 def pull_pics(payload: Any) -> tuple[Any, list[tuple[str, str]]]:
@@ -70,7 +71,16 @@ def safe_name(case_id: str) -> str:
 def store(conn: psycopg.Connection, case_id: str, pics: list[tuple[str, str]]) -> int:
     """사건 사진을 줄여 올리고 core.item_photos 에 적음. 이미 있으면 건너뜀. 올린 장 수."""
     c = client()
-    if not c or not pics:
+    if not pics:
+        return 0
+    if not c:
+        global _warned
+        if not _warned:
+            print(
+                "[사진] .env 의 SUPABASE_URL·SUPABASE_SECRET_KEY 가 비어 사진을 올리지 못함 — 키를 넣고 court_docs --photos 로 다시 받기",
+                flush=True,
+            )
+            _warned = True
         return 0
     have = conn.execute(
         "select count(*) from core.item_photos where case_id = %s", (case_id,)

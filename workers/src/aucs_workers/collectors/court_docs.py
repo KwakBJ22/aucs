@@ -82,6 +82,24 @@ def watched_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
     return [(court, case_no) for court, case_no in rows if court in COURTS]
 
 
+PHOTO_SQL = """
+select c.court_code, c.case_no, min(i.sale_date) as d,
+       bool_or(exists (select 1 from app.watch_items w where w.item_id = i.item_id)) as watched
+from core.cases c join core.items i using (case_id)
+where i.sale_date >= %s
+  and exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id and r.doc_kind like 'item_detail_%%')
+  and not exists (select 1 from core.item_photos p where p.case_id = c.case_id)
+group by 1, 2 order by watched desc, d
+limit %s
+"""
+
+
+def photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """사진 다시 받기(11/1 사진을 원문에서 빼면서 키가 비어 못 옮긴 것): 관심 먼저, 기일 가까운 순."""
+    rows = conn.execute(PHOTO_SQL, (today, ARCHIVE_MAX * 4)).fetchall()
+    return [(court, case_no) for court, case_no, _, _ in rows if court in COURTS]
+
+
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     rows = conn.execute(
         """select c.court_code, c.case_no, min(i.sale_date),
@@ -198,6 +216,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--archive", action="store_true")
     ap.add_argument("--watched", action="store_true", help="관심에 담은 뒤 아직 안 받은 서류만")
+    ap.add_argument(
+        "--photos", action="store_true", help="진행 중인데 현장 사진이 없는 사건만 다시 받기(11/1)"
+    )
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"))
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
@@ -207,6 +228,8 @@ def main() -> None:
             targets = [tuple(a.case)]
         elif a.watched:
             targets = watched_targets(conn, date.today())
+        elif a.photos:
+            targets = photo_targets(conn, date.today())
         else:
             targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
