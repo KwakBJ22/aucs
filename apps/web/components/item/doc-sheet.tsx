@@ -99,7 +99,8 @@ export function DocSheet({
         </button>
       </div>
       {docs === undefined && <p className="sub">{c.loading}</p>}
-      {docs !== undefined && !cur && <p className="sub">{c.none}</p>}
+      {docs?.closed && <p className="sub">{c.closed}</p>}
+      {docs !== undefined && !docs?.closed && !cur && <p className="sub">{c.none}</p>}
       {cur && <p className="sub fs-xs mt-0">{c.from(cur.fetched_at)}</p>}
       {kind === "status_report" && sr && (
         <>

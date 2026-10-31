@@ -43,6 +43,7 @@ export const copy = {
       ["건축물대장", "건물의 용도·층수·사용승인 날짜가 적힌 공문서예요. 등기부와 함께 봐야 해요."],
     ] as [string, string][],
   },
+  photos: { label: "법원 현장 사진", count: (n: number) => `사진 ${n}장` },
   states: {
     errorTitle: "자료를 불러오지 못했어요",
     errorSub: "인터넷 연결을 확인하고 다시 시도해 주세요",
@@ -994,6 +995,8 @@ export const copy = {
     },
     tenantsNone: "현황조사서에 임차인이 없거나 아직 못 받았어요",
     doc: {
+      closed:
+        "끝난 사건은 개인정보 보호를 위해 원문을 보여 드리지 않아요 · 주요 사항은 위 요약에 남아 있어요",
       open: "원문 ›",
       openSr: "현황조사서 원문 보기 ›",
       close: "닫기",

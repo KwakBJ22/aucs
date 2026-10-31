@@ -23,6 +23,8 @@ from aucs_workers.collectors.polite import Polite
 from aucs_workers.db import connect
 from aucs_workers.extract.case_docs import apply_case_docs
 from aucs_workers.jobs.runlog import run
+from aucs_workers.photos import pull_pics
+from aucs_workers.photos import store as store_photos
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
 ARCHIVE_MAX = 150
@@ -172,6 +174,13 @@ def save_case(
         "insert into core.cases (case_id, court_code, case_no) values (%s,%s,%s) on conflict do nothing",
         (case_id, court, case_no),
     )
+    pics: list[tuple[str, str]] = []
+    for kind in list(docs):
+        if kind.startswith("item_detail_") and docs[kind]:
+            docs[kind], got = pull_pics(
+                docs[kind]
+            )  # 사진 글자는 원문에서 빼고 줄여서 Storage 로(11/1)
+            pics += got
     for kind, data in docs.items():
         if not data:
             continue  # 비어 온 종류는 넣지 않음 → 예전 것 유지
@@ -180,6 +189,7 @@ def save_case(
             (case_id, kind, Jsonb(data), checksum(data)),
         )
     apply_case_docs(conn, case_id, docs)
+    store_photos(conn, case_id, pics)
 
 
 def main() -> None:

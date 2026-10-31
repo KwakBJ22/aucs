@@ -8,6 +8,7 @@ from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
 
+from aucs_api import settings
 from aucs_api.cache import memo
 from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
@@ -226,4 +227,20 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["same_house"] = same_house(item_id)
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)
+    out["photos"] = photos(item_id)
     return out
+
+
+def photos(item_id: str) -> list[str]:
+    """법원 현장 사진(휴대폰 크기, Storage 공개 주소). 매각 뒤 30일 지나면 지워져 빈 목록(11/1)."""
+    if not settings.SUPABASE_URL:
+        return []
+    with connect() as c:
+        rows = c.execute(
+            """select p.path from core.item_photos p join core.items i using (case_id)
+               where i.item_id = %s order by p.seq""",
+            (item_id,),
+        ).fetchall()
+    return [
+        f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{r['path']}" for r in rows
+    ]

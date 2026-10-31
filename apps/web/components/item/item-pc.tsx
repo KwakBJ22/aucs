@@ -13,6 +13,7 @@ import { answerOf } from "@/components/item/checklist";
 import type { MyReg } from "@/components/item/registry";
 import { t, DOT } from "@/components/item/shared";
 import { SameHouse } from "@/components/item/same-house";
+import { ItemPhotos } from "@/components/item/item-photos";
 import { InterestLine } from "@/components/item/interest-line";
 
 export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
@@ -84,6 +85,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
         <p className="fs-lg fw-6 lh-15 mt-14 mb-0 mx-0">{d.verdict}</p>
         <InterestLine v={d.interest} />
         <SameHouse list={d.same_house} />
+        <ItemPhotos list={d.photos} />
         {d.tags.length > 0 && (
           <div className="d-flex gap-6 f-wrap mt-10">
             {d.tags.map((x) => (

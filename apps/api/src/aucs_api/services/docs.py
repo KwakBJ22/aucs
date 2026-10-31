@@ -172,7 +172,12 @@ def item_docs(item_id: str) -> dict[str, Any] | None:
         q_it, q_rows, q_spec = batch(
             c,
             [
-                ("select case_id, item_no from core.items where item_id = %(id)s", {"id": item_id}),
+                (
+                    """select i.case_id, i.item_no, not exists (select 1 from core.items j where j.case_id = i.case_id
+                         and (j.sale_date is null or j.sale_date >= current_date - 30)) as closed
+                       from core.items i where i.item_id = %(id)s""",
+                    {"id": item_id},
+                ),
                 (
                     f"""select distinct on (doc_kind) doc_kind, payload, fetched_at from raw.court_doc_raw
                    where case_id = {case} and doc_kind in ('status_report','deliveries')
@@ -191,7 +196,7 @@ def item_docs(item_id: str) -> dict[str, Any] | None:
         if not it:
             return None
         spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
-    out: dict[str, Any] = {"status_report": None, "deliveries": None,
+    out: dict[str, Any] = {"closed": bool(it["closed"]), "status_report": None, "deliveries": None,
                            "spec_sheet": {**spec, "fetched_at": _ts(spec_at)} if spec else None}  # fmt: skip
     for r in rows:
         f = status_report if r["doc_kind"] == "status_report" else deliveries

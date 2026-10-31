@@ -138,3 +138,29 @@ def test_region_row():
     rows = [x for x in map(to_row, rows_of(d)) if x]
     assert rows == [{"region_code": "4159810400", "sido": "경기도", "sigungu": "화성시 동탄구",
                      "eupmyeondong": "오산동", "sigungu_code": "41598", "full_name": "경기도 화성시 동탄구 오산동"}]  # fmt: skip
+
+
+def test_pull_pics_strips_and_collects() -> None:
+    import base64
+    import io
+
+    from aucs_workers.photos import pull_pics, shrink
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (2000, 1000), "white").save(buf, "JPEG")
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    payload = {
+        "dma_result": {
+            "csPicLst": [
+                {"picTitlNm": "a.jpg", "picFile": b64},
+                {"picTitlNm": "a.jpg", "picFile": b64},
+            ],
+            "x": 1,
+        }
+    }
+    slim, pics = pull_pics(payload)
+    assert "picFile" not in str(slim) and slim["dma_result"]["x"] == 1
+    assert [n for n, _ in pics] == ["a.jpg", "a.jpg"]
+    data, w, h = shrink(pics[0][1])
+    assert (w, h) == (960, 480) and len(data) < len(buf.getvalue())
