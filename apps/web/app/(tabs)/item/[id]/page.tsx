@@ -115,8 +115,15 @@ export default function Item() {
           )}
           <section className="section">
             <div className="sub">
-              <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b> ·{" "}
-              {d.sale_date} · {d.court} {d.case_no}
+              <b
+                style={{
+                  color:
+                    (d.d_day ?? 0) < 0 ? "var(--muted)" : urgent ? "var(--red)" : "var(--amber)",
+                }}
+              >
+                {dday(d.d_day)}
+              </b>{" "}
+              · {d.sale_date} · {d.court} {d.case_no}
             </div>
             <div className="fs-base fw-6 mt-4">
               {d.place} {d.building ?? d.usage}

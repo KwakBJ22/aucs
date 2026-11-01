@@ -25,7 +25,13 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
     [
       t.pc.sale,
       <>
-        <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>{dday(d.d_day)}</b>{" "}
+        <b
+          style={{
+            color: (d.d_day ?? 0) < 0 ? "var(--muted)" : urgent ? "var(--red)" : "var(--amber)",
+          }}
+        >
+          {dday(d.d_day)}
+        </b>{" "}
         {d.sale_date ?? "-"}
       </>,
     ],
