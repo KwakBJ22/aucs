@@ -60,14 +60,18 @@ export default function Plans() {
                 {t.toFind}
               </Link>
             ) : p.key !== "free" ? (
-              <button
-                className="btn primary fs-base mt-12"
-                style={{ height: 46 }}
-                disabled
-                title={t.payLater}
-              >
-                {p.cta}
-              </button>
+              <>
+                <button
+                  className="btn primary fs-base mt-12"
+                  style={{ height: 46, opacity: 0.5 }}
+                  disabled
+                  title={t.payLater}
+                >
+                  {p.cta}
+                </button>
+                {/* 눌러도 반응이 없던 것(11/1) — 왜 안 되는지 바로 아래에 */}
+                <div className="sub fs-xs mt-4 ta-center">{t.payNote}</div>
+              </>
             ) : null}
           </section>
         ))}

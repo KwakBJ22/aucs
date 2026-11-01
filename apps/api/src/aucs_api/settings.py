@@ -19,5 +19,7 @@ ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
 # Supabase 로그인 확인용 (공개 키)
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
+# 회원 탈퇴(11/1)에만 씀 — 로그인 계정 지우기는 비밀 키가 있어야 함
+SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "").strip().strip("\"'")
 # 웹 푸시 (VAPID) 공개 키 — 비밀 키는 수집기(workers)만 씀
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()

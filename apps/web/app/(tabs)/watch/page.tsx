@@ -30,6 +30,7 @@ function StepRow({
   const choices = c.step === "result" ? (["after"] as WatchStep[]) : MOVABLE;
   return (
     <div className="pt-0 pb-12 pl-48 pr-0 d-flex gap-6 f-wrap">
+      {c.last_result && <div className="w-full fs-sm fw-6">{resultLine(c.last_result)}</div>}
       {!open ? (
         <>
           {c.changed && (
@@ -39,7 +40,7 @@ function StepRow({
           )}
           {/* 칩 둘까지 + 나머지는 글자 링크(08-look 5절) */}
           {c.step === "result" ? (
-            <Link href="/me" className="chip green mh-32">
+            <Link href={`/me#rec-${c.item_id}`} className="chip green mh-32">
               {t.resultShort} ›
             </Link>
           ) : (
@@ -79,6 +80,20 @@ function StepRow({
 }
 
 // PC 보드의 작은 카드
+// 기일이 지난 관심 물건의 결과 한 줄(11/1) — 예전엔 낙찰돼도 「감정가보다 … 낮음」만 보였음
+function resultLine(r: NonNullable<WatchCard["last_result"]>): string {
+  const d = r.date.slice(5).replace("-", "/");
+  if (r.result === "sold" && r.winning_bid_krw)
+    return copy.outcome.sold(d, won(r.winning_bid_krw), r.sale_rate);
+  return copy.outcome.other(d, RESULT_KO[r.result] ?? r.result);
+}
+const RESULT_KO: Record<string, string> = {
+  failed: "유찰",
+  withdrawn: "취하",
+  changed: "변경",
+  sold: "매각",
+};
+
 function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () => void }) {
   return (
     <button className={`board-card${on ? " on" : ""}`} onClick={onPick}>

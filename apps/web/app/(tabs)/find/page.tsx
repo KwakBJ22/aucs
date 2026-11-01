@@ -97,8 +97,11 @@ export default function Find() {
   useEffect(() => {
     const s = load(KEY_STATUS);
     if (s === "active" || s === "sold" || s === "withdrawn" || s === "all") setStatus(s);
-    const src = load(KEY_SOURCE);
+    // 주소에 ?source= 가 있으면 그것(홈 「이번 주 마감 공매 · 전체」 → 공매만, 11/1), 없으면 기억한 것
+    const fromUrl = new URLSearchParams(window.location.search).get("source");
+    const src = fromUrl ?? load(KEY_SOURCE);
     if (src === "court" || src === "onbid") setSource(src);
+    else if (fromUrl === "all") setSource("all");
     try {
       setFilter(JSON.parse(load(KEY_FILTER) ?? "{}") as FindFilter);
     } catch {

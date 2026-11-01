@@ -13,7 +13,11 @@ select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step, w.in_compare,
        (select max(e.created_at) from app.alert_events e
-         where e.user_id = w.user_id and e.item_id = i.item_id and e.prev_value is not null) as changed_at
+         where e.user_id = w.user_id and e.item_id = i.item_id and e.prev_value is not null) as changed_at,
+       (select json_build_object('result', s.result, 'winning_bid_krw', s.winning_bid_krw, 'sale_rate', s.sale_rate,
+                                 'date', s.sale_date)
+          from core.sale_results s where s.item_id = i.item_id and s.sale_date < current_date
+          order by s.sale_date desc limit 1) as last_result
 from app.watch_items w
 join core.items i on i.item_id = w.item_id
 join core.cases c using (case_id)
@@ -78,6 +82,8 @@ def watch_card(r: dict[str, Any], today: Any) -> dict[str, Any]:
         "step": watch_step(r["step"], r["sale_date"], today),
         "in_compare": r["in_compare"],
         "changed": bool(ch and (today - ch.date()).days <= CHANGED_DAYS),
+        # 기일이 지났으면 결과(11/1): 낙찰이면 금액, 유찰·취하면 그 말
+        "last_result": r.get("last_result") if r["sale_date"] and r["sale_date"] < today else None,
     }
 
 
@@ -492,3 +498,21 @@ def report_add(uid: str, item_id: str, section: str, note: str) -> int:
             (uid, item_id, section, note),
         ).fetchone()
     return int(row["report_id"]) if row else 0
+
+
+def delete_account(uid: str) -> bool:
+    """탈퇴(11/1): 로그인 계정을 지우면 관심·알림·모의입찰·메모·올린 등기부가 함께 지워짐(외래키 cascade).
+    사용 기록(app.events)은 회원 번호만 비워 익명으로 남음."""
+    import httpx
+
+    from aucs_api import settings
+
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY:
+        return False
+    k = settings.SUPABASE_SECRET_KEY
+    r = httpx.delete(
+        f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}",
+        headers={"apikey": k, "Authorization": f"Bearer {k}"},
+        timeout=15,
+    )
+    return r.status_code in (200, 204)

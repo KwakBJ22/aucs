@@ -255,3 +255,11 @@
 .cta-bar .btn {
   box-shadow: 0 6px 20px rgba(31, 94, 234, 0.25);
 }
+
+/* 제목 옆 글자 링크(알림함 ›·전체 ›·답 바꾸기 ›) — 손가락으로 누르기 쉽게 높이 36(11/1, 예전 17) */
+.jc-between > a.sub,
+.jc-between > a.sub.fs-sm {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}

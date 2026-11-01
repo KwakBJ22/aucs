@@ -291,6 +291,7 @@ export const fetchBidCheck = (id: string, bid: number) =>
 
 export type CashBreakdown = {
   bid_krw: number;
+  assume_krw?: number; // 떠안는 돈(넣었을 때)
   deposit_krw: number;
   loan_krw: number;
   loan: {
@@ -323,6 +324,7 @@ export type Calc = {
   cap_krw: number | null;
   slider: { min: number; max: number; step: number };
   resale: boolean;
+  assume?: { risk: boolean; krw: number | null }; // 떠안는 돈(선순위 전세권·대항력 임차인 등, 11/1)
   check?: BidCheck | null; // 입찰표 실수 막기 검사(고른 입찰가 기준)
   rent?: {
     loan_krw: number;
@@ -357,6 +359,7 @@ export function fetchCalc(
     selling?: boolean;
     income?: number | null;
     otherMonthly?: number | null;
+    assume?: number | null;
   },
 ): Promise<Calc> {
   const q = new URLSearchParams({
@@ -368,6 +371,7 @@ export function fetchCalc(
   if (o.otherMonthly) q.set("other_monthly", String(o.otherMonthly));
   if (o.bid) q.set("bid", String(o.bid));
   if (o.loan != null) q.set("loan", String(o.loan));
+  if (o.assume != null) q.set("assume", String(o.assume));
   return getJson<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);
 }
 

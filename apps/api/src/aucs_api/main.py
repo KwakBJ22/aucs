@@ -1,5 +1,6 @@
 """옥스 API 시작점. 실행: uv run uvicorn aucs_api.main:app --port 8100"""
 
+import re
 import traceback
 
 from fastapi import FastAPI, Request
@@ -38,4 +39,10 @@ async def on_error(request: Request, exc: Exception) -> JSONResponse:
         "api", f"{type(exc).__name__}: {exc}", path=f"{request.method} {request.url.path}",
         stack="".join(traceback.format_exception(exc))[-4000:],
     )  # fmt: skip
-    return JSONResponse({"detail": "잠시 문제가 생겼어요. 다시 해 주세요"}, status_code=500)
+    # 오류 응답은 CORS 층을 거치지 않아 브라우저가 내용을 못 읽고 화면이 「불러오는 중」에 멈춤(11/1) → 허용 머리글을 직접 붙임
+    origin = request.headers.get("origin", "")
+    ok = origin in settings.WEB_ORIGINS or bool(re.fullmatch(settings.WEB_ORIGIN_REGEX, origin))
+    headers = {"Access-Control-Allow-Origin": origin, "Vary": "Origin"} if ok else None
+    return JSONResponse(
+        {"detail": "잠시 문제가 생겼어요. 다시 해 주세요"}, status_code=500, headers=headers
+    )

@@ -8,7 +8,7 @@ export const copy = {
     ok: "정상",
     fail: "안 됨",
   },
-  tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "전체" },
+  tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "내 정보" }, // 「전체」는 찾기 칩과 겹쳐서(11/1)
   terms: {
     close: "닫기",
     more: "경매 처음이세요? 전체 안내",
@@ -52,6 +52,16 @@ export const copy = {
     within: "옥스 예상 범위 안",
     outside: (lo: string, hi: string) => `옥스 예상 ${lo}~${hi} 밖`,
     sameComplex: "같은 단지 다른 물건 보기 ›",
+  },
+  leave: {
+    open: "회원 탈퇴",
+    title: "탈퇴하면 되돌릴 수 없어요",
+    what: "관심 물건·알림·모의입찰·메모·올린 등기부가 모두 지워져요 · 같은 메일로 다시 가입할 수는 있어요",
+    word: "탈퇴",
+    type: "「탈퇴」라고 써 주세요",
+    cancel: "그만두기",
+    go: "탈퇴하기",
+    failed: "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요",
   },
   photos: { label: "법원 현장 사진", count: (n: number) => `사진 ${n}장` },
   states: {
@@ -216,7 +226,7 @@ export const copy = {
     expectCols: ["응찰자 (그런 경우)", "최저가 대비", "이 물건이면"],
     fewSample: "표본 적음",
     worthAnswer: (mkt: string | null, solo: string | null) =>
-      [mkt ? `시세 약 ${mkt}` : null, solo ? `혼자면 ${solo}쯤` : null]
+      [mkt ? `시세 약 ${mkt}` : null, solo ? `혼자 입찰하면 ${solo}쯤` : null]
         .filter(Boolean)
         .join(" · ") || "비교할 자료가 적어요",
     costAnswer: (d: string) => `입찰보증금 ${d}부터`,
@@ -283,9 +293,10 @@ export const copy = {
     rateOpt: [
       [null, "전체"],
       [80, "80% 이하"],
-      [64, "64% 이하"],
-      [51, "51% 이하"],
-    ] as [number | null, string][],
+      [70, "70% 이하"],
+      [60, "60% 이하"],
+      [50, "50% 이하"],
+    ] as [number | null, string][], // PC 표와 같은 칸(11/1, 예전 64·51%)
     safe: "초보자 안전 모드",
     safeSub:
       "지분·유치권·선순위 임차인·법정지상권·근생빌라 의심·특별매각조건·기일 변동 가능을 한 번에 빼요",
@@ -323,7 +334,7 @@ export const copy = {
     body: "관심 물건과 내 경매 기록은 로그인하면 저장돼요.",
   },
   more: {
-    title: "전체",
+    title: "내 정보",
     sub: "로그인하면 관심·알림·계산 저장을 쓸 수 있어요",
     items: [
       ["이용권 보기", "/plans"],
@@ -892,6 +903,13 @@ export const copy = {
     recentTrades: "최근 거래",
     deposit: "입찰보증금(최저가의 10%)",
     calc: {
+      assumeTitle: "떠안는 돈이 있을 수 있어요",
+      assumeWhy:
+        "선순위 전세권·대항력 있는 임차인 보증금처럼 낙찰가와 따로 내야 하는 돈이에요 · 등기부·명세서에서 금액을 확인해 넣어 주세요",
+      assumeInput: "떠안는 금액(만 원, 없으면 0)",
+      assumeNeed:
+        "금액을 넣기 전에는 추천 입찰가와 「이 금액을 넘으면 비싸다」를 보여 드리지 않아요",
+      assumeRow: "떠안는 돈",
       homesQ: "지금 집이 몇 채예요?",
       homes: ["없어요", "1채", "2채 이상"],
       firstTime: "생애 첫 집이에요",
@@ -1049,7 +1067,8 @@ export const copy = {
     title: "입찰가 계산",
     numbers: "이 물건 숫자",
     loginForSaved: "로그인하고 관심에 담으면 계산을 5개까지 저장해 비교할 수 있어요",
-    savedNone: "아직 저장한 계산이 없어요 · 계산 상자에서 「작업 공간에 저장」",
+    savedNone:
+      "아직 저장한 계산이 없어요 · 관심에 담은 물건은 위 계산 아래 「작업 공간에 저장」으로 남길 수 있어요",
     open: "계산 화면 크게 보기",
   },
   plans: {
@@ -1059,6 +1078,7 @@ export const copy = {
     perYear: "/ 1년",
     toFind: "물건 고르러 가기",
     payLater: "결제는 사업자등록과 결제 계약이 끝나면 열려요 · 금액·개수는 임시값이에요",
+    payNote: "결제는 곧 열려요 · 그때까지는 무료로 다 써 보세요",
     refundTitle: "환불 규칙",
     refund: [
       "매달 이용권 · 결제 7일 안에 상세를 연 적이 없으면 전액",
@@ -1120,11 +1140,12 @@ export const copy = {
   noti: {
     title: "알림함",
     empty: "아직 알림이 없어요",
-    groups: { change: "관심 물건 변경", todo: "할 일·마감", new: "새 물건" },
+    groups: { change: "관심 물건 변경", todo: "할 일·마감", new: "새 물건", past: "지난 할 일" },
     groupSub: {
       change: "이전 값 → 지금 값 · 누르면 그 물건으로",
       todo: "입찰일 아침·명세서 공개·잔금 같은 마감",
       new: "저장한 조건에 새로 맞은 물건",
+      past: "날짜가 지난 입찰일·마감 알림",
     },
   },
   me: {

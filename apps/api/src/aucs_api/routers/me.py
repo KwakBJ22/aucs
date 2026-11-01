@@ -302,3 +302,11 @@ async def post_registry(
     upload_id = registry.save_upload(uid, item_id, file.filename or "registry.pdf", data)
     tasks.add_task(registry.parse_upload, upload_id)
     return {"upload_id": upload_id, "status": "processing"}
+
+
+@router.delete("/account")
+def delete_account(uid: Uid) -> dict[str, bool]:
+    """회원 탈퇴 — 되돌릴 수 없음(화면에서 「탈퇴」를 직접 쳐서 확인)."""
+    if not me.delete_account(uid):
+        raise HTTPException(503, "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요")
+    return {"ok": True}

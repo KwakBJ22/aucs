@@ -411,7 +411,7 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                  from core.sale_results s
                  join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
                                and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
-                 where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' is not null
+                 where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' ->> 'p25' is not null and a.result -> 'sale_rate' ->> 'p75' is not null
                    and not coalesce((a.result ->> 'new_item')::boolean, false))
                select count(*) as n,
                       count(*) filter (where sale_rate between p25 and p75) as inside,
@@ -427,7 +427,7 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                from core.sale_results s
                join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
                              and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
-               where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' is not null
+               where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' ->> 'p25' is not null and a.result -> 'sale_rate' ->> 'p75' is not null
                  and not coalesce((a.result ->> 'new_item')::boolean, false)
                order by greatest((a.result -> 'sale_rate' ->> 'p25')::numeric - s.sale_rate,
                                  s.sale_rate - (a.result -> 'sale_rate' ->> 'p75')::numeric) desc

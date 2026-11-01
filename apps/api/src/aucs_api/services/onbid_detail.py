@@ -205,7 +205,17 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         e["price_krw"] = int(mn * e["p50"] / 100) if mn and e["p50"] else None
     rv = rounds_view(rounds, past, r["bid_end"], app)
     nxt = next((x for x in rv if x["label"] == "다음"), None)
-    warnings = [MOVE_OUT]
+    # 사는 사람이 없는 땅(임야·대지·전답·토지)에는 명도 경고를 띄우지 않음(11/1)
+    land = (
+        bool(
+            re.match(
+                r"(임야|대지|전|답|과수원|목장용지|잡종지|토지|도로|구거|하천)$",
+                (r["usage_name"] or "").strip(),
+            )
+        )
+        and not r["building_m2"]
+    )
+    warnings = [] if land else [MOVE_OUT]
     if r["kind"] == "trust":
         warnings.insert(0, TRUST)
     elif r["kind"] == "seized":

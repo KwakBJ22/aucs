@@ -129,10 +129,17 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
               label={t.rangeLabel}
               value={
                 <b>
-                  {won(b.range_krw[0])} ~ {won(b.range_krw[1])}
+                  {won(b.range_krw[0]) === won(b.range_krw[1])
+                    ? won(b.range_krw[0])
+                    : `${won(b.range_krw[0])} ~ ${won(b.range_krw[1])}`}
                 </b>
               }
             />
+            {b.assume_risk && (
+              <p className="fs-sm c-amber mb-0">
+                {copy.item.calc.assumeTitle} · {copy.item.calc.assumeNeed}
+              </p>
+            )}
             <p className="sub">{t.sample(b.rate.n)}</p>
             {b.market && (
               <>

@@ -53,6 +53,16 @@ _HOUSING_WORDS = re.compile(r"(다세대|연립|다가구|단독|주택|빌라|�
 _SPECIAL_CONDITION = re.compile(r"(대항력\s*포기|주택도시보증공사|HUG|일괄매각|제시외)")
 
 
+PRIOR_KINDS = ("전세권", "가등기", "가처분", "지상권", "지역권", "임차권", "근저당")
+
+
+def prior_rights_title(texts: list[str]) -> str:
+    """명세서 「소멸되지 않는 권리」 글에 실제로 나온 권리만(11/1 — 예전엔 넷을 다 늘어놓았음)."""
+    t = " ".join(texts or [])
+    kinds = [k for k in PRIOR_KINDS if k in t]
+    return f"선순위 {'·'.join(kinds)} 인수" if kinds else "매각으로 안 지워지는 권리 인수"
+
+
 def signals(f: dict[str, Any]) -> list[Signal]:
     """물건 사실(f)로 위험 신호 목록을 만듭니다. 키가 없으면 그 신호는 「모름」."""
     out: list[Signal] = []
@@ -78,7 +88,7 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add(
             "risk.prior_rights",
             "high",
-            "선순위 전세권·가등기·가처분·지상권 인수",
+            prior_rights_title(f["prior_assumed_rights"]),
             rights=f["prior_assumed_rights"],
         )
     if f.get("land_or_building_only"):

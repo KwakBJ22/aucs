@@ -34,6 +34,7 @@ from core.items i
 join core.cases c using (case_id)
 left join lateral (select result, computed_at from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.item_id = %s and i.display_policy = 'public'
+  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'  -- 차·배는 다루지 않음(목록처럼 상세도 막음, 11/1)
 """
 
 
@@ -115,6 +116,13 @@ def build_detail(
            "claim_deadline": r["claim_deadline"].isoformat() if r["claim_deadline"] else None}),
     ]  # fmt: skip
     out_come = outcome(rounds, sale, today, questions[2]["body"].get("range_krw"))
+    if analyzed and any(
+        x.get("ftype") == "T1" and x.get("level") in ("fatal", "high") for x in signals
+    ):
+        # 떠안는 돈이 있으면 시세 기준 예상 낙찰가는 그대로 믿으면 안 됨(11/1)
+        questions[2]["answer"] = "떠안는 돈을 빼고 봐야 해요 · 아래 예상은 떠안는 돈이 없을 때 값"
+        questions[2]["tone"] = "orange"
+        questions[2]["body"]["assume_risk"] = True
     if out_come and out_come["closed"]:
         if out_come["code"] == "sold" and out_come["expected"]:
             lo, hi = out_come["expected"]
@@ -203,9 +211,15 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     with connect() as c:
         with c.pipeline():
             q_item = c.execute(_ITEM_SQL, (item_id,))
+            # 매각기일: 우리가 받은 회차 + 그 전 매각결과(11/1 — 유찰 12번 물건이 1줄만 보였음)
             q_rounds = c.execute(
-                "select sale_date, min_price_krw, result from core.rounds where item_id = %s order by sale_date",
-                (item_id,),
+                """select sale_date, min_price_krw, result from core.rounds where item_id = %(id)s
+                   union all
+                   select s.sale_date, s.min_price_krw, s.result from core.sale_results s
+                   where s.item_id = %(id)s and not exists (select 1 from core.rounds r
+                         where r.item_id = s.item_id and r.sale_date = s.sale_date)
+                   order by sale_date""",
+                {"id": item_id},
             )
             q_events = c.execute(
                 f"""select event_date::text as date, category, importance, text_masked as text, after_deadline

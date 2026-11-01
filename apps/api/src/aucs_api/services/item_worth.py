@@ -23,6 +23,12 @@ SPEC_WORDS = [
 ]
 
 
+def pct_range(lo: float, hi: float) -> str:
+    """「73~73%」처럼 같은 수가 되면 하나만(11/1)."""
+    a, b = round(lo), round(hi)
+    return f"{a}%" if a == b else f"{a}~{b}%"
+
+
 def appraisal_gap(
     r: dict[str, Any], signals: list[dict[str, Any]], spec_txt: str = ""
 ) -> tuple[str, str] | None:
@@ -98,7 +104,7 @@ def worth(
         )
     if peers and peers.get("warn"):
         notes.append(
-            f"같은 구 최근 {peers['n']}건은 {round(peers['lo'])}~{round(peers['hi'])}%에 팔렸어요"
+            f"같은 구 최근 {peers['n']}건은 {pct_range(peers['lo'], peers['hi'])}에 팔렸어요"
         )
     if not gap and any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
@@ -107,10 +113,10 @@ def worth(
     below = bool(floor and hi < floor)
     if floor:
         lo, mid, hi = max(lo, floor), max(mid, floor), max(hi, floor)
-    ans = f"비슷한 물건은 감정가의 {round(lo)}~{round(hi)}%에 낙찰됐어요"
+    ans = f"비슷한 물건은 감정가의 {pct_range(lo, hi)}에 낙찰됐어요"
     if below:
         ans = "비슷한 물건이 이번 최저가보다 싸게 팔려서 최저가 근처에서 낙찰될 것 같아요"
     elif mkt and app:
         a, b = app * lo / mkt["price_krw"], app * hi / mkt["price_krw"]
-        ans = f"시세의 {round(a)}~{round(b)}%쯤에 낙찰될 것 같아요"
+        ans = f"시세의 {pct_range(a, b)}쯤에 낙찰될 것 같아요"
     return ans, notes, {**rate, "p25": lo, "p50": mid, "p75": hi, "court_shift": shift}

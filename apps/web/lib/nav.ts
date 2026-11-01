@@ -116,7 +116,7 @@ export const TABS = [
   { key: "find", label: "찾기", href: "/find", match: ["/find", "/item"] },
   { key: "watch", label: "관심", href: "/watch", match: ["/watch", "/compare"] },
   { key: "me", label: "내 경매", href: "/me", match: ["/me"] },
-  { key: "more", label: "전체", href: "/more", match: ["/more", "/pro", "/plans"] },
+  { key: "more", label: "내 정보", href: "/more", match: ["/more", "/pro", "/plans"] },
 ] as const;
 
 export function activeNav(path: string): NavItem | undefined {

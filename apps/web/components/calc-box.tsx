@@ -78,6 +78,7 @@ export function CalcBox({ id }: { id: string }) {
   const [otherMonthly, setOtherMonthly] = useState<number | null>(null);
   const [bid, setBid] = useState<number | null>(null);
   const [loan, setLoan] = useState<number | null>(null);
+  const [assume, setAssume] = useState<number | null>(null); // 떠안는 돈(직접 넣음, 원)
   const [editLoan, setEditLoan] = useState(false);
   const [d, setD] = useState<Calc | null>(null);
   const [chk, setChk] = useState<BidCheck | null>(null);
@@ -104,6 +105,7 @@ export function CalcBox({ id }: { id: string }) {
         selling: homes === 1 && selling,
         income,
         otherMonthly,
+        assume,
       })
         .then((r) => {
           setD(r);
@@ -116,7 +118,7 @@ export function CalcBox({ id }: { id: string }) {
         .catch(() => setD(null));
     }, 250);
     return () => clearTimeout(h);
-  }, [id, bid, homes, first, loan, selling, income, otherMonthly]);
+  }, [id, bid, homes, first, loan, selling, income, otherMonthly, assume]);
 
   const pickHomes = (n: number) => {
     setHomes(n);
@@ -181,6 +183,25 @@ export function CalcBox({ id }: { id: string }) {
         )}
       </div>
       {homes === 1 && selling && <div className="sub mt-4 mb-0 mx-0 fs-xs">{c.sellingHint}</div>}
+      {d?.assume?.risk && (
+        <div className="bg-panel r-14 p-12 mt-12" role="alert">
+          <b className="c-red fs-md">{c.assumeTitle}</b>
+          <p className="sub fs-sm mt-4 mb-6 mx-0">{c.assumeWhy}</p>
+          <label className="d-block fs-sm mt-6">
+            <span className="sub m-0">{c.assumeInput}</span>
+            <input
+              inputMode="numeric"
+              placeholder="0"
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, "");
+                setAssume(v === "" ? null : Number(v) * 10_000); // 0 = 떠안는 돈 없음 확인
+              }}
+              className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
+            />
+          </label>
+          {assume == null && <div className="fs-sm mt-6 c-amber">{c.assumeNeed}</div>}
+        </div>
+      )}
       {d && s && (
         <>
           {d.cases.length > 0 && (
@@ -297,6 +318,9 @@ export function CalcBox({ id }: { id: string }) {
                   </>
                 }
               />
+            )}
+            {(s.assume_krw ?? 0) > 0 && (
+              <Row label={c.assumeRow} value={<>+ {won(s.assume_krw ?? 0)}</>} />
             )}
             <Row label={<b>{c.cash}</b>} value={<b className="fs-lg">{won(s.cash_krw)}</b>} />
             {myCash && (

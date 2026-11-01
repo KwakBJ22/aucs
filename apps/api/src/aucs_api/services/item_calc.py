@@ -101,6 +101,11 @@ def _rent(
     return res
 
 
+def assume_risk(signals: list[dict[str, Any]]) -> bool:
+    """낙찰 뒤 떠안는 돈이 있을 수 있는 신호(T1: 선순위 임차인·전세권 등, 심각·높음)."""
+    return any(s.get("ftype") == "T1" and s.get("level") in ("fatal", "high") for s in signals)
+
+
 def build_calc(
     r: dict[str, Any],
     tables: dict[str, Any],
@@ -114,6 +119,7 @@ def build_calc(
     income_krw: int | None = None,
     other_monthly_krw: int = 0,
     leases: list[dict[str, Any]] | None = None,
+    assume_krw: int | None = None,
 ) -> dict[str, Any]:
     """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
     from aucs_rules.calc import area_class, bid_cases, cash_needed
@@ -143,15 +149,22 @@ def build_calc(
         "move_out_krw": move["mid_krw"] if move else 0, "repair_krw": repair["mid_krw"] if repair else 0,
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
+    # 떠안는 권리(11/1): 선순위 전세권·대항력 임차인 등을 떠안으면 낙찰가 + 그 돈이 실제 값.
+    # 금액을 모르면 추천 입찰가·「이 선을 넘으면 비싸다」를 내지 않음(예전엔 시세 기준으로 최저가의 8~11배를 추천했음)
+    risk = assume_risk(r.get("signals") or [])
+    extra = (assume_krw or 0) if risk else 0
     cases = []
-    if rate and app and not r.get("new_item"):
+    if rate and app and not r.get("new_item") and (not risk or assume_krw is not None):
         for c in bid_cases(app, mn, rate["p25"], rate["p50"], rate["p75"]):
-            v = cash_needed(c["bid_krw"], loan_override_krw=loan_krw, **common).value
-            cases.append({**c, "cash_krw": v["cash_krw"]})
+            b2 = max(mn, c["bid_krw"] - extra)
+            v = cash_needed(b2, loan_override_krw=loan_krw, **common).value
+            cases.append({**c, "bid_krw": b2, "cash_krw": v["cash_krw"] + extra})
     bid = bid_krw or (cases[1]["bid_krw"] if cases else mn)
     sel = cash_needed(bid, loan_override_krw=loan_krw, **common).value
+    if extra:
+        sel = {**sel, "cash_krw": sel["cash_krw"] + extra, "assume_krw": extra}
     cap = None
-    if mkt:
+    if mkt and (not risk or assume_krw is not None):
         at = cash_needed(mkt, **common).value
         cap = (
             mkt
@@ -159,6 +172,7 @@ def build_calc(
             - at["registration_krw"]
             - at["move_out_krw"]
             - at["repair_krw"]
+            - extra
         )
     return {
         "cls": cls,
@@ -170,6 +184,7 @@ def build_calc(
         "cap_krw": cap,
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,
+        "assume": {"risk": risk, "krw": assume_krw if risk else None},
     }
 
 
@@ -228,6 +243,7 @@ def calc(
     selling: bool = False,
     income_krw: int | None = None,
     other_monthly_krw: int = 0,
+    assume_krw: int | None = None,
 ) -> dict[str, Any] | None:
     if item_id.startswith("OB-"):
         return onbid_calc(
@@ -259,6 +275,7 @@ def calc(
     return build_calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
         selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw, leases=leases,
+        assume_krw=assume_krw,
     )  # fmt: skip
 
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ItemCard } from "@/components/item-card";
 import { fetchItems, type ItemList } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
+import { isStale } from "@/lib/noti";
 import { dday, won } from "@/lib/format";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { meApi, type Noti, type WatchCard } from "@/lib/api/me";
@@ -136,8 +137,9 @@ export default function Home() {
     )
     .sort((x, y) => (x.d_day ?? 99) - (y.d_day ?? 99));
   const toRecord = watch.filter((w) => w.step === "result");
-  const changes = notis.slice(0, pc ? 6 : 3);
-  const unread = notis.filter((n) => !n.read_at).length;
+  const fresh = notis.filter((n) => !isStale(n)); // 지난 입찰일 알림은 홈에서 뺌(11/1)
+  const changes = fresh.slice(0, pc ? 6 : 3);
+  const unread = fresh.filter((n) => !n.read_at).length;
 
   const bell = token ? (
     <Link
@@ -253,9 +255,11 @@ export default function Home() {
         {c.building ?? c.usage}
       </div>
       <div className="fs-base fw-7 mt-8">{won(c.min_price_krw)}</div>
-      <div className="sub fs-xs">
-        {copy.card.ofAppraisal} {c.min_rate}%
-      </div>
+      {c.min_rate != null && (
+        <div className="sub fs-xs">
+          {copy.card.ofAppraisal} {c.min_rate}%
+        </div>
+      )}
     </Link>
   );
   const closingBlock = closing.length > 0 && (
@@ -270,7 +274,7 @@ export default function Home() {
     <section className="section">
       <div className="d-flex jc-between ai-baseline">
         <h2 className="mb-12">{t.onbidClosing}</h2>
-        <Link href="/find" className="sub fs-sm">
+        <Link href="/find?source=onbid" className="sub fs-sm">
           {t.onbidAll}
         </Link>
       </div>
@@ -308,7 +312,7 @@ export default function Home() {
         ))}
       </div>
       {mine && mine.total > 5 && (
-        <Link href="/find" className="d-block ta-center pt-12 pb-0 px-0 fs-md fw-6">
+        <Link href="/find?source=all" className="d-block ta-center pt-12 pb-0 px-0 fs-md fw-6">
           {copy.find.total(mine.total)} 모두 보기 ›
         </Link>
       )}

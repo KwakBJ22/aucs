@@ -125,9 +125,11 @@ export default function ComparePage() {
         c.d ? (
           <>
             <b>{won(c.d.min_price_krw)}</b>
-            <div className="sub">
-              {copy.card.ofAppraisal} {c.d.min_rate}%
-            </div>
+            {c.d.min_rate != null && (
+              <div className="sub">
+                {copy.card.ofAppraisal} {c.d.min_rate}%
+              </div>
+            )}
           </>
         ) : (
           "-"
@@ -135,15 +137,22 @@ export default function ComparePage() {
     },
     {
       label: t.rows.cash,
-      cell: (c) =>
-        c.calc ? (
+      cell: (c) => {
+        const o = c.d && !isOnbid(c.d) ? (c.d as ItemDetail).outcome : null;
+        if (o?.closed)
+          // 끝난 물건은 계산 대신 결과(11/1)
+          return o.code === "sold" && o.winning_bid_krw
+            ? copy.outcome.sold(o.date.slice(5).replace("-", "/"), won(o.winning_bid_krw), o.rate)
+            : copy.outcome.other(o.date.slice(5).replace("-", "/"), o.text);
+        return c.calc ? (
           <>
             <b>{won(c.calc.selected.cash_krw)}</b>
             <div className="sub">{t.atBid(won(c.calc.selected.bid_krw))}</div>
           </>
         ) : (
           "-"
-        ),
+        );
+      },
     },
     { label: t.rows.hold, cell: (c) => answer(c.d, "hold") },
     { label: t.rows.worth, cell: (c) => answer(c.d, "worth") },

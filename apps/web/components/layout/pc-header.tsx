@@ -36,7 +36,13 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
   function search(e: React.FormEvent) {
     e.preventDefault();
     const v = q.trim();
-    if (v) router.push(`/pro/items?q=${encodeURIComponent(v)}`);
+    // 사건번호는 찾기로(끝난 사건도 결과·상세로 바로 감, 11/1), 주소·단지는 전체 물건 표로
+    if (v)
+      router.push(
+        /\d{4}\s*타경\s*\d+|^\d{4}-\d{4,5}-\d{3}$/.test(v)
+          ? `/find?q=${encodeURIComponent(v)}`
+          : `/pro/items?q=${encodeURIComponent(v)}`,
+      );
   }
 
   return (

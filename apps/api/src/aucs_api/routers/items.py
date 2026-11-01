@@ -114,10 +114,11 @@ def get_calc(
     selling: bool = False,
     income: Annotated[int | None, Query(ge=0)] = None,
     other_monthly: Annotated[int, Query(ge=0)] = 0,
+    assume: Annotated[int | None, Query(ge=0)] = None,
 ) -> dict[str, Any]:
     d = item_calc.calc(
         item_id, bid_krw=bid, homes=homes, first_time=first, loan_krw=loan,
-        selling=selling, income_krw=income, other_monthly_krw=other_monthly,
+        selling=selling, income_krw=income, other_monthly_krw=other_monthly, assume_krw=assume,
     )  # fmt: skip
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")

@@ -71,10 +71,10 @@ export const STATE_CHIP: Record<string, string> = {
   "전문가 확인 필요": "orange",
 };
 
-// 올해는 「6/25」, 다른 해는 「25.6/25」
+// 올해는 「6/25」, 다른 해는 「2025/6/25」(11/1 — 「25.6/25」는 읽기 어려웠음)
 export function flowDate(d: string): string {
   const md = `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
-  return d.slice(0, 4) === String(new Date().getFullYear()) ? md : `${d.slice(2, 4)}.${md}`;
+  return d.slice(0, 4) === String(new Date().getFullYear()) ? md : `${d.slice(0, 4)}/${md}`;
 }
 
 // ITEM-06: 사건 흐름 막대 + 체크리스트(끝난 것은 접음) + 사건 문건

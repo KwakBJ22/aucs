@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
@@ -23,6 +24,8 @@ function ProMarket() {
   const [months, setMonths] = useState(3);
   const [regions, setRegions] = useState<RegionRow[]>([]);
   const [m, setM] = useState<Market | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [tries, setTries] = useState(0);
 
   useEffect(() => {
     fetchRegions()
@@ -32,13 +35,14 @@ function ProMarket() {
   useEffect(() => {
     let stale = false;
     if (onbid) return;
+    setFailed(false);
     fetchMarket({ sido: sido || undefined, sigungu: sigungu || undefined, usage, months })
       .then((r) => !stale && setM(r))
-      .catch(() => {});
+      .catch(() => !stale && setFailed(true)); // 예전엔 오류를 삼켜서 「불러오는 중」에 멈춰 있었음(11/1)
     return () => {
       stale = true;
     };
-  }, [sido, sigungu, usage, months, onbid]);
+  }, [sido, sigungu, usage, months, onbid, tries]);
 
   const sel = {
     fontSize: 14,
@@ -52,6 +56,7 @@ function ProMarket() {
   return (
     <main className="page pro-page">
       <PageHeader title={t.title} />
+      {failed && !onbid && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       <div className="pills mb-8" role="group">
         {(["court", "onbid"] as const).map((k) => (
           <button

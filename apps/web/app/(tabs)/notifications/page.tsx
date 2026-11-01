@@ -8,6 +8,7 @@ import { NeedLogin } from "@/components/need-login";
 import { meApi, type Noti } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
+import { isStale } from "@/lib/noti";
 
 export default function Notifications() {
   const { session, ready } = useSession();
@@ -24,13 +25,14 @@ export default function Notifications() {
   }, [session, tries]);
   if (!ready) return null;
   if (!session) return <NeedLogin title={copy.noti.title} />;
-  const group = (n: Noti): "change" | "todo" | "new" => {
+  const group = (n: Noti): "change" | "todo" | "new" | "past" => {
     const k = n.kind ?? "";
+    if (isStale(n)) return "past";
     if (!k || k === "new_match") return "new";
     if (k.startsWith("deadline_") || k === "bid_morning" || k === "spec_open") return "todo";
     return "change";
   };
-  const groups = (["change", "todo", "new"] as const).map((g) => ({
+  const groups = (["change", "todo", "new", "past"] as const).map((g) => ({
     g,
     rows: (list ?? []).filter((n) => group(n) === g),
   }));

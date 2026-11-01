@@ -233,7 +233,9 @@ export default function Me() {
     d && d.todo.length > 0 ? t.todoHint : null,
     <>
       {d?.todo.map((x) => (
-        <RecordForm key={x.item_id} x={x} token={session.access_token} onSaved={load} />
+        <div key={x.item_id} id={`rec-${x.item_id}`}>
+          <RecordForm x={x} token={session.access_token} onSaved={load} />
+        </div>
       ))}
       {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
       {d && d.history.length > 0 && (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { LeaveBox } from "@/components/leave-box";
 import { PageHeader } from "@/components/layout/page-header";
 import { meApi, type SavedSearch } from "@/lib/api/me";
 import { signOut, useSession } from "@/lib/auth";
@@ -110,10 +111,13 @@ export default function More() {
         ),
       )}
       {session && (
-        <button className="menu-row w-full b-0 bg-none ta-left" onClick={() => void signOut()}>
-          <span>{t.logout}</span>
-          <span />
-        </button>
+        <>
+          <button className="menu-row w-full b-0 bg-none ta-left" onClick={() => void signOut()}>
+            <span>{t.logout}</span>
+            <span />
+          </button>
+          <LeaveBox token={session.access_token} />
+        </>
       )}
     </section>
   );

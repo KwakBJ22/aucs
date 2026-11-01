@@ -11,7 +11,17 @@ export const WATCH_STEPS: WatchStep[] = [
   "result",
   "after",
 ];
-export type WatchCard = ItemCard & { step: WatchStep; in_compare: boolean; changed?: boolean };
+export type WatchCard = ItemCard & {
+  step: WatchStep;
+  in_compare: boolean;
+  changed?: boolean;
+  last_result?: {
+    result: string;
+    winning_bid_krw: number | null;
+    sale_rate: number | null;
+    date: string;
+  } | null;
+};
 export type Compare = {
   items: string[];
   excluded: {
@@ -198,6 +208,7 @@ export const meApi = {
   saveMock: (t: string, m: MockIn) =>
     call(t, "/mocks", { method: "POST", body: JSON.stringify(m) }),
   removeMock: (t: string, id: number) => call(t, `/mocks/${id}`, { method: "DELETE" }),
+  deleteAccount: (t: string) => call(t, "/account", { method: "DELETE" }),
   compare: (t: string) => call<Compare>(t, "/compare"),
   /** 비교함 화면 전부(담은 물건마다 상세·계산·작업 공간) 한 번에. */
   compareFull: (t: string, homes: number, first: boolean) =>
