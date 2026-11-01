@@ -56,7 +56,7 @@ export const copy = {
   leave: {
     open: "회원 탈퇴",
     title: "탈퇴하면 되돌릴 수 없어요",
-    what: "관심 물건·알림·모의입찰·메모·올린 등기부가 모두 지워져요 · 같은 메일로 다시 가입할 수는 있어요",
+    what: "관심 물건·알림·모의입찰·메모·올린 등기부가 모두 지워져요 · 남겨 주신 입찰 결과는 이름 없이 법원 통계로만 남아요 · 같은 메일로 다시 가입할 수는 있어요",
     word: "탈퇴",
     type: "「탈퇴」라고 써 주세요",
     cancel: "그만두기",
@@ -358,6 +358,7 @@ export const copy = {
     alerts: "새 물건 알림 조건",
     alertsNone: "저장한 조건이 없어요",
     alertsAdd: "찾기에서 조건 저장하기",
+    alertDel: "지우기",
     instant: "바로",
     daily: "하루 한 번",
     logout: "로그아웃",
@@ -1149,6 +1150,7 @@ export const copy = {
     },
   },
   me: {
+    manUnit: "만 원",
     upcoming: "입찰 예정",
     upcomingEmpty: "관심 물건 중 앞으로 입찰할 물건이 여기 모여요",
     recordTitle: "입찰 기록과 결과",

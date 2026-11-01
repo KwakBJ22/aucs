@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/copy-text";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
@@ -145,7 +146,7 @@ export default function OnbidBid() {
             <button
               className="chip gray b-0 mh-28"
               onClick={() =>
-                navigator.clipboard?.writeText(d.case_no).then(
+                void copyText(d.case_no).then(
                   () => setCopied(true),
                   () => setCopied(false),
                 )

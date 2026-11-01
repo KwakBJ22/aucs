@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
-import { saveProfile, type Purpose } from "@/lib/profile";
+import { loadProfile, saveProfile, type Purpose } from "@/lib/profile";
 import { track } from "@/lib/track";
 
 const t = copy.start;
@@ -49,6 +49,14 @@ export default function Start() {
   const [man, setMan] = useState(""); // 만 원 단위 입력
   const [purpose, setPurpose] = useState<Purpose>("live");
 
+  // 「답 바꾸기」로 다시 오면 지난 답을 미리 채움(11/1 — 예전엔 처음부터 다시 골라야 했음)
+  useEffect(() => {
+    const p = loadProfile();
+    if (!p) return;
+    setPicked(p.regions ?? []);
+    if (p.cash) setMan(String(Math.round(p.cash / 10_000)));
+    if (p.purpose) setPurpose(p.purpose);
+  }, []);
   useEffect(() => {
     fetchRegions()
       .then(setRegions)

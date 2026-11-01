@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ItemCard } from "@/components/item-card";
 import { fetchItems, type ItemList } from "@/lib/api/items";
+import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { isStale } from "@/lib/noti";
 import { dday, won } from "@/lib/format";
@@ -82,7 +83,10 @@ export default function Home() {
       router.push("/login");
       return;
     }
-    await meApi.addSearch(token, copy.alert.name, { sigungu: p.regions, max_cash: p.cash });
+    await meApi.addSearch(token, condSummary({ sigungu: p.regions, max_cash: p.cash }), {
+      sigungu: p.regions,
+      max_cash: p.cash,
+    });
     track("alert_on");
     const r = await subscribePush(token);
     setAlertMsg(

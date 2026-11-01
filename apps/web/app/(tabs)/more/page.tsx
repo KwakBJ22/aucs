@@ -6,6 +6,7 @@ import { LeaveBox } from "@/components/leave-box";
 import { PageHeader } from "@/components/layout/page-header";
 import { meApi, type SavedSearch } from "@/lib/api/me";
 import { signOut, useSession } from "@/lib/auth";
+import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
 import { loadProfile, type Profile } from "@/lib/profile";
@@ -85,8 +86,25 @@ export default function More() {
       {searches.length === 0 && <p className="sub">{t.alertsNone}</p>}
       {searches.map((x) => (
         <div key={x.search_id} className="line-row fs-md">
-          <span>{x.name}</span>
-          <span className="sub">{x.delivery === "instant" ? t.instant : t.daily}</span>
+          <span className="minw-0">
+            {condSummary(x.filters)}
+            <span className="sub d-block fs-xs">
+              {x.delivery === "instant" ? t.instant : t.daily}
+            </span>
+          </span>
+          {session && (
+            <button
+              className="link-btn"
+              onClick={() =>
+                void meApi
+                  .removeSearch(session.access_token, x.search_id)
+                  .then(() => setSearches((s) => s.filter((y) => y.search_id !== x.search_id)))
+                  .catch(() => {})
+              }
+            >
+              {t.alertDel}
+            </button>
+          )}
         </div>
       ))}
       <Link href="/find" className="menu-row">

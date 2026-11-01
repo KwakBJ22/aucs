@@ -263,6 +263,7 @@ export const meApi = {
       method: "POST",
       body: JSON.stringify({ name, filters, delivery: "daily" }),
     }),
+  removeSearch: (t: string, id: number) => call(t, `/searches/${id}`, { method: "DELETE" }),
   notifications: (t: string) => call<Noti[]>(t, "/notifications"),
   saveProfile: (t: string, p: { regions: string[]; cash: number | null; purpose: string | null }) =>
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),

@@ -23,6 +23,11 @@ import { won } from "@/lib/format";
 
 const t = copy.me;
 const num = (s: string) => (s ? Number(s.replace(/[^0-9]/g, "")) || null : null);
+// 금액 칸은 만 원 단위(11/1 — 예전엔 원 단위라 「38000」이 3만 8천 원으로 저장됐음)
+const man = (s: string) => {
+  const n = num(s);
+  return n ? n * 10_000 : null;
+};
 const md = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
 
 // 결과 기록(RESULT-01): 결과 하나 고르고, 숫자는 아는 것만.
@@ -36,9 +41,9 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
       item_id: x.item_id,
       sale_date: x.sale_date,
       outcome: outcome!,
-      my_bid_krw: num(f.my),
-      winning_bid_krw: outcome === "won" ? num(f.my) : num(f.win),
-      second_bid_krw: num(f.second),
+      my_bid_krw: man(f.my),
+      winning_bid_krw: outcome === "won" ? man(f.my) : man(f.win),
+      second_bid_krw: man(f.second),
       bidder_count: num(f.n),
       pay_date: f.pay || null,
     };
@@ -66,9 +71,13 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
         </div>
       </div>
     );
-  const input = (k: keyof typeof f, label: string, type = "text") => (
+  const input = (k: keyof typeof f, label: string, type = "text", money = false) => (
     <label className="d-block fs-sm mt-8">
-      <span className="sub m-0">{label}</span>
+      <span className="sub m-0">
+        {label}
+        {money ? ` (${t.manUnit})` : ""}
+        {money && man(f[k]) ? ` = ${won(man(f[k]))}` : ""}
+      </span>
       <input
         type={type}
         inputMode={type === "text" ? "numeric" : undefined}
@@ -97,9 +106,9 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
       </div>
       {bid && (
         <>
-          {input("my", t.myBid)}
-          {outcome === "lost" && input("win", t.winning)}
-          {input("second", t.second)}
+          {input("my", t.myBid, "text", true)}
+          {outcome === "lost" && input("win", t.winning, "text", true)}
+          {input("second", t.second, "text", true)}
           {input("n", t.bidders)}
           {outcome === "won" && input("pay", t.payDate, "date")}
         </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/copy-text";
 import { useState } from "react";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -69,7 +70,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             <button
               className="chip gray b-0 mh-28"
               onClick={() => {
-                navigator.clipboard?.writeText(d.case_no).then(() => setCopied(true));
+                void copyText(d.case_no).then(() => setCopied(true));
               }}
             >
               {copied ? t.pc.copied : t.pc.copy}

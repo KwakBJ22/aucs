@@ -426,10 +426,17 @@ def compare_exclude(uid: str, item_id: str, reason: str) -> bool:
 
 
 def compare_unexclude(uid: str, item_id: str) -> None:
+    """「되돌리기」: 뺀 목록에서 지우고 비교함에 다시 넣음(11/1 — 예전엔 목록에서만 사라지고 비교함에 안 돌아왔음).
+    비교함은 5개까지라 꽉 찼으면 뺀 목록에서만 지움."""
     with connect() as c:
         c.execute(
             "delete from app.compare_exclusions where user_id = %s and item_id = %s",
             (uid, item_id),
+        )
+        c.execute(
+            """update app.watch_items set in_compare = true where user_id = %(u)s and item_id = %(i)s
+               and (select count(*) from app.watch_items w where w.user_id = %(u)s and w.in_compare) < %(m)s""",
+            {"u": uid, "i": item_id, "m": COMPARE_MAX},
         )
 
 
@@ -502,6 +509,7 @@ def report_add(uid: str, item_id: str, section: str, note: str) -> int:
 
 def delete_account(uid: str) -> bool:
     """탈퇴(11/1): 로그인 계정을 지우면 관심·알림·모의입찰·메모·올린 등기부가 함께 지워짐(외래키 cascade).
+    입찰 결과(app.bid_results)는 회원 번호만 비우고 응찰자 수 통계로 남김(0029).
     사용 기록(app.events)은 회원 번호만 비워 익명으로 남음."""
     import httpx
 

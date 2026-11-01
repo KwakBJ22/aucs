@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/items";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
+import { condSummary as condName } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { loadProfile } from "@/lib/profile";
@@ -187,7 +188,10 @@ export default function Find() {
       return;
     }
     meApi
-      .addSearch(session.access_token, copy.alert.name, { sigungu: regions, ...filter })
+      .addSearch(session.access_token, condName({ sigungu: regions, ...filter }), {
+        sigungu: regions,
+        ...filter,
+      })
       .then(() => setSaveMsg(t.saved))
       .catch(() => setSaveMsg(""));
   };

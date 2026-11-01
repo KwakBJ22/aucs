@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/copy-text";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
@@ -48,7 +49,7 @@ export default function NoticePage() {
               <button
                 className="btn f-1"
                 onClick={() =>
-                  navigator.clipboard?.writeText(d.mng_no).then(
+                  void copyText(d.mng_no).then(
                     () => setCopied(true),
                     () => setCopied(false),
                   )

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/copy-text";
 import { useState } from "react";
 import Link from "next/link";
 import { HeartButton } from "@/components/heart-button";
@@ -216,7 +217,7 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
     { key: "check", answer: t.checkAnswer(d.check_left), tone: "orange" },
   ];
   const copyNo = () => {
-    navigator.clipboard?.writeText(d.case_no).then(
+    void copyText(d.case_no).then(
       () => setCopied(true),
       () => setCopied(false),
     );

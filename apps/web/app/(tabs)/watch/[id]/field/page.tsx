@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/copy-text";
 import { PageHeader } from "@/components/layout/page-header";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -169,7 +170,7 @@ export default function FieldPage() {
             <button
               className="chip gray b-0 mh-36 mt-8"
               onClick={() =>
-                navigator.clipboard?.writeText(askText).then(() => {
+                void copyText(askText).then(() => {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 })
