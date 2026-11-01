@@ -43,6 +43,16 @@ export const copy = {
       ["건축물대장", "건물의 용도·층수·사용승인 날짜가 적힌 공문서예요. 등기부와 함께 봐야 해요."],
     ] as [string, string][],
   },
+  outcome: {
+    sold: (date: string, bid: string, rate: number | null) =>
+      `${date} 낙찰 ${bid}${rate != null ? ` · 감정가의 ${Math.round(rate)}%` : ""}`,
+    other: (date: string, text: string) => `${date} ${text}`,
+    failedNext: "다음 기일은 아직 안 잡혔어요",
+    unknown: "결과를 아직 못 받았어요",
+    within: "옥스 예상 범위 안",
+    outside: (lo: string, hi: string) => `옥스 예상 ${lo}~${hi} 밖`,
+    sameComplex: "같은 단지 다른 물건 보기 ›",
+  },
   photos: { label: "법원 현장 사진", count: (n: number) => `사진 ${n}장` },
   states: {
     errorTitle: "자료를 불러오지 못했어요",

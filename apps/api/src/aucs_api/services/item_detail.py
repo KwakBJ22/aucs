@@ -47,6 +47,7 @@ def build_detail(
     holidays: list[date] | None = None,
     doc_times: dict[str, Any] | None = None,
     spec: dict[str, Any] | None = None,
+    sale: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     c = card(r, today)
     signals = r["signals"] or []
@@ -113,9 +114,19 @@ def build_detail(
           {"checklist": checklist, "flow": flow, "events": events,
            "claim_deadline": r["claim_deadline"].isoformat() if r["claim_deadline"] else None}),
     ]  # fmt: skip
+    out_come = outcome(rounds, sale, today, questions[2]["body"].get("range_krw"))
+    if out_come and out_come["closed"]:
+        if out_come["code"] == "sold" and out_come["expected"]:
+            lo, hi = out_come["expected"]
+            bid = out_come["winning_bid_krw"]
+            # 웹 금액(won)은 만 원 아래를 반올림 → 같은 숫자로 맞춤
+            questions[2]["answer"] = f"예상 {won(_man(lo))}~{won(_man(hi))} · 실제 {won(_man(bid))}"
     return {
         **c,
-        "verdict": verdict(signals, len(todo)) if analyzed else PENDING,
+        "outcome": out_come,
+        "verdict": (CLOSED_LINE if out_come and out_come["closed"] else verdict(signals, len(todo)))
+        if analyzed
+        else PENDING,
         "analyzed": analyzed,
         "fatal": GONE_LINE
         if r.get("status_code") == "gone"
@@ -149,6 +160,40 @@ def build_detail(
 
 
 _CASE = "(select case_id from core.items where item_id = %s)"
+
+
+def _man(v: int) -> int:
+    """만 원 아래 반올림(웹 Math.round 와 같게 — 파이썬 round 는 5에서 짝수로 감)."""
+    return int(v / 10_000 + 0.5) * 10_000
+
+
+CLOSED_LINE = "끝난 물건이에요 · 아래는 매각 전에 한 분석이에요"
+
+
+def outcome(
+    rounds: list[dict[str, Any]],
+    sale: dict[str, Any] | None,
+    today: date,
+    expected: list[int] | None,
+) -> dict[str, Any] | None:
+    """지난 기일 결과(11/1): 앞으로 잡힌 기일이 없고 마지막 기일이 지났으면 그 결과. 매각·취하면 끝(closed)."""
+    if not rounds or any(x["sale_date"] >= today for x in rounds):
+        return None
+    last = rounds[-1]
+    code = (sale or {}).get("result") or last["result"] or "unknown"
+    if code == "scheduled":
+        code = "unknown"  # 기일은 지났는데 결과를 아직 못 받음
+    bid = (sale or {}).get("winning_bid_krw")
+    return {
+        "date": last["sale_date"].isoformat(),
+        "code": code,
+        "text": RESULT_KO.get(code, code),
+        "closed": code in ("sold", "withdrawn"),
+        "winning_bid_krw": bid,
+        "rate": float(sale["sale_rate"]) if sale and sale.get("sale_rate") is not None else None,
+        "expected": expected,
+        "within": bool(bid and expected and expected[0] <= bid <= expected[1]),
+    }
 
 
 @memo()
@@ -202,6 +247,11 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             # 같은 단지 지난 낙찰(같은 동 이름·지번이 주소에 있는 매각 결과, 이 사건은 빼고)
             q_peers = c.execute(PEERS_SQL, (item_id,))
+            q_sale = c.execute(
+                """select result, winning_bid_krw, sale_rate, sale_date from core.sale_results
+                   where item_id = %s order by sale_date desc limit 1""",
+                (item_id,),
+            )
         r = q_item.fetchone()
         if not r:
             return None
@@ -214,11 +264,12 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         hol = [x["holiday_date"] for x in q_hol.fetchall()]
         trades = q_trades.fetchall()
         peers = q_peers.fetchall()
+        sale = q_sale.fetchone()
     spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     if spec_at:
         doc_times["spec_sheet"] = spec_at
     out = build_detail(
-        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times, spec
+        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times, spec, sale
     )
     cx = build_complex(trades, peers, c_area(r), today)
     for q in out["questions"]:

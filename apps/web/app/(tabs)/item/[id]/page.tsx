@@ -27,6 +27,7 @@ import { DocSheet } from "@/components/item/doc-sheet";
 import { OnbidItem } from "@/components/item/onbid-detail";
 import { SameHouse } from "@/components/item/same-house";
 import { ItemPhotos } from "@/components/item/item-photos";
+import { OutcomeBand } from "@/components/item/outcome-band";
 import { InterestLine } from "@/components/item/interest-line";
 import { ItemPc } from "@/components/item/item-pc";
 import { RegCtx, useMyRegistry } from "@/components/item/registry";
@@ -127,6 +128,7 @@ export default function Item() {
                 {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
               </span>
             </div>
+            <OutcomeBand d={d} />
             <p className="fs-base lh-15 mt-12 mb-0 mx-0">{d.verdict}</p>
             <InterestLine v={d.interest} />
             <SameHouse list={d.same_house} />
@@ -162,7 +164,7 @@ export default function Item() {
           </section>
 
           <section className="section">
-            {d.next_round.min_price_krw && (
+            {d.next_round.min_price_krw && !d.outcome?.closed && (
               <Row
                 label={t.nextRound}
                 value={

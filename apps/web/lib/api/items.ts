@@ -167,7 +167,8 @@ export type ItemDetail = ItemCard & {
   same_house?: SameHouse[];
   interest?: Interest | null;
   court_bidders?: CourtBidders | null;
-  photos?: string[]; // 법원 현장 사진(휴대폰 크기, 매각 뒤 30일 지나면 없음)
+  photos?: string[];
+  outcome?: Outcome | null; // 지난 기일 결과(앞으로 잡힌 기일이 없을 때, 11/1) // 법원 현장 사진(휴대폰 크기, 매각 뒤 30일 지나면 없음)
   computed_at: string | null;
 };
 
@@ -238,6 +239,17 @@ export const isOnbid = (d: { source?: string }): d is OnbidDetail => d.source ==
 
 // DOC-01 원문 보기
 export type DocKind = "status_report" | "deliveries" | "spec_sheet";
+export type Outcome = {
+  date: string;
+  code: "sold" | "failed" | "withdrawn" | "changed" | "unknown" | string;
+  text: string;
+  closed: boolean; // 매각·취하 — 입찰 준비는 감춤
+  winning_bid_krw: number | null;
+  rate: number | null;
+  expected: [number, number] | null;
+  within: boolean;
+};
+
 export type ItemDocs = {
   closed?: boolean; // 매각 뒤 30일 지난 사건 — 원문은 보여 주지 않음(11/1)
   spec_sheet: {

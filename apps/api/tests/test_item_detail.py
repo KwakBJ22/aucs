@@ -254,3 +254,30 @@ def test_build_complex():
     assert cx["trend"]["recent_krw"] == 1_050_000_000 and cx["trend"]["prev_krw"] == 950_000_000
     assert cx["trend"]["change_pct"] == 10.5 and cx["trend"]["jeonse_krw"] == 600_000_000
     assert build_complex([], [], 84.0, t0) is None
+
+
+def test_outcome_sold_within_expected() -> None:
+    from datetime import date
+
+    from aucs_api.services.item_detail import outcome
+
+    rounds = [{"sale_date": date(2026, 10, 20), "min_price_krw": 710_500_000, "result": "sold"}]
+    sale = {"result": "sold", "winning_bid_krw": 935_799_900, "sale_rate": 92.2}
+    o = outcome(rounds, sale, date(2026, 11, 1), [900_300_000, 985_570_000])
+    assert o and o["closed"] and o["within"] and o["text"] == "매각"
+    assert (
+        outcome(
+            rounds + [{"sale_date": date(2026, 11, 20), "min_price_krw": 1, "result": "scheduled"}],
+            None,
+            date(2026, 11, 1),
+            None,
+        )
+        is None
+    )
+    failed = outcome(
+        [{"sale_date": date(2026, 10, 20), "min_price_krw": 1, "result": "failed"}],
+        None,
+        date(2026, 11, 1),
+        None,
+    )
+    assert failed and not failed["closed"]

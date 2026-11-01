@@ -309,7 +309,7 @@ export function RegistryBox() {
       )}
       {u?.status !== "processing" && (
         <>
-          <label className="btn d-block ta-center mt-10 cur-pointer">
+          <label className="btn secondary mt-10 cur-pointer" style={{ height: 48 }}>
             {u ? r.reupload : r.upload}
             <input
               type="file"

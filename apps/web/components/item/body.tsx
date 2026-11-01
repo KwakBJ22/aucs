@@ -111,7 +111,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
               ◆ {s.title}
             </div>
           ))}
-        <RegistryBox />
+        {!d.outcome?.closed && <RegistryBox />}
       </>
     );
   if (q.key === "worth")
@@ -168,7 +168,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         {b.deadlines.map((x: { key: string; label: string; short: string }) => (
           <Row key={x.key} label={x.label} value={x.short} />
         ))}
-        <CalcBox id={d.item_id} />
+        {!d.outcome?.closed && <CalcBox id={d.item_id} />}
       </>
     );
   return <CheckBody b={b} />;

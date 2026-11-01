@@ -14,6 +14,7 @@ import type { MyReg } from "@/components/item/registry";
 import { t, DOT } from "@/components/item/shared";
 import { SameHouse } from "@/components/item/same-house";
 import { ItemPhotos } from "@/components/item/item-photos";
+import { OutcomeBand } from "@/components/item/outcome-band";
 import { InterestLine } from "@/components/item/interest-line";
 
 export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
@@ -36,13 +37,17 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
       </>,
     ],
     [t.pc.failed, d.failed_count ? copy.card.failed(d.failed_count) : t.pc.none],
-    [
-      t.nextRound,
-      d.next_round.min_price_krw
-        ? `${won(d.next_round.min_price_krw)}${d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}`
-        : "-",
-    ],
-    [t.pc.deposit, won(d.deposit_krw)],
+    ...(d.outcome?.closed
+      ? []
+      : ([
+          [
+            t.nextRound,
+            d.next_round.min_price_krw
+              ? `${won(d.next_round.min_price_krw)}${d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}`
+              : "-",
+          ],
+          [t.pc.deposit, won(d.deposit_krw)],
+        ] as [string, React.ReactNode][])),
   ];
   return (
     <main className="page">
@@ -82,6 +87,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
             </div>
           ))}
         </div>
+        <OutcomeBand d={d} />
         <p className="fs-lg fw-6 lh-15 mt-14 mb-0 mx-0">{d.verdict}</p>
         <InterestLine v={d.interest} />
         <SameHouse list={d.same_house} />
@@ -145,15 +151,23 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
         </div>
         <aside className="section pc-sticky pc-actions">
           <div className="fs-base fw-7">{t.pc.actions}</div>
-          <Link href={`/item/${id}/calc`} className="btn primary fs-base" style={{ height: 46 }}>
-            {t.bidTry}
-          </Link>
-          <Link href={`/item/${id}/bid-sheet`} className="pc-act">
-            {copy.bidSheet.title}
-          </Link>
-          <Link href={`/item/${id}/bid-day`} className="pc-act">
-            {copy.bidDay.title}
-          </Link>
+          {!d.outcome?.closed && (
+            <>
+              <Link
+                href={`/item/${id}/calc`}
+                className="btn primary fs-base"
+                style={{ height: 46 }}
+              >
+                {t.bidTry}
+              </Link>
+              <Link href={`/item/${id}/bid-sheet`} className="pc-act">
+                {copy.bidSheet.title}
+              </Link>
+              <Link href={`/item/${id}/bid-day`} className="pc-act">
+                {copy.bidDay.title}
+              </Link>
+            </>
+          )}
           <CompareAdd id={d.item_id} />
           <Link href="/pro/market" className="pc-act">
             {t.pc.market}
