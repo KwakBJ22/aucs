@@ -117,6 +117,14 @@ export default function Find() {
       .then((r) => setRegionNames(r.map((x) => x.sigungu)))
       .catch(() => {});
   }, []);
+  // 다른 화면에서 /find?q=… 로 오면 그 말로 바로 찾기(11/1, 「같은 단지 다른 물건 보기」)
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("q")?.trim();
+    if (v) {
+      setQ(v);
+      setQuery(v);
+    }
+  }, []);
   useEffect(() => {
     const h = setTimeout(() => setQuery(q.trim()), 350);
     return () => clearTimeout(h);

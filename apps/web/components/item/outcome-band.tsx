@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ItemDetail } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
+import { complexName } from "@/lib/talk";
 
 const t = copy.outcome;
 
@@ -33,7 +34,7 @@ export function OutcomeBand({ d }: { d: ItemDetail }) {
       {sub && <div className="sub fs-sm mt-2">{sub}</div>}
       {o.closed && (
         <Link
-          href={`/find?q=${encodeURIComponent(d.building ?? d.place ?? "")}`}
+          href={`/find?q=${encodeURIComponent(complexName(d))}`}
           className="fs-sm c-blue mt-6 d-inline-block"
         >
           {t.sameComplex}

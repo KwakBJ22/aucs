@@ -150,3 +150,9 @@ export function dropPart(t: Talk, key: string): Talk | null {
   if (!parts.length) return null;
   return { ...t, filter: f, sigungu: sigungu?.length ? sigungu : undefined, source, parts };
 }
+
+// 「버들치마을성복힐스테이트3차 304동 2층203호」 → 단지 이름만(동·층·호 뺌)
+export function complexName(d: { building: string | null; place: string | null }): string {
+  const b = (d.building ?? "").replace(/\s*(제?\d+동|[^\s]*\d+층|[^\s]*\d+호).*$/, "").trim();
+  return b || d.place || "";
+}

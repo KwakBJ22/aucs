@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropPart, parseTalk } from "./talk";
+import { complexName, dropPart, parseTalk } from "./talk";
 
 const R = ["용인시 수지구", "강남구", "성남시 분당구", "화성시 동탄구"];
 
@@ -35,5 +35,14 @@ describe("parseTalk", () => {
     const u = dropPart(t, "price_max")!;
     expect(u.filter.price_max).toBeUndefined();
     expect(dropPart(u, "region:용인시 수지구")).toBeNull();
+  });
+});
+
+describe("complexName", () => {
+  it("동·층·호를 뺀 단지 이름", () => {
+    expect(
+      complexName({ building: "버들치마을성복힐스테이트3차 304동 2층203호", place: "수지구" }),
+    ).toBe("버들치마을성복힐스테이트3차");
+    expect(complexName({ building: null, place: "수지구" })).toBe("수지구");
   });
 });
