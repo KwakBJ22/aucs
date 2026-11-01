@@ -17,6 +17,7 @@ from typing import Any
 import psycopg
 from psycopg.types.json import Jsonb
 
+from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.collectors.court_site import COURTS
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import Polite
@@ -236,7 +237,7 @@ def main() -> None:
         if not targets:
             return
         with sync_playwright() as p:
-            browser = p.chromium.launch(channel="chrome", headless=not a.show)
+            browser = launch_chrome(p, headless=not a.show)
             page = browser.new_page()
             page.goto(CASE_PAGE, wait_until="networkidle", timeout=60000)
             try:

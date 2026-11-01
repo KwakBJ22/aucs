@@ -6,6 +6,7 @@
 from collections.abc import Iterator
 from typing import Any
 
+from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.collectors.polite import Polite
 
 COURTS = {
@@ -76,7 +77,7 @@ def fetch_pages(
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=not show)  # 설치된 크롬
+        browser = launch_chrome(p, headless=not show)
         page = browser.new_page()
         page.goto(RESULT_PAGE if results else SEARCH_PAGE, wait_until="networkidle", timeout=60000)
         try:

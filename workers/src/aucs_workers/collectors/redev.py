@@ -13,6 +13,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.db import ROOT, connect
 from aucs_workers.jobs.runlog import run
 
@@ -64,7 +65,7 @@ def download() -> Path:
     INBOX.mkdir(parents=True, exist_ok=True)
     out = INBOX / f"사업장목록_{date.today():%Y%m%d}.xls"
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=True)
+        browser = launch_chrome(p)
         page = browser.new_page(accept_downloads=True)
         page.goto(PAGE, wait_until="networkidle", timeout=60000)
         with page.expect_download(timeout=120000) as dl:
