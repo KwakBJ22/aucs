@@ -1,0 +1,16 @@
+# 옥스 Vercel 올릴 때 빼는 것(11/3) — 웹·API 두 프로젝트가 저장소 맨 위에서 같이 씀. API 함수는 vercel.json excludeFiles 로 웹을 뺌
+node_modules
+tools
+logs
+db
+docs
+infra
+scripts
+apps/web/check/failed
+**/tests
+**/__pycache__
+**/.venv
+*.duckdb
+.env
+.env.*
+_to_delete

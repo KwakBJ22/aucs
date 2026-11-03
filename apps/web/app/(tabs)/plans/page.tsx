@@ -83,6 +83,7 @@ export default function Plans() {
             {x}
           </div>
         ))}
+        <div className="sub py-4 px-0">{t.usedNote}</div>
         <div className="sub mt-8 fw-6">{t.payLater}</div>
       </section>
     </main>

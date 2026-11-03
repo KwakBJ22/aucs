@@ -21,11 +21,12 @@ function Say($m) { Write-Host $m; Add-Content -Path $log -Value $m -Encoding UTF
 Initialize-PgTools
 $sw = [Diagnostics.Stopwatch]::StartNew()
 Say "시험할 백업: $Dump"
-if (Test-Path $tmp) { & "$pgBin\pg_ctl.exe" -D "$tmp\data" stop -m fast 2>$null | Out-Null; Remove-Item $tmp -Recurse -Force }
+if (Test-Path $tmp) { if (Test-Path "$tmp\data") { Invoke-PgCtl @('-D', "`"$tmp\data`"", 'stop', '-m', 'fast') | Out-Null }; Remove-Item $tmp -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 try {
   & "$pgBin\initdb.exe" -D "$tmp\data" -U postgres -A trust -E UTF8 --locale=C 2>&1 | Out-Null
-  & "$pgBin\pg_ctl.exe" -D "$tmp\data" -o "-p $port" -l "$tmp\server.log" -w start | Out-Null
+  Say "임시 DB 켜는 중..."
+  if ((Invoke-PgCtl @('-D', "`"$tmp\data`"", '-o', "`"-p $port`"", '-l', "`"$tmp\server.log`"", '-w', 'start')) -ne 0) { throw "임시 DB를 켜지 못함(로그: $tmp\server.log)" }
   & "$pgBin\createdb.exe" -h localhost -p $port -U postgres aucs
   # Supabase 에만 있는 것 흉내(로그인 함수·역할·확장 자리)
   $stub = @"
@@ -41,7 +42,7 @@ end `$`$;
 create extension if not exists pgcrypto schema extensions;
 create extension if not exists "uuid-ossp" schema extensions;
 "@
-  & "$pgBin\psql.exe" -d $local -q -c $stub | Out-Null
+  Invoke-PgSql $local $stub | Out-Null
   # 1) 표 만들기: 좌표 칸은 글자 칸으로 바꿔서
   & "$pgBin\pg_restore.exe" --section=pre-data --no-owner --no-privileges -f "$tmp\pre.sql" $Dump
   $pre = [IO.File]::ReadAllText("$tmp\pre.sql", [Text.Encoding]::UTF8) -replace 'public\.geography\([^)]*\)', 'text' -replace 'public\.geography', 'text'
@@ -54,8 +55,11 @@ create extension if not exists "uuid-ossp" schema extensions;
   Say "자료 넣기 끝 · 오류 $e2"
   # 3) 색인·제약(좌표 색인은 PostGIS 가 없어 실패해도 됨)
   & "$pgBin\pg_restore.exe" --section=post-data --no-owner --no-privileges -f "$tmp\post.sql" $Dump
-  $e3 = (& "$pgBin\psql.exe" -d $local -q -f "$tmp\post.sql" 2>&1 | Select-String 'ERROR' | Where-Object { $_ -notmatch 'gist|geography|st_' }).Count
-  Say "색인·제약 끝 · 좌표 말고 오류 $e3"
+  # 회원 표(auth.users)는 임시 DB에 없어 회원 번호 연결(외래키)은 만들 수 없음 — 정상이라 뺌(11/2)
+  $err3 = @(& "$pgBin\psql.exe" -d $local -q -f "$tmp\post.sql" 2>&1 | Select-String 'ERROR' | Where-Object { $_ -notmatch 'gist|geography|st_|auth\.users|schema "auth"' })
+  $e3 = $err3.Count
+  Say "색인·제약 끝 · 좌표·회원 연결 말고 오류 $e3"
+  $err3 | Select-Object -First 20 | ForEach-Object { Say "  $_" }
   # 4) 줄 수 맞춰 보기
   $want = @{}
   if (Test-Path $counts) { Get-Content $counts -Encoding UTF8 | ForEach-Object { $p = $_ -split ','; $want[$p[0]] = [long]$p[1] } }
@@ -77,9 +81,10 @@ create extension if not exists "uuid-ossp" schema extensions;
   try {
     $url = Get-DbUrl
     $st = if ($pass) { 'ok' } else { 'failed' }
-    & "$pgBin\psql.exe" -d $url -q -c "insert into ops.jobs (job_id, name_ko) values ('restore_test', 'DB 복구 시험') on conflict do nothing; insert into ops.job_runs (job_id, finished_at, status, item_count, message) values ('restore_test', now(), '$st', $($got.Count), '다른 표 $($bad.Count) · 오류 $($e1 + $e2 + $e3)')" | Out-Null
+    $rc = Invoke-PgSql $url "insert into ops.jobs (job_id, name_ko) values ('restore_test', 'DB 복구 시험') on conflict do nothing; insert into ops.job_runs (job_id, finished_at, status, item_count, message) values ('restore_test', now(), '$st', $($got.Count), '다른 표 $($bad.Count) · 오류 $($e1 + $e2 + $e3)');"
+    if ($rc -ne 0) { Say "관리자 화면 기록은 못 남김" }
   } catch { Say "관리자 화면 기록은 못 남김: $_" }
 } finally {
-  & "$pgBin\pg_ctl.exe" -D "$tmp\data" stop -m fast 2>$null | Out-Null
+  if (Test-Path "$tmp\data") { Invoke-PgCtl @('-D', "`"$tmp\data`"", 'stop', '-m', 'fast') | Out-Null }
   Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

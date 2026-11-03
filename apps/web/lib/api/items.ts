@@ -123,7 +123,27 @@ export function fetchItems(opts: {
   return getJson<ItemList>(`/items?${q.toString()}`);
 }
 
-export const fetchRegions = () => getJson<RegionRow[]>("/regions");
+// 지역별 물건 수는 하루 한 번 바뀜 → 30분 기억(찾기·시작·전문가 화면을 오가도 다시 부르지 않음, 11/3)
+export const fetchRegions = () => getJson<RegionRow[]>("/regions", 30 * 60_000);
+
+// 홈 공개 자료 한 번에(11/3): 내 조건 물건 20 · 이번 주 마감 공매 5 · (PC) 석 달 낙찰가율 · 게시 중 공지
+export type HomeFeed = {
+  mine: ItemList;
+  onbid_soon: ItemList | null;
+  market: import("./pro").Market | null;
+  notices: { notice_id: number; title: string; body: string }[];
+};
+export function fetchHomeFeed(opts: {
+  sigungu?: string[];
+  maxCash?: number | null;
+  market?: boolean;
+}) {
+  const q = new URLSearchParams();
+  (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
+  if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
+  if (opts.market) q.set("market", "true");
+  return getJson<HomeFeed>(`/home-feed?${q.toString()}`);
+}
 
 export type Question = {
   key: "buy" | "hold" | "worth" | "cost" | "check";

@@ -129,8 +129,33 @@ export type RegistryUpload = {
   };
 };
 
-// 등기부 PDF 올리기 (multipart 라 공통 call 을 쓰지 않음)
+// 등기부 PDF 올리기. 먼저 파일 보관함(registry-uploads/<회원>/…)에 바로 올리고 API 는 그걸 가져감(11/3 —
+// 서버(Vercel)가 한 번에 4.5MB 까지만 받아서). 보관함이 안 되면 예전처럼 API 로 직접(multipart).
 export async function uploadRegistry(token: string, itemId: string, file: File): Promise<void> {
+  const { supabase } = await import("@/lib/auth");
+  const uid = supabase ? (await supabase.auth.getSession()).data.session?.user.id : undefined;
+  if (supabase && uid) {
+    const path = `${uid}/${crypto.randomUUID()}.pdf`;
+    const up = await supabase.storage
+      .from("registry-uploads")
+      .upload(path, file, { contentType: "application/pdf" });
+    if (!up.error) {
+      const res = await fetch(
+        `${apiBaseUrl}/me/registries/${encodeURIComponent(itemId)}/from-storage`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ path, file_name: file.name.slice(0, 120) }),
+        },
+      );
+      clearMeCache();
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(j?.detail ?? `HTTP ${res.status}`);
+      }
+      return;
+    }
+  }
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch(`${apiBaseUrl}/me/registries/${encodeURIComponent(itemId)}`, {
@@ -203,7 +228,62 @@ export type Mock = MockIn & {
   similar?: { item_id: string; place: string; sale_date: string; min_price_krw: number }[];
 };
 
+export type MyInquiry = {
+  inquiry_id: number;
+  body: string;
+  answer: string | null;
+  created_at: string;
+};
+export type Payment = {
+  payment_id: number;
+  plan: string;
+  period: "month" | "year" | "one";
+  amount_krw: number;
+  item_id: string | null;
+  status: "paid" | "cancelled" | "refunded" | "part_refunded";
+  refunded_krw: number;
+  auto_renew: boolean;
+  method_note: string | null;
+  order_id: string | null;
+  receipt_url: string | null;
+  paid_at: string;
+  valid_from: string;
+  valid_to: string;
+  refund_status: "waiting" | "done" | "rejected" | null;
+  refund: { amount_krw: number; rule: string } | null;
+};
+export type Billing = {
+  current: {
+    plan: string;
+    until: string;
+    auto_renew: boolean;
+    period: string;
+    amount_krw: number;
+    item_id: string | null;
+  }[];
+  payments: Payment[];
+  grants: { plan: string; until_date: string; reason: string; created_at: string }[];
+};
 export const meApi = {
+  // 화면 한 번에(11/3): 내 경매 = 관심·입찰 기록·모의입찰, 내 정보 = 알림 조건·문의
+  auction: (t: string) => call<{ watch: WatchCard[]; bids: Bids; mocks: Mock[] }>(t, "/auction"),
+  // 관심 물건 한 칸 = 물건 상세 + 내 작업 공간(PC 관심 오른쪽·현장 확인)
+  panel: (t: string, id: string) =>
+    call<{ d: import("./items").ItemDetail | null; w: Workspace }>(
+      t,
+      `/watch/${encodeURIComponent(id)}/panel`,
+    ),
+  more: (t: string) => call<{ searches: SavedSearch[]; inquiries: MyInquiry[] }>(t, "/more"),
+  billing: (t: string) => call<Billing>(t, "/billing", { fresh: true }),
+  refund: (t: string, id: number, reason?: string) =>
+    call<{ estimate_krw: number; rule: string; stopped?: boolean }>(t, `/billing/${id}/refund`, {
+      method: "POST",
+      body: JSON.stringify({ reason: reason ?? null }),
+    }),
+  stopRenew: (t: string, id: number) => call(t, `/billing/${id}/stop-renew`, { method: "POST" }),
+  inquiries: (t: string) => call<MyInquiry[]>(t, "/inquiries", { fresh: true }),
+  ask: (t: string, body: string) =>
+    call(t, "/inquiries", { method: "POST", body: JSON.stringify({ body }) }),
   mocks: (t: string) => call<Mock[]>(t, "/mocks"),
   saveMock: (t: string, m: MockIn) =>
     call(t, "/mocks", { method: "POST", body: JSON.stringify(m) }),

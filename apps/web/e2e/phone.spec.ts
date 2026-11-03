@@ -21,11 +21,12 @@ test("경매 상세 → 입찰가 계산 → 보고서", async ({ page }) => {
   await open(page, `/item/${id}`);
   await expect(page.locator("h1, h2").first()).toBeVisible();
   await open(page, `/item/${id}/calc`);
+  await page.getByRole("button", { name: "없어요" }).click(); // 집 몇 채 — 골라야 계산이 나옴(새 브라우저는 저장된 답이 없음)
   const slider = page.getByRole("slider", { name: "입찰가 넣어 보기" });
   await expect(slider).toBeVisible();
   await slider.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByText(/억|만/).first()).toBeVisible();
+  await expect(page.getByText(/\d억|\d만/).first()).toBeVisible(); // 금액(숨은 PC 머리의 「3초 만에」는 빼려고 숫자 붙은 것만)
   await open(page, `/item/${id}/report`);
   await expect(page.getByText(/감정가|최저가/).first()).toBeVisible();
   expect(errs).toEqual([]);
@@ -33,10 +34,19 @@ test("경매 상세 → 입찰가 계산 → 보고서", async ({ page }) => {
 
 test("공매 상세", async ({ page }) => {
   const errs = watchErrors(page);
-  const { onbid } = await pickItems(page);
-  test.skip(!onbid, "찾기 첫 화면에 공매 물건이 없음");
+  await open(page, "/find?source=onbid"); // 공매만 보기(첫 화면에 공매가 없을 때도 시험되게)
+  const link = page.locator('a[href^="/item/OB-"]').first();
+  const onbid = (await link.waitFor({ timeout: 20000 }).then(
+    () => true,
+    () => false,
+  ))
+    ? decodeURIComponent(
+        ((await link.getAttribute("href")) ?? "").replace("/item/", "").split("/")[0] ?? "",
+      )
+    : null;
+  test.skip(!onbid, "공매 목록이 비어 있음");
   await open(page, `/item/${encodeURIComponent(onbid as string)}`);
-  await expect(page.getByText(/공매|온비드/).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible(); // 주소 제목(숨은 PC 메뉴 「공매」는 빼고)
   expect(errs).toEqual([]);
 });
 
@@ -49,8 +59,12 @@ test("로그인 → 관심 담기·빼기 → 모의입찰 남기기·지우기 
   );
   const id = encodeURIComponent(court);
   await open(page, `/item/${id}`);
-  const heart = page.getByRole("button", { name: /관심 담기|관심 빼기/ }).first();
-  if ((await heart.getAttribute("aria-label")) === "관심 빼기") await heart.click(); // 지난 시험 찌꺼기
+  await page.waitForLoadState("networkidle"); // 관심 여부를 받아 온 뒤에 하트를 봄(먼저 누르면 상태가 엇갈림)
+  const off = page.getByRole("button", { name: "관심 빼기" }).first();
+  if (await off.isVisible().catch(() => false)) {
+    await off.click(); // 지난 시험 찌꺼기
+    await page.waitForLoadState("networkidle");
+  }
   await page.getByRole("button", { name: "관심 담기" }).first().click();
   const later = page.getByRole("button", { name: "나중에" }); // 처음이면 홈 화면 추가 안내
   if (await later.isVisible().catch(() => false)) await later.click();
@@ -66,7 +80,7 @@ test("로그인 → 관심 담기·빼기 → 모의입찰 남기기·지우기 
     await expect(page.getByText(/남겼어요/)).toBeVisible();
   }
   await open(page, "/me");
-  await expect(page.getByText("내 경매").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "내 경매", level: 1 })).toBeVisible(); // 숨은 PC 메뉴 「내 경매」는 빼고
   const rm = page.getByRole("button", { name: "지우기" });
   while ((await rm.count()) > 0) {
     await rm.first().click();

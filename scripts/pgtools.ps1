@@ -31,3 +31,20 @@ function Get-CountSql {
   $list = ($schemas | ForEach-Object { "'$_'" }) -join ','
   return "select table_schema||'.'||table_name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text from information_schema.tables where table_schema in ($list) and table_type = 'BASE TABLE' order by 1"
 }
+
+# 한글이 든 SQL 을 psql 에 넘길 때: 명령 줄(-c)로 넘기면 Windows 가 CP949 로 바꿔 「invalid byte sequence for encoding UTF8」(11/2).
+# UTF-8 파일로 써서 -f 로 넘김.
+function Invoke-PgSql([string]$url, [string]$sql) {
+  $f = Join-Path $env:TEMP ("aucs_sql_{0}.sql" -f [guid]::NewGuid().ToString('N'))
+  [IO.File]::WriteAllText($f, $sql, (New-Object Text.UTF8Encoding $false))
+  try { & "$pgBin\psql.exe" -d $url -q -v ON_ERROR_STOP=1 -f $f | Out-Null; return $LASTEXITCODE } finally { Remove-Item $f -ErrorAction SilentlyContinue }
+}
+
+# pg_ctl start 는 출력을 | Out-Null 로 받으면 띄운 DB 서버가 그 통로를 계속 잡고 있어 PowerShell 이 끝없이 기다림(11/1 복구 시험 멈춤).
+# 출력 통로 없이 띄우고 pg_ctl 만 기다림.
+function Invoke-PgCtl([string[]]$argv) {
+  $p = Start-Process -FilePath "$pgBin\pg_ctl.exe" -ArgumentList $argv -NoNewWindow -PassThru
+  $null = $p.Handle  # 이걸 잡아 둬야 끝난 뒤 ExitCode 가 비지 않음
+  $p.WaitForExit()
+  return $p.ExitCode
+}

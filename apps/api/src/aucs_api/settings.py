@@ -9,9 +9,21 @@ ROOT = Path(__file__).resolve().parents[4]
 load_dotenv(ROOT / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-WEB_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
-# 같은 와이파이의 휴대폰에서 개발 화면 보기(192.168.x.x·10.x.x.x:3000)
-WEB_ORIGIN_REGEX = r"http://(192\.168|10)\.\d+\.\d+(\.\d+)?:3000"
+# 화면 주소(CORS). 서비스 주소 + 개발용. Vercel 은 WEB_ORIGINS_EXTRA(쉼표로)에 더 넣을 수 있음(11/3)
+WEB_ORIGINS = [
+    "https://aucs.co.kr",
+    "https://www.aucs.co.kr",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+] + [o.strip() for o in os.getenv("WEB_ORIGINS_EXTRA", "").split(",") if o.strip()]
+# 같은 와이파이의 휴대폰에서 개발 화면 보기(192.168.x.x·10.x.x.x:3000) + Vercel 시험 주소(aucs-web-….vercel.app)
+WEB_ORIGIN_REGEX = (
+    r"http://(192\.168|10)\.\d+\.\d+(\.\d+)?:3000|https://aucs-web(-[a-z0-9-]+)?\.vercel\.app"
+)
+# Vercel 에서 도는지(그림 등기부 글자 인식은 PC 에서만 — tesseract 가 없음)
+ON_VERCEL = bool(os.getenv("VERCEL"))
+# Vercel 예약 실행(Cron)이 보내는 비밀값 — /cron/* 주소만 씀
+CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 
 # 관리자 화면 열쇠 (2단계 로그인 전까지 개발용). 비어 있으면 관리자 주소는 모두 막힘.
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()

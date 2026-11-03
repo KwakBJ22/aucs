@@ -1,0 +1,9 @@
+# Vercel 의 옥스 API 함수가 설치하는 것(11/3). 수집기(Chrome·글자 인식·지도 좌표)용은 PC 에만 — workers/pyproject.toml
+fastapi>=0.115
+psycopg[binary]>=3.2
+python-dotenv>=1.1
+httpx>=0.28
+python-multipart>=0.0.9
+cryptography>=44
+pypdf>=5.0
+pywebpush>=2.0

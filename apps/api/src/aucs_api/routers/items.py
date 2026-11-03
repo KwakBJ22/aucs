@@ -42,6 +42,42 @@ def get_items(
     return out
 
 
+@router.get("/home-feed")
+def get_home_feed(
+    sigungu: Annotated[list[str] | None, Query()] = None,
+    max_cash: Annotated[int | None, Query(ge=0)] = None,
+    market: bool = False,
+) -> dict[str, Any]:
+    """홈 화면 공개 자료를 한 번에(11/3 — 예전엔 내 조건 물건·이번 주 마감 공매·석 달 낙찰가율·공지를 4번 불렀음)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import timedelta
+
+    from aucs_api.services import admin_ops, pro
+
+    today = date.today()
+    sg = sigungu or []
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        mine = ex.submit(
+            items.list_items, sigungu=sg, max_cash=max_cash, sort="deadline", limit=20, today=today
+        )
+        soon = ex.submit(items.list_items, sigungu=sg, max_cash=max_cash, sort="deadline", limit=5, today=today,
+                         extra={"days_max": 3}, source="onbid")  # fmt: skip
+        mk = ex.submit(pro.market, {"sido": None, "sigungu": None, "court": None, "usage": None,
+                                    "since": today - timedelta(days=93)}, today) if market else None  # fmt: skip
+        notes = ex.submit(admin_ops.notices, True)
+        base = {"total": 0, "items": [], "results": [], "exact_item_id": None}
+        try:
+            onbid_soon: dict[str, Any] | None = {**base, **soon.result()}
+        except Exception:  # noqa: BLE001 — 공매가 안 와도 홈은 그대로
+            onbid_soon = None
+        return {
+            "mine": {**base, **mine.result()},
+            "onbid_soon": onbid_soon,
+            "market": mk.result() if mk else None,
+            "notices": notes.result(),
+        }
+
+
 @router.get("/regions")
 def get_regions() -> list[dict[str, Any]]:
     return items.regions()

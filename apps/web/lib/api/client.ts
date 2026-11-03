@@ -43,8 +43,9 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function getJson<T>(path: string): Promise<T> {
-  return remembered(pub, path, PUB_TTL, () => fetchJson<T>(`${apiBaseUrl}${path}`));
+/** 공개 자료(GET). ttl: 기억하는 시간(기본 1분, 지역 목록처럼 잘 안 바뀌는 것은 길게). */
+export function getJson<T>(path: string, ttl = PUB_TTL): Promise<T> {
+  return remembered(pub, path, ttl, () => fetchJson<T>(`${apiBaseUrl}${path}`));
 }
 
 /** 로그인한 사람의 자료(GET). 토큰마다 따로 기억. */

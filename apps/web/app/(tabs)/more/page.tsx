@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AskBox } from "@/components/ask-box";
 import { LeaveBox } from "@/components/leave-box";
 import { PageHeader } from "@/components/layout/page-header";
-import { meApi, type SavedSearch } from "@/lib/api/me";
+import { meApi, type MyInquiry, type SavedSearch } from "@/lib/api/me";
 import { signOut, useSession } from "@/lib/auth";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
@@ -21,11 +22,16 @@ export default function More() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   useEffect(() => setProfile(loadProfile()), []);
+  const [inquiries, setInquiries] = useState<MyInquiry[]>([]);
   useEffect(() => {
+    // 알림 조건·문의를 한 번에(11/3 — 예전 2번)
     if (session)
       meApi
-        .searches(session.access_token)
-        .then(setSearches)
+        .more(session.access_token)
+        .then((m) => {
+          setSearches(m.searches);
+          setInquiries(m.inquiries);
+        })
         .catch(() => {});
   }, [session]);
   if (!ready) return null;
@@ -36,7 +42,10 @@ export default function More() {
         <>
           <h2>{t.hello}</h2>
           <div className="sub">{session.user.email}</div>
-          <div className="chip gray mt-8">{t.plan}</div>
+          <Link href="/more/billing" className="menu-row mt-8">
+            <span>{t.plan}</span>
+            <span className="sub">›</span>
+          </Link>
         </>
       ) : (
         <>
@@ -160,6 +169,7 @@ export default function More() {
             <div>
               {alerts}
               {menu}
+              {session && <AskBox token={session.access_token} initial={inquiries} />}
             </div>
           </div>
         </div>
@@ -172,6 +182,7 @@ export default function More() {
       {cond}
       {alerts}
       {menu}
+      {session && <AskBox token={session.access_token} initial={inquiries} />}
     </main>
   );
 }

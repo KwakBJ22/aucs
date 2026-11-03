@@ -45,7 +45,8 @@ export function useMyRegistry(id: string): MyReg {
           if (x?.status === "processing") {
             // 이 화면을 떠났다 돌아와도 올린 시각부터 막대를 이어 감
             setStartedAt((v) => v ?? (x.created_at ? Date.parse(x.created_at) : Date.now()));
-            timer = setTimeout(load, 3000);
+            // 그림 등기부(ocr_wait)는 글자 읽기를 기다리는 중이라 1분마다만 확인(11/3)
+            timer = setTimeout(load, x.method === "ocr_wait" ? 60_000 : 3000);
           } else setStartedAt(null);
         })
         .catch(() => !stop && setU(null));
@@ -193,7 +194,12 @@ export function RegistryBox() {
   const lad = u?.ladder;
   return (
     <div className="mt-12 pt-10">
-      {u?.status === "processing" && <ReadingBar sending={sending} startedAt={startedAt} />}
+      {u?.status === "processing" &&
+        (u.method === "ocr_wait" ? (
+          <p className="note blue">{t.reg.ocrWait}</p>
+        ) : (
+          <ReadingBar sending={sending} startedAt={startedAt} />
+        ))}
       {blocked && addr && (
         <div className="bg-orange-soft r-16 p-14">
           <b className="c-amber fs-base">

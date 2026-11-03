@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
-import { fetchItem, type ItemDetail } from "@/lib/api/items";
+import type { ItemDetail } from "@/lib/api/items";
 import { meApi, type Workspace } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
@@ -39,15 +39,14 @@ export default function FieldPage() {
     if (uid) listFiles(uid, id).then(setFiles);
   }, [uid, id]);
   useEffect(() => {
-    fetchItem(id)
-      .then(setD)
-      .catch(() => setD(null));
-  }, [id]);
-  useEffect(() => {
     if (!token) return;
+    // 물건 상세 + 내 작업 공간을 한 번에(11/3 — 예전 2번)
     meApi
-      .workspace(token, id)
-      .then(setW)
+      .panel(token, id)
+      .then((x) => {
+        setD(x.d);
+        setW(x.w);
+      })
       .catch(() => setW(null));
     reload();
   }, [token, id, reload]);

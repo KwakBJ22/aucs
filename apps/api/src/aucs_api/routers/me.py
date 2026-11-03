@@ -3,14 +3,35 @@
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from pydantic import BaseModel, Field
 
 from aucs_api import settings
 from aucs_api.auth.user import current_user_id
-from aucs_api.services import me, mock, registry
+from aucs_api.services import admin_ops, billing, me, mock, registry
 
-router = APIRouter(prefix="/me")
+
+def not_limited(request: Request, authorization: str = Header(default="")) -> None:
+    """관리자가 이용 제한한 회원은 저장·삭제를 못 함(읽기·탈퇴·문의는 됨, 11/2)."""
+    if request.method == "GET" or request.url.path.endswith(
+        ("/account", "/inquiries", "/refund", "/stop-renew")
+    ):
+        return
+    if authorization and admin_ops.is_limited(current_user_id(authorization)):
+        raise HTTPException(403, "이용이 제한된 계정이에요 · 문의로 알려 주세요")
+
+
+router = APIRouter(prefix="/me", dependencies=[Depends(not_limited)])
 Uid = Annotated[str, Depends(current_user_id)]
 
 
@@ -47,6 +68,32 @@ class ProfileIn(BaseModel):
 @router.get("/watch")
 def get_watch(uid: Uid) -> list[dict[str, Any]]:
     return me.watch_list(uid, date.today())
+
+
+def _together(**jobs: Any) -> dict[str, Any]:
+    """여러 내 자료를 동시에 읽어 한 번에 돌려줌(11/3 화면마다 여러 번 부르던 것 합치기)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=len(jobs)) as ex:
+        futs = {k: ex.submit(fn, *args) for k, (fn, *args) in jobs.items()}
+        return {k: f.result() for k, f in futs.items()}
+
+
+@router.get("/auction")
+def get_auction(uid: Uid) -> dict[str, Any]:
+    """「내 경매」 화면 한 번에: 관심·입찰 기록·모의입찰(예전 3번)."""
+    today = date.today()
+    return _together(
+        watch=(me.watch_list, uid, today),
+        bids=(me.bids, uid, today),
+        mocks=(mock.listing, uid, today),
+    )
+
+
+@router.get("/more")
+def get_more(uid: Uid) -> dict[str, Any]:
+    """「내 정보」 화면 한 번에: 알림 조건·문의(예전 2번)."""
+    return _together(searches=(me.searches, uid), inquiries=(admin_ops.my_inquiries, uid))
 
 
 @router.get("/home")
@@ -103,6 +150,19 @@ def get_workspace(item_id: str, uid: Uid) -> dict[str, Any]:
     if ws is None:
         raise HTTPException(status_code=404, detail="관심 물건이 아니에요")
     return ws
+
+
+@router.get("/watch/{item_id}/panel")
+def get_watch_panel(item_id: str, uid: Uid) -> dict[str, Any]:
+    """관심 물건 한 칸(PC 관심 오른쪽·현장 확인) 한 번에: 물건 상세 + 내 작업 공간(11/3 — 예전 2번)."""
+    from aucs_api.services import item_detail, onbid_detail
+
+    today = date.today()
+    detail = onbid_detail.detail if item_id.startswith("OB-") else item_detail.detail
+    out = _together(d=(detail, item_id, today), w=(me.workspace, uid, item_id, today))
+    if out["w"] is None:
+        raise HTTPException(status_code=404, detail="관심 물건이 아니에요")
+    return out
 
 
 @router.put("/watch/{item_id}/memo")
@@ -299,9 +359,40 @@ async def post_registry(
         raise HTTPException(413, "10MB보다 큰 파일은 올릴 수 없어요")
     if not data.startswith(b"%PDF"):
         raise HTTPException(415, "PDF 파일만 올릴 수 있어요")
-    upload_id = registry.save_upload(uid, item_id, file.filename or "registry.pdf", data)
-    tasks.add_task(registry.parse_upload, upload_id)
+    return _registry_saved(uid, item_id, file.filename or "registry.pdf", data, tasks)
+
+
+def _registry_saved(
+    uid: str, item_id: str, name: str, data: bytes, tasks: BackgroundTasks
+) -> dict[str, Any]:
+    """저장하고 읽기 시작. Vercel 에서는 글자 PDF 를 바로 읽고(응답 뒤 함수가 멈출 수 있어 뒤로 미루지 않음),
+    그림 PDF 는 PC 가 마저 읽음. PC(개발)에서는 예전처럼 뒤에서 글자 인식까지."""
+    upload_id = registry.save_upload(uid, item_id, name, data)
+    if settings.ON_VERCEL:
+        registry.parse_upload(upload_id, ocr=False)
+    else:
+        tasks.add_task(registry.parse_upload, upload_id)
     return {"upload_id": upload_id, "status": "processing"}
+
+
+class FromStorageIn(BaseModel):
+    path: str = Field(min_length=3, max_length=200)
+    file_name: str = Field(default="registry.pdf", max_length=120)
+
+
+@router.post("/registries/{item_id}/from-storage")
+def post_registry_from_storage(
+    item_id: str, uid: Uid, tasks: BackgroundTasks, body: FromStorageIn
+) -> dict[str, Any]:
+    """화면이 파일 보관함(registry-uploads/<회원>/…)에 바로 올린 등기부(11/3 — 큰 PDF 도 Vercel 에서 받게)."""
+    data = registry.take_from_storage(uid, body.path)
+    if data is None:
+        raise HTTPException(404, "올린 파일을 찾지 못했어요 · 다시 올려 주세요")
+    if len(data) > registry.MAX_BYTES:
+        raise HTTPException(413, "10MB보다 큰 파일은 올릴 수 없어요")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(415, "PDF 파일만 올릴 수 있어요")
+    return _registry_saved(uid, item_id, body.file_name, data, tasks)
 
 
 @router.delete("/account")
@@ -309,4 +400,43 @@ def delete_account(uid: Uid) -> dict[str, bool]:
     """회원 탈퇴 — 되돌릴 수 없음(화면에서 「탈퇴」를 직접 쳐서 확인)."""
     if not me.delete_account(uid):
         raise HTTPException(503, "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요")
+    return {"ok": True}
+
+
+class AskIn(BaseModel):
+    body: str = Field(min_length=2, max_length=2000)
+
+
+@router.get("/inquiries")
+def get_inquiries(uid: Uid) -> list[dict[str, Any]]:
+    return admin_ops.my_inquiries(uid)
+
+
+@router.post("/inquiries")
+def post_inquiry(uid: Uid, body: AskIn) -> dict[str, int]:
+    return {"inquiry_id": admin_ops.ask(uid, body.body)}
+
+
+# 이용권·결제(11/3)
+@router.get("/billing")
+def get_billing(uid: Uid) -> dict[str, Any]:
+    return billing.my_billing(uid)
+
+
+class RefundIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/billing/{payment_id}/refund")
+def post_refund(uid: Uid, payment_id: int, body: RefundIn) -> dict[str, Any]:
+    r = billing.request_refund(uid, payment_id, body.reason)
+    if r is None:
+        raise HTTPException(404, "환불할 수 있는 결제가 아니에요")
+    return r
+
+
+@router.post("/billing/{payment_id}/stop-renew")
+def post_stop_renew(uid: Uid, payment_id: int) -> dict[str, bool]:
+    if not billing.stop_renew(uid, payment_id):
+        raise HTTPException(404, "없는 결제")
     return {"ok": True}

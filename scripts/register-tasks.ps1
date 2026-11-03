@@ -2,13 +2,15 @@
 # 10/28 정리: 예전 register-tasks-2~5 를 이 파일 하나로 합침.
 #   켜 둠: 아침_묶음 매일 07:00(매각결과→물건→분석→서류→분석→알림) · 입찰일_아침 매일 07:30
 #          관심_바로_준비 09:05~21:05 매시(10/29, 관심 담은 뒤 서류·건축물대장·분석)
-#          DB_백업 매주 일요일 12:00(10/29, backup-db.ps1) · 실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
+#          관리자_요청 5분마다(11/2) · DB_백업 매주 일요일 12:00(10/29, backup-db.ps1) · 실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
 #   꺼 둠(지우지 않음): \Aucs\ 매각결과·물건·서류보관·분석·알림(아침 묶음으로 바뀜, 10/18)
 #                      \Auction\ 경매레이더 수집 5개(옥스로 넘김, 10/17)
 #   다시 켜기 예: Enable-ScheduledTask -TaskPath '\Aucs\' -TaskName '물건'
 # 모든 작업: PC가 그 시각에 꺼져 있었으면 켜질 때 시작, 배터리로 돌 때도 시작·도중에 멈추지 않음(10/22 원인)
 $run = Join-Path $PSScriptRoot 'run-job.ps1'
-$tr = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$run`""
+# 창이 떴다 사라지지 않게 hidden.vbs 로 띄움(11/2)
+$vbs = Join-Path $PSScriptRoot 'hidden.vbs'
+$tr = "wscript.exe `"$vbs`" `"$run`""
 function Set-Opts($name, $hours) {
   $s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours $hours)
   Set-ScheduledTask -TaskPath '\Aucs\' -TaskName $name -Settings $s | Out-Null
@@ -20,8 +22,11 @@ schtasks /Create /TN "\Aucs\입찰일_아침" /SC DAILY /ST 07:30 /TR "$tr morni
 Write-Host "등록: \Aucs\입찰일_아침 — 매일 07:30"
 schtasks /Create /TN "\Aucs\관심_바로_준비" /SC DAILY /ST 09:05 /RI 60 /DU 12:00 /TR "$tr watched" /F | Out-Null; Set-Opts '관심_바로_준비' 1
 Write-Host "등록: \Aucs\관심_바로_준비 — 09:05~21:05 매시(관심 담은 뒤 서류·건축물대장)"
+$rq = Join-Path $PSScriptRoot 'run-requests.ps1'
+schtasks /Create /TN "\Aucs\관리자_요청" /SC MINUTE /MO 5 /TR "wscript.exe `"$vbs`" `"$rq`"" /F | Out-Null; Set-Opts '관리자_요청' 6
+Write-Host "등록: \Aucs\관리자_요청 — 5분마다(관리자 화면 「다시 돌리기 요청」)"
 $bk = Join-Path $PSScriptRoot 'backup-db.ps1'
-schtasks /Create /TN "\Aucs\DB_백업" /SC WEEKLY /D SUN /ST 12:00 /TR "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$bk`"" /F | Out-Null; Set-Opts 'DB_백업' 2
+schtasks /Create /TN "\Aucs\DB_백업" /SC WEEKLY /D SUN /ST 12:00 /TR "wscript.exe `"$vbs`" `"$bk`"" /F | Out-Null; Set-Opts 'DB_백업' 2
 Write-Host "등록: \Aucs\DB_백업 — 매주 일요일 12:00(D:\Auction\backup, 최근 8개)"
 schtasks /Create /TN "\Aucs\실거래" /SC MONTHLY /D 2 /ST 10:00 /TR "$tr trades" /F | Out-Null; Set-Opts '실거래' 3
 Write-Host "등록: \Aucs\실거래 — 매월 2일 10:00"

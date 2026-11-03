@@ -275,6 +275,17 @@ def analyze_item(
             for s in sig
         ],
     )
+    # 관리자가 판단한 신호(11/2): 「없음」은 빼고 「확정」은 확정으로 — 다시 분석해도 유지
+    cur.execute(
+        """delete from analysis.risk_signals s using analysis.signal_overrides o
+           where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '없음'""",
+        (item_id,),
+    )
+    cur.execute(
+        """update analysis.risk_signals s set status = '확정' from analysis.signal_overrides o
+           where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '확정'""",
+        (item_id,),
+    )
     for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events)),
                      ("building", bool(bldg))]:  # fmt: skip
         cur.execute(
@@ -329,6 +340,15 @@ def main() -> None:
     ap.add_argument("--stale", action="store_true", help="분석이 없거나 그 뒤로 바뀐 물건만")
     a = ap.parse_args()
     today = date.today()
+    with connect() as lock:
+        # 아침 묶음과 「관심 바로 준비」가 같은 때 분석을 돌리면 서로 겹침(11/2) → 하나만 돌고 나머지는 건너뜀
+        if not a.item and not lock.execute("select pg_try_advisory_lock(7421001)").fetchone()[0]:  # type: ignore[index]
+            print("다른 분석이 도는 중이라 건너뜀")
+            return
+        _analyze(a, today)
+
+
+def _analyze(a: argparse.Namespace, today: date) -> None:
     with connect() as conn, run(conn, "analyze", "물건 분석") as job:
         sales = load_sales(conn, today)
         row = conn.execute(

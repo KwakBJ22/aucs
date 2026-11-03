@@ -163,19 +163,16 @@ export default function Me() {
   const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
     if (!session) return;
-    meApi
-      .watch(session.access_token)
-      .then(setWatch)
-      .catch(() => setWatch([]));
     setFailed(false);
+    // 관심·입찰 기록·모의입찰을 한 번에(11/3 — 예전 3번)
     meApi
-      .bids(session.access_token)
-      .then(setD)
+      .auction(session.access_token)
+      .then((a) => {
+        setWatch(a.watch);
+        setD(a.bids);
+        setMocks(a.mocks);
+      })
       .catch(() => setFailed(true));
-    meApi
-      .mocks(session.access_token)
-      .then(setMocks)
-      .catch(() => setMocks([]));
   }, [session]);
   useEffect(load, [load]);
 

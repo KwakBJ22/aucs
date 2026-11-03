@@ -15,7 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 TTL = 120.0
 MAX = 500
-PREFIXES = ("/items", "/regions", "/pro/")
+PREFIXES = ("/items", "/regions", "/pro/", "/home-feed")
 # 공개 자료를 바꾸는 건 관리자 요청뿐 — 관심·메모·사용 기록 같은 회원 요청으로는 비우지 않음(10/27)
 CLEAR_ON = ("/admin",)
 
@@ -59,6 +59,15 @@ def clear() -> None:
         b.clear()
 
 
+def _cdn(path: str) -> tuple[bytes, bytes]:
+    """공개 자료에 붙이는 보관 머리글: Vercel 앞단이 같은 시간만큼 보관했다 바로 돌려줌(브라우저는 보관 안 함)."""
+    ttl = int(LONG.get(path, TTL))
+    return (
+        b"cache-control",
+        f"public, max-age=0, s-maxage={ttl}, stale-while-revalidate=60".encode(),
+    )
+
+
 class PublicCache:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -88,7 +97,7 @@ class PublicCache:
         hit = _store.get(key)
         if hit and time.monotonic() - hit[0] < LONG.get(path, TTL):
             _, st, hd, body = hit
-            await send({"type": "http.response.start", "status": st, "headers": hd})
+            await send({"type": "http.response.start", "status": st, "headers": [*hd, _cdn(path)]})
             await send({"type": "http.response.body", "body": body})
             return
         start: dict[str, Any] = {}
@@ -96,6 +105,8 @@ class PublicCache:
 
         async def keep(m: Message) -> None:
             if m["type"] == "http.response.start":
+                if m.get("status") == 200:  # Vercel 앞단(서울)도 같은 시간만큼 보관(11/3)
+                    m = {**m, "headers": [*m.get("headers", []), _cdn(path)]}
                 start.update(m)
             elif m["type"] == "http.response.body":
                 parts.append(m.get("body", b""))
@@ -103,7 +114,8 @@ class PublicCache:
                     hd = [
                         (k, v)
                         for k, v in start.get("headers", [])
-                        if k.lower() not in (b"access-control-allow-origin", b"vary")
+                        if k.lower()
+                        not in (b"access-control-allow-origin", b"vary", b"cache-control")
                     ]
                     _store[key] = (time.monotonic(), 200, hd, b"".join(parts))
                     _store.move_to_end(key)

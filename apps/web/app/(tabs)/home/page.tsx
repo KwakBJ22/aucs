@@ -5,15 +5,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ItemCard } from "@/components/item-card";
-import { fetchItems, type ItemList } from "@/lib/api/items";
+import { fetchHomeFeed, type HomeFeed, type ItemList } from "@/lib/api/items";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { isStale } from "@/lib/noti";
 import { dday, won } from "@/lib/format";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { meApi, type Noti, type WatchCard } from "@/lib/api/me";
-import { fetchMarket, type Market } from "@/lib/api/pro";
+import type { Market } from "@/lib/api/pro";
 import { PageHeader } from "@/components/layout/page-header";
+import { NoticeLine } from "@/components/notice-line";
 import { useIsPc } from "@/lib/use-pc";
 import { useSession } from "@/lib/auth";
 import { subscribePush } from "@/lib/push";
@@ -33,6 +34,7 @@ export default function Home() {
   const [watch, setWatch] = useState<WatchCard[]>([]);
   const [notis, setNotis] = useState<Noti[]>([]);
   const [market, setMarket] = useState<Market | null>(null);
+  const [notices, setNotices] = useState<HomeFeed["notices"]>([]);
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
   const pc = useIsPc();
@@ -49,13 +51,6 @@ export default function Home() {
       })
       .catch(() => {});
   }, [token]);
-  // PC 오른쪽: 이번 석 달 법원별 낙찰가율
-  useEffect(() => {
-    if (pc && !market)
-      fetchMarket({ months: 3 })
-        .then(setMarket)
-        .catch(() => {});
-  }, [pc, market]);
 
   // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
   useEffect(() => {
@@ -102,18 +97,17 @@ export default function Home() {
     }
     setProfile(p);
     setFailed(false);
-    fetchItems({ sigungu: p.regions, maxCash: p.cash, limit: 20 })
-      .then(setMine)
+    // 내 조건 물건·이번 주 마감 공매·(PC) 석 달 낙찰가율·공지를 한 번에(11/3 — 예전 4번)
+    // PC 여부는 지금 창으로 봄(처음 그릴 때 잠깐 휴대폰 값이라 두 번 부르지 않게)
+    const wide = window.matchMedia("(min-width: 1024px)").matches;
+    fetchHomeFeed({ sigungu: p.regions, maxCash: p.cash, market: wide })
+      .then((f) => {
+        setMine(f.mine);
+        setOnbidSoon(f.onbid_soon);
+        if (f.market) setMarket(f.market);
+        setNotices(f.notices);
+      })
       .catch(() => setFailed(true));
-    fetchItems({
-      sigungu: p.regions,
-      maxCash: p.cash,
-      limit: 5,
-      source: "onbid",
-      filter: { days_max: 3 },
-    })
-      .then(setOnbidSoon)
-      .catch(() => setOnbidSoon(null)); // 공매가 안 와도 홈은 그대로
   }, [router, tries]);
 
   if (!profile) return null;
@@ -355,6 +349,7 @@ export default function Home() {
     return (
       <main className="page">
         <PageHeader title={t.pcTitle} sub={summary} />
+        <NoticeLine notices={notices} />
         {loginBanner}
         <div className="pc-grid g-64-36">
           <div>
@@ -430,6 +425,7 @@ export default function Home() {
   return (
     <main className="page">
       <PageHeader title={copy.appName} right={bell} />
+      <NoticeLine notices={notices} />
       {loginBanner}
       {changesBlock}
       {todayBlock}

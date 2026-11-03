@@ -661,3 +661,316 @@
   min-width: 140px;
   max-width: 200px;
 }
+
+/* ── 관리자 모드(11/2): 왼쪽 메뉴 20 · 내용 80, 휴대폰은 위 메뉴 줄 ── */
+.adm {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.adm-menu {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  align-items: center;
+}
+.adm-menu button {
+  flex: none;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+.adm-menu button.on {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+}
+.adm-role {
+  margin-left: auto;
+  padding: 0 8px;
+}
+.adm-h1 {
+  font-size: var(--fs-xl);
+  margin: 4px 0 8px;
+}
+@media (min-width: 1024px) {
+  .adm {
+    grid-template-columns: 1fr 4fr;
+    padding: 24px;
+  }
+  .adm-menu {
+    flex-direction: column;
+    align-items: stretch;
+    position: sticky;
+    top: 80px;
+    align-self: start;
+  }
+  .adm-menu button {
+    text-align: left;
+  }
+  .adm-role {
+    margin: 8px 0 0;
+  }
+}
+.adm-gate {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.adm-qr {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border-radius: 12px;
+  align-self: center;
+}
+.adm-input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+textarea.adm-input {
+  height: auto;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.adm-code {
+  height: 52px;
+  font-size: var(--fs-2xl);
+  letter-spacing: 8px;
+  text-align: center;
+}
+.adm-short {
+  width: 96px;
+}
+.adm-btn {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+.adm-btn.primary {
+  background: var(--blue);
+  color: #fff;
+}
+.adm-btn.danger {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.adm-btn:disabled {
+  opacity: 0.4;
+}
+.adm-confirm {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--fs-sm);
+  color: var(--red);
+}
+.adm-err {
+  color: var(--red);
+}
+.adm-ok {
+  padding: 14px 16px;
+  border-radius: var(--r-panel);
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 700;
+}
+.adm-red {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 6px 0;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--r-panel);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+.adm-red-text {
+  color: var(--red);
+}
+.adm-nums {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.adm-nums div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.adm-nums b {
+  font-size: var(--fs-xl);
+}
+@media (max-width: 600px) {
+  .adm-nums {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.adm-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+  width: 100%;
+}
+.adm-click {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-align: left;
+  padding: 0;
+  font-size: var(--fs-md);
+}
+.adm-line {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+.adm-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.adm-detail {
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 12px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adm-msg {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.adm-pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: var(--fs-xs);
+}
+.adm-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.adm-bar i {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+}
+.adm-bar i.warn {
+  background: var(--red);
+}
+.adm-tabs {
+  display: flex;
+  gap: 6px;
+}
+.adm-tabs button {
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--panel);
+  color: var(--text);
+}
+.adm-tabs button.on {
+  background: var(--text);
+  color: var(--surface);
+}
+.adm-job {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+.adm-job summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 36px;
+  cursor: pointer;
+  list-style: none;
+}
+.adm-job-name {
+  flex: 1 1 auto;
+}
+.adm-days {
+  display: flex;
+  gap: 2px;
+}
+.adm-days i {
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.adm-days i.ok {
+  background: var(--green);
+}
+.adm-days i.bad {
+  background: var(--red);
+}
+.adm-days i.run {
+  background: var(--blue);
+}
+@media (max-width: 600px) {
+  .adm-days {
+    display: none;
+  }
+}
+
+/* 공지 한 줄(홈 맨 위) */
+.notice-line {
+  display: block;
+  margin: 8px 16px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-size: var(--fs-md);
+}
+.adm-week {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 56px;
+  margin-top: 4px;
+}
+.adm-week i {
+  flex: 1 1 0;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--blue);
+}

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from aucs_api import settings
 from aucs_api.cache import PublicCache
 from aucs_api.db import warm
-from aucs_api.routers import admin, errors, events, health, items, me, pro
+from aucs_api.routers import admin, cron, errors, events, health, items, me, pro
 from aucs_api.services import errors as error_log
 
 app = FastAPI(title="옥스 API", on_startup=[warm])
@@ -25,11 +25,13 @@ app.add_middleware(
 )
 app.include_router(health.router)
 app.include_router(admin.router)
+app.include_router(admin.public)
 app.include_router(items.router)
 app.include_router(me.router)
 app.include_router(pro.router)
 app.include_router(events.router)
 app.include_router(errors.router)
+app.include_router(cron.router)
 
 
 @app.exception_handler(Exception)

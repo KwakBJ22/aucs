@@ -21,7 +21,14 @@ _idle: "queue.LifoQueue[tuple[Conn, float]]" = queue.LifoQueue(maxsize=POOL_MAX)
 
 
 def _new() -> Conn:
-    return psycopg.connect(settings.DATABASE_URL, connect_timeout=5, row_factory=dict_row)
+    # Supabase 나눔 연결(6543, Vercel 용)은 미리 준비한 쿼리를 못 씀 → prepare_threshold=None (11/3)
+    pooled = ":6543/" in settings.DATABASE_URL
+    return psycopg.connect(
+        settings.DATABASE_URL,
+        connect_timeout=5,
+        row_factory=dict_row,
+        prepare_threshold=None if pooled else 5,
+    )
 
 
 def _take() -> Conn:

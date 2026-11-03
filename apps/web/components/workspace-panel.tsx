@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { fetchItem, type ItemDetail } from "@/lib/api/items";
+import type { ItemDetail } from "@/lib/api/items";
 import { meApi, WATCH_STEPS, type WatchStep, type Workspace } from "@/lib/api/me";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
@@ -34,14 +34,13 @@ export function WorkspacePanel({
   useEffect(() => {
     setD(null);
     setW(null);
-    fetchItem(id)
-      .then(setD)
-      .catch(() => setD(null));
+    // 물건 상세 + 내 작업 공간을 한 번에(11/3 — 예전 2번)
     meApi
-      .workspace(token, id)
+      .panel(token, id)
       .then((x) => {
-        setW(x);
-        setMemo(x.memo);
+        setD(x.d);
+        setW(x.w);
+        setMemo(x.w.memo);
       })
       .catch(() => setW("none"));
   }, [token, id]);

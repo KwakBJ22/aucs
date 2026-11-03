@@ -125,9 +125,9 @@ export default function Item() {
               </b>{" "}
               · {d.sale_date} · {d.court} {d.case_no}
             </div>
-            <div className="fs-base fw-6 mt-4">
+            <h1 className="fs-base fw-6 mt-4 mb-0">
               {d.place} {d.building ?? d.usage}
-            </div>
+            </h1>
             <div className="fs-3xl fw-7 mt-6">
               {won(d.min_price_krw)}{" "}
               <span className="fs-md fw-5 c-muted d-inline-block">

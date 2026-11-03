@@ -1,245 +1,51 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import {
-  adminApi,
-  formatBytes,
-  type AdminStatus,
-  type ErrorRow,
-  type Flag,
-  type Review,
-  type RuleRow,
-} from "@/lib/api/admin";
+import { useState } from "react";
+import { AdminGate } from "@/components/admin/gate";
+import { AdminProvider } from "@/components/admin/ctx";
+import { JobsView } from "@/components/admin/jobs";
+import { MembersView } from "@/components/admin/members";
+import { NoticesView } from "@/components/admin/notices";
+import { ReviewView } from "@/components/admin/review";
+import { SettingsView } from "@/components/admin/settings";
+import { StatsView } from "@/components/admin/stats";
+import { TodayView } from "@/components/admin/today";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.admin;
-const box = { border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, margin: "12px 0" };
-const th = {
-  textAlign: "left" as const,
-  color: "#6b7280",
-  fontWeight: 500,
-  padding: "6px 8px 6px 0",
-};
-const td = { padding: "6px 8px 6px 0", borderTop: "1px solid #f3f4f6" };
+const MENUS = ["today", "jobs", "review", "members", "notices", "stats", "settings"] as const;
+type Menu = (typeof MENUS)[number];
 
-function readToken(): string {
-  try {
-    return sessionStorage.getItem("aucs_admin") ?? "";
-  } catch {
-    return "";
-  }
-}
-
+// 관리자 모드(11/2 1단계): 왼쪽 메뉴 20 · 내용 80 (휴대폰은 위에 메뉴 줄)
 export default function AdminPage() {
-  const [token, setToken] = useState("");
-  const [input, setInput] = useState("");
-  const [error, setError] = useState("");
-  const [status, setStatus] = useState<AdminStatus | null>(null);
-  const [review, setReview] = useState<Review | null>(null);
-  const [flags, setFlags] = useState<Flag[]>([]);
-  const [rules, setRules] = useState<RuleRow[]>([]);
-  const [errs, setErrs] = useState<ErrorRow[]>([]);
-
-  const load = useCallback(async (k: string) => {
-    try {
-      const [s, r, f, ru, er] = await Promise.all([
-        adminApi.status(k),
-        adminApi.review(k),
-        adminApi.flags(k),
-        adminApi.rules(k),
-        adminApi.errors(k).catch(() => [] as ErrorRow[]),
-      ]);
-      setStatus(s);
-      setReview(r);
-      setFlags(f);
-      setRules(ru);
-      setErrs(er);
-      setError("");
-      setToken(k);
-      try {
-        sessionStorage.setItem("aucs_admin", k);
-      } catch {
-        /* 저장 못 해도 화면은 동작 */
-      }
-    } catch (e) {
-      setError(e instanceof Error && e.message === "denied" ? t.denied : String(e));
-      setToken("");
-    }
-  }, []);
-
-  useEffect(() => {
-    const k = readToken();
-    if (k) void load(k);
-  }, [load]);
-
-  if (!token) {
-    return (
-      <main className="my-0 mx-auto py-32 px-20" style={{ maxWidth: 420 }}>
-        <h1 className="fs-2xl">{t.title}</h1>
-        <label>
-          {t.tokenLabel}
-          <input
-            type="password"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="d-block w-full p-12 my-8 mx-0 fs-base"
-          />
-        </label>
-        <button onClick={() => void load(input)} className="py-12 px-20 fs-base">
-          {t.tokenSave}
-        </button>
-        {error && <p style={{ color: "#d64545" }}>{error}</p>}
-      </main>
-    );
-  }
-
-  const dbUsed = status ? status.counts.db_bytes / status.db_limit_bytes : 0;
+  const [m, setM] = useState<Menu>("today");
+  const go = (x: string) => setM((MENUS as readonly string[]).includes(x) ? (x as Menu) : "today");
   return (
-    <main className="my-0 mx-auto py-24 px-16" style={{ maxWidth: 960 }}>
-      <h1 className="fs-2xl">{t.title}</h1>
-
-      <section style={box}>
-        <h2 className="fs-lg mt-0">{t.jobs}</h2>
-        <table className="w-full fs-md" style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={th}>{t.job}</th>
-              <th style={th}>{t.lastRun}</th>
-              <th style={th}>{t.result}</th>
-              <th style={th}>{t.count}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {status?.jobs.map((j) => (
-              <tr key={j.job_id}>
-                <td style={td}>{j.name_ko}</td>
-                <td style={td}>{new Date(j.started_at).toLocaleString("ko-KR")}</td>
-                <td style={{ ...td, color: j.status === "ok" ? "#1f9d55" : "#d64545" }}>
-                  {t.statusName[j.status] ?? j.status}
-                  {j.message ? ` · ${j.message}` : ""}
-                </td>
-                <td style={td}>{j.item_count?.toLocaleString("ko-KR") ?? "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {status && (
-          <p className="fs-md" style={{ color: dbUsed > 0.9 ? "#d64545" : "#6b7280" }}>
-            {t.db} {formatBytes(status.counts.db_bytes)} / {formatBytes(status.db_limit_bytes)}
-          </p>
-        )}
-      </section>
-
-      <section style={box}>
-        <h2 className="fs-lg mt-0">{t.errors}</h2>
-        {errs.length === 0 ? (
-          <p className="sub fs-md">{t.errorsEmpty}</p>
-        ) : (
-          errs.map((e) => (
-            <details key={`${e.side}-${e.message}`} className="fs-md py-6">
-              <summary>
-                <b style={{ color: "#d64545" }}>{t.errorSide[e.side] ?? e.side}</b> {e.message}{" "}
-                <span className="sub">
-                  · {t.errorLine(e.n, e.devices)} · {e.path ?? ""} ·{" "}
-                  {new Date(e.last_at).toLocaleString("ko-KR")}
-                </span>
-              </summary>
-              {e.stack && (
-                <pre className="fs-xs oy-auto" style={{ maxHeight: 240, whiteSpace: "pre-wrap" }}>
-                  {e.stack}
-                </pre>
-              )}
-            </details>
-          ))
-        )}
-      </section>
-
-      {status?.metrics && (
-        <section style={box}>
-          <h2 className="fs-lg mt-0">{t.metrics}</h2>
-          <ul className="pl-18 fs-md">
-            {t.metricRows(status.metrics).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section style={box}>
-        <h2 className="fs-lg mt-0">{t.review}</h2>
-        {review &&
-          review.fields.length + review.signals.length + (review.reports?.length ?? 0) === 0 && (
-            <p>{t.reviewEmpty}</p>
-          )}
-        {(review?.reports?.length ?? 0) > 0 && (
-          <>
-            <b className="fs-md">{t.reportsTitle}</b>
-            <ul className="pl-18 fs-md">
-              {review?.reports?.map((r) => (
-                <li key={r.report_id}>
-                  {r.at} · <a href={`/item/${encodeURIComponent(r.item_id)}`}>{r.item_id}</a> ·{" "}
-                  {r.section} · {r.note}{" "}
-                  {(["fixed", "rejected"] as const).map((st) => (
-                    <button
-                      key={st}
-                      onClick={() =>
-                        adminApi
-                          .closeReport(token, r.report_id, st)
-                          .then(() => load(token))
-                          .catch(() => {})
-                      }
-                      className="ml-6 fs-xs py-2 px-8"
-                    >
-                      {t.reportAction[st]}
-                    </button>
-                  ))}
-                </li>
+    <AdminGate>
+      {(token, role) => (
+        <AdminProvider token={token} role={role}>
+          <main className="adm">
+            <nav className="adm-menu">
+              {MENUS.map((k) => (
+                <button key={k} className={m === k ? "on" : ""} onClick={() => setM(k)}>
+                  {t.menu[k]}
+                </button>
               ))}
-            </ul>
-          </>
-        )}
-        <ul className="pl-18 fs-md">
-          {review?.signals.map((s) => (
-            <li key={`${s.item_id}-${s.title}`}>
-              {s.sale_date} · {s.item_id} · {s.title}
-            </li>
-          ))}
-          {review?.fields.map((f) => (
-            <li key={f.field_id}>
-              {f.case_id} · {f.field} · {f.raw_text}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section style={box}>
-        <h2 className="fs-lg mt-0">{t.flags}</h2>
-        {flags.map((f) => (
-          <label key={f.flag_key} className="d-flex gap-12 ai-center mh-44">
-            <input
-              type="checkbox"
-              checked={f.enabled}
-              onChange={async (e) => {
-                const row = await adminApi.setFlag(token, f.flag_key, e.target.checked);
-                setFlags((xs) => xs.map((x) => (x.flag_key === row.flag_key ? row : x)));
-              }}
-            />
-            <span>{f.note ?? f.flag_key}</span>
-          </label>
-        ))}
-      </section>
-
-      <section style={box}>
-        <h2 className="fs-lg mt-0">{t.rules}</h2>
-        {rules.length === 0 && <p>{t.rulesEmpty}</p>}
-        <ul className="pl-18 fs-md">
-          {rules.map((r) => (
-            <li key={`${r.rule_key}-${r.valid_from}`}>
-              {r.rule_key} · {r.valid_from}~{r.valid_to ?? ""} · {r.basis}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+              <span className="sub adm-role">{t.roleName[role]}</span>
+            </nav>
+            <div className="adm-body">
+              <h1 className="adm-h1">{t.menu[m]}</h1>
+              {m === "today" && <TodayView go={go} />}
+              {m === "jobs" && <JobsView />}
+              {m === "review" && <ReviewView />}
+              {m === "members" && <MembersView />}
+              {m === "notices" && <NoticesView />}
+              {m === "stats" && <StatsView />}
+              {m === "settings" && <SettingsView />}
+            </div>
+          </main>
+        </AdminProvider>
+      )}
+    </AdminGate>
   );
 }

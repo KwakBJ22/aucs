@@ -33,7 +33,8 @@ try {
   $mb = [math]::Round((Get-Item $out).Length / 1MB)
   $msg = "백업 끝: $out ($mb MB, $([math]::Round($sw.Elapsed.TotalMinutes, 1))분)"
   Write-Host $msg | Tee-Object -FilePath $log -Append
-  & "$pgBin\psql.exe" -d $url -q -c "insert into ops.jobs (job_id, name_ko) values ('backup', 'DB 백업') on conflict do nothing; insert into ops.job_runs (job_id, finished_at, status, item_count, message) values ('backup', now(), 'ok', $mb, 'MB · aucs_$stamp')" | Out-Null
+  $rc = Invoke-PgSql $url "insert into ops.jobs (job_id, name_ko) values ('backup', 'DB 백업') on conflict do nothing; insert into ops.job_runs (job_id, finished_at, status, item_count, message) values ('backup', now(), 'ok', $mb, '$mb MB · aucs_$stamp');"
+  if ($rc -ne 0) { Write-Host "관리자 화면 기록은 못 남김(백업 파일은 정상)" | Tee-Object -FilePath $log -Append }
 } catch {
   "멈춤: $_" | Tee-Object -FilePath $log -Append
   Add-Type -AssemblyName System.Windows.Forms

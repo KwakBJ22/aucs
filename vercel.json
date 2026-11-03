@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "outputDirectory": "api/public",
+  "regions": [
+    "icn1"
+  ],
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "memory": 1024,
+      "excludeFiles": "{apps/web/**,node_modules/**,tools/**,logs/**,db/**,docs/**,infra/**,scripts/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/cron/notify?morning=true",
+      "schedule": "30 22 * * *"
+    }
+  ]
+}

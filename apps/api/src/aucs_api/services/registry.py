@@ -218,9 +218,12 @@ def save_upload(uid: str, item_id: str, file_name: str, data: bytes) -> int:
     return int(r["upload_id"])
 
 
-def parse_upload(upload_id: int) -> None:
-    """뒤에서 돌림: PDF → 권리 목록. 그림 PDF는 글자 인식이라 수십 초 걸릴 수 있음."""
-    from aucs_workers.extract.registry import read_pdf
+def parse_upload(upload_id: int, ocr: bool = True) -> None:
+    """PDF → 권리 목록. 그림 PDF는 글자 인식이라 수십 초 걸릴 수 있음.
+
+    ocr=False(Vercel): 글자 있는 PDF 만 바로 읽고, 그림 PDF 는 method='ocr_wait' 로 두면
+    PC 의 「관리자_요청」 작업(5분마다)이 글자 인식으로 마저 읽음(11/3 — Vercel 에는 tesseract 가 없음)."""
+    from aucs_workers.extract.registry import read_pdf, read_pdf_text
 
     with connect() as c:
         r = c.execute(
@@ -232,7 +235,15 @@ def parse_upload(upload_id: int) -> None:
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "registry.pdf"
             p.write_bytes(bytes(r["pdf"]))
-            rights, meta = read_pdf(p)
+            got = read_pdf(p) if ocr else read_pdf_text(p)
+            if got is None:
+                with connect() as c:
+                    c.execute(
+                        "update app.uploaded_registries set method = 'ocr_wait' where upload_id = %s",
+                        (upload_id,),
+                    )
+                return
+            rights, meta = got
         if not rights:
             raise ValueError("등기부에서 권리를 찾지 못했어요")
         data = [right_to_json(x) for x in rights]
@@ -377,3 +388,36 @@ def fix_right(
             (Jsonb(rights), u["upload_id"]),
         )
     return latest(uid, item_id)
+
+
+def ocr_waiting(limit: int = 5) -> list[int]:
+    """PC 에서 글자 인식으로 마저 읽을 등기부(Vercel 이 그림 PDF 라 남겨 둔 것 + 10분 넘게 읽는 중인 것)."""
+    with connect() as c:
+        rows = c.execute(
+            """select upload_id from app.uploaded_registries
+               where status = 'processing' and (method = 'ocr_wait' or created_at < now() - interval '10 minutes')
+               order by upload_id limit %s""",
+            (limit,),
+        ).fetchall()
+    return [int(r["upload_id"]) for r in rows]
+
+
+BUCKET = "registry-uploads"
+
+
+def take_from_storage(uid: str, path: str) -> bytes | None:
+    """화면이 Supabase 파일 보관함에 바로 올린 PDF 를 받아 오고 보관함에서는 지움(11/3 — Vercel 은 4.5MB 까지만 받음)."""
+    import httpx
+
+    from aucs_api import settings
+
+    if not path.startswith(f"{uid}/") or ".." in path or not settings.SUPABASE_SECRET_KEY:
+        return None
+    k = settings.SUPABASE_SECRET_KEY
+    h = {"apikey": k, "Authorization": f"Bearer {k}"}
+    url = f"{settings.SUPABASE_URL}/storage/v1/object"
+    r = httpx.get(f"{url}/{BUCKET}/{path}", headers=h, timeout=30)
+    if r.status_code != 200:
+        return None
+    httpx.request("DELETE", f"{url}/{BUCKET}", headers=h, json={"prefixes": [path]}, timeout=15)
+    return r.content

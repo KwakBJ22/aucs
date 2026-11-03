@@ -234,9 +234,9 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
             {t.badge(d.kind_name ?? "")}
           </span>
         </div>
-        <div className="fs-base fw-6 mt-4">
+        <h1 className="fs-base fw-6 mt-4 mb-0">
           {d.place} {d.usage ?? ""}
-        </div>
+        </h1>
         <div className="sub fs-sm m-0">{d.case_no}</div>
         <div className="fs-3xl fw-7 mt-6">
           {won(d.min_price_krw)}{" "}

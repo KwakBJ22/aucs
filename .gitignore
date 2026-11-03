@@ -25,3 +25,9 @@ tools/pgsql/
 tools/pgsql.zip
 apps/web/test-results/
 apps/web/playwright-report/
+_to_delete/
+
+# 목숨줄 검사 실패 사진·배포 무대 연결(11/3)
+apps/web/check/failed/
+.next-check/
+.vercel/

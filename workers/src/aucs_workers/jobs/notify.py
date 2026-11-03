@@ -474,21 +474,17 @@ def send_pushes(conn: psycopg.Connection) -> int:
     return sent
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--no-push", action="store_true")
-    ap.add_argument("--morning", action="store_true", help="입찰일 아침 알림만")
-    a = ap.parse_args()
-    if a.morning:
+def run_once(*, morning: bool, push: bool = True) -> str:
+    """알림 한 번 돌리기. PC(명령 줄)와 Vercel 예약 실행(/cron/notify, 11/3)이 같이 씀."""
+    if morning:
         with connect() as conn, run(conn, "notify_morning", "입찰일 아침 알림") as job:
             m = make_bid_prep_alerts(conn, morning=True) + make_onbid_close_alerts(
                 conn, morning=True
             )
             conn.commit()
-            p = 0 if a.no_push else send_pushes(conn)
+            p = send_pushes(conn) if push else 0
             job.count = m
-            print(f"입찰일 아침 {m} · 푸시 {p}")
-        return
+            return f"입찰일 아침 {m} · 푸시 {p}"
     with connect() as conn, run(conn, "notify", "알림") as job:
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
         b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
@@ -499,9 +495,17 @@ def main() -> None:
             + make_onbid_close_alerts(conn, morning=False)
         )
         conn.commit()
-        p = 0 if a.no_push else send_pushes(conn)
+        p = send_pushes(conn) if push else 0
         job.count = s + w + b + d + o
-        print(f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 공매 {o} · 푸시 {p}")
+        return f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 공매 {o} · 푸시 {p}"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--no-push", action="store_true")
+    ap.add_argument("--morning", action="store_true", help="입찰일 아침 알림만")
+    a = ap.parse_args()
+    print(run_once(morning=a.morning, push=not a.no_push))
 
 
 if __name__ == "__main__":

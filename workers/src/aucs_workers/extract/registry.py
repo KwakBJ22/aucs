@@ -84,14 +84,22 @@ def _merge_subordinates(rows: list[dict[str, Any]]) -> None:
             m["amount_krw"] = r["amount_krw"]
 
 
-def read_pdf(path: Path) -> tuple[list[Right], dict[str, Any]]:
-    """PDF 하나 읽기: 글자가 있으면 글자로, 없으면 글자 인식."""
+def read_pdf_text(path: Path) -> tuple[list[Right], dict[str, Any]] | None:
+    """글자가 있는 PDF 만 읽기(빠름, 글자 인식 프로그램 없이 — Vercel 에서도 됨). 그림 PDF 면 None (11/3)."""
     from pypdf import PdfReader
 
     text = "\n".join((p.extract_text() or "") for p in PdfReader(str(path)).pages)
     if len(re.sub(r"\s", "", text)) > 200 and re.search(r"갑\s*구|을\s*구|주요\s*등기사항", text):
         m = re.search(r"\[(?:집합건물|건물|토지)\]\s*([^\n]+)", text)
         return text_to_rights(text), {"method": "text", "소재지": m.group(1).strip() if m else None}
+    return None
+
+
+def read_pdf(path: Path) -> tuple[list[Right], dict[str, Any]]:
+    """PDF 하나 읽기: 글자가 있으면 글자로, 없으면 글자 인식(tesseract — PC 에서만)."""
+    got = read_pdf_text(path)
+    if got is not None:
+        return got
     from aucs_workers.extract.registry_ocr import ocr_rows
 
     rows, head = ocr_rows(path)
