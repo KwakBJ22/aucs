@@ -31,3 +31,5 @@ _to_delete/
 apps/web/check/failed/
 .next-check/
 .vercel/
+
+.vercel

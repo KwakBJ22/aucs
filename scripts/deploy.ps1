@@ -41,9 +41,15 @@ function Stop-Deploy([string]$why) {
 
 function Step([string]$title) { Write-Host ""; Write-Host "▶ $title" -ForegroundColor Cyan }
 
+# Vercel CLI 는 안내 글을 오류 통로(stderr)로 내보냄 → PowerShell 5 가 「Stop」 설정에서 오류로 보고 멈춤(11/4).
+# 이 호출 동안만 멈추지 않게 하고, 성공·실패는 끝난 번호($LASTEXITCODE)로만 판단.
 function Vercel([string]$dir, [string[]]$argv) {
-  $out = & npx --yes vercel@latest @argv --cwd $dir 2>&1
-  $code = $LASTEXITCODE
+  $old = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $out = & npx --yes vercel@latest @argv --cwd $dir 2>&1 | ForEach-Object { "$_" }
+    $code = $LASTEXITCODE
+  } finally { $ErrorActionPreference = $old }
   return @{ code = $code; text = ($out | Out-String) }
 }
 
