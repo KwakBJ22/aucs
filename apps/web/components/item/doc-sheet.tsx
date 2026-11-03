@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import { useEffect, useState } from "react";
 import { fetchDocs, type DocKind, type ItemDocs } from "@/lib/api/items";
 import { meApi } from "@/lib/api/me";
@@ -98,7 +99,11 @@ export function DocSheet({
           {c.close}
         </button>
       </div>
-      {docs === undefined && <p className="sub">{c.loading}</p>}
+      {docs === undefined && (
+        <Delayed>
+          <SkLines n={8} />
+        </Delayed>
+      )}
       {docs?.closed && <p className="sub">{c.closed}</p>}
       {docs !== undefined && !docs?.closed && !cur && <p className="sub">{c.none}</p>}
       {cur && <p className="sub fs-xs mt-0">{c.from(cur.fetched_at)}</p>}

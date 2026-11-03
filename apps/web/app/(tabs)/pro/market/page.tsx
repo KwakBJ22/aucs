@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
@@ -130,7 +131,9 @@ function ProMarket() {
           <section className="section q-sec" id="score">
             <h2 className="fs-base">{t.score}</h2>
             {!sc ? (
-              <div className="sub">{copy.pro.loading}</div>
+              <Delayed>
+                <SkLines n={3} />
+              </Delayed>
             ) : sc.n < MIN_SCORE ? (
               <div className="sub">{t.scoreWait(sc.n, MIN_SCORE)}</div>
             ) : (

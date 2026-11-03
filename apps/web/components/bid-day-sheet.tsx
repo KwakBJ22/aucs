@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchBidDay, type BidDay } from "@/lib/api/items";
@@ -29,7 +30,17 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
       localStorage.setItem(KEY(id), JSON.stringify(next));
     } catch {}
   };
-  if (!d) return null;
+  if (!d)
+    return (
+      <Delayed>
+        <section className="section">
+          <SkLines n={2} />
+        </section>
+        <section className="section">
+          <SkRows n={5} />
+        </section>
+      </Delayed>
+    );
 
   const color = d.state === "ok" || d.state === "soon" ? "var(--green)" : "var(--red)";
   const mapUrl = `https://map.kakao.com/?q=${encodeURIComponent(d.court_full)}`;

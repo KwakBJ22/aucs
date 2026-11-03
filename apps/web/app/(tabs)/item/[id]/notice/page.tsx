@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import { copyText } from "@/lib/copy-text";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -29,7 +30,14 @@ export default function NoticePage() {
     <main className="page">
       <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
       {!d ? (
-        <div className="sub">{copy.pro.loading}</div>
+        <Delayed>
+          <section className="section">
+            <SkLines n={2} />
+          </section>
+          <section className="section">
+            <SkLines n={8} />
+          </section>
+        </Delayed>
       ) : (
         <>
           <section className="section">

@@ -1,5 +1,6 @@
 "use client";
 
+import { SkListPage } from "@/components/skeleton";
 import { copyText } from "@/lib/copy-text";
 import { PageHeader } from "@/components/layout/page-header";
 import { useParams } from "next/navigation";
@@ -60,7 +61,12 @@ export default function FieldPage() {
     );
   }, [d]);
 
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage cards={false} />
+      </main>
+    );
   if (!session || !token || !uid) return <NeedLogin title={t.title} />;
 
   const toggle = (key: string) => {

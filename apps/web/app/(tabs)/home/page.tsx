@@ -1,6 +1,7 @@
 "use client";
 
 import { LoadError } from "@/components/load-error";
+import { Delayed, SkCards, SkListPage } from "@/components/skeleton";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -110,7 +111,12 @@ export default function Home() {
       .catch(() => setFailed(true));
   }, [router, tries]);
 
-  if (!profile) return null;
+  if (!profile)
+    return (
+      <main className="page">
+        <SkListPage />
+      </main>
+    );
   const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
   const closing = (shown?.items ?? [])
     .filter((c) => c.source !== "onbid" && c.d_day != null && c.d_day <= 7)
@@ -304,6 +310,11 @@ export default function Home() {
       </button>
       {alertMsg && <p className="sub mt-0 mb-4 mx-0">{alertMsg}</p>}
       {shown && shown.items.length === 0 && <p className="sub">{t.empty}</p>}
+      {!shown && !failed && (
+        <Delayed>
+          <SkCards n={pc ? 8 : 5} grid={pc} />
+        </Delayed>
+      )}
       <div className={pc ? "card-grid" : ""}>
         {shown?.items.slice(0, pc ? 8 : 5).map((c) => (
           <ItemCard key={c.item_id} c={c} />

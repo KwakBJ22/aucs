@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { adminApi, type Metrics, type Stats } from "@/lib/api/admin";
@@ -67,7 +68,9 @@ export function StatsView() {
             ))}
           </ul>
         ) : (
-          <p className="sub">{t.loading}</p>
+          <Delayed>
+            <SkRows n={5} />
+          </Delayed>
         )}
       </section>
       {s && (

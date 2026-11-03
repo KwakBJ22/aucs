@@ -263,3 +263,70 @@
   align-items: center;
   min-height: 36px;
 }
+
+/* 스켈레톤(11/4): 자료를 기다리는 동안 그 화면 모양 그대로 연한 판을 깔아 둠 — 선 없이 면만, 은은하게 밝아졌다 어두워짐 */
+.sk {
+  display: block;
+  background: var(--panel);
+  border-radius: 8px;
+  animation: sk-pulse 1.4s ease-in-out infinite;
+}
+.sk-line {
+  height: 14px;
+  border-radius: 6px;
+}
+.sk-title {
+  height: 26px;
+  border-radius: 8px;
+}
+.sk-chip {
+  display: inline-block;
+  height: 40px;
+  border-radius: 20px;
+}
+.sk-num {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+.sk-box {
+  border-radius: var(--r-panel);
+}
+.sk-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+@media (max-width: 1023px) {
+  .sk-thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+  }
+}
+.sk-wrap {
+  animation: sk-in 0.2s ease-out both;
+}
+@keyframes sk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes sk-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk-wrap {
+    animation: none;
+  }
+}

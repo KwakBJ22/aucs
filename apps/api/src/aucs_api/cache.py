@@ -20,6 +20,9 @@ PREFIXES = ("/items", "/regions", "/pro/", "/home-feed")
 CLEAR_ON = ("/admin",)
 
 LONG = {"/regions": 1800.0}  # 지역별 물건 수는 하루 한 번 바뀜 → 30분
+# 보관 시간이 지나도 지난 값을 바로 주고 새 값은 뒤에서 받는 시간(11/4). 지역 수는 하루 한 번 바뀌므로 하루 —
+# 첫 손님이 잠든 서버가 깨는 몇 초를 기다리지 않게. 나머지는 1분.
+STALE = {"/regions": 86400}
 _store: "OrderedDict[str, tuple[float, int, list[tuple[bytes, bytes]], bytes]]" = OrderedDict()
 _memos: list[dict[Any, Any]] = []
 
@@ -64,7 +67,7 @@ def _cdn(path: str) -> tuple[bytes, bytes]:
     ttl = int(LONG.get(path, TTL))
     return (
         b"cache-control",
-        f"public, max-age=0, s-maxage={ttl}, stale-while-revalidate=60".encode(),
+        f"public, max-age=0, s-maxage={ttl}, stale-while-revalidate={STALE.get(path, 60)}".encode(),
     )
 
 

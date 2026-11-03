@@ -1,5 +1,6 @@
 "use client";
 
+import { SkListPage } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AskBox } from "@/components/ask-box";
@@ -34,7 +35,12 @@ export default function More() {
         })
         .catch(() => {});
   }, [session]);
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage cards={false} n={8} />
+      </main>
+    );
 
   const head = (
     <section className="section" id="me">

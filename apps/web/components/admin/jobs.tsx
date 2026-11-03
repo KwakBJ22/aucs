@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkRows } from "@/components/skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type ErrorRow, type Jobs } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
@@ -23,7 +24,12 @@ export function JobsView() {
       .catch((e) => say(errText(e)));
   }, [token, say]);
   useEffect(load, [load]);
-  if (!d) return <p className="sub">{t.loading}</p>;
+  if (!d)
+    return (
+      <Delayed>
+        <SkRows n={8} />
+      </Delayed>
+    );
   const op = can("operator");
   return (
     <>

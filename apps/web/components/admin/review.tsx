@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type Review } from "@/lib/api/admin";
@@ -26,7 +27,12 @@ export function ReviewView() {
       .catch((e) => say(errText(e)));
   }, [token, say]);
   useEffect(load, [load]);
-  if (!d) return <p className="sub">{t.loading}</p>;
+  if (!d)
+    return (
+      <Delayed>
+        <SkRows n={8} />
+      </Delayed>
+    );
   const op = can("operator");
   const run = (p: Promise<unknown>) =>
     p

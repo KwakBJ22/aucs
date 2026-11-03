@@ -1,5 +1,6 @@
 "use client";
 
+import { SkDetail } from "@/components/skeleton";
 import { copyText } from "@/lib/copy-text";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -75,7 +76,12 @@ export default function OnbidBid() {
         <LoadError onRetry={() => location.reload()} />
       </main>
     );
-  if (!d) return <main className="page narrow" aria-busy="true" />;
+  if (!d)
+    return (
+      <main className="page narrow">
+        <SkDetail />
+      </main>
+    );
   const items = [t.ready[0], t.ready[1](won(d.deposit_krw)), t.ready[2]];
   const levelColor =
     chk?.level === "block"

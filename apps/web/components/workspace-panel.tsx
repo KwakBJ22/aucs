@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkSection } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { ItemDetail } from "@/lib/api/items";
@@ -52,7 +53,12 @@ export function WorkspacePanel({
         <Link href={`/item/${encodeURIComponent(id)}`}>{t.toDetail} ›</Link>
       </section>
     );
-  if (!w) return <section className="section" style={{ height: 220, opacity: 0.5 }} />;
+  if (!w)
+    return (
+      <Delayed>
+        <SkSection rows={4} />
+      </Delayed>
+    );
 
   const typeMemo = (v: string) => {
     setMemo(v);

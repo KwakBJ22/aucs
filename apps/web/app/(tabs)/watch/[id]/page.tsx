@@ -1,5 +1,6 @@
 "use client";
 
+import { SkDetail } from "@/components/skeleton";
 import { useParams } from "next/navigation";
 import { NeedLogin } from "@/components/need-login";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,7 +14,12 @@ export default function WorkspacePage() {
   const id = decodeURIComponent(String(useParams().id));
   const { session, ready } = useSession();
   const pc = useIsPc();
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkDetail />
+      </main>
+    );
   if (!session) return <NeedLogin title={copy.ws.title} />;
   return (
     <main className={pc ? "page narrow" : "page"}>

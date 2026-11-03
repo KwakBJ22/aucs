@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -47,6 +48,13 @@ export default function CalcPage() {
           <CalcBox id={id} />
         </section>
         <div className="pc-sticky">
+          {!d && (
+            <section className="section mt-0">
+              <Delayed>
+                <SkLines n={6} gap={14} />
+              </Delayed>
+            </section>
+          )}
           {d && (
             <section className="section mt-0">
               <h2>{t.numbers}</h2>

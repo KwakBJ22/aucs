@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkHeader, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { adminApi, type Role } from "@/lib/api/admin";
@@ -26,7 +27,15 @@ export function AdminGate(props: { children: (token: string, role: Role) => Reac
       .catch(() => setState("denied"));
   }, [token]);
 
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <Delayed>
+          <SkHeader />
+          <SkRows n={6} />
+        </Delayed>
+      </main>
+    );
   if (!session)
     return (
       <main className="adm-gate">
@@ -44,7 +53,15 @@ export function AdminGate(props: { children: (token: string, role: Role) => Reac
         <p className="sub">{t.denied}</p>
       </main>
     );
-  if (!me) return null;
+  if (!me)
+    return (
+      <main className="page">
+        <Delayed>
+          <SkHeader />
+          <SkRows n={6} />
+        </Delayed>
+      </main>
+    );
   if (!me.mfa) return <Mfa />;
   return <>{props.children(token, me.role)}</>;
 }

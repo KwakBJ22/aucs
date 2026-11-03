@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkListPage, SkSection } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -176,13 +177,28 @@ export default function Me() {
   }, [session]);
   useEffect(load, [load]);
 
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage cards={false} />
+      </main>
+    );
   if (!session) return <NeedLogin title={copy.tabs.me} />;
   if (failed && !d)
     return (
       <main className="page">
         <PageHeader title={copy.tabs.me} />
         <LoadError onRetry={load} />
+      </main>
+    );
+  if (!d)
+    return (
+      <main className="page">
+        <PageHeader title={copy.tabs.me} />
+        <Delayed>
+          <SkSection rows={2} />
+          <SkSection rows={3} />
+        </Delayed>
       </main>
     );
   const empty = d && !d.won.length && !d.history.length && !d.todo.length && !mocks.length;

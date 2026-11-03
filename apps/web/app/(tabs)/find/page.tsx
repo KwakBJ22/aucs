@@ -1,6 +1,7 @@
 "use client";
 
 import { LoadError } from "@/components/load-error";
+import { Delayed, SkCards, SkTable } from "@/components/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -339,6 +340,11 @@ export default function Find() {
     <>
       {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       {!failed && empty && <p className="sub">{t.noResult}</p>}
+      {!failed && !list && (
+        <Delayed>
+          <SkCards n={6} />
+        </Delayed>
+      )}
       {list?.items.map((c) => (
         <ItemCard key={c.item_id} c={c} />
       ))}
@@ -374,6 +380,10 @@ export default function Find() {
               </div>
             </div>
             {empty && <p className="sub">{t.noResult}</p>}
+            {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
+            {!failed && !list && (
+              <Delayed>{asTable ? <SkTable rows={10} cols={5} /> : <SkCards n={6} />}</Delayed>
+            )}
             {asTable ? (
               <div className="ox-auto">
                 <table className="pro-table">

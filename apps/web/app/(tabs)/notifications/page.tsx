@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkListPage, SkRows } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
 import { useEffect, useState } from "react";
@@ -23,7 +24,12 @@ export default function Notifications() {
       .then(setList)
       .catch(() => setFailed(true));
   }, [session, tries]);
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage cards={false} n={8} />
+      </main>
+    );
   if (!session) return <NeedLogin title={copy.noti.title} />;
   const group = (n: Noti): "change" | "todo" | "new" | "past" => {
     const k = n.kind ?? "";
@@ -40,6 +46,13 @@ export default function Notifications() {
     <main className="page">
       <PageHeader title={copy.noti.title} back="/home" />
       {failed && !list && <LoadError onRetry={() => setTries((n) => n + 1)} />}
+      {!failed && !list && session && (
+        <Delayed>
+          <section className="section">
+            <SkRows n={8} />
+          </section>
+        </Delayed>
+      )}
       {list && list.length === 0 && (
         <section className="section">
           <p className="sub">{copy.noti.empty}</p>

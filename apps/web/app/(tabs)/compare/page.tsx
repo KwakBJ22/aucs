@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkListPage, SkTable } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -68,7 +69,12 @@ export default function ComparePage() {
     if (token) void load(token);
   }, [token]);
 
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage />
+      </main>
+    );
   if (!session || !token) return <NeedLogin title={t.title} />;
 
   const exclude = (id: string, reason: (typeof REASONS)[number]) => {
@@ -205,6 +211,13 @@ export default function ComparePage() {
         }
       />
       {failed && !data && <LoadError onRetry={() => token && void load(token)} />}
+      {!failed && !data && token && (
+        <Delayed>
+          <section className="section">
+            <SkTable rows={8} cols={3} />
+          </section>
+        </Delayed>
+      )}
       {data && data.items.length === 0 && (
         <section className="section">
           <p className="sub">{t.empty}</p>

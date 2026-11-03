@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkListPage, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -29,7 +30,12 @@ export default function BillingPage() {
         .catch(() => setMsg(t.fail));
   }, [token]);
   useEffect(load, [load]);
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage cards={false} />
+      </main>
+    );
   if (!session) return <NeedLogin title={t.title} />;
 
   const done = (m: string) => {
@@ -44,6 +50,11 @@ export default function BillingPage() {
       <PageHeader title={t.title} back="/more" />
       <section className="section">
         <h2>{t.now}</h2>
+        {!d && (
+          <Delayed>
+            <SkRows n={2} />
+          </Delayed>
+        )}
         {d && d.current.length === 0 && (
           <>
             <p className="sub mt-8">{t.free}</p>

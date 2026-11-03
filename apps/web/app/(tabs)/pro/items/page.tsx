@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, Sk } from "@/components/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -398,13 +399,18 @@ function ProItems() {
               </tr>
             </thead>
             <tbody>
-              {!data && (
-                <tr>
-                  <td colSpan={cols.length} className="sub">
-                    {t.loading}
-                  </td>
-                </tr>
-              )}
+              {!data &&
+                Array.from({ length: 12 }, (_, i) => (
+                  <tr key={`sk-${i}`}>
+                    {cols.map((c) => (
+                      <td key={c}>
+                        <Delayed>
+                          <Sk className="sk-line" />
+                        </Delayed>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               {data?.rows.length === 0 && (
                 <tr>
                   <td colSpan={cols.length} className="sub">

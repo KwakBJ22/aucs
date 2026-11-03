@@ -1,5 +1,6 @@
 "use client";
 
+import { SkDetail } from "@/components/skeleton";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
@@ -37,7 +38,12 @@ function Report() {
   }, [id, bid]);
 
   if (failed) return <LoadError onRetry={() => window.location.reload()} />;
-  if (!d) return <main className="page sub">{copy.pro.loading}</main>;
+  if (!d)
+    return (
+      <main className="page">
+        <SkDetail />
+      </main>
+    );
   const ob = isOnbid(d);
   const s = calc?.selected;
   const when = ob

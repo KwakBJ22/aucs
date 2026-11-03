@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
+import { SIGUNGU } from "@/lib/regions";
+import { Sk } from "@/components/skeleton";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
 import { loadProfile, saveProfile, type Purpose } from "@/lib/profile";
@@ -43,7 +45,8 @@ function Progress({ step }: { step: number }) {
 export default function Start() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [regions, setRegions] = useState<RegionRow[]>([]);
+  // 이름은 바로(코드에 둔 목록), 숫자는 서버에서 받은 뒤 채움(11/4 — 첫 방문에 서버가 깨는 몇 초를 기다리지 않게)
+  const [counts, setCounts] = useState<RegionRow[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [man, setMan] = useState(""); // 만 원 단위 입력
@@ -59,12 +62,25 @@ export default function Start() {
   }, []);
   useEffect(() => {
     fetchRegions()
-      .then(setRegions)
-      .catch(() => setRegions([]));
+      .then(setCounts)
+      .catch(() => setCounts([]));
   }, []);
 
+  const regions = useMemo(() => {
+    const got = new Map((counts ?? []).map((r) => [`${r.sido}-${r.sigungu}`, r.items]));
+    const base = SIGUNGU.map(([sido, sigungu]) => ({
+      sido,
+      sigungu,
+      items: got.get(`${sido}-${sigungu}`) ?? null,
+    }));
+    const known = new Set(base.map((r) => `${r.sido}-${r.sigungu}`));
+    const extra = (counts ?? []).filter((r) => !known.has(`${r.sido}-${r.sigungu}`));
+    return [...base, ...extra];
+  }, [counts]);
   const shown = useMemo(() => regions.filter((r) => !q || r.sigungu.includes(q)), [regions, q]);
-  const count = regions.filter((r) => picked.includes(r.sigungu)).reduce((a, r) => a + r.items, 0);
+  const count = regions
+    .filter((r) => picked.includes(r.sigungu))
+    .reduce((a, r) => a + (r.items ?? 0), 0);
   const cash = man ? Number(man) * 10_000 : null;
 
   function finish() {
@@ -115,12 +131,21 @@ export default function Start() {
                     fontWeight: on ? 700 : 400,
                   }}
                 >
-                  {r.sigungu} <span className="c-muted fs-xs">{r.items}</span>
+                  {r.sigungu}{" "}
+                  {r.items == null ? (
+                    counts ? null : (
+                      <Sk className="sk-num" />
+                    )
+                  ) : (
+                    <span className="c-muted fs-xs">{r.items}</span>
+                  )}
                 </button>
               );
             })}
           </div>
-          {picked.length > 0 && <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>}
+          {picked.length > 0 && counts && counts.length > 0 && (
+            <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>
+          )}
           <button className="btn primary" disabled={!picked.length} onClick={() => setStep(2)}>
             {t.next}
           </button>

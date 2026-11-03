@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   adminApi,
@@ -194,7 +195,12 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
       .catch((e) => say(errText(e)));
   }, [token, id, say]);
   useEffect(load, [load]);
-  if (!u) return <p className="sub">{t.loading}</p>;
+  if (!u)
+    return (
+      <Delayed>
+        <SkLines n={6} />
+      </Delayed>
+    );
   const done = () => {
     say(t.done);
     load();

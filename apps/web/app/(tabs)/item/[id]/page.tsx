@@ -5,6 +5,7 @@ import { Row } from "@/components/calc-box";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
+import { SkDetail } from "@/components/skeleton";
 import { isNotFound } from "@/lib/api/client";
 import {
   fetchItem,
@@ -66,11 +67,9 @@ export default function Item() {
     );
   if (d === undefined)
     return (
-      <main className="page" aria-busy="true">
+      <main className="page">
         <div className="topbar" />
-        {[120, 260].map((h) => (
-          <section key={h} className="section" style={{ height: h, opacity: 0.5 }} />
-        ))}
+        <SkDetail />
       </main>
     );
   if (d === null)

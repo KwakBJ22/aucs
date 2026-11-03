@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkRows } from "@/components/skeleton";
 import { useEffect, useState } from "react";
 import { adminApi, formatBytes, type Today } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
@@ -19,7 +20,12 @@ export function TodayView({ go }: { go: (m: string) => void }) {
       .catch((e) => setErr(errText(e)));
   }, [token]);
   if (err) return <p className="adm-err">{err}</p>;
-  if (!d) return <p className="sub">{t.loading}</p>;
+  if (!d)
+    return (
+      <Delayed>
+        <SkRows n={6} />
+      </Delayed>
+    );
   const pct = d.db.used / d.db.limit;
   return (
     <>

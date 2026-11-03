@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkCards, SkListPage } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ItemCard } from "@/components/item-card";
@@ -143,7 +144,12 @@ export default function Watch() {
       .catch(() => setFailed(true));
   }, [session, tries]);
 
-  if (!ready) return null;
+  if (!ready)
+    return (
+      <main className="page">
+        <SkListPage />
+      </main>
+    );
   if (!session) return <NeedLogin title={copy.tabs.watch} />;
   const token = session.access_token;
 
@@ -200,6 +206,13 @@ export default function Watch() {
     </section>
   );
   const errorBox = failed && !list && <LoadError onRetry={() => setTries((n) => n + 1)} />;
+  const waitBox = !failed && !list && session && (
+    <Delayed>
+      <section className="section">
+        <SkCards n={4} />
+      </section>
+    </Delayed>
+  );
   const empty = list && list.length === 0 && (
     <section className="section">
       <p className="sub">{t.empty}</p>
@@ -214,6 +227,8 @@ export default function Watch() {
         {header}
         {recentBox}
         {errorBox}
+        {waitBox}
+        {waitBox}
         {msg && <div className="sub c-amber">{msg}</div>}
         {empty}
         {list && list.length > 0 && (

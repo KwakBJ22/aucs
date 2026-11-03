@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HeartButton } from "@/components/heart-button";
@@ -37,7 +38,17 @@ export function PickPanel({ id }: { id: string | null }) {
         <p className="sub">{t.pickEmpty}</p>
       </section>
     );
-  if (!d) return <section className="section" style={{ height: 260, opacity: 0.5 }} />;
+  if (!d)
+    return (
+      <section className="section">
+        <Delayed>
+          <SkLines n={2} />
+          <div className="mt-16">
+            <SkLines n={5} />
+          </div>
+        </Delayed>
+      </section>
+    );
   const eid = encodeURIComponent(d.item_id);
   // 공매는 다섯 질문 대신 공매 상세의 줄(10/29 — 공매를 고르면 화면이 멈추던 것)
   const qs = isOnbid(d)

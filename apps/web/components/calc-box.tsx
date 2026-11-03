@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, Sk, SkLines } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { fetchCalc, type BidCheck, type Calc } from "@/lib/api/items";
@@ -202,6 +203,16 @@ export function CalcBox({ id }: { id: string }) {
           </label>
           {assume == null && <div className="fs-sm mt-6 c-amber">{c.assumeNeed}</div>}
         </div>
+      )}
+      {!d && (
+        <Delayed>
+          <div className="mt-16">
+            <Sk className="sk-box" h={56} />
+            <div className="mt-16">
+              <SkLines n={5} gap={14} />
+            </div>
+          </div>
+        </Delayed>
       )}
       {d && s && (
         <>

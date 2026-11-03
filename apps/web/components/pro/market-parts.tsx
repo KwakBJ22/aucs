@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkLines } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchOnbidMarket, type OnbidMarket as OM, type Stat } from "@/lib/api/pro";
@@ -58,7 +59,12 @@ export function OnbidMarket(f: { sido: string; sigungu: string; usage: string[];
       stale = true;
     };
   }, [sido, sigungu, usage, months]);
-  if (!m) return <div className="sub">{copy.pro.loading}</div>;
+  if (!m)
+    return (
+      <Delayed>
+        <SkLines n={6} />
+      </Delayed>
+    );
   const o = t.onbid;
   return (
     <>

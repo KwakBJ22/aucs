@@ -1,5 +1,6 @@
 "use client";
 
+import { Delayed, SkRows } from "@/components/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -168,7 +169,11 @@ function Cases() {
       </div>
       <div className="pc-grid g-26-74">
         <section className="section m-0">
-          {list === null && <div className="sub">{copy.pro.loading}</div>}
+          {list === null && (
+            <Delayed>
+              <SkRows n={8} />
+            </Delayed>
+          )}
           {list?.length === 0 && <div className="sub">{t.empty}</div>}
           {list?.map((c) => (
             <button
