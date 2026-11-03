@@ -1,6 +1,7 @@
 // 화면 문구는 이 파일 한 곳에 모읍니다.
 export const copy = {
   appName: "옥스",
+  siteTitle: "옥스경매", // 브라우저 탭·검색 결과에 보이는 이름(11/4). 화면 안 로고는 appName
   health: {
     api: "API 연결",
     db: "DB 연결",

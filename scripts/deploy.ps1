@@ -2,6 +2,7 @@
 #  1 커밋 안 된 파일 수 알림 → 2 문법 검사 → 3 DB 이주 확인 → 4 Vercel 환경 변수 이름 확인
 #  5 API 무대 배포(주소만, 손님 주소는 그대로) + /health → 6 웹 무대 배포 + 목숨줄 검사
 #  7 모두 초록이면 API → 웹 순서로 손님 주소에 올림 → 8 aucs.co.kr 확인, 실패하면 바로 되돌림 → 9 배포 기록
+#  10 성공했을 때만 GitHub에 보관(커밋·올리기) — 실패하면 올리지 않음
 # 비밀값은 화면·기록에 찍지 않습니다(.env 에서 읽기만).
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
@@ -42,12 +43,13 @@ function Stop-Deploy([string]$why) {
 function Step([string]$title) { Write-Host ""; Write-Host "▶ $title" -ForegroundColor Cyan }
 
 # Vercel CLI 는 안내 글을 오류 통로(stderr)로 내보냄 → PowerShell 5 가 「Stop」 설정에서 오류로 보고 멈춤(11/4).
+# 대표가 로그인한 것과 같은 판(npx vercel)을 씀 — 최신판(@latest)은 로그인 정보를 다른 곳에서 찾아 「로그인 안 됨」(11/4).
 # 이 호출 동안만 멈추지 않게 하고, 성공·실패는 끝난 번호($LASTEXITCODE)로만 판단.
 function Vercel([string]$dir, [string[]]$argv) {
   $old = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $out = & npx --yes vercel@latest @argv --cwd $dir 2>&1 | ForEach-Object { "$_" }
+    $out = & npx --yes vercel @argv --cwd $dir 2>&1 | ForEach-Object { "$_" }
     $code = $LASTEXITCODE
   } finally { $ErrorActionPreference = $old }
   return @{ code = $code; text = ($out | Out-String) }
@@ -106,7 +108,7 @@ $need = @{
 }
 foreach ($dir in @($apiDir, $webDir)) {
   $r = Vercel $dir @('env', 'ls', 'production')
-  if ($r.code) { Stop-Deploy "Vercel 환경 변수 목록을 못 읽었어요(로그인·연결 확인: npx vercel login / npx vercel link --repo)" }
+  if ($r.code) { Stop-Deploy "Vercel 환경 변수 목록을 못 읽었어요($(Split-Path $dir -Leaf))`n$($r.text)" }
   $lack = $need[$dir] | Where-Object { $r.text -notmatch "(?m)^\s*$_\s" }
   if ($lack) { Stop-Deploy "Vercel에 없는 환경 변수($(Split-Path $dir -Leaf)): $($lack -join ', ')" }
 }
@@ -161,6 +163,20 @@ Write-Host "  aucs.co.kr · api.aucs.co.kr 정상"
 $sec = [int]((Get-Date) - $started).TotalSeconds
 $msg = "배포 완료 ${sec}초 · 커밋 안 된 파일 $($dirty.Count)개 · API $($state.api) · 웹 $($state.web)"
 Save-Run 'ok' $msg
+
+# 10 ── GitHub 보관(배포가 성공한 판만). 여기서 실패해도 배포는 이미 끝났으니 알림만.
+Step "10 GitHub 보관"
+$old = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+  if ($dirty.Count -gt 0) {
+    git add -A | Out-Null
+    git commit -q -m ("배포 " + $started.ToString("yyyy-MM-dd HH:mm") + " · 검사 통과") | Out-Null
+  }
+  git push -q origin main 2>&1 | Out-Null
+  if ($LASTEXITCODE) { Write-Host "  GitHub에 올리지 못했어요(배포는 끝남) — 다음 배포 때 같이 올라가요" -ForegroundColor Yellow }
+  else { Write-Host "  GitHub에 올림" }
+} finally { $ErrorActionPreference = $old }
 Write-Host ""
 Write-Host $msg -ForegroundColor Green
 Stop-Transcript | Out-Null

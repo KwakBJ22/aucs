@@ -25,5 +25,8 @@
       "path": "/cron/notify?morning=true",
       "schedule": "30 22 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }

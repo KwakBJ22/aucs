@@ -1,7 +1,22 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["icn1"],
+  "regions": [
+    "icn1"
+  ],
   "redirects": [
-    { "source": "/:path*", "has": [{ "type": "host", "value": "www.aucs.co.kr" }], "destination": "https://aucs.co.kr/:path*", "permanent": true }
-  ]
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.aucs.co.kr"
+        }
+      ],
+      "destination": "https://aucs.co.kr/:path*",
+      "permanent": true
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
