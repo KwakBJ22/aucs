@@ -331,7 +331,7 @@
   }
 }
 
-/* 로고(11/4): 그림 비율 그대로, 높이만 자리마다 */
+/* 로고(11/4): 그림 비율 그대로, 높이만 자리마다 — 11/4 대표님 50% 키움 */
 .logo {
   display: inline-flex;
   align-items: center;
@@ -341,11 +341,11 @@
   width: auto;
 }
 .logo-sm img {
-  height: 26px;
+  height: 39px;
 }
 .logo-md img {
-  height: 30px;
+  height: 45px;
 }
 .logo-lg img {
-  height: 44px;
+  height: 66px;
 }
