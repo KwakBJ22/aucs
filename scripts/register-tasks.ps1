@@ -1,6 +1,6 @@
 ﻿# 옥스 작업 스케줄러 등록 — 지금 쓰는 작업 전부 (한 번 돌리면 같은 상태가 됨, 여러 번 돌려도 됨)
 # 10/28 정리: 예전 register-tasks-2~5 를 이 파일 하나로 합침.
-#   켜 둠: 아침_묶음 매일 07:00(매각결과→물건→분석→서류→분석→알림) · 입찰일_아침 매일 07:30
+#   켜 둠: 아침_묶음 매일 07:00(매각결과→물건→건축물대장→공매→분석→알림) · 법원_매시 매시 10분(11/4) · 입찰일_아침 매일 07:30
 #          관심_바로_준비 09:05~21:05 매시(10/29, 관심 담은 뒤 서류·건축물대장·분석)
 #          관리자_요청 5분마다(11/2) · DB_백업 매주 일요일 12:00(10/29, backup-db.ps1) · 실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
 #   꺼 둠(지우지 않음): \Aucs\ 매각결과·물건·서류보관·분석·알림(아침 묶음으로 바뀜, 10/18)
@@ -21,7 +21,11 @@ Write-Host "등록: \Aucs\아침_묶음 — 매일 07:00"
 schtasks /Create /TN "\Aucs\입찰일_아침" /SC DAILY /ST 07:30 /TR "$tr morning" /F | Out-Null; Set-Opts '입찰일_아침' 1
 Write-Host "등록: \Aucs\입찰일_아침 — 매일 07:30"
 schtasks /Create /TN "\Aucs\관심_바로_준비" /SC DAILY /ST 09:05 /RI 60 /DU 12:00 /TR "$tr watched" /F | Out-Null; Set-Opts '관심_바로_준비' 1
-Write-Host "등록: \Aucs\관심_바로_준비 — 09:05~21:05 매시(관심 담은 뒤 서류·건축물대장)"
+Write-Host "등록: \Aucs\관심_바로_준비 — 09:05~21:05 매시(관심 담은 뒤 건축물대장·분석, 서류는 법원_매시)"
+# 11/4 저녁: 법원 사건 서류·사진·다음 회차·감정평가서는 매시 나눠 받음(하루 한도 ÷ 18시간). 매시 10분, 하루 종일 —
+#   밤(01~06시)에는 작업이 스스로 쉼. PC 가 꺼져 있다 켜지면 바로 한 번 돌고(StartWhenAvailable), 앞 차례가 돌고 있으면 건너뜀.
+schtasks /Create /TN "\Aucs\법원_매시" /SC HOURLY /MO 1 /ST 06:10 /TR "$tr court_hourly" /F | Out-Null; Set-Opts '법원_매시' 2
+Write-Host "등록: \Aucs\법원_매시 — 매시 10분(관심 서류 → 추천 사진 → 다음 회차 → 서류 보관 → 감정평가서 원본 → 분석)"
 $rq = Join-Path $PSScriptRoot 'run-requests.ps1'
 schtasks /Create /TN "\Aucs\관리자_요청" /SC MINUTE /MO 5 /TR "wscript.exe `"$vbs`" `"$rq`"" /F | Out-Null; Set-Opts '관리자_요청' 6
 Write-Host "등록: \Aucs\관리자_요청 — 5분마다(관리자 화면 「다시 돌리기 요청」)"

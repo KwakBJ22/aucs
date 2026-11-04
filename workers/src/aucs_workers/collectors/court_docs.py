@@ -140,6 +140,9 @@ def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str,
             where {AREA} and {REAL_ESTATE} and i.sale_date between %(from)s and %(to)s
               and i.status_code is distinct from 'gone'
               and not exists (select 1 from core.item_photos p where p.case_id = c.case_id)
+              -- 매시 돌므로(11/4) 법원에 사진이 없는 사건을 매번 다시 받지 않게 사흘에 한 번만
+              and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                              and r.fetched_at > now() - interval '3 days')
             group by c.case_id, c.court_code, c.case_no
             order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
             limit %(n)s""",
@@ -248,6 +251,8 @@ def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str,
             out[f"item_detail_{seq}"] = post(
                 "/pgj/pgj15B/selectAuctnCsSrchRslt.on", body, f"물건상세{seq}"
             )
+        except DailyLimitReached:
+            raise  # 한도 — 이 사건은 저장하지 않고 다음 시간에 처음부터(반쪽 저장 막기)
         except Exception as e:  # noqa: BLE001 — 물건상세만 실패하면 나머지는 저장
             if type(e).__name__ == "Blocked" and "물건상세" not in str(e):
                 raise
@@ -268,6 +273,8 @@ def fetch_appraisal_info(
                                 "pgmId": "PGJ15BP03"}}  # fmt: skip
     try:
         d = post("/pgj/pgj15B/selectAeeWevlInfo.on", body, "감정평가서 정보")
+    except DailyLimitReached:
+        raise
     except Exception:  # noqa: BLE001
         return {}
     inf = d.get("dma_ordTsIndvdAeeWevlInf") or {}
@@ -321,7 +328,10 @@ def main() -> None:
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"))
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
-    polite = Polite(daily_limit=NEXT_MAX * 8 if a.next else ARCHIVE_MAX * 12)
+    # 손님이 연 물건(--queue)·한 사건(--case)은 시간 몫과 상관없이(하루 전체 한도에는 셈)
+    polite = Polite(
+        daily_limit=NEXT_MAX * 8 if a.next else ARCHIVE_MAX * 12, hourly=not (a.queue or a.case)
+    )
     req_ids: list[int] = []
     try:
         _run(a, polite, req_ids)
@@ -366,7 +376,7 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
                     try:
                         docs = fetch_case(page, polite, court, case_no)
                     except DailyLimitReached:
-                        print("하루 요청 한도 — 나머지는 내일")  # 법원 예의(11/4 --next 가 많을 때)
+                        print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
                         break
                     save_case(conn, court, case_no, docs)
                     conn.commit()

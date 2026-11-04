@@ -1,5 +1,5 @@
 ﻿# 옥스 수집·분석 실행기 — 작업 스케줄러가 부릅니다. 결과는 logs\ 에 남깁니다.
-param([Parameter(Mandatory = $true)][ValidateSet('items', 'results', 'docs', 'analyze', 'notify', 'morning', 'daily', 'trades', 'redev', 'buildings', 'buildings_retry', 'onbid', 'onbid_first', 'watched', 'regions', 'slim', 'purge', 'photos')][string]$Job)
+param([Parameter(Mandatory = $true)][ValidateSet('items', 'results', 'docs', 'analyze', 'notify', 'morning', 'daily', 'trades', 'redev', 'buildings', 'buildings_retry', 'onbid', 'onbid_first', 'watched', 'regions', 'slim', 'purge', 'photos', 'court_hourly')][string]$Job)
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -10,7 +10,7 @@ $env:PYTHONIOENCODING = 'utf-8'
 $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
 if (-not $uv) { $uv = "$env:USERPROFILE\.local\bin\uv.exe" }
 $mod = @{ items = 'aucs_workers.collectors.court_items'; results = 'aucs_workers.collectors.court_results';
-          docs = 'aucs_workers.collectors.court_docs --archive'; analyze = 'aucs_workers.jobs.analyze'; notify = 'aucs_workers.jobs.notify'; morning = 'aucs_workers.jobs.notify --morning'; daily = 'aucs_workers.jobs.daily'; trades = 'aucs_workers.collectors.trades --months 3'; redev = 'aucs_workers.collectors.redev'; buildings = 'aucs_workers.collectors.buildings --cap 3000'; buildings_retry = 'aucs_workers.collectors.buildings --retry-none --cap 3000'; onbid = 'aucs_workers.collectors.onbid'; onbid_first = 'aucs_workers.collectors.onbid --result-days 60'; watched = 'aucs_workers.jobs.watched'; regions = 'aucs_workers.collectors.regions'; slim = 'aucs_workers.jobs.slim'; purge = 'aucs_workers.jobs.purge'; photos = 'aucs_workers.collectors.court_docs --photos' }[$Job]
+          docs = 'aucs_workers.collectors.court_docs --archive'; analyze = 'aucs_workers.jobs.analyze'; notify = 'aucs_workers.jobs.notify'; morning = 'aucs_workers.jobs.notify --morning'; daily = 'aucs_workers.jobs.daily'; trades = 'aucs_workers.collectors.trades --months 3'; redev = 'aucs_workers.collectors.redev'; buildings = 'aucs_workers.collectors.buildings --cap 3000'; buildings_retry = 'aucs_workers.collectors.buildings --retry-none --cap 3000'; onbid = 'aucs_workers.collectors.onbid'; onbid_first = 'aucs_workers.collectors.onbid --result-days 60'; watched = 'aucs_workers.jobs.watched'; regions = 'aucs_workers.collectors.regions'; slim = 'aucs_workers.jobs.slim'; purge = 'aucs_workers.jobs.purge'; photos = 'aucs_workers.collectors.court_docs --photos'; court_hourly = 'aucs_workers.jobs.court_hourly' }[$Job]
 $parts = $mod -split ' '
 # 공매 처음 한 번: 받아 둔 DuckDB 입찰결과(5/4~9/2)를 먼저 옮긴 뒤 수집(10/28)
 if ($Job -eq 'onbid_first') { & $uv run --with duckdb python tools/duckdb_export/export_onbid_results.py *>&1 | Tee-Object -FilePath $log }

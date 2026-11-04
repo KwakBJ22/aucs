@@ -3,12 +3,16 @@
 11/4 법원이 집 IP 를 「비정상 IP」로 막음 → 더 느리고 적게:
 - 요청 사이 2.5초 + 0~1초 흔들림, 사건 사이 6초 + 0~3초 (줄이지 않음)
 - 법원 전체 하루 요청 한도(모든 수집기 합): logs/court_budget.json 에 그날 센 수를 함께 씀
+- 11/4 저녁 「하루 종일 고르게」: 한도를 법원 서비스 시간(06~24시, 18시간)으로 나눠 시간마다 몫만 씀
+  (아침 목록 수집처럼 한 번에 끝내야 하는 것은 hourly=False). 한도는 고정이 아님 —
+  7일 연속 막히지 않으면 20% 올리고, 막히면 40% 내림(법원이 견디는 만큼만, 2,500번은 시작점일 뿐)
 - 이상 응답은 3번까지만 다시 시도, 그래도 이상하면 전체 중단하고 logs/court_blocked.txt 를 남김
   → 그 뒤 12시간은 법원 수집기가 켜지자마자 멈춤(막힌 동안 두드리지 않게). 풀렸으면 이 파일을 지우면 됨
 - 하루 한도를 넘기면 중단
 """
 
 import json
+import math
 import random
 import time
 from collections.abc import Callable
@@ -19,7 +23,10 @@ from typing import Any
 REQUEST_GAP_SEC = 2.5
 CASE_GAP_SEC = 6.0
 RETRIES = 3
-SITE_DAY_MAX = {"court": 2500}  # 하루 요청 수(모든 수집기 합) — 사건 하나에 6~7번
+SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집기 합) — 사건 하나에 6~7번
+CAP_MIN, CAP_MAX = 800, 20000
+GROW_AFTER_DAYS, GROW, SHRINK = 7, 1.2, 0.6
+SERVICE_HOURS = 18  # 법원 06:00~24:00
 BLOCK_HOURS = 12
 LOGS = Path(__file__).resolve().parents[4] / "logs"
 
@@ -40,6 +47,25 @@ def _budget_file(site: str) -> Path:
     return LOGS / f"{site}_budget.json"
 
 
+def roll(b: dict[str, Any], today: str, start_cap: int) -> dict[str, Any]:
+    """하루가 바뀌면 센 수를 0으로 — 어제 안 막혔으면 무사한 날 +1, 7일 모이면 한도 20% 올림."""
+    if b.get("date") == today:
+        b.setdefault("cap", start_cap)
+        b.setdefault("hours", {})
+        return b
+    cap, ok = int(b.get("cap") or start_cap), int(b.get("ok_days") or 0)
+    if b.get("date") and not b.get("blocked"):
+        ok += 1
+        if ok >= GROW_AFTER_DAYS:
+            cap, ok = min(CAP_MAX, int(cap * GROW)), 0
+    return {"date": today, "count": 0, "hours": {}, "cap": cap, "ok_days": ok, "blocked": False}
+
+
+def hour_share(cap: int) -> int:
+    """한 시간에 쓸 몫 — 하루 한도를 서비스 시간으로 나눔."""
+    return math.ceil(cap / SERVICE_HOURS)
+
+
 class Polite:
     def __init__(
         self,
@@ -47,6 +73,7 @@ class Polite:
         sleep: Callable[[float], None] = time.sleep,
         site: str | None = "court",
         jitter: bool = True,
+        hourly: bool = True,
     ):
         self.daily_limit = daily_limit
         self.count = 0
@@ -54,6 +81,7 @@ class Polite:
         self._last = 0.0
         self.site = site
         self._jitter = jitter
+        self.hourly = hourly
         if site:
             f = _block_file(site)
             if f.exists():
@@ -66,22 +94,46 @@ class Polite:
     def _j(self, n: float) -> float:
         return random.uniform(0, n) if self._jitter else 0.0
 
-    def _spend(self) -> None:
-        """사이트 전체 하루 한도(수집기 여럿이 함께 씀)."""
-        cap = SITE_DAY_MAX.get(self.site or "")
-        if not cap:
-            return
+    def _load(self) -> tuple[Path, dict[str, Any]]:
         f = _budget_file(self.site or "")
-        today = date.today().isoformat()
         try:
             b = json.loads(f.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001 — 처음이거나 깨졌으면 0부터
             b = {}
-        n = int(b.get("count", 0)) if b.get("date") == today else 0
-        if n >= cap:
+        return f, roll(b, date.today().isoformat(), SITE_DAY_MAX.get(self.site or "", 0))
+
+    def _spend(self) -> None:
+        """사이트 전체 하루 한도와 이번 시간 몫(수집기 여럿이 함께 씀)."""
+        if not SITE_DAY_MAX.get(self.site or ""):
+            return
+        f, b = self._load()
+        # 수집기 여럿이 동시에 돌아도(매시 작업 + 5분마다 손님 요청) 법원 쪽에서 보면 간격이 지켜지게
+        wait = REQUEST_GAP_SEC - (time.time() - float(b.get("last_ts") or 0))
+        if wait > 0:
+            self._sleep(wait)
+            f, b = self._load()
+        cap = int(b["cap"])
+        if b["count"] >= cap:
             raise DailyLimitReached(f"{self.site} 하루 전체 한도 {cap}번")
+        hh = f"{datetime.now():%H}"
+        if self.hourly and b["hours"].get(hh, 0) >= hour_share(cap):
+            raise DailyLimitReached(
+                f"{self.site} 이번 시간 몫 {hour_share(cap)}번 — 다음 시간에 이어서"
+            )
+        b["count"] += 1
+        b["hours"][hh] = b["hours"].get(hh, 0) + 1
+        b["last_ts"] = time.time()
         LOGS.mkdir(exist_ok=True)
-        f.write_text(json.dumps({"date": today, "count": n + 1}), encoding="utf-8")
+        f.write_text(json.dumps(b), encoding="utf-8")
+
+    def _shrink(self) -> None:
+        """막힘 → 한도 40% 내리고 무사한 날 0부터."""
+        if not SITE_DAY_MAX.get(self.site or ""):
+            return
+        f, b = self._load()
+        b.update(cap=max(CAP_MIN, int(int(b["cap"]) * SHRINK)), ok_days=0, blocked=True)
+        LOGS.mkdir(exist_ok=True)
+        f.write_text(json.dumps(b), encoding="utf-8")
 
     def call(self, fn: Callable[[], dict[str, Any]], what: str) -> dict[str, Any]:
         """fn 은 {"ok": bool, ...} 을 돌려주는 요청 한 번."""
@@ -102,6 +154,7 @@ class Polite:
                 break
             self._sleep(3.0 * (attempt + 1))
         if self.site:
+            self._shrink()
             LOGS.mkdir(exist_ok=True)
             _block_file(self.site).write_text(
                 f"{datetime.now():%Y-%m-%d %H:%M} {what}\n", encoding="utf-8"

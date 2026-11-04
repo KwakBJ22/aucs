@@ -35,8 +35,35 @@ def test_site_budget_shared(tmp_path, monkeypatch) -> None:  # type: ignore[no-u
 
     monkeypatch.setattr(m, "LOGS", tmp_path)
     monkeypatch.setitem(m.SITE_DAY_MAX, "court", 2)
-    a, b = Polite(sleep=lambda s: None, jitter=False), Polite(sleep=lambda s: None, jitter=False)
+    a = Polite(sleep=lambda s: None, jitter=False, hourly=False)
+    b = Polite(sleep=lambda s: None, jitter=False, hourly=False)
     a.call(lambda: {"ok": True}, "1")
     b.call(lambda: {"ok": True}, "2")
     with pytest.raises(DailyLimitReached):
         a.call(lambda: {"ok": True}, "3")
+
+
+def test_budget_grows_after_quiet_week_and_shrinks_on_block() -> None:
+    # 2,500번은 시작점 — 7일 무사하면 20% 올리고(11/4 저녁), 막히면 40% 내림
+    from aucs_workers.collectors.polite import hour_share, roll
+
+    b: dict = {}
+    for d in range(1, 9):
+        b = roll(b, f"2026-11-{d:02d}", 2500)
+    assert b["cap"] == 3000 and b["ok_days"] == 0
+    b["blocked"] = True
+    assert roll(b, "2026-11-09", 2500)["ok_days"] == 0
+    assert hour_share(2500) == 139
+
+
+def test_hour_share_stops_hourly_job(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from aucs_workers.collectors import polite as m
+
+    monkeypatch.setattr(m, "LOGS", tmp_path)
+    monkeypatch.setattr(m, "REQUEST_GAP_SEC", 0)
+    monkeypatch.setitem(m.SITE_DAY_MAX, "court", 18)  # 시간 몫 1번
+    p = Polite(sleep=lambda s: None, jitter=False)
+    p.call(lambda: {"ok": True}, "1")
+    with pytest.raises(DailyLimitReached):
+        p.call(lambda: {"ok": True}, "2")
+    Polite(sleep=lambda s: None, jitter=False, hourly=False).call(lambda: {"ok": True}, "목록")

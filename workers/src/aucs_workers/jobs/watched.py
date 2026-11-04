@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 STEPS = [
-    ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"]),
+    # 관심 물건 서류는 매시 법원 작업(court_hourly)이 맨 먼저 받음(11/4 — 법원에 두 창이 겹치지 않게)
     ("건축물대장(관심 먼저)", ["aucs_workers.collectors.buildings", "--cap", "60"]),
     ("분석", ["aucs_workers.jobs.analyze", "--stale"]),
 ]

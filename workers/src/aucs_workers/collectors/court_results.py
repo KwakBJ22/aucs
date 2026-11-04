@@ -24,7 +24,7 @@ def main() -> None:
     if a.court:
         courts = {a.court: COURTS[a.court]}
     with connect() as conn, run(conn, "court_results", "법원 매각결과") as job:
-        for court, rows in fetch_pages(courts, Polite(), results=True, show=a.show):
+        for court, rows in fetch_pages(courts, Polite(hourly=False), results=True, show=a.show):
             save_raw(conn, "court_result_raw", court, rows)
             job.count += save_results(conn, rows)
             conn.commit()

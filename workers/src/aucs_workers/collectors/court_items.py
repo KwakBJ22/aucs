@@ -68,7 +68,7 @@ def main() -> None:
         started = now_row[0] if now_row else datetime.now().astimezone()
         seen: set[str] = set()
         for court, rows in fetch_pages(
-            courts, Polite(), results=False,
+            courts, Polite(hourly=False), results=False,
             date_from=f"{d_from:%Y%m%d}", date_to=f"{d_to:%Y%m%d}", show=a.show,
         ):  # fmt: skip
             save_raw(conn, "court_item_raw", court, rows)
