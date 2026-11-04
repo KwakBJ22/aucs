@@ -55,7 +55,11 @@ function Vercel-Cmd {
   $script:VercelExe = @('npx', '--yes', 'vercel')
   if ($g) {
     $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-    try { $null = & $g.Source whoami 2>&1; if ($LASTEXITCODE -eq 0) { $script:VercelExe = @($g.Source) } } finally { $ErrorActionPreference = $old }
+    # 로그인 안 된 판은 whoami 가 0 으로 끝나기도 해서(11/4) 글로도 확인 — 「credentials」·「Error」가 있으면 npx(로그인된 판)
+    try {
+      $w = (& $g.Source whoami --cwd $root 2>&1 | ForEach-Object { "$_" }) -join "`n"
+      if ($LASTEXITCODE -eq 0 -and $w -notmatch 'credentials|Error|login') { $script:VercelExe = @($g.Source) }
+    } finally { $ErrorActionPreference = $old }
   }
   return $script:VercelExe
 }
