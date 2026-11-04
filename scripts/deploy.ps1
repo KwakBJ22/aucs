@@ -81,6 +81,7 @@ function Start-Stage([string[]]$dirs) {
   $cmd = @(Vercel-Cmd)   # 하나짜리 배열은 함수에서 글자로 풀려 나옴 → 다시 배열로(11/4 「C」 오류)
   Start-Job -ArgumentList $cmd, $dirs -ScriptBlock {
     param($cmd, $dirs)
+    $cmd = @($cmd); $dirs = @($dirs)
     $exe = $cmd[0]; $pre = @($cmd | Select-Object -Skip 1)
     $ErrorActionPreference = 'Continue'
     $res = @{}
