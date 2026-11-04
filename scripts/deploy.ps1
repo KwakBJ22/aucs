@@ -1,5 +1,5 @@
 ﻿# 옥스 배포(11/3, 11/4 빠르게) — 이 순서만. 검사를 건너뛰는 길 없음.
-#  11/4: 지난 배포 뒤 바뀐 쪽(웹·API)만 올림 · 무대 배포를 맨 처음 함께 시작하고 그동안 검사(손님 주소는 검사 통과 뒤에만)
+#  11/4: 맨 먼저 GitHub 새것 받기 · 지난 배포 뒤 바뀐 쪽(웹·API)만 올림 · 무대 배포를 맨 처음 함께 시작하고 그동안 검사(손님 주소는 검사 통과 뒤에만)
 #        · 설치된 vercel 을 바로 부름 · 환경 변수 이름은 .env 가 바뀌었거나 하루 지났을 때만 확인
 #  1 커밋 안 된 파일 수 알림 → 2 문법 검사 → 3 DB 이주 확인 → 4 Vercel 환경 변수 이름 확인
 #  5 API 무대 배포(주소만, 손님 주소는 그대로) + /health → 6 웹 무대 배포 + 목숨줄 검사
@@ -105,6 +105,29 @@ $bypassApi = Read-Env 'VERCEL_BYPASS_API'
 if (-not $bypassApi) { $bypassApi = Read-Env 'VERCEL_AUTOMATION_BYPASS_SECRET' }
 $bypassWeb = Read-Env 'VERCEL_BYPASS_WEB'
 if (-not $bypassWeb) { $bypassWeb = Read-Env 'VERCEL_AUTOMATION_BYPASS_SECRET' }
+
+# 00 ── GitHub에서 새것 받기(11/4) — Claude가 올린 고침을 PC로 받은 뒤 배포. 배치 파일만 누르면 되게.
+#  커밋 안 된 PC 파일은 잠깐 치웠다 되돌림(--autostash). 겹쳐서 못 받으면 배포하지 않고 멈춤.
+Step "00 GitHub에서 새것 받기"
+$old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+try {
+  git fetch -q origin main 2>&1 | Out-Null
+  if ($LASTEXITCODE) { Write-Host "  GitHub에 못 붙어 PC에 있는 그대로 배포합니다" -ForegroundColor Yellow }
+  else {
+    $null = git merge-base --is-ancestor HEAD origin/main 2>$null; $behind = ($LASTEXITCODE -eq 0)
+    $null = git merge-base --is-ancestor origin/main HEAD 2>$null; $ahead = ($LASTEXITCODE -eq 0)
+    if ($ahead) { Write-Host "  받을 것 없음" }
+    elseif ($behind) {
+      $out = git merge --ff-only --autostash origin/main 2>&1 | Out-String
+      if ($LASTEXITCODE) { Stop-Deploy "GitHub 새것을 받지 못했어요(PC에서 고친 파일과 겹침)`n$out" }
+      Write-Host "  받음: $(git log -1 --format=%s)"
+    } else {
+      $out = git rebase --autostash origin/main 2>&1 | Out-String
+      if ($LASTEXITCODE) { git rebase --abort 2>&1 | Out-Null; Stop-Deploy "GitHub 새것과 PC 커밋이 겹쳐 받지 못했어요`n$out" }
+      Write-Host "  받음(PC 커밋은 그 위로): $(git log -1 --format=%s)"
+    }
+  }
+} finally { $ErrorActionPreference = $old }
 
 # 0 ── 무엇이 바뀌었나(지난 배포 뒤) → 바뀐 쪽만 올림. 기록이 없거나 공통 파일이 바뀌면 둘 다.
 $lastFile = "$root\logs\last_deploy.txt"
