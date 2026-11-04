@@ -53,7 +53,7 @@ export default function Start() {
   const [man, setMan] = useState(""); // 만 원 단위 입력
   const [purpose, setPurpose] = useState<Purpose>("live");
 
-  // 「답 바꾸기」로 다시 오면 지난 답을 미리 채움(11/1 — 예전엔 처음부터 다시 골라야 했음)
+  // 「조건 바꾸기」로 다시 오면 지난 답을 미리 채움(11/1 — 예전엔 처음부터 다시 골라야 했음)
   useEffect(() => {
     const p = loadProfile();
     if (!p) return;

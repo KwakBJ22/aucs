@@ -115,7 +115,7 @@ export const copy = {
     login: "로그인",
     loginBanner: "로그인하면 관심 물건이 바뀔 때 알려 드려요",
     forMe: "나에게 맞는 물건",
-    changeAnswers: "답 바꾸기 ›",
+    changeAnswers: "조건 바꾸기 ›",
     closing: "마감 임박",
     onbidClosing: "이번 주 마감 공매",
     onbidAll: "전체 ›",
