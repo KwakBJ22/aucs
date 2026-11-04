@@ -152,7 +152,7 @@ export default function Start() {
           {picked.length > 0 && counts && counts.length > 0 && (
             <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>
           )}
-          <button className="btn primary" disabled={!picked.length} onClick={() => setStep(2)}>
+          <button className="btn primary mt-16" disabled={!picked.length} onClick={() => setStep(2)}>
             {t.next}
           </button>
         </>
