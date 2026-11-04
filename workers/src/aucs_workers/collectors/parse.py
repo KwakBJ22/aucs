@@ -97,7 +97,7 @@ GYEONGGI_CITIES = {
 }  # fmt: skip
 
 
-def region_from(
+def _region_raw(
     sido: str | None, sigungu_text: str | None, address: str | None
 ) -> tuple[str | None, str | None, str | None]:
     """(시도, 시군구, 구). 법원 칸(hjgu)을 우선 쓰고, 그 칸이 망가졌을 때만 주소로 바로잡습니다.
@@ -127,6 +127,50 @@ def region_from(
         return "경기도", sido, gu
     sg, gu = split_sigungu(sg_text)
     return SIDO_ALIAS.get(sido or "", sido), sg, gu
+
+
+# 옛 시군구 이름 → 지금 이름(11/4). 법원 칸에 옛 이름이 남아 있으면 지역 숫자에서 빠졌음(예: 경기 「평택군」 3건).
+SIGUNGU_ALIAS = {("경기도", "평택군"): "평택시"}
+# 인천 구 개편(2026-07-01): 중구·동구 → 제물포구 · 영종구, 서구 → 서해구 · 검단구. 법원 칸에 옛 이름이 오면 동 이름으로 가름.
+YEONGJONG_DONG = ("운서동", "운남동", "운북동", "중산동", "을왕동", "남북동", "덕교동", "무의동")
+GEOMDAN_DONG = (
+    "검단동",
+    "불로동",
+    "마전동",
+    "당하동",
+    "원당동",
+    "대곡동",
+    "오류동",
+    "왕길동",
+    "금곡동",
+    "백석동",
+    "아라동",
+)
+
+
+def fix_sigungu(sido: str | None, sg: str | None, address: str | None) -> str | None:
+    """옛 시군구 이름을 지금 이름으로(순수 함수). 인천 옛 구는 주소의 동 이름으로 새 구를 고름."""
+    if not sg:
+        return sg
+    if (sido, sg) in SIGUNGU_ALIAS:
+        return SIGUNGU_ALIAS[(sido or "", sg)]
+    if sido == "인천광역시":
+        a = address or ""
+        if sg == "중구":
+            return "영종구" if any(d in a for d in YEONGJONG_DONG) else "제물포구"
+        if sg == "동구":
+            return "제물포구"
+        if sg == "서구":
+            return "검단구" if any(d in a for d in GEOMDAN_DONG) else "서해구"
+    return sg
+
+
+def region_from(
+    sido: str | None, sigungu_text: str | None, address: str | None
+) -> tuple[str | None, str | None, str | None]:
+    """(시도, 시군구, 구) — _region_raw 로 읽고 옛 이름을 지금 이름으로 바꿈."""
+    sd, sg, gu = _region_raw(sido, sigungu_text, address)
+    return sd, fix_sigungu(sd, sg, address), gu
 
 
 def min_price(r: dict[str, Any]) -> int | None:

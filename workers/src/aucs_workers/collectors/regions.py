@@ -1,6 +1,6 @@
 """법정동 표 채우기 — 행정안전부 「법정동코드」(data.go.kr StanReginCd, 활용신청 필요).
 
-서울·경기 법정동(읍·면·동)을 받아 ref.regions 에 없는 것만 더함(있는 줄은 건드리지 않음).
+서울·경기·인천 법정동(읍·면·동)을 받아 ref.regions 에 없는 것만 더함(있는 줄은 건드리지 않음).
 빠진 동(예: 2026년 새로 생긴 화성 동탄구 오산동)이 있으면 지역 코드 바로잡기·건축물대장·시세가 이웃 동으로 붙던 것을 막음.
 
     uv run python -m aucs_workers.collectors.regions
@@ -16,7 +16,7 @@ from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
 URL = "https://apis.data.go.kr/1741000/StanReginCd/getStanReginCdList"
-SIDO = ["서울특별시", "경기도"]
+SIDO = ["서울특별시", "경기도", "인천광역시"]  # 인천 11/4
 ROWS = 1000
 
 
@@ -81,7 +81,20 @@ def main() -> None:
     with connect() as conn, run(conn, "regions", "법정동 표") as job:
         have = {r[0] for r in conn.execute("select region_code from ref.regions").fetchall()}
         new = [x for c, x in found.items() if c not in have]
+        # 시군구 줄(…00000)도 없으면 더함 — 처음 들어오는 시도(인천, 11/4)는 시군구 줄이 없어 지역 목록·실거래 수집에서 빠졌음
+        sgg = {x["sigungu_code"]: x for x in found.values()}
+        new_sgg = [
+            {"region_code": c + "00000", "sido": x["sido"], "sigungu": x["sigungu"],
+             "sigungu_code": c, "full_name": f'{x["sido"]} {x["sigungu"]}'}
+            for c, x in sgg.items() if c + "00000" not in have
+        ]  # fmt: skip
         with conn.cursor() as cur:
+            cur.executemany(
+                """insert into ref.regions (region_code, level, sido, sigungu, eupmyeondong, sigungu_code, full_name)
+                   values (%(region_code)s, 'sigungu', %(sido)s, %(sigungu)s, null, %(sigungu_code)s, %(full_name)s)
+                   on conflict (region_code) do nothing""",
+                new_sgg,
+            )
             cur.executemany(
                 """insert into ref.regions (region_code, level, sido, sigungu, eupmyeondong, sigungu_code, full_name)
                    values (%(region_code)s, 'dong', %(sido)s, %(sigungu)s, %(eupmyeondong)s, %(sigungu_code)s, %(full_name)s)
@@ -90,7 +103,9 @@ def main() -> None:
             )
         conn.commit()
         job.count = len(new)
-        print(f"받은 동 {len(found):,} · 새로 더한 동 {len(new):,}")
+        print(
+            f"받은 동 {len(found):,} · 새로 더한 동 {len(new):,} · 새로 더한 시군구 {len(new_sgg):,}"
+        )
         for x in new[:20]:
             print("  +", x["full_name"], x["region_code"])
 

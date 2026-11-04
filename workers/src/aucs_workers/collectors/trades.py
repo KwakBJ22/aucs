@@ -1,4 +1,4 @@
-"""국토부 실거래가 수집 (서울·경기) → core.trades.
+"""국토부 실거래가 수집 (서울·경기·인천) → core.trades.
 
     uv run python -m aucs_workers.collectors.trades --months 3     # 매달: 최근 3개월 다시 (늦은 신고·해제 반영)
 
@@ -174,6 +174,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--months", type=int, default=3)
     ap.add_argument("--types", nargs="*", default=list(TYPES))
+    ap.add_argument(
+        "--sido", help="이 시도만(예: 인천광역시) — 새로 더한 지역을 몇 년치 채울 때(11/4)"
+    )
     a = ap.parse_args()
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
     key = unquote(key) if "%" in key else key  # Encoding 키를 넣어도 Decoding 키로
@@ -183,7 +186,8 @@ def main() -> None:
     yms = months_back(a.months, today)
     with connect() as conn, run(conn, "trades", "실거래가") as job:
         sggs = [r[0] for r in conn.execute(
-            "select distinct sigungu_code from ref.regions where level = 'sigungu' and sigungu_code is not null").fetchall()]  # fmt: skip
+            "select distinct sigungu_code from ref.regions where level = 'sigungu' and sigungu_code is not null"
+            " and (%s::text is null or sido = %s)", (a.sido, a.sido)).fetchall()]  # fmt: skip
         sggs = [
             c
             for c in sggs

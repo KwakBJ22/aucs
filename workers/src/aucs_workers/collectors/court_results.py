@@ -16,8 +16,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--test", action="store_true", help="서울중앙 1곳만")
     ap.add_argument("--show", action="store_true")
+    ap.add_argument(
+        "--court", help="이 법원 코드만(예: B000240 인천) — 새로 더한 법원 채우기(11/4)"
+    )
     a = ap.parse_args()
     courts = {"B000210": COURTS["B000210"]} if a.test else COURTS
+    if a.court:
+        courts = {a.court: COURTS[a.court]}
     with connect() as conn, run(conn, "court_results", "법원 매각결과") as job:
         for court, rows in fetch_pages(courts, Polite(), results=True, show=a.show):
             save_raw(conn, "court_result_raw", court, rows)

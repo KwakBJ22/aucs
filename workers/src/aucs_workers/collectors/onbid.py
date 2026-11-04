@@ -36,7 +36,7 @@ from aucs_workers.jobs.runlog import run
 
 BASE = "https://apis.data.go.kr/B010003"
 PRPT_ALL = "0007,0010,0005,0004,0002,0003,0006,0008,0011,0013"
-SIDO = ["서울특별시", "경기도"]
+SIDO = ["서울특별시", "경기도", "인천광역시"]  # 인천 11/4
 GAP = 0.3  # 초당 3회쯤
 ROWS = 1000
 

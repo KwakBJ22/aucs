@@ -106,7 +106,7 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
         """select c.court_code, c.case_no, min(i.sale_date),
                   (select max(fetched_at)::date from raw.court_doc_raw r where r.case_id = c.case_id)
            from core.items i join core.cases c using (case_id)
-           where i.usage_name = any(%s) and i.sido in ('서울특별시', '경기도')
+           where i.usage_name = any(%s) and i.sido in ('서울특별시', '경기도', '인천광역시')
              and i.sale_date between %s and %s
            group by c.case_id, c.court_code, c.case_no""",
         (list(ARCHIVE_USAGES), today - timedelta(days=7), today + timedelta(days=14)),

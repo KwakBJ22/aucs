@@ -257,14 +257,15 @@ def _court_query(
 
 
 def regions() -> list[dict[str, Any]]:
-    """시작 질문의 지역 고르기: 서울·경기 시군구와 지금 진행 중인 물건 수."""
+    """시작 질문의 지역 고르기: 서울·경기·인천 시군구와 지금 진행 중인 물건 수(인천 11/4)."""
     with connect() as c:
         return c.execute(
             """select r.sido, r.sigungu, count(i.item_id) as items
                from (select distinct sido, split_part(sigungu, ' ', 1) as sigungu from ref.regions
-                     where level = 'sigungu' and sido in ('서울특별시', '경기도')) r
+                     where level = 'sigungu' and sido in ('서울특별시', '경기도', '인천광역시')) r
                left join core.items i on i.sido = r.sido and i.sigungu = r.sigungu and i.sale_date >= current_date
                  and i.status_code is distinct from 'gone'
                  and exists (select 1 from analysis.item_analysis x where x.item_id = i.item_id)
-               group by 1, 2 order by 1 desc, 2"""
+               group by 1, 2
+               order by array_position(array['서울특별시', '경기도', '인천광역시'], r.sido), 2"""
         ).fetchall()

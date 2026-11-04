@@ -1,4 +1,4 @@
-// 서울·경기 시군구 이름(11/4) — 첫 화면에서 서버를 기다리지 않고 바로 띄우려고 화면 코드에 둠.
+// 서울·경기·인천 시군구 이름(11/4 · 인천은 2026-07 개편 이름) — 첫 화면에서 서버를 기다리지 않고 바로 띄우려고 화면 코드에 둠.
 // 원본은 DB ref.regions(level='sigungu'). 숫자(진행 물건 수)는 /regions 로 뒤에 채운다.
 // 이름이 바뀌거나 새 시군구가 생기면 이 목록도 같이 고친다(서버 목록에만 있는 이름은 받은 뒤 덧붙여 보임).
 export const SIGUNGU: readonly (readonly [sido: string, sigungu: string])[] = [
@@ -62,4 +62,17 @@ export const SIGUNGU: readonly (readonly [sido: string, sigungu: string])[] = [
     "하남시",
     "화성시",
   ].map((g) => ["경기도", g] as const),
+  ...[
+    "제물포구",
+    "영종구",
+    "미추홀구",
+    "연수구",
+    "남동구",
+    "부평구",
+    "계양구",
+    "서해구",
+    "검단구",
+    "강화군",
+    "옹진군",
+  ].map((g) => ["인천광역시", g] as const),
 ];

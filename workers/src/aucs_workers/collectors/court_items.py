@@ -1,4 +1,4 @@
-"""법원 경매 물건 수집 (서울·경기 15개 법원, 앞으로 6주치).
+"""법원 경매 물건 수집 (서울·경기·인천 16개 법원, 앞으로 6주치 — 인천은 11/4 더함).
 
 uv run python -m aucs_workers.collectors.court_items --test   # 서울중앙 1곳
 uv run python -m aucs_workers.collectors.court_items          # 전체
@@ -51,8 +51,13 @@ def main() -> None:
     ap.add_argument("--test", action="store_true", help="서울중앙 1곳만")
     ap.add_argument("--show", action="store_true", help="브라우저 창 띄우기")
     ap.add_argument("--weeks", type=int, default=6)
+    ap.add_argument(
+        "--court", help="이 법원 코드만(예: B000240 인천) — 새로 더한 법원 채우기(11/4)"
+    )
     a = ap.parse_args()
     courts = {"B000210": COURTS["B000210"]} if a.test else COURTS
+    if a.court:
+        courts = {a.court: COURTS[a.court]}
     d_from = date.today()
     d_to = d_from + timedelta(weeks=a.weeks)
     with connect() as conn, run(conn, "court_items", "법원 경매 물건") as job:

@@ -60,7 +60,7 @@ def expected_rates(housing: bool) -> list[dict[str, Any]]:
       select rate_min, case when coalesce(bidders, 1) <= 1 then 1 when bidders = 2 then 2
                             when bidders <= 4 then 3 else 5 end as b
       from core.onbid_results
-      where result = '낙찰' and rate_min is not null and sido in ('서울특별시', '경기도')
+      where result = '낙찰' and rate_min is not null and sido in ('서울특별시', '경기도', '인천광역시')
         and (concat_ws(' ', usage_l, usage_m, usage_s, title) ~ %(h)s) = %(housing)s)
     select b, count(*) as n,
            percentile_cont(0.25) within group (order by rate_min) as p25,
