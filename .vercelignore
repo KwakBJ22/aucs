@@ -14,3 +14,14 @@ apps/web/check/failed
 .env
 .env.*
 _to_delete
+# 11/4 — 화면 빌드 결과물은 Vercel 이 직접 만듦. PC 의 개발·빠른 보기·검사용 빌드 폴더(수십~수백 MB)를 올리지 않게
+.next
+.next-fast
+.next-check
+.next_old*
+.turbo
+.ruff_cache
+.pytest_cache
+.mypy_cache
+test-results
+playwright-report
