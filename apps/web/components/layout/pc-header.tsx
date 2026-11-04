@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/logo";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -48,8 +49,8 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
   return (
     <header className="pc-header">
       <div className="ph-top">
-        <Link href="/home" className="ph-brand">
-          {copy.appName}
+        <Link href="/home" className="ph-brand" aria-label={copy.appName}>
+          <Logo size="sm" />
         </Link>
         {admin ? (
           <>

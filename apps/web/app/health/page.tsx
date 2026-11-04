@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/logo";
 import { useEffect, useState } from "react";
 import { HealthRow } from "@/components/health-row";
 import { checkApi, checkDb, type HealthState } from "@/lib/api/health";
@@ -16,7 +17,9 @@ export default function HomePage() {
 
   return (
     <main className="my-0 mx-auto py-32 px-20" style={{ maxWidth: 420 }}>
-      <h1 className="fs-3xl mt-0 mb-24 mx-0">{copy.appName}</h1>
+      <h1 className="mt-0 mb-24 mx-0">
+        <Logo size="lg" />
+      </h1>
       <HealthRow label={copy.health.api} state={api} />
       <HealthRow label={copy.health.db} state={db} />
     </main>

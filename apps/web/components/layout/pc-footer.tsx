@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { copy } from "@/lib/copy.ko";
 
 // PC 바닥: 약관 · 자료 출처 · 고객센터. 휴대폰에서는 CSS로 숨김(전체 탭에 같은 내용).
@@ -8,7 +9,9 @@ export function PcFooter() {
     <footer className="pc-footer">
       <div className="pf-grid">
         <div>
-          <div className="pf-brand">{copy.appName}</div>
+          <div className="pf-brand">
+            <Logo size="sm" />
+          </div>
           <div className="pf-links">
             {t.links.map(([name, href]) =>
               href ? (

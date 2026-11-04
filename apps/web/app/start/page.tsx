@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/logo";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
@@ -91,6 +92,11 @@ export default function Start() {
 
   return (
     <main style={wrap}>
+      {step === 1 && (
+        <div className="mb-16">
+          <Logo />
+        </div>
+      )}
       <Progress step={step} />
       {step > 1 && (
         <button

@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/logo";
 import { LoadError } from "@/components/load-error";
 import { Delayed, SkCards, SkListPage } from "@/components/skeleton";
 import { useEffect, useState } from "react";
@@ -435,7 +436,7 @@ export default function Home() {
 
   return (
     <main className="page">
-      <PageHeader title={copy.appName} right={bell} />
+      <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
       {loginBanner}
       {changesBlock}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/logo";
 import { PageHeader } from "@/components/layout/page-header";
 import { useState } from "react";
 import { sendLoginLink, signOut, useSession } from "@/lib/auth";
@@ -16,6 +17,7 @@ export default function Login() {
     <main className="page narrow">
       <PageHeader title="" back="/home" />
       <section className="section py-28 px-18">
+        <Logo size="lg" />
         <h2 className="fs-2xl">{t.title}</h2>
         {session ? (
           <>

@@ -330,3 +330,22 @@
     animation: none;
   }
 }
+
+/* 로고(11/4): 그림 비율 그대로, 높이만 자리마다 */
+.logo {
+  display: inline-flex;
+  align-items: center;
+}
+.logo img {
+  display: block;
+  width: auto;
+}
+.logo-sm img {
+  height: 26px;
+}
+.logo-md img {
+  height: 30px;
+}
+.logo-lg img {
+  height: 44px;
+}
