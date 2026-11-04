@@ -45,6 +45,10 @@ def _kind(usage: str | None) -> str:
     u = usage or ""
     if "아파트" in u:
         return "apt"
+    if any(
+        k in u for k in ("근린", "상가", "판매")
+    ):  # 「상가,오피스텔,근린시설」 묶음은 상가로(11/4 — 오피스텔로 잘못 높게 쳤음)
+        return "shop"
     if "오피스텔" in u:
         return "officetel"
     if any(k in u for k in ("다세대", "연립", "빌라")):
@@ -82,7 +86,9 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         if gap >= 10_000_000:
             reasons.append(f"시세보다 {_won_short(gap)} 낮게 살 여지")
     elif app and mn:
-        value = 20 * _clamp((app - mn) / app / 0.4)  # 시세가 없으면 감정가 대비로만, 낮게
+        value = 12 * _clamp(
+            (app - mn) / app / 0.5
+        )  # 시세가 없으면 감정가 대비로만 — 믿을 만하지 않아 낮게
     else:
         value = 0.0
 
@@ -119,7 +125,15 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     by_purpose = {
         "live": (12 if kind == "apt" else 7 if kind in ("officetel", "villa") else 2)
         + (8 if 40 <= area <= 110 else 3 if area else 0),
-        "rent": (12 if kind in ("officetel", "villa") else 8 if kind == "apt" else 4)
+        "rent": (
+            12
+            if kind in ("officetel", "villa")
+            else 8
+            if kind == "apt"
+            else 6
+            if kind == "shop"
+            else 3
+        )
         + (8 if 0 < area <= 60 else 3),
         "invest": (10 if redev else 0) + (5 if fc >= 2 else 0) + (5 if disc >= 0.3 else 0),
     }
