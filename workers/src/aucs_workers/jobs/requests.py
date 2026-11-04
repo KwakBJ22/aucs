@@ -35,6 +35,29 @@ def command(key: str) -> list[str] | None:
     return None
 
 
+def queue_docs() -> None:
+    """손님이 연 물건의 서류 요청(case_docs:, 11/4)을 한 번에 받고, 바뀐 물건만 다시 분석. 실패해도 관리자 요청은 계속."""
+    with connect() as c:
+        if c.execute(  # 앞 차례가 아직 받는 중이면 겹쳐 띄우지 않음(법원에 한 번에 한 창만)
+            "select 1 from ops.job_requests where status = 'running' and job_key like 'case_docs:%%'"
+            " and started_at > now() - interval '30 minutes'"
+        ).fetchone():
+            return
+        n = c.execute(
+            "select count(*) from ops.job_requests where status = 'waiting' and job_key like 'case_docs:%%'"
+        ).fetchone()
+    if not n or not n[0]:
+        return
+    print(f"── 손님이 연 물건 서류 {n[0]}건", flush=True)
+    if (
+        subprocess.call(
+            [sys.executable, "-m", "aucs_workers.collectors.court_docs", "--queue"], cwd=ROOT
+        )
+        == 0
+    ):
+        subprocess.call([sys.executable, "-m", "aucs_workers.jobs.analyze", "--stale"], cwd=ROOT)
+
+
 def main() -> None:
     try:  # Vercel 이 남긴 그림 등기부부터(11/3) — 실패해도 요청 처리는 계속
         from aucs_workers.jobs import registry_ocr
@@ -42,6 +65,7 @@ def main() -> None:
         registry_ocr.main()
     except Exception as e:  # noqa: BLE001
         print(f"등기부 글자 인식 실패: {e}", flush=True)
+    queue_docs()
     with connect() as c:
         busy = c.execute(
             "select 1 from ops.job_requests where status = 'running' and started_at > now() - interval '6 hours'"
@@ -55,6 +79,7 @@ def main() -> None:
         row = c.execute(
             """update ops.job_requests set status = 'running', started_at = now()
                where req_id = (select req_id from ops.job_requests where status = 'waiting'
+                               and job_key not like 'case_docs:%%'
                                order by requested_at limit 1 for update skip locked)
                returning req_id, job_key"""
         ).fetchone()

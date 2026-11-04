@@ -78,7 +78,7 @@ function Report() {
   const risks: string[] = ob
     ? d.warnings.filter((w) => w !== d.fatal)
     : (d.failure_table ?? [])
-        .filter((r) => r.state !== "신호 없음")
+        .filter((r) => r.state === "걸림" || r.state === "확인 필요")
         .map((r) => `${r.state === "걸림" ? "●" : "○"} ${r.title} — ${r.why}`);
   const todo: string[] = ob
     ? d.checklist.filter((c) => c.state !== "해당 없음").map((c) => `${c.label}: ${c.what}`)

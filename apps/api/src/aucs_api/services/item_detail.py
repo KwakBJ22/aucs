@@ -161,7 +161,15 @@ def build_detail(
         ],
         "questions": questions,
         "failure_types": [{"code": t, "title": FAILURE_TYPES[t]} for t in types],
-        "failure_table": failure_table(signals),
+        "failure_table": failure_table(
+            signals,
+            {
+                "usage": r["usage_name"],
+                "ds": ds,
+                "redev": bool(r.get("redev")),
+                "market": bool((r.get("market") or {}).get("price_krw")),
+            },
+        ),  # fmt: skip
         "schedule": sched,
         "computed_at": r["computed_at"].isoformat() if r["computed_at"] else None,
     }

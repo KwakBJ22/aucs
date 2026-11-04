@@ -8,8 +8,8 @@ import { t } from "@/components/item/shared";
 export function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_table"]> }) {
   const [open, setOpen] = useState(false);
   const hit = rows.filter((r) => r.state === "걸림");
-  const need = rows.filter((r) => r.state === "확인 필요").length;
-  const none = rows.filter((r) => r.state === "신호 없음").length;
+  const count: Record<string, number> = {};
+  rows.forEach((r) => (count[r.state] = (count[r.state] ?? 0) + 1));
   return (
     <div className="m-block mt-10">
       <div className="fs-md fw-7">{t.failHead(rows.length, hit.length)}</div>
@@ -20,7 +20,7 @@ export function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_tab
         </div>
       ))}
       <button className="cond-row bg-bg mt-6" onClick={() => setOpen(!open)}>
-        <span className="fs-md">{t.failFold(none, need)}</span>
+        <span className="fs-md">{t.failFold(count)}</span>
         <span className="sub">{open ? "▴" : "›"}</span>
       </button>
       {open &&
@@ -28,11 +28,11 @@ export function FailMobile({ rows }: { rows: NonNullable<ItemDetail["failure_tab
           .filter((r) => r.state !== "걸림")
           .map((r) => (
             <div key={r.code} className="line-row fs-sm">
-              <span>{r.title}</span>
-              <span
-                className="nowrap"
-                style={{ color: r.state === "확인 필요" ? "var(--orange)" : "var(--faint)" }}
-              >
+              <span className="minw-0">
+                {r.title}
+                {r.why && <span className="sub d-block fs-xs">{r.why}</span>}
+              </span>
+              <span className="nowrap" style={{ color: t.failColor[r.state] }}>
                 {r.state}
               </span>
             </div>

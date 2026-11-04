@@ -87,6 +87,12 @@ def get_regions() -> list[dict[str, Any]]:
     return items.regions()
 
 
+@router.post("/items/{item_id}/docs-request")
+def post_docs_request(item_id: str) -> dict[str, bool]:
+    """물건을 연 손님 화면이 부름: 서류(현황조사·문건)가 없으면 받기를 줄 세움(11/4)."""
+    return {"queued": items.request_docs(item_id)}
+
+
 @router.get("/items/{item_id}")
 def get_item(item_id: str) -> dict[str, Any]:
     if item_id.startswith("OB-"):  # 공매(온비드) — 10/28

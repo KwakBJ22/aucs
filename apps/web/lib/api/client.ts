@@ -58,3 +58,8 @@ export function getMine<T>(token: string, path: string): Promise<T> {
 export function clearMeCache(): void {
   mine.clear();
 }
+
+/** 공개 요청(POST) — 답을 기다리지 않고 보내기만(서류 받기 줄 세우기 등, 11/4). 실패해도 화면은 그대로. */
+export function postQuiet(path: string): void {
+  fetch(`${apiBaseUrl}${path}`, { method: "POST" }).catch(() => {});
+}

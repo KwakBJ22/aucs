@@ -30,7 +30,8 @@ from aucs_workers.photos import pull_pics
 from aucs_workers.photos import store as store_photos
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
-ARCHIVE_MAX = 150
+ARCHIVE_MAX = 300  # 11/4: 150 → 300, 대상도 아파트류 → 모든 부동산(「자료 기다림」 줄이기)
+QUEUE_MAX = 40  # 5분마다: 손님이 연 물건의 서류(요청 줄)
 NEXT_MAX = 300  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4)
 PICKS_MAX = 100  # 하루: 추천 후보(입찰 1~6주 남음) 중 사진 없는 것
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
@@ -148,15 +149,36 @@ def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str,
     return [(court, case_no) for court, case_no in rows if court in COURTS]
 
 
+def queue_targets(conn: psycopg.Connection) -> tuple[list[tuple[str, str]], list[int]]:
+    """손님이 연 물건의 서류 요청(ops.job_requests 'case_docs:<item_id>')을 오래된 것부터 — 받을 사건과 요청 번호(11/4)."""
+    rows = conn.execute(
+        """update ops.job_requests r set status = 'running', started_at = now()
+           where r.req_id in (select req_id from ops.job_requests where status = 'waiting' and job_key like 'case_docs:%%'
+                              order by requested_at limit %s for update skip locked)
+           returning r.req_id, substr(r.job_key, 11) as item_id""",
+        (QUEUE_MAX,),
+    ).fetchall()
+    conn.commit()
+    ids = [req for req, _ in rows]
+    if not ids:
+        return [], []
+    cases = conn.execute(
+        """select distinct c.court_code, c.case_no from core.items i join core.cases c using (case_id)
+           where i.item_id = any(%s)""",
+        ([item for _, item in rows],),
+    ).fetchall()
+    return [(court, no) for court, no in cases if court in COURTS], ids
+
+
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     rows = conn.execute(
         """select c.court_code, c.case_no, min(i.sale_date),
                   (select max(fetched_at)::date from raw.court_doc_raw r where r.case_id = c.case_id)
            from core.items i join core.cases c using (case_id)
-           where i.usage_name = any(%s) and i.sido in ('서울특별시', '경기도', '인천광역시')
+           where coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기' and i.sido in ('서울특별시', '경기도', '인천광역시')
              and i.sale_date between %s and %s
            group by c.case_id, c.court_code, c.case_no""",
-        (list(ARCHIVE_USAGES), today - timedelta(days=7), today + timedelta(days=14)),
+        (today - timedelta(days=7), today + timedelta(days=14)),
     ).fetchall()
     todo = []
     for court, case_no, sale_date, last in rows:
@@ -259,7 +281,6 @@ def save_case(
 
 
 def main() -> None:
-    from playwright.sync_api import sync_playwright
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--archive", action="store_true")
@@ -271,10 +292,29 @@ def main() -> None:
         "--next", action="store_true", help="유찰된 물건의 다음 회차·사진 미리 받기(11/4)"
     )
     ap.add_argument("--picks", action="store_true", help="추천 후보 중 사진 없는 것(11/4)")
+    ap.add_argument(
+        "--queue", action="store_true", help="손님이 연 물건의 서류 요청(11/4, 5분마다)"
+    )
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"))
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
     polite = Polite(daily_limit=NEXT_MAX * 8 if a.next else ARCHIVE_MAX * 12)
+    req_ids: list[int] = []
+    try:
+        _run(a, polite, req_ids)
+    finally:
+        if req_ids:  # 손님 요청 줄은 받았든 못 받았든 끝냄(다음 날 다시 줄 설 수 있음)
+            with connect() as conn:
+                conn.execute(
+                    "update ops.job_requests set status = 'done', finished_at = now(), message = '서류 받음' where req_id = any(%s)",
+                    (req_ids,),
+                )
+                conn.commit()
+
+
+def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
+    from playwright.sync_api import sync_playwright
+
     with connect() as conn, run(conn, "court_docs", "사건 서류 보관") as job:
         if a.case:
             targets = [tuple(a.case)]
@@ -284,6 +324,9 @@ def main() -> None:
             targets = photo_targets(conn, date.today())
         elif a.next:
             targets = next_targets(conn, date.today())
+        elif a.queue:
+            targets, ids = queue_targets(conn)
+            req_ids.extend(ids)
         elif a.picks:
             targets = pick_photo_targets(conn, date.today())
         else:

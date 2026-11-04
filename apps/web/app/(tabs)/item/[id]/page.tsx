@@ -8,6 +8,7 @@ import { LoadError } from "@/components/load-error";
 import { SkDetail } from "@/components/skeleton";
 import { isNotFound } from "@/lib/api/client";
 import {
+  requestDocs,
   fetchItem,
   isOnbid,
   type DocKind,
@@ -50,6 +51,8 @@ export default function Item() {
       .then((x) => {
         setD(x);
         track("item_view", x.item_id);
+        // 현황조사가 아직 없으면 서류 받기를 줄 세움(11/4) — 손님이 본 물건부터 「자료 기다림」이 채워짐
+        if (!isOnbid(x) && !x.tags?.find((g) => g.label === "현황조사")?.ok) requestDocs(x.item_id);
         rememberItem(
           x.item_id,
           `${isOnbid(x) ? "공매" : x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,

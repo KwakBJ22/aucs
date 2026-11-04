@@ -269,3 +269,24 @@ def regions() -> list[dict[str, Any]]:
                group by 1, 2
                order by array_position(array['서울특별시', '경기도', '인천광역시'], r.sido), 2"""
         ).fetchall()
+
+
+def request_docs(item_id: str) -> bool:
+    """손님이 연 물건에 현황조사·문건이 없으면 그 사건 서류 받기를 줄 세움(11/4) — PC 수집기가 5분마다 받아 감.
+
+    같은 물건은 하루에 한 번만, 이미 받았으면 줄 세우지 않음. 줄 세웠으면 True.
+    """
+    key = f"case_docs:{item_id}"
+    with connect() as c:
+        row = c.execute(
+            """insert into ops.job_requests (job_key)
+               select %(key)s
+               where exists (select 1 from core.items where item_id = %(id)s and sale_date >= current_date)
+                 and not exists (select 1 from analysis.item_data_status d where d.item_id = %(id)s
+                                 and d.data_kind = 'status_report' and d.status in ('extracted', 'verified'))
+                 and not exists (select 1 from ops.job_requests r where r.job_key = %(key)s
+                                 and (r.status in ('waiting', 'running') or r.requested_at > now() - interval '1 day'))
+               returning req_id""",
+            {"key": key, "id": item_id},
+        ).fetchone()
+    return row is not None

@@ -99,7 +99,7 @@ export default function ComparePage() {
   };
   const failHit = (c: Col): number | null =>
     c.d && !isOnbid(c.d) && c.d.failure_table
-      ? c.d.failure_table.filter((r) => r.state !== "신호 없음").length
+      ? c.d.failure_table.filter((r) => r.state === "걸림" || r.state === "확인 필요").length
       : null;
   // 줄마다 가장 나은 값(작을수록 좋은 것)을 연하게 표시
   const best = (f: (c: Col) => number | null | undefined): string | null => {

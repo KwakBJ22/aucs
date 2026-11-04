@@ -1,4 +1,4 @@
-import { getJson } from "./client";
+import { getJson, postQuiet } from "./client";
 
 export type Signal = {
   rule_id: string;
@@ -194,7 +194,7 @@ export type ItemDetail = ItemCard & {
   failure_table?: {
     code: string;
     title: string;
-    state: "걸림" | "확인 필요" | "신호 없음";
+    state: "걸림" | "확인 필요" | "확인함" | "대비됨" | "해당 없음" | "자료 기다림"; // 11/4 신호 없음을 나눔
     why: string;
   }[];
   schedule: Schedule;
@@ -431,3 +431,7 @@ export type BidDay = {
 };
 export const fetchBidDay = (id: string) =>
   getJson<BidDay>(`/items/${encodeURIComponent(id)}/bid-day`);
+
+/** 물건 상세를 열었는데 현황조사가 없으면 서류 받기를 줄 세움(11/4 — 「자료 기다림」을 손님이 본 물건부터 채움). */
+export const requestDocs = (id: string) =>
+  postQuiet(`/items/${encodeURIComponent(id)}/docs-request`);

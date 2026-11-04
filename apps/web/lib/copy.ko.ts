@@ -992,8 +992,25 @@ export const copy = {
     failureTypes: "비슷한 물건에서 실제로 손해 본 경우",
     failureTable: "손해 본 11가지 경우 전체",
     failHead: (n: number, hit: number) => `실패 사례 점검 · ${n}가지 중 ${hit}가지 걸림`,
-    failFold: (none: number, need: number) => `신호 없음 ${none}가지 · 확인 필요 ${need}가지`,
-    failureTableNote: "신호 없음은 자료에서 못 찾았다는 뜻이에요 · 안전하다는 뜻은 아니에요",
+    failFold: (c: Record<string, number>) =>
+      [
+        c["확인 필요"] ? `확인 필요 ${c["확인 필요"]}` : "",
+        c["자료 기다림"] ? `자료 기다림 ${c["자료 기다림"]}` : "",
+        c["확인함"] || c["대비됨"] ? `확인함 ${(c["확인함"] ?? 0) + (c["대비됨"] ?? 0)}` : "",
+        c["해당 없음"] ? `해당 없음 ${c["해당 없음"]}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    failureTableNote:
+      "확인함은 받은 자료에서 신호가 없었다는 뜻이에요 · 자료 기다림은 서류가 오면 다시 봐요",
+    failColor: {
+      걸림: "var(--red)",
+      "확인 필요": "var(--orange)",
+      "자료 기다림": "var(--faint)",
+      확인함: "var(--green)",
+      대비됨: "var(--green)",
+      "해당 없음": "var(--faint)",
+    } as Record<string, string>,
     reg: {
       foldTitle: (n: number, keep: number) =>
         keep

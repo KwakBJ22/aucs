@@ -80,14 +80,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
                     <td
                       className="py-4 px-6 nowrap"
                       style={{
-                        fontWeight: r.state === "신호 없음" ? 400 : 600,
-                        color:
-                          r.state === "걸림"
-                            ? "var(--red, #d33)"
-                            : r.state === "확인 필요"
-                              ? "var(--orange, #d80)"
-                              : undefined,
-                        opacity: r.state === "신호 없음" ? 0.6 : 1,
+                        fontWeight: r.state === "걸림" || r.state === "확인 필요" ? 600 : 400,
+                        color: t.failColor[r.state],
                       }}
                     >
                       {r.state}
