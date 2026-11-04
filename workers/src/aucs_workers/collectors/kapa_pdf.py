@@ -9,6 +9,7 @@
 
     uv run python -m aucs_workers.collectors.kapa_pdf            # 관심 → 입찰 가까운 순, 하루 150건
     uv run python -m aucs_workers.collectors.kapa_pdf --probe    # 한 건만 — 무슨 일이 있었는지 logs/kapa_probe.txt
+    uv run python -m aucs_workers.collectors.kapa_pdf --probe --show --case B000210 2023타경106499   # 그 사건, 창을 띄워서
 """
 
 import argparse
@@ -109,6 +110,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true")
     ap.add_argument("--show", action="store_true")
+    ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"), help="이 사건만(시험용)")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
@@ -117,6 +119,10 @@ def main() -> None:
     )  # 팝업이 법원에 요청 한 번 — 법원 한도에 셈
     with connect() as conn, run(conn, "kapa_pdf", "감정평가서 원본") as job:
         todo = targets(conn, date.today(), 1 if a.probe else DAY_MAX)
+        if a.case:
+            todo = [
+                t for t in targets(conn, date.today(), 100000) if t[0] == f"{a.case[0]}-{a.case[1]}"
+            ]
         print(f"대상 {len(todo)}건")
         if not todo:
             if a.probe:
