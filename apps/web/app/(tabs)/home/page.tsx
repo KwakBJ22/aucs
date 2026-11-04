@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ItemCard } from "@/components/item-card";
-import { fetchHomeFeed, type HomeFeed, type ItemList } from "@/lib/api/items";
+import { PickRow } from "@/components/pick-card";
+import { fetchHomeFeed, type HomeFeed, type ItemList, type PickCard } from "@/lib/api/items";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { isStale } from "@/lib/noti";
@@ -37,6 +38,11 @@ export default function Home() {
   const [notis, setNotis] = useState<Noti[]>([]);
   const [market, setMarket] = useState<Market | null>(null);
   const [notices, setNotices] = useState<HomeFeed["notices"]>([]);
+  const [picks, setPicks] = useState<{
+    picks: PickCard[];
+    soon: PickCard[];
+    next: PickCard[];
+  } | null>(null); // 오늘의 추천 · 마감 임박 · 다음 달 더 싸지는 물건(11/4)
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
   const pc = useIsPc();
@@ -102,12 +108,13 @@ export default function Home() {
     // 내 조건 물건·이번 주 마감 공매·(PC) 석 달 낙찰가율·공지를 한 번에(11/3 — 예전 4번)
     // PC 여부는 지금 창으로 봄(처음 그릴 때 잠깐 휴대폰 값이라 두 번 부르지 않게)
     const wide = window.matchMedia("(min-width: 1024px)").matches;
-    fetchHomeFeed({ sigungu: p.regions, maxCash: p.cash, market: wide })
+    fetchHomeFeed({ sigungu: p.regions, maxCash: p.cash, market: wide, purpose: p.purpose })
       .then((f) => {
         setMine(f.mine);
         setOnbidSoon(f.onbid_soon);
         if (f.market) setMarket(f.market);
         setNotices(f.notices);
+        setPicks({ picks: f.picks ?? [], soon: f.soon ?? [], next: f.next ?? [] });
       })
       .catch(() => setFailed(true));
   }, [router, tries]);
@@ -119,9 +126,6 @@ export default function Home() {
       </main>
     );
   const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
-  const closing = (shown?.items ?? [])
-    .filter((c) => c.source !== "onbid" && c.d_day != null && c.d_day <= 7)
-    .slice(0, 2);
   const onbidClosing = (onbidSoon?.items ?? []).filter((c) => !dropped.has(c.item_id)).slice(0, 4);
   const summary = [
     profile.regions.join("·"),
@@ -143,7 +147,6 @@ export default function Home() {
     .sort((x, y) => (x.d_day ?? 99) - (y.d_day ?? 99));
   const toRecord = watch.filter((w) => w.step === "result");
   const fresh = notis.filter((n) => !isStale(n)); // 지난 입찰일 알림은 홈에서 뺌(11/1)
-  const changes = fresh.slice(0, pc ? 6 : 3);
   const unread = fresh.filter((n) => !n.read_at).length;
 
   const bell = token ? (
@@ -181,11 +184,14 @@ export default function Home() {
     </Link>
   );
 
+  // 다가오는 입찰(11/4): 관심 물건 중 입찰이 남은 것만. 끝난 물건(결과 적기)은 한 줄로 내 경매에
   const todayBlock = token && (todo.length > 0 || toRecord.length > 0) && (
     <section className="section">
-      <h2 className="mb-8">
-        {t.today} <span className="c-blue">{todo.length + toRecord.length}</span>
-      </h2>
+      {todo.length > 0 && (
+        <h2 className="mb-8">
+          {t.today} <span className="c-blue">{todo.length}</span>
+        </h2>
+      )}
       {todo.map((w) => (
         <Link
           key={w.item_id}
@@ -205,41 +211,16 @@ export default function Home() {
           <span className="sub">›</span>
         </Link>
       ))}
-      {toRecord.map((w) => (
-        <Link key={w.item_id} href="/me" className="menu-row">
-          <span className="minw-0">
-            {w.place} {w.building ?? w.usage}
-            <span className="sub d-block">{t.record}</span>
-          </span>
+      {toRecord.length > 0 && (
+        <Link href="/me" className="menu-row">
+          <span className="sub">{t.toRecord(toRecord.length)}</span>
           <span className="sub">›</span>
         </Link>
-      ))}
+      )}
     </section>
   );
 
-  const changesBlock = token && changes.length > 0 && (
-    <section className="section">
-      <div className="d-flex jc-between ai-baseline">
-        <h2>
-          {t.changes} <span className="c-blue">{unread || ""}</span>
-        </h2>
-        <Link href="/notifications" className="sub">
-          {t.allNoti} ›
-        </Link>
-      </div>
-      {changes.map((n) => (
-        <Link key={n.noti_id} href={n.link ?? "/notifications"} className="menu-row">
-          <span className="minw-0">
-            <span style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</span>
-            {n.body && <span className="sub d-block">{n.body}</span>}
-          </span>
-          <span className="sub nowrap">{n.created_at.slice(5, 10).replace("-", "/")}</span>
-        </Link>
-      ))}
-    </section>
-  );
-
-  const smallCard = (c: (typeof closing)[number]) => (
+  const smallCard = (c: ItemList["items"][number]) => (
     <Link
       key={c.item_id}
       href={`/item/${encodeURIComponent(c.item_id)}`}
@@ -267,12 +248,32 @@ export default function Home() {
       )}
     </Link>
   );
-  const closingBlock = closing.length > 0 && (
+  const picksWait = !picks && !failed && (
+    <Delayed>
+      <SkCards n={3} />
+    </Delayed>
+  );
+  const picksBlock = (
     <section className="section">
-      <h2 className="mb-12">{t.closing}</h2>
-      <div className="d-grid gap-10" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-        {closing.map(smallCard)}
-      </div>
+      <h2>{t.picks}</h2>
+      <div className="sub">{t.picksSub}</div>
+      {picksWait}
+      {picks && picks.picks.length === 0 && <p className="sub">{t.picksEmpty}</p>}
+      {picks && picks.picks.length > 0 && <PickRow list={picks.picks.slice(0, pc ? 8 : 5)} />}
+    </section>
+  );
+  const soonBlock = picks && picks.soon.length > 0 && (
+    <section className="section">
+      <h2>{t.soon}</h2>
+      <div className="sub">{t.soonSub}</div>
+      <PickRow list={picks.soon} />
+    </section>
+  );
+  const nextBlock = picks && picks.next.length > 0 && (
+    <section className="section">
+      <h2>{t.next}</h2>
+      <div className="sub">{t.nextSub}</div>
+      <PickRow list={picks.next} mode="next" />
     </section>
   );
   const onbidBlock = onbidClosing.length > 0 && (
@@ -366,7 +367,9 @@ export default function Home() {
         <div className="pc-grid g-64-36">
           <div>
             {todayBlock}
-            {changesBlock}
+            {picksBlock}
+            {soonBlock}
+            {nextBlock}
             {forMeBlock}
           </div>
           <div>
@@ -425,7 +428,6 @@ export default function Home() {
                 </Link>
               </section>
             )}
-            {closingBlock}
             {onbidBlock}
             {whyBlock}
           </div>
@@ -439,9 +441,10 @@ export default function Home() {
       <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
       {loginBanner}
-      {changesBlock}
       {todayBlock}
-      {closingBlock}
+      {picksBlock}
+      {soonBlock}
+      {nextBlock}
       {onbidBlock}
       {forMeBlock}
       {whyBlock}

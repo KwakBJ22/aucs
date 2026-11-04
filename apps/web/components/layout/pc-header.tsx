@@ -62,7 +62,7 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
         ) : (
           <>
             <nav aria-label="기본 메뉴" className="ph-menu">
-              {NAV.filter((n) => n.group === "basic").map((n) => (
+              {NAV.filter((n) => n.group === "basic" && !n.pcHide).map((n) => (
                 <Link key={n.key} href={n.href} className={cur?.key === n.key ? "on" : ""}>
                   {n.label}
                 </Link>

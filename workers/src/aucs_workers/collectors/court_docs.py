@@ -2,6 +2,8 @@
 
     uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트·다세대·오피스텔, 관심 물건 먼저)
     uv run python -m aucs_workers.collectors.court_docs --watched        # 관심에 담은 뒤 아직 서류를 안 받은 물건만(낮에 매시)
+    uv run python -m aucs_workers.collectors.court_docs --next           # 유찰된 물건의 다음 회차·사진 미리(11/4, 하루 300)
+    uv run python -m aucs_workers.collectors.court_docs --picks          # 추천 후보 중 사진 없는 것(11/4, 하루 100)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
@@ -20,7 +22,7 @@ from psycopg.types.json import Jsonb
 from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.collectors.court_site import COURTS
 from aucs_workers.collectors.parse import checksum
-from aucs_workers.collectors.polite import Polite
+from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
 from aucs_workers.extract.case_docs import apply_case_docs
 from aucs_workers.jobs.runlog import run
@@ -29,6 +31,8 @@ from aucs_workers.photos import store as store_photos
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
 ARCHIVE_MAX = 150
+NEXT_MAX = 300  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4)
+PICKS_MAX = 100  # 하루: 추천 후보(입찰 1~6주 남음) 중 사진 없는 것
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
 ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
 
@@ -99,6 +103,49 @@ def photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]
     """사진 다시 받기(11/1 사진을 원문에서 빼면서 키가 비어 못 옮긴 것): 관심 먼저, 기일 가까운 순."""
     rows = conn.execute(PHOTO_SQL, (today, ARCHIVE_MAX * 4)).fetchall()
     return [(court, case_no) for court, case_no, _, _ in rows if court in COURTS]
+
+
+REAL_ESTATE = "coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'"
+AREA = "i.sido in ('서울특별시', '경기도', '인천광역시')"
+LIVE_FIRST = "case when i.usage_name = any(%(usages)s) then 0 else 1 end"
+
+
+def next_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """유찰된 뒤 아직 다음 기일을 모르는 사건(지난 2주) — 아파트류 먼저, 감정가 대비 싼 순(11/4).
+
+    기일내역을 받으면 apply_next_sales 가 다음 기일·최저가를 넣음. 사진도 같이 받음.
+    """
+    rows = conn.execute(
+        f"""select c.court_code, c.case_no
+            from core.items i join core.cases c using (case_id)
+            where {AREA} and {REAL_ESTATE} and i.sale_date < %(today)s and i.sale_date >= %(since)s
+              and exists (select 1 from core.sale_results s where s.item_id = i.item_id and s.result = 'failed'
+                          and s.sale_date = i.sale_date)
+              and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                              and r.doc_kind = 'schedule' and r.fetched_at::date > i.sale_date)
+            group by c.case_id, c.court_code, c.case_no
+            order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
+            limit %(n)s""",
+        {"today": today, "since": today - timedelta(days=14), "usages": list(ARCHIVE_USAGES), "n": NEXT_MAX},
+    ).fetchall()  # fmt: skip
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
+
+
+def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """추천 후보(입찰 7~45일 남음) 가운데 사진이 없는 사건 — 아파트류 먼저, 감정가 대비 싼 순(11/4)."""
+    rows = conn.execute(
+        f"""select c.court_code, c.case_no
+            from core.items i join core.cases c using (case_id)
+            where {AREA} and {REAL_ESTATE} and i.sale_date between %(from)s and %(to)s
+              and i.status_code is distinct from 'gone'
+              and not exists (select 1 from core.item_photos p where p.case_id = c.case_id)
+            group by c.case_id, c.court_code, c.case_no
+            order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
+            limit %(n)s""",
+        {"from": today + timedelta(days=7), "to": today + timedelta(days=45),
+         "usages": list(ARCHIVE_USAGES), "n": PICKS_MAX},
+    ).fetchall()  # fmt: skip
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
 
 
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
@@ -220,10 +267,14 @@ def main() -> None:
     ap.add_argument(
         "--photos", action="store_true", help="진행 중인데 현장 사진이 없는 사건만 다시 받기(11/1)"
     )
+    ap.add_argument(
+        "--next", action="store_true", help="유찰된 물건의 다음 회차·사진 미리 받기(11/4)"
+    )
+    ap.add_argument("--picks", action="store_true", help="추천 후보 중 사진 없는 것(11/4)")
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"))
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
-    polite = Polite(daily_limit=ARCHIVE_MAX * 12)
+    polite = Polite(daily_limit=NEXT_MAX * 8 if a.next else ARCHIVE_MAX * 12)
     with connect() as conn, run(conn, "court_docs", "사건 서류 보관") as job:
         if a.case:
             targets = [tuple(a.case)]
@@ -231,6 +282,10 @@ def main() -> None:
             targets = watched_targets(conn, date.today())
         elif a.photos:
             targets = photo_targets(conn, date.today())
+        elif a.next:
+            targets = next_targets(conn, date.today())
+        elif a.picks:
+            targets = pick_photo_targets(conn, date.today())
         else:
             targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
@@ -242,7 +297,12 @@ def main() -> None:
             page.goto(CASE_PAGE, wait_until="networkidle", timeout=60000)
             try:
                 for court, case_no in targets:
-                    save_case(conn, court, case_no, fetch_case(page, polite, court, case_no))
+                    try:
+                        docs = fetch_case(page, polite, court, case_no)
+                    except DailyLimitReached:
+                        print("하루 요청 한도 — 나머지는 내일")  # 법원 예의(11/4 --next 가 많을 때)
+                        break
+                    save_case(conn, court, case_no, docs)
                     conn.commit()
                     job.count += 1
                     polite.between_cases()

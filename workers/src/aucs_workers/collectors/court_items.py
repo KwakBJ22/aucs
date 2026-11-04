@@ -22,11 +22,13 @@ GONE_MAX_SHARE = 0.2  # 한 법원에서 이보다 많이 빠지면 수집 이�
 def mark_gone(
     conn: psycopg.Connection, court: str, d_from: date, d_to: date, started: datetime
 ) -> int:
-    """이번 수집 기간(d_from~d_to)에 있어야 하는데 법원 목록에 안 나온 물건 표시."""
+    """이번 수집 기간(d_from~d_to)에 있어야 하는데 법원 목록에 안 나온 물건 표시.
+    공고 전 다음 회차(preview, 기일내역으로 미리 안 것)는 아직 목록에 없는 게 맞으므로 빼고 봄(11/4)."""
     row = conn.execute(
         """select count(*), count(*) filter (where i.checked_at < %s)
            from core.items i join core.cases c using (case_id)
-           where c.court_code = %s and i.sale_date between %s and %s""",
+           where c.court_code = %s and i.sale_date between %s and %s
+             and i.status_code is distinct from 'preview'""",
         (started, court, d_from, d_to),
     ).fetchone()
     total, missing = row if row else (0, 0)
@@ -40,7 +42,8 @@ def mark_gone(
             """update core.items i set status_code = %s, updated_at = now()
            from core.cases c
            where c.case_id = i.case_id and c.court_code = %s and i.sale_date between %s and %s
-             and i.checked_at < %s and i.status_code is distinct from %s""",
+             and i.checked_at < %s and i.status_code is distinct from %s
+             and i.status_code is distinct from 'preview'""",
             (GONE, court, d_from, d_to, started, GONE),
         ).rowcount
     )

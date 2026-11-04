@@ -8,6 +8,7 @@ export type NavItem = {
   group: "basic" | "pro";
   ready: boolean;
   match: string[]; // 이 주소로 시작하면 이 메뉴가 켜짐
+  pcHide?: boolean; // PC 머리 메뉴에서 뺌(홈은 로고를 누르면 가므로, 11/4)
   sub: SubItem[];
 };
 
@@ -19,8 +20,9 @@ export const NAV: NavItem[] = [
     group: "basic",
     ready: true,
     match: ["/home", "/notifications", "/guide"],
+    pcHide: true,
     sub: [
-      { label: "오늘 할 일", href: "/home" },
+      { label: "오늘의 추천", href: "/home" },
       { label: "알림함", href: "/notifications" },
       { label: "경매 처음이세요?", href: "/guide" },
     ],

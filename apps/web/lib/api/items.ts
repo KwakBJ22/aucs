@@ -127,8 +127,20 @@ export function fetchItems(opts: {
 export const fetchRegions = () => getJson<RegionRow[]>("/regions", 30 * 60_000);
 
 // 홈 공개 자료 한 번에(11/3): 내 조건 물건 20 · 이번 주 마감 공매 5 · (PC) 석 달 낙찰가율 · 게시 중 공지
+// 홈 추천 카드(11/4): 카드 + 추천 점수·이유·사진·공고 전 여부·유찰 예상
+export type PickCard = ItemCard & {
+  score: number;
+  reasons: string[];
+  photo: string | null;
+  preview: boolean; // 유찰 뒤 다음 기일이 잡힌 물건(법원 공고 전)
+  likely_fail: boolean; // 이번엔 유찰될 것 같은 물건
+  next_min_krw?: number | null; // 유찰되면 다음 최저가
+};
 export type HomeFeed = {
   mine: ItemList;
+  picks?: PickCard[];
+  soon?: PickCard[];
+  next?: PickCard[];
   onbid_soon: ItemList | null;
   market: import("./pro").Market | null;
   notices: { notice_id: number; title: string; body: string }[];
@@ -137,8 +149,10 @@ export function fetchHomeFeed(opts: {
   sigungu?: string[];
   maxCash?: number | null;
   market?: boolean;
+  purpose?: string | null;
 }) {
   const q = new URLSearchParams();
+  if (opts.purpose) q.set("purpose", opts.purpose);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
   if (opts.market) q.set("market", "true");

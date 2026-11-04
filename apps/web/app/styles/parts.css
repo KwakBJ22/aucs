@@ -349,3 +349,63 @@
 .logo-lg img {
   height: 66px;
 }
+
+/* 홈 추천 카드(11/4): 휴대폰은 옆으로 넘기는 줄, PC는 네 칸 격자. 선 없이 사진 판과 여백만 */
+.pick-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  margin: 12px -20px 0;
+  padding: 0 20px 4px;
+}
+.pick-card {
+  flex: 0 0 62%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.pick-photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.pick-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pick-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.pick-why {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .pick-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+    margin: 12px 0 0;
+    padding: 0;
+  }
+}

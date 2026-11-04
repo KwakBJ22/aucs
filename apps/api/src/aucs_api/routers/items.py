@@ -47,16 +47,18 @@ def get_home_feed(
     sigungu: Annotated[list[str] | None, Query()] = None,
     max_cash: Annotated[int | None, Query(ge=0)] = None,
     market: bool = False,
+    purpose: str | None = None,
 ) -> dict[str, Any]:
     """홈 화면 공개 자료를 한 번에(11/3 — 예전엔 내 조건 물건·이번 주 마감 공매·석 달 낙찰가율·공지를 4번 불렀음)."""
     from concurrent.futures import ThreadPoolExecutor
     from datetime import timedelta
 
     from aucs_api.services import admin_ops, pro
+    from aucs_api.services.picks import home_picks
 
     today = date.today()
     sg = sigungu or []
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=5) as ex:
         mine = ex.submit(
             items.list_items, sigungu=sg, max_cash=max_cash, sort="deadline", limit=20, today=today
         )
@@ -65,6 +67,7 @@ def get_home_feed(
         mk = ex.submit(pro.market, {"sido": None, "sigungu": None, "court": None, "usage": None,
                                     "since": today - timedelta(days=93)}, today) if market else None  # fmt: skip
         notes = ex.submit(admin_ops.notices, True)
+        pk = ex.submit(home_picks, sigungu=sg, max_cash=max_cash, purpose=purpose, today=today)
         base = {"total": 0, "items": [], "results": [], "exact_item_id": None}
         try:
             onbid_soon: dict[str, Any] | None = {**base, **soon.result()}
@@ -75,6 +78,7 @@ def get_home_feed(
             "onbid_soon": onbid_soon,
             "market": mk.result() if mk else None,
             "notices": notes.result(),
+            **pk.result(),  # 오늘의 추천 · 마감 임박 · 다음 달 더 싸지는 물건(11/4)
         }
 
 

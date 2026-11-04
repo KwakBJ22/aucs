@@ -82,6 +82,8 @@ def apply_case_docs(
     if sr := docs.get("status_report"):
         if sr.get("dlt_ordTsLserLtn") is not None or sr.get("dlt_ordTsRlet"):
             save_tenants(conn, case_id, sr)
+    if sched := docs.get("schedule"):
+        apply_next_sales(conn, case_id, sched)  # 유찰된 물건의 다음 회차(11/4)
     deliveries = docs.get("deliveries") or {}
     if not deliveries:
         return
@@ -118,6 +120,48 @@ def apply_case_docs(
                 for e in events
             ],  # fmt: skip
         )
+
+
+PREVIEW = "preview"  # 유찰 뒤 기일내역으로 미리 안 다음 회차(법원 공고 전, 11/4)
+
+
+def next_sales(schedule: dict[str, Any], today: date) -> dict[int, dict[str, Any]]:
+    """기일내역 → 물건 번호별 「아직 안 열린 다음 매각기일」·그 최저가·지금까지 유찰 횟수(순수 함수).
+
+    유찰되면 법원이 그날 바로 다음 기일(보통 4~5주 뒤)과 낮아진 최저가를 잡아 둠 — 공고 목록보다 한 달쯤 먼저 알 수 있음.
+    """
+    out: dict[int, dict[str, Any]] = {}
+    failed: dict[int, int] = {}
+    for r in schedule.get("dlt_dxdyDtsLst") or []:
+        if (r.get("auctnDxdyKndNm") or "") != "매각기일":
+            continue
+        seq = int(r.get("dspslGdsSeq") or 1)
+        if (r.get("dxdyRslt") or "") == "유찰":
+            failed[seq] = failed.get(seq, 0) + 1
+            continue
+        m = re.match(r"(\d{4})\.(\d{2})\.(\d{2})", str(r.get("dxdyTime") or ""))
+        price = parse_krw(r.get("tsLwsDspslPrc"))
+        if not m or r.get("dxdyRslt") or not price:
+            continue
+        d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        if d >= today and (seq not in out or d < out[seq]["date"]):
+            out[seq] = {"date": d, "min_price_krw": price}
+    for seq, x in out.items():
+        x["failed_count"] = failed.get(seq, 0)
+    return out
+
+
+def apply_next_sales(conn: psycopg.Connection, case_id: str, schedule: dict[str, Any]) -> int:
+    """지난 회차에 머물러 있는 물건(기일이 지남)에 다음 기일·최저가를 넣고 「공고 전」으로 표시."""
+    n = 0
+    for seq, x in next_sales(schedule, date.today()).items():
+        n += conn.execute(
+            """update core.items set sale_date = %s, min_price_krw = %s, failed_count = greatest(coalesce(failed_count, 0), %s),
+                      status_code = %s, updated_at = now()
+               where case_id = %s and item_no = %s and sale_date < current_date and sale_date < %s""",
+            (x["date"], x["min_price_krw"], x["failed_count"], PREVIEW, case_id, seq, x["date"]),
+        ).rowcount
+    return n
 
 
 def parse_krw(text: Any) -> int | None:
