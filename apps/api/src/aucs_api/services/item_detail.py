@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 from typing import Any
 
+from aucs_rules.appraisal_points import parse_points
 from aucs_rules.fmt import won
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
@@ -301,7 +302,20 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
+    out["appraisal"] = appraisal_section(sp["payload"] if sp else None)
     return out
+
+
+def appraisal_section(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    """「감정평가 요점」 칸(11/4 대표님 — 개인정보 가리고 쓰기 허락, 평가사 이름을 곁에 붙임).
+
+    법원 물건상세의 감정평가요항표 요약 글. 회사 이름은 이 자료에 없어(문건송달에도 가려져 있음)
+    감정평가서 원본을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음."""
+    dr = (payload or {}).get("dma_result") or {}
+    points = parse_points(dr.get("aeeWevlMnpntLst"))
+    if not points:
+        return None
+    return {"points": points, "firm": None}
 
 
 def photos(item_id: str) -> list[str]:

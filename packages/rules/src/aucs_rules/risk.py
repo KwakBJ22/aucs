@@ -46,10 +46,15 @@ RULE_TYPE = {
     "risk.superficies": "T8", "risk.share": "T8", "risk.farmland": "T9", "risk.special_corp": "T9",
     "risk.illegal": "T10", "risk.neighborhood_villa": "T10", "risk.old": "T10", "risk.lien": "T10",
     "risk.over_cost": "T11", "risk.no_loan": "T11",
+    # 감정평가 요항(11/4)
+    "risk.greenbelt": "T9", "risk.edu_zone": "T9", "risk.permit_exempt": "T9",
+    "risk.no_road": "T11", "risk.narrow_road": "T11", "risk.extra_building": "T8", "risk.doc_diff": "T10",
 }  # fmt: skip
 
 
 _HOUSING_WORDS = re.compile(r"(다세대|연립|다가구|단독|주택|빌라|아파트)")
+_LAND_OR_HOUSE = re.compile(r"(대지|임야|잡종지|토지|단독|다가구|공장|창고|^\s*전\b|^\s*답\b)")
+_COMMERCIAL = re.compile(r"(근린|상가|판매|점포)")
 _SPECIAL_CONDITION = re.compile(r"(대항력\s*포기|주택도시보증공사|HUG|일괄매각|제시외)")
 
 
@@ -99,6 +104,44 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.illegal", "mid", "위반건축물")
     if f.get("farmland_permit"):
         add("risk.farmland", "mid", "농지취득자격증명 필요")
+    # ── 감정평가 요항(11/4): 토지 이용 계획 · 길
+    if f.get("greenbelt"):
+        add("risk.greenbelt", "mid", "개발제한구역 — 새로 짓거나 용도를 바꾸기 어려워요")
+    if f.get("edu_protect") and _COMMERCIAL.search(f.get("usage_text") or ""):
+        # 교육환경 보호에 관한 법률 제9조 — 보호구역 안 금지 업종(유흥·숙박 등)
+        add(
+            "risk.edu_zone",
+            "mid",
+            "교육환경보호구역 — 들일 수 없는 업종이 있어요",
+            Status.NEEDS_CHECK,
+        )
+    if f.get("land_permit_area"):
+        # 부동산 거래신고 등에 관한 법률 제14조, 시행령 제11조 — 민사집행법에 따른 경매는 허가 예외
+        add(
+            "risk.permit_exempt", "info", "토지거래허가구역 — 경매로 사면 허가·실거주 의무가 없어요"
+        )
+    if f.get("no_road") == "yes":
+        add("risk.no_road", "high", "맹지 — 길에 닿지 않아 집을 짓기 어려워요")
+    elif f.get("no_road") == "check":
+        add("risk.no_road", "mid", "지적도에는 맹지 — 실제로 드나드는 길 확인", Status.NEEDS_CHECK)
+    if f.get("narrow_road") and _LAND_OR_HOUSE.search(f.get("usage_text") or ""):
+        # 건축법 제2조 제1항 제11호(도로 너비 4m) · 제44조(대지는 도로에 2m 이상 접해야)
+        add("risk.narrow_road", "mid", "앞길이 4m보다 좁아요 — 새로 짓기 어려울 수 있어요",
+            road_m=f.get("road_max_m"))  # fmt: skip
+    if f.get("extra_building_text"):
+        add(
+            "risk.extra_building",
+            "mid",
+            "제시외 건물이 있어요 — 매각에 들어가는지 확인",
+            Status.NEEDS_CHECK,
+        )
+    if f.get("doc_diff_text"):
+        add(
+            "risk.doc_diff",
+            "mid",
+            "감정평가서에 서류와 실제가 다른 점이 있어요",
+            Status.NEEDS_CHECK,
+        )
     if f.get("family_tenant"):
         add("risk.family", "mid", "가족 임차인 의심 — 실제 임대차 확인")
     if f.get("claim_after_deadline"):

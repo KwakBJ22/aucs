@@ -16,6 +16,7 @@ from typing import Any
 
 import psycopg
 from aucs_rules import ENGINE_VERSION
+from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.price import Trade, market_price, trade_region
@@ -77,13 +78,17 @@ def load_market(
 
 
 def commercial_over(
-    item: dict[str, Any], tenants: list[dict[str, Any]], table: dict[str, Any] | None, today: date
+    item: dict[str, Any],
+    tenants: list[dict[str, Any]],
+    table: dict[str, Any] | None,
+    today: date,
+    overcrowded_hint: bool | None = None,
 ) -> bool:
     """상가 물건에서 환산보증금이 지역 한도를 넘는 임차인이 있는지 (T3)."""
     usage = item.get("usage_name") or ""
     if not table or not any(w in usage for w in COMMERCIAL_WORDS):
         return False
-    cls = region_class(item.get("sido"), item.get("sigungu"), None, today).value
+    cls = region_class(item.get("sido"), item.get("sigungu"), None, today, overcrowded_hint).value
     for t in tenants:
         r = commercial_over_limit(
             t.get("deposit_krw"), t.get("monthly_rent_krw"), sido=item.get("sido"),
@@ -94,13 +99,18 @@ def commercial_over(
     return False
 
 
-def load_spec(cur: Any, item: dict[str, Any]) -> dict[str, Any] | None:
-    """물건상세(item_detail_N)의 명세서 칸 (작성 전이면 None)."""
+def load_detail(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
+    """물건상세(item_detail_N) 원문의 dma_result — 명세서 칸 · 감정평가 요항을 함께 읽으려고 한 번만 부름."""
     row = cur.execute(
         "select payload from raw.court_doc_raw where case_id = %s and doc_kind = %s order by fetched_at desc limit 1",
         (item["case_id"], f"item_detail_{item.get('item_no') or 1}"),
     ).fetchone()
-    info = ((row or {}).get("payload") or {}).get("dma_result", {}).get("dspslGdsDxdyInfo") or {}
+    return dict(((row or {}).get("payload") or {}).get("dma_result") or {})
+
+
+def load_spec(detail: dict[str, Any]) -> dict[str, Any] | None:
+    """물건상세의 명세서 칸 (작성 전이면 None)."""
+    info = detail.get("dspslGdsDxdyInfo") or {}
     if not info.get("gdsSpcfcWrtYmd"):
         return None
 
@@ -184,11 +194,18 @@ def analyze_item(
             (item["case_id"],),
         ).fetchone()
     )
-    over = commercial_over(item, tenants, commercial_table, today)
+    detail = load_detail(cur, item)
+    # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
+    points = parse_points(detail.get("aeeWevlMnpntLst"))
+    af = appraisal_facts(points).value
+    hint = bool(af.get("overcrowded")) if points else None
+    over = commercial_over(item, tenants, commercial_table, today, hint)
     market = load_market(conn, item, today)
     facts = build_facts(item, events, tenants, has_sr, over)
+    for k, v in af.items():
+        facts.setdefault(k, v)
     # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도
-    sf = spec_facts(load_spec(cur, item))
+    sf = spec_facts(load_spec(detail))
     spec_note = sf.pop("spec_note", "")
     if spec_note:
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
@@ -248,6 +265,20 @@ def analyze_item(
         "tenant_count": len(tenants),
         "redev": redev,
         "building": bldg,
+        # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
+        "appraisal": {
+            k: af[k]
+            for k in (
+                "near_station",
+                "near_school",
+                "overcrowded",
+                "land_permit_area",
+                "road_max_m",
+            )
+            if k in af
+        }
+        if points
+        else None,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
                "tenants": tenants, "market": market, "building": bldg, "engine": ENGINE_VERSION})  # fmt: skip

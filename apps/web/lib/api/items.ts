@@ -202,6 +202,7 @@ export type ItemDetail = ItemCard & {
   interest?: Interest | null;
   court_bidders?: CourtBidders | null;
   photos?: string[];
+  appraisal?: { points: { label: string; text: string }[]; firm: string | null } | null; // 감정평가 요점(11/4)
   outcome?: Outcome | null; // 지난 기일 결과(앞으로 잡힌 기일이 없을 때, 11/1) // 법원 현장 사진(휴대폰 크기, 매각 뒤 30일 지나면 없음)
   computed_at: string | null;
 };

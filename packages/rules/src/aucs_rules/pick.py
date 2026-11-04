@@ -146,7 +146,13 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         + (8 if 0 < area <= 60 else 3),
         "invest": (10 if redev else 0) + (5 if fc >= 2 else 0) + (5 if disc >= 0.3 else 0),
     }  # fmt: skip
-    r_fit = fit_pts.get(purpose or "", 0) / 20
+    # 감정평가 요항의 역·초등학교(11/4) — 실거주는 +3·+1, 임대는 역만 +2 (20점 안에서)
+    ap = a.get("appraisal") or {}
+    bonus = {"live": (3 if ap.get("near_station") else 0) + (1 if ap.get("near_school") else 0),
+             "rent": 2 if ap.get("near_station") else 0}.get(purpose or "", 0)  # fmt: skip
+    r_fit = min(20, fit_pts.get(purpose or "", 0) + bonus) / 20
+    if purpose == "live" and ap.get("near_station"):
+        reasons.append(f"{ap['near_station']} 가까움")
     if redev and purpose in ("invest", None):
         reasons.append("재개발·재건축 구역")
 

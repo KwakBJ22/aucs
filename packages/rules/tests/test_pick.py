@@ -28,7 +28,9 @@ def test_guest_has_no_purpose_part() -> None:
 
 
 def test_purpose_changes_order() -> None:
-    officetel = _x(usage="오피스텔", area_m2=25.0, rent={"monthly_krw": 2_000_000, "deposit_krw": 10_000_000})
+    officetel = _x(
+        usage="오피스텔", area_m2=25.0, rent={"monthly_krw": 2_000_000, "deposit_krw": 10_000_000}
+    )
     apt = _x()
     assert pick_score(officetel, "rent").value["score"] > pick_score(apt, "rent").value["score"]
     assert pick_score(apt, "live").value["score"] > pick_score(officetel, "live").value["score"]

@@ -6,6 +6,7 @@ import type { ItemDetail, Question } from "@/lib/api/items";
 import { won } from "@/lib/format";
 import { BuildingRows, ComplexBlock } from "@/components/item/building";
 import { CheckBody } from "@/components/item/checklist";
+import { AppraisalPoints } from "@/components/item/appraisal";
 import { FailMobile } from "@/components/item/failure";
 import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { t } from "@/components/item/shared";
@@ -35,6 +36,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             {b.note}
           </p>
         )}
+        {d.appraisal && <AppraisalPoints a={d.appraisal} />}
       </>
     );
   if (q.key === "hold")

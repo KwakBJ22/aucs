@@ -78,6 +78,11 @@ def failure_table(
         need = _NEED.get(code)
         if hit:
             state, why = "걸림", hit[0]["title"]
+        elif known and all(s.get("level") == "info" for s in known):
+            state, why = (
+                "확인함",
+                known[0]["title"],
+            )  # 알림뿐(예: 토지거래허가구역이지만 경매는 예외)
         elif known:
             state, why = "확인 필요", known[0]["title"]
         elif _not_applicable(code, usage, redev):

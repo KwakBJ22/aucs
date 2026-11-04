@@ -24,7 +24,7 @@ _SQL = (
         "a.result -> 'top' as top,",
         "a.result -> 'top' as top, jsonb_build_object('market', a.result -> 'market', 'sale_rate', a.result -> 'sale_rate',"
         " 'court_cell', a.result -> 'court_cell', 'redev', a.result -> 'redev', 'new_item', a.result -> 'new_item',"
-        " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals') as analysis,"
+        " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals', 'appraisal', a.result -> 'appraisal') as analysis,"
         " i.is_special_case, i.status_code,"
         " (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo,",
     )

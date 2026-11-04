@@ -3,7 +3,7 @@
 구분: seoul / overcrowded(과밀억제권역, 서울 제외) / metro(광역시급) / other.
 기준일은 「최초 담보물권 설정일」 — 그날 시행 중인 구분을 씁니다.
 일부 동만 과밀억제권역인 시(남양주·시흥)는 동으로 가리고, 모르면 「확인 필요」.
-개발 기준이며 3단계 법률 검토 대상입니다. 서울·경기만 다룹니다(우리 수집 범위).
+개발 기준이며 3단계 법률 검토 대상입니다. 서울·경기·인천만 다룹니다(우리 수집 범위, 인천은 11/4 더함).
 """
 
 from datetime import date
@@ -49,11 +49,28 @@ _PERIODS = [
 
 
 def region_class(
-    sido: str | None, sigungu: str | None, dong: str | None, base_date: date
+    sido: str | None,
+    sigungu: str | None,
+    dong: str | None,
+    base_date: date,
+    overcrowded_hint: bool | None = None,
 ) -> RuleResult:
-    """(구분, 확실한 정도). 2018-09-18 전 설정은 이 표에 없어 「모름」."""
+    """(구분, 확실한 정도). 2018-09-18 전 설정은 이 표에 없어 「모름」.
+
+    overcrowded_hint(11/4): 감정평가 요항 「토지 이용 계획」에 「과밀억제권역」이 있으면 True,
+    요항은 있는데 그 말이 없으면 False, 요항이 없으면 None — 동으로 못 가리는 곳(남양주·시흥·인천)을 이것으로 가림.
+    """
     if sido == "서울특별시":
         return RuleResult("seoul", Status.ESTIMATED, "small_region.seoul", [])
+    if sido == "인천광역시" and sigungu:
+        ev0 = [{"sigungu": sigungu, "hint": overcrowded_hint}]
+        if sigungu in ("강화군", "옹진군"):  # 광역시의 군 — 「그 밖의 지역」
+            return RuleResult("other", Status.ESTIMATED, "small_region.incheon", ev0)
+        if overcrowded_hint is True:
+            return RuleResult("overcrowded", Status.ESTIMATED, "small_region.incheon", ev0)
+        if overcrowded_hint is False:  # 경제자유구역·남동국가산업단지 등 — 광역시 구분
+            return RuleResult("metro", Status.NEEDS_CHECK, "small_region.incheon", ev0)
+        return RuleResult("overcrowded", Status.NEEDS_CHECK, "small_region.incheon", ev0)
     if sido != "경기도" or not sigungu:
         return RuleResult(None, Status.UNKNOWN, "small_region.out_of_scope", [{"sido": sido}])
     periods = [p for p in _PERIODS if p[0] <= base_date]
@@ -65,6 +82,9 @@ def region_class(
     ev = [{"sigungu": sigungu, "dong": dong, "period_from": str(periods[-1][0])}]
     if sigungu in _OVERCROWDED or sigungu in extra_over:
         return RuleResult("overcrowded", Status.ESTIMATED, "small_region.overcrowded", ev)
+    if sigungu in ("남양주시", "시흥시") and overcrowded_hint is not None:
+        cls = "overcrowded" if overcrowded_hint else "other"
+        return RuleResult(cls, Status.ESTIMATED, "small_region.by_appraisal", ev)
     if sigungu == "남양주시":
         if not dong:
             return RuleResult(None, Status.NEEDS_CHECK, "small_region.namyangju", ev)
