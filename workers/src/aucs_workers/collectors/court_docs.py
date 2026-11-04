@@ -30,10 +30,10 @@ from aucs_workers.photos import pull_pics
 from aucs_workers.photos import store as store_photos
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
-ARCHIVE_MAX = 300  # 11/4: 150 → 300, 대상도 아파트류 → 모든 부동산(「자료 기다림」 줄이기)
-QUEUE_MAX = 40  # 5분마다: 손님이 연 물건의 서류(요청 줄)
-NEXT_MAX = 300  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4)
-PICKS_MAX = 100  # 하루: 추천 후보(입찰 1~6주 남음) 중 사진 없는 것
+ARCHIVE_MAX = 150  # 11/4 오후: 300 → 150 (법원이 집 IP 를 막음), 대상은 모든 부동산 그대로
+QUEUE_MAX = 10  # 5분마다: 손님이 연 물건의 서류(요청 줄) — 11/4 40 → 10
+NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4, 300 → 100)
+PICKS_MAX = 50  # 하루: 추천 후보(입찰 1~6주 남음) 중 사진 없는 것(11/4 100 → 50)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
 ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
 

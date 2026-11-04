@@ -25,7 +25,7 @@ from aucs_workers.db import connect
 from aucs_workers.extract.appraisal_pdf import read_pdf
 from aucs_workers.jobs.runlog import run
 
-DAY_MAX = 300  # 하루 원본 수(입찰 가까운 순)
+DAY_MAX = 150  # 하루 원본 수(입찰 가까운 순)
 COURT_REFERER = "https://www.courtauction.go.kr/"
 BASE = "https://ca.kapanet.or.kr"
 PROBE_LOG = Path(__file__).resolve().parents[4] / "logs" / "kapa_probe.txt"
@@ -123,7 +123,7 @@ def main() -> None:
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
-    polite = Polite(daily_limit=DAY_MAX)
+    polite = Polite(daily_limit=DAY_MAX, site="kapa")
     with connect() as conn, run(conn, "kapa_pdf", "감정평가서 원본") as job:
         todo = targets(conn, date.today(), 1 if a.probe else DAY_MAX)
         print(f"대상 {len(todo)}건")
