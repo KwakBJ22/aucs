@@ -7,7 +7,7 @@
   (아침 목록 수집처럼 한 번에 끝내야 하는 것은 hourly=False). 한도는 고정이 아님 —
   7일 연속 막히지 않으면 20% 올리고, 막히면 40% 내림(법원이 견디는 만큼만, 2,500번은 시작점일 뿐)
 - 이상 응답은 3번까지만 다시 시도, 그래도 이상하면 전체 중단하고 logs/court_blocked.txt 를 남김
-  → 그 뒤 12시간은 법원 수집기가 켜지자마자 멈춤(막힌 동안 두드리지 않게). 풀렸으면 이 파일을 지우면 됨
+  → 그 뒤 1시간(같은 날 또 막히면 2·4시간)은 법원 수집기가 켜지자마자 멈춤. 풀렸으면 이 파일을 지우면 됨
 - 하루 한도를 넘기면 중단
 """
 
@@ -27,7 +27,9 @@ SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집
 CAP_MIN, CAP_MAX = 800, 20000
 GROW_AFTER_DAYS, GROW, SHRINK = 7, 1.2, 0.6
 SERVICE_HOURS = 18  # 법원 06:00~24:00
-BLOCK_HOURS = 12
+# 막히면 쉬는 시간(11/4 저녁): 1시간 → 같은 날 또 막히면 2시간 → 4시간까지. 다시 시작할 때는 새 브라우저(새 세션)이고
+# 한도는 막힐 때마다 40% 낮춤. 법원 막힘은 IP 보다 세션(쿠키) 단위라는 다른 수집기의 실측을 따름.
+BLOCK_BASE_HOURS, BLOCK_MAX_HOURS = 1, 4
 LOGS = Path(__file__).resolve().parents[4] / "logs"
 
 
@@ -61,6 +63,11 @@ def roll(b: dict[str, Any], today: str, start_cap: int) -> dict[str, Any]:
     return {"date": today, "count": 0, "hours": {}, "cap": cap, "ok_days": ok, "blocked": False}
 
 
+def pause_hours(blocks_today: int) -> int:
+    """그날 몇 번째 막힘인지 → 쉬는 시간(1·2·4시간)."""
+    return min(BLOCK_MAX_HOURS, BLOCK_BASE_HOURS * 2 ** max(0, blocks_today - 1))
+
+
 def hour_share(cap: int) -> int:
     """한 시간에 쓸 몫 — 하루 한도를 서비스 시간으로 나눔."""
     return math.ceil(cap / SERVICE_HOURS)
@@ -86,10 +93,20 @@ class Polite:
             f = _block_file(site)
             if f.exists():
                 at = datetime.fromtimestamp(f.stat().st_mtime)
-                if datetime.now() - at < timedelta(hours=BLOCK_HOURS):
+                hours = pause_hours(self._blocks_today())
+                if datetime.now() - at < timedelta(hours=hours):
                     raise Blocked(
-                        f"{site} 이 {at:%m-%d %H:%M} 에 막음 — {BLOCK_HOURS}시간 쉼 ({f} 를 지우면 다시 시작)"
+                        f"{site} 이 {at:%m-%d %H:%M} 에 막음 — {hours}시간 쉼 ({f} 를 지우면 다시 시작)"
                     )
+
+    def _blocks_today(self) -> int:
+        if not SITE_DAY_MAX.get(self.site or ""):
+            return 1
+        try:
+            b = json.loads(_budget_file(self.site or "").read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            return 1
+        return int(b.get("blocks") or 1) if b.get("date") == date.today().isoformat() else 1
 
     def _j(self, n: float) -> float:
         return random.uniform(0, n) if self._jitter else 0.0
@@ -131,7 +148,8 @@ class Polite:
         if not SITE_DAY_MAX.get(self.site or ""):
             return
         f, b = self._load()
-        b.update(cap=max(CAP_MIN, int(int(b["cap"]) * SHRINK)), ok_days=0, blocked=True)
+        b.update(cap=max(CAP_MIN, int(int(b["cap"]) * SHRINK)), ok_days=0, blocked=True,
+                 blocks=int(b.get("blocks") or 0) + 1)  # fmt: skip
         LOGS.mkdir(exist_ok=True)
         f.write_text(json.dumps(b), encoding="utf-8")
 
