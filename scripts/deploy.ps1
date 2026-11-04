@@ -75,19 +75,26 @@ function Vercel([string]$dir, [string[]]$argv) {
   return @{ code = $code; text = ($out | Out-String) }
 }
 # 무대 배포를 뒤에서 시작(검사와 함께 돎). 손님 주소는 건드리지 않음(--skip-domain).
-function Start-Stage([string]$dir) {
+# 11/4 — vercel 을 여러 개 동시에 부르면 로그인 정보 파일을 서로 고쳐 쓰다 「No existing credentials」가 났음.
+#        그래서 vercel 은 한 번에 하나만: 뒤의 작업 하나가 API → 웹 차례로 올리고, 그동안 앞에서는 vercel 을 부르지 않는 검사만.
+function Start-Stage([string[]]$dirs) {
   $cmd = Vercel-Cmd
-  Start-Job -ArgumentList $cmd, $dir -ScriptBlock {
-    param($cmd, $dir)
+  Start-Job -ArgumentList $cmd, $dirs -ScriptBlock {
+    param($cmd, $dirs)
     $exe = $cmd[0]; $pre = @($cmd | Select-Object -Skip 1)
     $ErrorActionPreference = 'Continue'
-    $out = & $exe @pre deploy --prod --skip-domain --yes --cwd $dir 2>&1 | ForEach-Object { "$_" }
-    @{ code = $LASTEXITCODE; text = ($out | Out-String) }
+    $res = @{}
+    foreach ($dir in $dirs) {
+      $out = & $exe @pre deploy --prod --skip-domain --yes --cwd $dir 2>&1 | ForEach-Object { "$_" }
+      $res[$dir] = @{ code = $LASTEXITCODE; text = ($out | Out-String) }
+      if ($LASTEXITCODE) { break }
+    }
+    $res
   }
 }
-function Wait-Stage($job, [string]$name) {
-  $r = Receive-Job -Job $job -Wait -AutoRemoveJob
-  if ($r -is [array]) { $r = $r[-1] }
+function Stage-Url($res, [string]$dir, [string]$name) {
+  $r = $res[$dir]
+  if (-not $r) { Stop-Deploy "$name 무대 배포를 못 했어요(앞 배포가 실패)" }
   $url = ([regex]::Matches("$($r.text)", 'https://[a-z0-9.-]+\.vercel\.app') | Select-Object -Last 1).Value
   if ($r.code -or -not $url) { Stop-Deploy "$name 무대 배포 실패`n$($r.text)" }
   return $url
@@ -156,10 +163,29 @@ Step "0 올릴 것: $what"
 $dirty = @(git status --porcelain 2>$null | Where-Object { $_ })
 Write-Host "  커밋 안 된 파일 $($dirty.Count)개가 같이 올라갑니다"
 
-# 1 ── 무대 배포를 먼저 뒤에서 시작(손님 주소는 아직 그대로) — 그동안 아래 검사
-Step "1 무대 배포 시작(뒤에서)"
-$jobApi = if ($doApi) { Start-Stage $apiDir } else { $null }
-$jobWeb = if ($doWeb) { Start-Stage $webDir } else { $null }
+# 1 ── Vercel 환경 변수 이름(값은 안 봄) — 무대 배포 전에(vercel 동시 호출 막기)
+Step "1 Vercel 환경 변수 이름"
+$need = @{
+  $apiDir = @('DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY', 'CRON_SECRET', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT')
+  $webDir = @('NEXT_PUBLIC_API_BASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_VAPID_PUBLIC_KEY')
+}
+$envStamp = "$root\logs\env_checked.txt"
+$envFresh = (Test-Path $envStamp) -and ((Get-Item $envStamp).LastWriteTime -gt (Get-Item "$root\.env").LastWriteTime) -and ((Get-Item $envStamp).LastWriteTime -gt (Get-Date).AddHours(-24))
+$envDirs = @()
+if (-not $envFresh) { if ($doApi) { $envDirs += $apiDir }; if ($doWeb) { $envDirs += $webDir } }
+foreach ($dir in $envDirs) {
+  $r = Vercel $dir @('env', 'ls', 'production')
+  if ($r.code) { Stop-Deploy "Vercel 환경 변수 목록을 못 읽었어요($(Split-Path $dir -Leaf))`n$($r.text)" }
+  $lack = $need[$dir] | Where-Object { $r.text -notmatch "(?m)^\s*$_\s" }
+  if ($lack) { Stop-Deploy "Vercel에 없는 환경 변수($(Split-Path $dir -Leaf)): $($lack -join ', ')" }
+}
+if ($envFresh) { Write-Host "  .env 가 그대로이고 하루 안에 확인함 — 지난 확인 그대로" }
+else { if ($doApi -and $doWeb) { Set-Content $envStamp (Get-Date -Format o) }; Write-Host "  환경 변수 이름 모두 있음" }
+
+# 1b ── 무대 배포를 뒤에서 시작(손님 주소는 아직 그대로) — 그동안 아래 검사
+Step "1b 무대 배포 시작(뒤에서)"
+$dirs = @(); if ($doApi) { $dirs += $apiDir }; if ($doWeb) { $dirs += $webDir }
+$job = Start-Stage $dirs
 Write-Host "  시작함 — 검사가 하나라도 빨강이면 손님 주소에 올리지 않습니다"
 
 # 2 ── 문법 검사(바뀐 쪽)
@@ -188,35 +214,18 @@ $missing = Get-ChildItem "$root\db\migrations" -Filter *.sql |
 if ($missing) { Stop-Deploy "DB에 아직 안 올린 이주 파일: $($missing -join ', ')" }
 Write-Host "  이주 모두 적용됨"
 
-# 4 ── Vercel 환경 변수 이름(값은 안 봄)
-Step "4 Vercel 환경 변수 이름"
-$need = @{
-  $apiDir = @('DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY', 'CRON_SECRET', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT')
-  $webDir = @('NEXT_PUBLIC_API_BASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_VAPID_PUBLIC_KEY')
-}
-$envStamp = "$root\logs\env_checked.txt"
-$envFresh = (Test-Path $envStamp) -and ((Get-Item $envStamp).LastWriteTime -gt (Get-Item "$root\.env").LastWriteTime) -and ((Get-Item $envStamp).LastWriteTime -gt (Get-Date).AddHours(-24))
-$envDirs = @()
-if (-not $envFresh) { if ($doApi) { $envDirs += $apiDir }; if ($doWeb) { $envDirs += $webDir } }
-foreach ($dir in $envDirs) {
-  $r = Vercel $dir @('env', 'ls', 'production')
-  if ($r.code) { Stop-Deploy "Vercel 환경 변수 목록을 못 읽었어요($(Split-Path $dir -Leaf))`n$($r.text)" }
-  $lack = $need[$dir] | Where-Object { $r.text -notmatch "(?m)^\s*$_\s" }
-  if ($lack) { Stop-Deploy "Vercel에 없는 환경 변수($(Split-Path $dir -Leaf)): $($lack -join ', ')" }
-}
-if ($envFresh) { Write-Host "  .env 가 그대로이고 하루 안에 확인함 — 지난 확인 그대로" }
-else { if ($doApi -and $doWeb) { Set-Content $envStamp (Get-Date -Format o) }; Write-Host "  환경 변수 이름 모두 있음" }
-
 # 5 ── 무대 배포 받기 + 확인
 Step "5 무대 배포 확인"
+$res = Receive-Job -Job $job -Wait -AutoRemoveJob
+if ($res -is [array]) { $res = $res[-1] }
 if ($doApi) {
-  $state.api = Wait-Stage $jobApi "API"
+  $state.api = Stage-Url $res $apiDir "API"
   Write-Host "  API $($state.api)"
   if (-not (Get-Ok "$($state.api)/health" $bypassApi)) { Stop-Deploy "무대 API /health 가 응답하지 않아요" }
   Write-Host "  /health 정상"
 }
 if ($doWeb) {
-  $state.web = Wait-Stage $jobWeb "웹"
+  $state.web = Stage-Url $res $webDir "웹"
   Write-Host "  웹 $($state.web)"
 }
 
