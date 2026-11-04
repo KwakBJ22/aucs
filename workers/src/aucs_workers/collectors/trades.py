@@ -13,7 +13,7 @@ import argparse
 import json
 import os
 import time
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 from urllib.parse import unquote
 
@@ -211,11 +211,7 @@ def main() -> None:
                         n += len(rows)
                 job.count += n
                 print(f"  {name} {n:,}")
-        conn.execute(
-            "delete from core.trades where deal_kind = 'lease' and deal_date < %s",
-            (today - timedelta(days=365),),
-        )
-        conn.commit()
+        # 11/4 대표님: 법이 강제하지 않으면 지우지 않음 — 1년 지난 전월세도 남김(예전엔 지웠음)
     print(f"끝: {job.count:,}건")
 
 

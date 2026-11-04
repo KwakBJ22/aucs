@@ -81,7 +81,7 @@ export const copy = {
     ] as [string, string | null][],
     sourceHead: "자료 출처",
     sources: [
-      "법원경매정보 · 매일 아침",
+      "대법원 법원경매정보(courtauction.go.kr) · 매일 아침",
       "국토교통부 실거래가",
       "건축물대장 · 공시가격 · 정비사업 정보",
     ],
@@ -1078,7 +1078,7 @@ export const copy = {
       remark: "비고",
       none: "아직 법원에서 받지 못했어요",
       from: (at: string | null) =>
-        at ? `법원경매정보 · ${at} 받음 · 글은 원문 그대로예요` : "법원경매정보",
+        at ? `대법원 법원경매정보 · ${at} 받음 · 글은 원문 그대로예요` : "대법원 법원경매정보",
       examAt: "조사 일시",
       summary: "부동산 현황",
       possession: "점유 관계",
@@ -1099,7 +1099,9 @@ export const copy = {
     gotAt: (doc: string, t: string | null) => (t ? `${doc} · ${t} 받음` : doc),
     flowGuess: "예상",
     afterDeadline: "종기 뒤",
-    footer: (t: string) => `법원경매정보 기준 · ${t} 계산`,
+    // 저작권 보호정책: 법원 자료는 출처를 구체적으로 표시해야 함 · 이용약관 제7조: 입찰 전 법원 비치 서류로 다시 확인(11/4)
+    footer: (t: string) =>
+      `자료 출처: 대법원 법원경매정보(courtauction.go.kr) · ${t} 계산 · 입찰 전 법원에 비치된 매각물건명세서·현황조사서·감정평가서로 다시 확인하세요`,
   },
   calcPage: {
     title: "입찰가 계산",
