@@ -131,7 +131,7 @@ export const copy = {
     purposeName: { live: "실거주", rent: "임대", resell: "매도" } as Record<string, string>,
     pcTitle: "오늘",
     today: "다가오는 입찰",
-    toRecord: (n: number) => `결과 적을 물건 ${n}건`,
+    toRecord: (n: number) => `입찰일이 지난 관심 물건 ${n}건 · 결과 적어 두기`,
     picks: "오늘의 추천",
     picksSub: "입찰까지 10일 넘게 남아 준비할 시간이 있는 물건",
     soon: "마감 임박",

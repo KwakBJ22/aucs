@@ -961,6 +961,19 @@ textarea.adm-input {
   color: var(--blue-text);
   font-size: var(--fs-md);
 }
+/* 홈: 입찰일이 지나 결과를 안 적은 관심 물건 한 줄(11/4) — 공지 줄과 같은 자리·크기, 회색 */
+.record-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 16px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
 .adm-week {
   display: flex;
   gap: 4px;

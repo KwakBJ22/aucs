@@ -191,14 +191,19 @@ export default function Home() {
     </Link>
   );
 
-  // 다가오는 입찰(11/4): 관심 물건 중 입찰이 남은 것만. 끝난 물건(결과 적기)은 한 줄로 내 경매에
-  const todayBlock = token && (todo.length > 0 || toRecord.length > 0) && (
+  // 다가오는 입찰(11/4): 관심 물건 중 입찰이 남은 것만.
+  // 입찰일이 지나 결과를 안 적은 물건은 뜻이 보이는 회색 한 줄로 따로(11/4 — 제목 없이 한 줄만 남아 무슨 뜻인지 몰랐음)
+  const recordLine = token && toRecord.length > 0 && (
+    <Link href="/me" className="record-line">
+      <span>{t.toRecord(toRecord.length)}</span>
+      <span aria-hidden="true">›</span>
+    </Link>
+  );
+  const todayBlock = token && todo.length > 0 && (
     <section className="section">
-      {todo.length > 0 && (
-        <h2 className="mb-8">
-          {t.today} <span className="c-blue">{todo.length}</span>
-        </h2>
-      )}
+      <h2 className="mb-8">
+        {t.today} <span className="c-blue">{todo.length}</span>
+      </h2>
       {todo.map((w) => (
         <Link
           key={w.item_id}
@@ -218,12 +223,6 @@ export default function Home() {
           <span className="sub">›</span>
         </Link>
       ))}
-      {toRecord.length > 0 && (
-        <Link href="/me" className="menu-row">
-          <span className="sub">{t.toRecord(toRecord.length)}</span>
-          <span className="sub">›</span>
-        </Link>
-      )}
     </section>
   );
 
@@ -370,6 +369,7 @@ export default function Home() {
       <main className="page">
         <PageHeader title={t.pcTitle} sub={summary} />
         <NoticeLine notices={notices} />
+        {recordLine}
         {loginBanner}
         <div className="pc-grid g-64-36">
           <div>
@@ -447,6 +447,7 @@ export default function Home() {
     <main className="page">
       <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
+      {recordLine}
       {loginBanner}
       {todayBlock}
       {picksBlock}
