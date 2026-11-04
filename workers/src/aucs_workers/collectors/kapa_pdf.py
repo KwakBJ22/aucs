@@ -128,6 +128,10 @@ def main() -> None:
         todo = targets(conn, date.today(), 1 if a.probe else DAY_MAX)
         print(f"대상 {len(todo)}건")
         if not todo:
+            if a.probe:  # 감정서 번호를 아직 안 받았거나 입찰일이 지난 사건뿐
+                print(
+                    "   감정서 번호가 있는 진행 사건이 없어요 — 새 코드로 court_docs --case 를 먼저 돌려 주세요"
+                )
             return
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
