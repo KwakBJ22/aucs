@@ -64,7 +64,7 @@ function Vercel-Cmd {
   return $script:VercelExe
 }
 function Vercel([string]$dir, [string[]]$argv) {
-  $cmd = Vercel-Cmd
+  $cmd = @(Vercel-Cmd)   # 하나짜리 배열은 함수에서 글자로 풀려 나옴 → 다시 배열로(11/4 「C」 오류)
   $exe = $cmd[0]; $pre = @($cmd | Select-Object -Skip 1)
   $old = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
@@ -78,7 +78,7 @@ function Vercel([string]$dir, [string[]]$argv) {
 # 11/4 — vercel 을 여러 개 동시에 부르면 로그인 정보 파일을 서로 고쳐 쓰다 「No existing credentials」가 났음.
 #        그래서 vercel 은 한 번에 하나만: 뒤의 작업 하나가 API → 웹 차례로 올리고, 그동안 앞에서는 vercel 을 부르지 않는 검사만.
 function Start-Stage([string[]]$dirs) {
-  $cmd = Vercel-Cmd
+  $cmd = @(Vercel-Cmd)   # 하나짜리 배열은 함수에서 글자로 풀려 나옴 → 다시 배열로(11/4 「C」 오류)
   Start-Job -ArgumentList $cmd, $dirs -ScriptBlock {
     param($cmd, $dirs)
     $exe = $cmd[0]; $pre = @($cmd | Select-Object -Skip 1)
