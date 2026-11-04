@@ -13,6 +13,7 @@
 """
 
 import argparse
+import time
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,10 @@ from aucs_workers.jobs.runlog import run
 DAY_MAX = 150
 COURT_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml"
 WAIT_SEC = 20
+MISS_STOP = (
+    3  # 연달아 이만큼 못 받으면 하루 쉼(KAPA 가 원본을 안 줄 때 법원·KAPA 를 헛되이 두드리지 않게)
+)
+PAUSE = Path(__file__).resolve().parents[4] / "logs" / "kapa_paused.txt"
 PROBE_LOG = Path(__file__).resolve().parents[4] / "logs" / "kapa_probe.txt"
 
 # 법원 화면의 「감정평가서 보기」 단추가 부르는 것과 같은 팝업(PGJ15BM01.xml scwin.aeeWevlPopUp)
@@ -126,6 +131,14 @@ def main() -> None:
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
+    if (
+        PAUSE.exists()
+        and time.time() - PAUSE.stat().st_mtime < 24 * 3600
+        and not (a.probe or a.case)
+    ):
+        print(f"KAPA 원본이 안 와서 쉬는 중 — {PAUSE} 를 지우면 다시")
+        return
+    misses = 0
     polite = Polite(
         daily_limit=DAY_MAX, hourly=not a.probe
     )  # 팝업이 법원에 요청 한 번 — 법원 한도에 셈
@@ -162,8 +175,20 @@ def main() -> None:
                     pdf = download(page, res["url"], probe) if res.get("url") else None
                     if not pdf:
                         print(f"   {case_id} 원본 못 받음")
+                        misses += 1
+                        if (
+                            misses >= MISS_STOP and not a.case
+                        ):  # 연달아 안 오면 KAPA 쪽 문제 — 하루 쉼
+                            PAUSE.write_text(
+                                f"{date.today()} 연달아 {misses}건 못 받음\n", encoding="utf-8"
+                            )
+                            print(
+                                f"   연달아 {misses}건 못 받음 — 24시간 쉼({PAUSE} 를 지우면 다시)"
+                            )
+                            break
                         polite.between_cases()
                         continue
+                    misses = 0
                     data = {"no": info["aeeWevlNo"], **read_pdf(pdf)}
                     conn.execute(
                         "insert into raw.court_doc_raw (case_id, doc_kind, payload, checksum) values (%s,'appraisal_pdf',%s,%s) on conflict do nothing",
