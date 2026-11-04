@@ -21,6 +21,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from aucs_workers.collectors.browser import launch_chrome
+from aucs_workers.collectors.court_docs import JS_POST
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
@@ -69,15 +70,25 @@ def targets(conn: psycopg.Connection, today: date, limit: int) -> list[tuple[str
 def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | None) -> str | None:
     """법원 화면에서 감정평가서 팝업을 띄우고, 브라우저가 여는 KAPA PDF 주소를 잡아 돌려줌(못 잡으면 None)."""
     seen: list[str] = []
+    kapa: list[str] = []  # 시험 기록용 — KAPA 쪽으로 간 요청 전부
 
     def on_request(req: Any) -> None:
         u = req.url
-        if "kapanet" in u and u.lower().split("?")[0].endswith(".pdf"):
-            seen.append(u)
+        if "kapanet" in u:
+            kapa.append(f"{req.resource_type} {u[:160]}")
+            if u.lower().split("?")[0].endswith(".pdf"):
+                seen.append(u)
 
     pid = f"aucsAeeWevl{n}"
     page.context.on("request", on_request)
     try:
+        # 사람이 하듯 물건상세를 먼저 연 뒤 단추를 누름(11/4 — 대표님 화면은 물건상세에서 눌렀을 때 원본이 떴음)
+        seq = int(info.get("dspslGdsSeq") or 1)
+        det = page.evaluate(JS_POST, ["/pgj/pgj15B/selectAuctnCsSrchRslt.on", {"dma_srchGdsDtlSrch": {
+            "csNo": info["csNo"], "cortOfcCd": info["cortOfcCd"], "dspslGdsSeq": seq,
+            "pgmId": "PGJ15BM01", "srchInfo": {}}}])  # fmt: skip
+        if probe is not None:
+            probe.append(f"물건상세 {det.get('status')} ok={det.get('ok')}")
         name = page.evaluate(JS_OPEN, [pid, info["cortOfcCd"], info["csNo"], ""])
         if probe is not None:
             probe.append(f"팝업 열음 {info['cortOfcCd']} {info['csNo']} ({name})")
@@ -94,6 +105,7 @@ def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | N
             pass
     if probe is not None:
         probe.append(f"잡은 PDF 주소: {seen[:3]}")
+        probe.append("KAPA 쪽 요청:\n  " + "\n  ".join(kapa[:20]))
     return seen[0] if seen else None
 
 
