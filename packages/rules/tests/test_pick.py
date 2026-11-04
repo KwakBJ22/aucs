@@ -1,12 +1,12 @@
-"""추천 점수(PICK-01) — 걸러내기·싸게 살 여지·이유 한 줄."""
+"""추천 점수(PICK-01) — 걸러내기·목적별 비중·이유 한 줄."""
 
-from aucs_rules.pick import PickInput, diversify, pick_score, timing_by_days
+from aucs_rules.pick import PickInput, diversify, pick_score
 
 
 def _x(**kw: object) -> PickInput:
     base: dict[str, object] = dict(
         usage="아파트", appraisal_krw=500_000_000, min_price_krw=350_000_000, failed_count=1,
-        area_m2=84.0, is_share=False, is_special=False,
+        area_m2=84.0, is_share=False, is_special=False, d_day=20,
         analysis={"market": {"price_krw": 520_000_000}, "sale_rate": {"p50": 80},
                   "court_cell": {"p50": 85}, "signals": [], "tenant_count": 0},
     )  # fmt: skip
@@ -15,11 +15,24 @@ def _x(**kw: object) -> PickInput:
 
 
 def test_cheap_safe_apartment_scores_high_with_reasons() -> None:
-    v = pick_score(_x()).value
+    v = pick_score(_x(), "live").value
     assert v["excluded"] is None
     assert v["score"] >= 70
     assert v["reasons"][0].startswith("시세보다 1억 2천만 원")  # 예상 낙찰가 4억 vs 시세 5.2억
     assert "위험 신호 없음" in v["reasons"]
+
+
+def test_guest_has_no_purpose_part() -> None:
+    v = pick_score(_x(), None).value
+    assert "fit" not in v["parts"] and "yield" not in v["parts"]
+
+
+def test_purpose_changes_order() -> None:
+    officetel = _x(usage="오피스텔", area_m2=25.0, rent={"monthly_krw": 2_000_000, "deposit_krw": 10_000_000})
+    apt = _x()
+    assert pick_score(officetel, "rent").value["score"] > pick_score(apt, "rent").value["score"]
+    assert pick_score(apt, "live").value["score"] > pick_score(officetel, "live").value["score"]
+    assert pick_score(officetel, "rent").value["reasons"][0].startswith("월세 수익률")
 
 
 def test_fatal_signal_is_excluded() -> None:
@@ -29,13 +42,11 @@ def test_fatal_signal_is_excluded() -> None:
 
 def test_share_only_for_invest() -> None:
     assert pick_score(_x(is_share=True)).value["excluded"] == "지분·특수매각"
-    assert pick_score(_x(is_share=True), "invest").value["excluded"] is None
+    assert pick_score(_x(is_share=True), "resell").value["excluded"] is None
 
 
-def test_timing_and_diversify() -> None:
-    assert timing_by_days(20) == 4 and timing_by_days(5) == 0
+def test_diversify() -> None:
     rows = [{"place": "강남구", "building": "A"}, {"place": "강남구", "building": "A"},
             {"place": "강남구", "building": "B"}, {"place": "강남구", "building": "C"},
             {"place": "서초구", "building": "D"}]  # fmt: skip
-    got = diversify(rows, 5)
-    assert [r["building"] for r in got] == ["A", "B", "D"]
+    assert [r["building"] for r in diversify(rows, 5)] == ["A", "B", "D"]

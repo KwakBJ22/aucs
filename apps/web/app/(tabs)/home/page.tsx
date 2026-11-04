@@ -30,7 +30,7 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mine, setMine] = useState<ItemList | null>(null);
   const [onbidSoon, setOnbidSoon] = useState<ItemList | null>(null); // 이번 주 마감 공매(10/28)
-  const { session } = useSession();
+  const { session, ready } = useSession();
   const token = session?.access_token ?? null;
   const [alertMsg, setAlertMsg] = useState("");
   const [dropped, setDropped] = useState<Set<string>>(new Set());
@@ -104,11 +104,18 @@ export default function Home() {
       return;
     }
     setProfile(p);
+    if (!ready) return; // 로그인 여부를 안 뒤에 부름(로그인 전이면 목적을 빼고 셈)
     setFailed(false);
     // 내 조건 물건·이번 주 마감 공매·(PC) 석 달 낙찰가율·공지를 한 번에(11/3 — 예전 4번)
     // PC 여부는 지금 창으로 봄(처음 그릴 때 잠깐 휴대폰 값이라 두 번 부르지 않게)
     const wide = window.matchMedia("(min-width: 1024px)").matches;
-    fetchHomeFeed({ sigungu: p.regions, maxCash: p.cash, market: wide, purpose: p.purpose })
+    fetchHomeFeed({
+      sigungu: p.regions,
+      maxCash: p.cash,
+      market: wide,
+      // 로그인 전에는 개인 목적을 빼고 점수 큰 것 위주로(11/4 대표님)
+      purpose: token ? p.purpose : null,
+    })
       .then((f) => {
         setMine(f.mine);
         setOnbidSoon(f.onbid_soon);
@@ -117,7 +124,7 @@ export default function Home() {
         setPicks({ picks: f.picks ?? [], soon: f.soon ?? [], next: f.next ?? [] });
       })
       .catch(() => setFailed(true));
-  }, [router, tries]);
+  }, [router, tries, ready, token]);
 
   if (!profile)
     return (

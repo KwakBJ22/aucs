@@ -10,7 +10,7 @@
 from datetime import date
 from typing import Any
 
-from aucs_rules.pick import PickInput, diversify, pick_score, timing_by_days
+from aucs_rules.pick import PickInput, diversify, pick_score
 from aucs_rules.sale_rate import next_round_min_price
 
 from aucs_api import settings
@@ -41,10 +41,27 @@ def _photo_url(path: str | None) -> str | None:
 def home_picks(
     *, sigungu: list[str], max_cash: int | None, purpose: str | None, today: date
 ) -> dict[str, Any]:
-    """내 지역·현금 안 물건을 PICK-01 로 매겨 세 칸으로 나눔."""
+    """내 지역·현금 안 물건을 PICK-01 로 매겨 세 칸으로 나눔. purpose 가 없으면(로그인 전) 목적 점수 없이 점수 큰 것 위주."""
     if purpose == "resell":  # 시작 질문 「매도(되팔기)」 = 규칙의 투자 목적
         purpose = "invest"
     sql = _SQL
+    if (
+        purpose == "rent"
+    ):  # 임대 목적만: 같은 단지(전용 ±3㎡) 1년 월세 가운데값 — 물건 상세 「세놓으면」과 같은 자료
+        sql = sql.replace(
+            " as photo,",
+            " as photo, rl.monthly_krw as rent_monthly, rl.deposit_krw as rent_deposit,",
+        ).replace(
+            "left join lateral (select result",
+            """left join lateral (
+  select percentile_cont(0.5) within group (order by t.monthly_rent_krw)::bigint as monthly_krw,
+         percentile_cont(0.5) within group (order by t.deposit_krw)::bigint as deposit_krw
+  from core.trades t
+  where t.region_code = left(i.region_code, 8) || '00' and t.lot_no = i.lot_no and t.deal_kind = 'lease'
+    and t.monthly_rent_krw > 0 and t.deal_date >= %(today)s::date - 366
+    and (i.building_area_m2 is null or abs(t.area_m2 - i.building_area_m2) <= 3)) rl on true
+left join lateral (select result""",
+        )
     params: dict[str, Any] = {"today": today}
     if sigungu:
         sql += " and i.sigungu = any(%(sigungu)s)"
@@ -71,13 +88,15 @@ def home_picks(
                 failed_count=r["failed_count"],
                 area_m2=float(r["building_area_m2"]) if r["building_area_m2"] else None,
                 is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]), analysis=an,
+                d_day=(r["sale_date"] - today).days if r["sale_date"] else None,
+                rent={"monthly_krw": r.get("rent_monthly"), "deposit_krw": r.get("rent_deposit")},
             ),
             purpose,
         ).value  # fmt: skip
         if p["excluded"]:
             continue
         cd = card(r, today)
-        cd["score"] = p["score"] + timing_by_days(cd["d_day"])
+        cd["score"] = p["score"]
         cd["reasons"] = p["reasons"]
         cd["photo"] = _photo_url(r["photo"])
         cd["preview"] = r["status_code"] == PREVIEW
