@@ -74,3 +74,12 @@ def test_pause_hours_grow_within_day() -> None:
     from aucs_workers.collectors.polite import pause_hours
 
     assert [pause_hours(n) for n in (1, 2, 3, 4)] == [1, 2, 4, 4]
+
+
+def test_step_share_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # 매시 작업이 단계마다 몫을 나눠 줌 — 앞 단계가 시간 몫을 다 쓰지 않게(11/5)
+    monkeypatch.setenv("AUCS_STEP_REQ", "1")
+    p = Polite(sleep=lambda s: None, site=None, jitter=False)
+    p.call(lambda: {"ok": True}, "1")
+    with pytest.raises(DailyLimitReached):
+        p.call(lambda: {"ok": True}, "2")

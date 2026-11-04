@@ -13,6 +13,7 @@
 
 import json
 import math
+import os
 import random
 import time
 from collections.abc import Callable
@@ -68,6 +69,20 @@ def pause_hours(blocks_today: int) -> int:
     return min(BLOCK_MAX_HOURS, BLOCK_BASE_HOURS * 2 ** max(0, blocks_today - 1))
 
 
+def _save(f: Path, b: dict[str, Any]) -> None:
+    """한 번에 바꿔 씀(임시 파일 → 바꿔치기) — 쓰는 도중 다른 수집기가 빈 파일을 읽지 않게."""
+    LOGS.mkdir(exist_ok=True)
+    tmp = f.with_suffix(f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(b), encoding="utf-8")
+    for _ in range(10):
+        try:
+            os.replace(tmp, f)
+            return
+        except PermissionError:  # 윈도에서 다른 수집기가 막 읽는 중
+            time.sleep(0.1)
+    tmp.unlink(missing_ok=True)
+
+
 def hour_share(cap: int) -> int:
     """한 시간에 쓸 몫 — 하루 한도를 서비스 시간으로 나눔."""
     return math.ceil(cap / SERVICE_HOURS)
@@ -89,6 +104,9 @@ class Polite:
         self.site = site
         self._jitter = jitter
         self.hourly = hourly
+        # 매시 작업(court_hourly)이 단계마다 시간 몫을 나눠 줌 — 한 단계가 몫을 다 써서 뒤 단계가 굶지 않게(11/5)
+        step = os.environ.get("AUCS_STEP_REQ")
+        self.step_max = int(step) if step and step.isdigit() else None
         if site:
             f = _block_file(site)
             if f.exists():
@@ -113,10 +131,17 @@ class Polite:
 
     def _load(self) -> tuple[Path, dict[str, Any]]:
         f = _budget_file(self.site or "")
-        try:
-            b = json.loads(f.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001 — 처음이거나 깨졌으면 0부터
-            b = {}
+        b: dict[str, Any] = {}
+        for _ in range(
+            5
+        ):  # 다른 수집기가 쓰는 찰나에 읽으면 비어 보임(11/5 아침 0바이트) — 잠깐 뒤 다시
+            try:
+                b = json.loads(f.read_text(encoding="utf-8"))
+                break
+            except FileNotFoundError:
+                break
+            except Exception:  # noqa: BLE001
+                time.sleep(0.2)
         return f, roll(b, date.today().isoformat(), SITE_DAY_MAX.get(self.site or "", 0))
 
     def _spend(self) -> None:
@@ -140,8 +165,7 @@ class Polite:
         b["count"] += 1
         b["hours"][hh] = b["hours"].get(hh, 0) + 1
         b["last_ts"] = time.time()
-        LOGS.mkdir(exist_ok=True)
-        f.write_text(json.dumps(b), encoding="utf-8")
+        _save(f, b)
 
     def _shrink(self) -> None:
         """막힘 → 한도 40% 내리고 무사한 날 0부터."""
@@ -150,13 +174,16 @@ class Polite:
         f, b = self._load()
         b.update(cap=max(CAP_MIN, int(int(b["cap"]) * SHRINK)), ok_days=0, blocked=True,
                  blocks=int(b.get("blocks") or 0) + 1)  # fmt: skip
-        LOGS.mkdir(exist_ok=True)
-        f.write_text(json.dumps(b), encoding="utf-8")
+        _save(f, b)
 
     def call(self, fn: Callable[[], dict[str, Any]], what: str) -> dict[str, Any]:
         """fn 은 {"ok": bool, ...} 을 돌려주는 요청 한 번."""
         if self.daily_limit is not None and self.count >= self.daily_limit:
             raise DailyLimitReached(f"하루 한도 {self.daily_limit}건")
+        if (
+            self.step_max is not None and self.count >= self.step_max
+        ):  # 매시 작업이 단계마다 나눠 준 몫
+            raise DailyLimitReached(f"이 단계 몫 {self.step_max}번 — 다음 단계로")
         res: dict[str, Any] = {}
         for attempt in range(RETRIES):
             gap = REQUEST_GAP_SEC + self._j(1.0) - (time.monotonic() - self._last)

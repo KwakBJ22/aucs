@@ -15,16 +15,27 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from aucs_workers.collectors.polite import SITE_DAY_MAX, Polite, hour_share
+
 LOCK = Path(__file__).resolve().parents[4] / "logs" / "court_hourly.lock"
 SERVICE = range(6, 24)  # 법원 06:00~24:00 (00~01시도 열리지만 하루 몫을 나누는 18시간에 맞춤)
+# (이름, 명령, 시간 몫 가운데 이 단계 몫 %) — 11/5: 앞 단계가 몫을 다 써서 서류 보관·다음 회차가 한 번도 못 돌았음
 STEPS = [
-    ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"]),
-    ("추천 후보 사진", ["aucs_workers.collectors.court_docs", "--picks"]),
-    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"]),
-    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"]),
-    ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"]),
-    ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
+    ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"], None),
+    ("추천 후보 사진", ["aucs_workers.collectors.court_docs", "--picks"], 25),
+    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 25),
+    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 40),
+    ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"], 10),
+    ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]
+
+
+def _cap() -> int:
+    """오늘 법원 하루 한도(저절로 바뀐 값)."""
+    try:
+        return int(Polite(site="court", jitter=False)._load()[1]["cap"])
+    except Exception:  # noqa: BLE001 — 막힘 표시 중이면 시작 한도로
+        return SITE_DAY_MAX["court"]
 
 
 def busy() -> bool:
@@ -42,9 +53,15 @@ def main() -> None:
     LOCK.parent.mkdir(exist_ok=True)
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
-        for name, mod in STEPS:
+        share = hour_share(_cap())
+        for name, mod, pct in STEPS:
             print(f"── {name}", flush=True)
-            code = subprocess.call([sys.executable, "-m", *mod])
+            env = dict(os.environ)
+            if pct:
+                env["AUCS_STEP_REQ"] = str(
+                    max(7, share * pct // 100)
+                )  # 사건 하나는 끝낼 만큼(6~7번)
+            code = subprocess.call([sys.executable, "-m", *mod], env=env)
             if code != 0:
                 print(f"   {name} 멈춤({code}) — 한도·막힘이면 다음 시간에 이어서", flush=True)
     finally:
