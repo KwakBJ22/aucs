@@ -26,7 +26,6 @@ from aucs_workers.extract.appraisal_pdf import read_pdf
 from aucs_workers.jobs.runlog import run
 
 DAY_MAX = 150  # 하루 원본 수(입찰 가까운 순)
-COURT_REFERER = "https://www.courtauction.go.kr/"
 BASE = "https://ca.kapanet.or.kr"
 PROBE_LOG = Path(__file__).resolve().parents[4] / "logs" / "kapa_probe.txt"
 
@@ -62,7 +61,7 @@ _SRC = re.compile(r"""(?:src|href|location(?:\.href)?)\s*=\s*["']([^"']+)["']"""
 
 def fetch_pdf(ctx: Any, page: Any, url: str, probe: list[str] | None = None) -> bytes | None:
     """열람 주소 → PDF 바이트. ① 바로 PDF ② 페이지 안 iframe·주소 ③ 브라우저로 열어 내려받기 — 차례로."""
-    r = ctx.request.get(url, headers={"Referer": COURT_REFERER}, timeout=60000)
+    r = ctx.request.get(url, timeout=60000)
     body = r.body()
     if probe is not None:
         probe.append(f"① {r.status} {r.headers.get('content-type')} {len(body)}B")
@@ -99,7 +98,7 @@ def fetch_pdf(ctx: Any, page: Any, url: str, probe: list[str] | None = None) -> 
     try:
         with page.expect_download(timeout=30000) as dl:
             try:
-                page.goto(url, referer=COURT_REFERER, timeout=60000)
+                page.goto(url, timeout=60000)
             except Exception:  # noqa: BLE001 — 내려받기로 시작하면 goto 가 오류를 냄
                 pass
         path = dl.value.path()
