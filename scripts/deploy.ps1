@@ -50,7 +50,8 @@ function Step([string]$title) { Write-Host ""; Write-Host "▶ $title" -Foregrou
 $script:VercelExe = $null   # 설치된 vercel(대표 11/4 설치)이 로그인돼 있으면 그것, 아니면 npx(예전 방식)
 function Vercel-Cmd {
   if ($script:VercelExe) { return $script:VercelExe }
-  $g = (Get-Command vercel -ErrorAction SilentlyContinue)
+  # vercel.cmd·vercel.ps1 둘이 같이 잡히면 배열이 되어 「&」가 못 부름(11/4) → 실행 파일(.cmd) 하나만
+  $g = Get-Command vercel -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   $script:VercelExe = @('npx', '--yes', 'vercel')
   if ($g) {
     $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
