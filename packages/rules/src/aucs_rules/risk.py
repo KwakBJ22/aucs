@@ -48,7 +48,7 @@ RULE_TYPE = {
     "risk.over_cost": "T11", "risk.no_loan": "T11",
     # 감정평가 요항(11/4)
     "risk.greenbelt": "T9", "risk.edu_zone": "T9", "risk.permit_exempt": "T9",
-    "risk.no_road": "T11", "risk.narrow_road": "T11", "risk.extra_building": "T8", "risk.doc_diff": "T10",
+    "risk.old_appraisal": "T11", "risk.no_road": "T11", "risk.narrow_road": "T11", "risk.extra_building": "T8", "risk.doc_diff": "T10",
 }  # fmt: skip
 
 
@@ -197,6 +197,13 @@ def signals(f: dict[str, Any]) -> list[Signal]:
                 "risk.low_appraisal", "info", "감정가가 시세보다 낮아요 — 더 높게 팔릴 수 있어요",
                 Status.ESTIMATED if old else Status.NEEDS_CHECK, ratio=round(app / mkt, 3),
             )  # fmt: skip
+    # 오래된 감정(11/4): 가격시점에서 1년 넘게 지났으면 알림 — 저평가 신호가 이미 나왔으면 되풀이하지 않음
+    ad1, as1 = f.get("appraisal_date"), f.get("as_of")
+    if isinstance(ad1, date) and isinstance(as1, date) and (as1 - ad1).days >= 365:
+        if not any(s.rule_id == "risk.low_appraisal" for s in out):
+            years = (as1 - ad1).days // 365
+            add("risk.old_appraisal", "info", f"감정한 지 {years}년 넘었어요 — 지금 값과 다를 수 있어요",
+                Status.CONFIRMED, appraisal_date=str(ad1))  # fmt: skip
     if f.get("commercial_over_limit"):
         add(
             "risk.commercial_over",

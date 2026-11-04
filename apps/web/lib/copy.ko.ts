@@ -894,6 +894,7 @@ export const copy = {
       source: "법원 감정평가요항표", // 평가사 이름은 원본을 받으면 이 자리에(○○감정평가사)
       more: (n: number) => `${n}가지 더 보기`,
       less: "접기",
+      asOf: (d: string) => `${d} 기준`,
     },
     bldg: {
       built: "건물 나이",

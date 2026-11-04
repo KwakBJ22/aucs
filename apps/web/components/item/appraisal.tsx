@@ -13,7 +13,11 @@ export function AppraisalPoints({ a }: { a: NonNullable<ItemDetail["appraisal"]>
     <div className="m-block mt-10">
       <div className="fs-md fw-7">
         {c.head}
-        <span className="sub fw-4"> · {a.firm ?? c.source}</span>
+        <span className="sub fw-4">
+          {" "}
+          · {a.firm ?? c.source}
+          {a.price_date && ` · ${c.asOf(a.price_date)}`}
+        </span>
       </div>
       {rows.map((p) => (
         <div key={p.label} className="py-6 px-0 fs-sm">

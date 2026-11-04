@@ -7,7 +7,7 @@
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
-감정평가서·명세서 PDF 는 받지 않습니다(데이터만). 원본은 raw 에 추가만 하므로
+명세서 PDF 는 받지 않습니다(데이터만). 감정평가서는 번호·가격시점만 받고 원본은 kapa_pdf(11/4). 원본은 raw 에 추가만 하므로
 다시 받을 때 비어 온 종류는 예전 것이 그대로 남습니다.
 """
 
@@ -251,7 +251,30 @@ def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str,
         except Exception as e:  # noqa: BLE001 — 물건상세만 실패하면 나머지는 저장
             if type(e).__name__ == "Blocked" and "물건상세" not in str(e):
                 raise
+    out["appraisal"] = fetch_appraisal_info(post, court, cs, out)
     return out
+
+
+def fetch_appraisal_info(
+    post: Any, court: str, cs: str, out: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """감정평가서 정보(11/4 — KAPA 허락): 감정서 번호 · 가격시점 · 작성일. 화면 「감정평가서 보기」 팝업(PGJ15BP03)과 같은 요청.
+
+    원본 PDF 는 이 번호로 kapa_pdf 수집기가 받음. 감정평가서가 없는 사건은 빈 값. 실패해도 다른 서류는 저장."""
+    info = next((d.get("dma_result", {}).get("dspslGdsDxdyInfo") or {} for k, d in out.items()
+                 if k.startswith("item_detail_") and d), {})  # fmt: skip
+    body = {"dma_srchAeeWevl": {"cortOfcCd": court, "cortSptNm": COURTS.get(court, ""), "csNo": cs,
+                                "auctnInfOriginDvsCd": "4", "dspslDxdyYmd": info.get("dspslDxdyYmd") or "",
+                                "pgmId": "PGJ15BP03"}}  # fmt: skip
+    try:
+        d = post("/pgj/pgj15B/selectAeeWevlInfo.on", body, "감정평가서 정보")
+    except Exception:  # noqa: BLE001
+        return {}
+    inf = d.get("dma_ordTsIndvdAeeWevlInf") or {}
+    if not inf.get("aeeWevlNo"):
+        return {}
+    # ipcheck 같은 접속 정보는 버리고 감정서 칸만
+    return {"info": inf, "orders": d.get("dlt_aeeWevlOrdTsLst") or []}
 
 
 def save_case(

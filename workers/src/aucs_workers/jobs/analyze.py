@@ -108,6 +108,22 @@ def load_detail(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
     return dict(((row or {}).get("payload") or {}).get("dma_result") or {})
 
 
+def load_appraisal(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
+    """감정평가서 정보(raw 'appraisal' — 가격시점·작성일)와 원본에서 읽은 회사 이름(raw 'appraisal_pdf'), 11/4."""
+    rows = cur.execute(
+        """select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw
+           where case_id = %s and doc_kind in ('appraisal', 'appraisal_pdf') order by doc_kind, fetched_at desc""",
+        (item["case_id"],),
+    ).fetchall()
+    by = {r["doc_kind"]: r["payload"] or {} for r in rows}
+    info = (by.get("appraisal") or {}).get("info") or {}
+    ymd = str(info.get("dspslPrcCrtrYmd") or "")
+    return {
+        "price_date": date(int(ymd[:4]), int(ymd[4:6]), int(ymd[6:8])) if len(ymd) == 8 else None,
+        "firm": (by.get("appraisal_pdf") or {}).get("firm"),
+    }
+
+
 def load_spec(detail: dict[str, Any]) -> dict[str, Any] | None:
     """물건상세의 명세서 칸 (작성 전이면 None)."""
     info = detail.get("dspslGdsDxdyInfo") or {}
@@ -204,6 +220,9 @@ def analyze_item(
     facts = build_facts(item, events, tenants, has_sr, over)
     for k, v in af.items():
         facts.setdefault(k, v)
+    apr = load_appraisal(cur, item)
+    if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음
+        facts.update(appraisal_date=apr["price_date"], as_of=today)
     # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도
     sf = spec_facts(load_spec(detail))
     spec_note = sf.pop("spec_note", "")
@@ -277,7 +296,11 @@ def analyze_item(
             )
             if k in af
         }
-        if points
+        | {
+            "firm": apr["firm"],
+            "price_date": apr["price_date"].isoformat() if apr["price_date"] else None,
+        }
+        if points or apr["price_date"]
         else None,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,

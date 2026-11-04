@@ -1,4 +1,4 @@
-"""아침 묶음 (10/18 대표님): 매각결과 → 물건 수집 → 건축물대장(10/27) → 공매(10/28) → 바로 분석 → 서류 보관 → 다음 회차 미리·추천 후보 사진(11/4) → 받은 물건 다시 분석 → 첫 화면 숫자 새로(11/4) → 알림.
+"""아침 묶음 (10/18 대표님): 매각결과 → 물건 수집 → 건축물대장(10/27) → 공매(10/28) → 바로 분석 → 서류 보관 → 다음 회차 미리·추천 후보 사진·감정평가서 원본(11/4) → 받은 물건 다시 분석 → 첫 화면 숫자 새로(11/4) → 알림.
 
 작업 스케줄러가 매일 07:00에 부르고, PC가 꺼져 있었으면 켜지는 순간 시작합니다(StartWhenAvailable).
 순서가 섞이지 않도록 한 작업 안에서 차례로 돌립니다. 한 단계가 실패해도 다음 단계는 계속하고,
@@ -20,6 +20,7 @@ STEPS = [
     ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"]),
     ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"]),
     ("추천 후보 사진", ["aucs_workers.collectors.court_docs", "--picks"]),
+    ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"]),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),
     ("알림", ["aucs_workers.jobs.notify"]),

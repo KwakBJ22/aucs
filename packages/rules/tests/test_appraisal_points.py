@@ -98,3 +98,14 @@ def test_incheon_small_lease_class() -> None:
     assert region_class("인천광역시", "연수구", None, d, False).value == "metro"
     assert region_class("인천광역시", "강화군", None, d, None).value == "other"
     assert region_class("경기도", "남양주시", None, d, True).value == "overcrowded"
+
+
+def test_old_appraisal_info() -> None:
+    s = {
+        x.rule_id: x
+        for x in signals({"appraisal_date": date(2022, 3, 22), "as_of": date(2026, 11, 4)})
+    }
+    assert s["risk.old_appraisal"].level == "info" and "4년" in s["risk.old_appraisal"].title
+    assert "risk.old_appraisal" not in {
+        x.rule_id for x in signals({"appraisal_date": date(2026, 6, 1), "as_of": date(2026, 11, 4)})
+    }

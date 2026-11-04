@@ -253,6 +253,11 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                 "and doc_kind = %s order by fetched_at desc limit 1",
                 (item_id, f"item_detail_{item_no}"),
             )
+            q_apr = c.execute(
+                f"""select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw where case_id = {_CASE}
+                    and doc_kind in ('appraisal', 'appraisal_pdf') order by doc_kind, fetched_at desc""",
+                (item_id,),
+            )
             q_docs = c.execute(
                 f"select doc_kind, max(fetched_at) as t from raw.court_doc_raw where case_id = {_CASE} group by 1",
                 (item_id,),
@@ -283,6 +288,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         tenants = q_tenants.fetchall()
         red = q_red.fetchone()
         sp = q_spec.fetchone()
+        apr = {x["doc_kind"]: x["payload"] or {} for x in q_apr.fetchall()}
         doc_times = {x["doc_kind"]: x["t"] for x in q_docs.fetchall()}
         hol = [x["holiday_date"] for x in q_hol.fetchall()]
         trades = q_trades.fetchall()
@@ -302,20 +308,26 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
-    out["appraisal"] = appraisal_section(sp["payload"] if sp else None)
+    out["appraisal"] = appraisal_section(sp["payload"] if sp else None, apr)
     return out
 
 
-def appraisal_section(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+def appraisal_section(
+    payload: dict[str, Any] | None, apr: dict[str, dict[str, Any]] | None = None
+) -> dict[str, Any] | None:
     """「감정평가 요점」 칸(11/4 대표님 — 개인정보 가리고 쓰기 허락, 평가사 이름을 곁에 붙임).
 
     법원 물건상세의 감정평가요항표 요약 글. 회사 이름은 이 자료에 없어(문건송달에도 가려져 있음)
-    감정평가서 원본을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음."""
+    감정평가서 원본(kapa_pdf)을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음. 가격시점은 법원 감정평가서 정보."""
     dr = (payload or {}).get("dma_result") or {}
     points = parse_points(dr.get("aeeWevlMnpntLst"))
-    if not points:
+    a = apr or {}
+    ymd = str(((a.get("appraisal") or {}).get("info") or {}).get("dspslPrcCrtrYmd") or "")
+    price_date = f"{ymd[:4]}.{ymd[4:6]}.{ymd[6:8]}" if len(ymd) == 8 else None
+    firm = (a.get("appraisal_pdf") or {}).get("firm")
+    if not points and not price_date:
         return None
-    return {"points": points, "firm": None}
+    return {"points": points, "firm": firm, "price_date": price_date}
 
 
 def photos(item_id: str) -> list[str]:
