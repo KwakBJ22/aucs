@@ -23,9 +23,11 @@ SERVICE = range(6, 24)  # 법원 06:00~24:00 (00~01시도 열리지만 하루 �
 STEPS = [
     ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"], None),
     # 11/7: 홈은 사진 있는 물건만 띄움 → 홈에 뜰 물건 사진을 가장 크게(물건상세 한 번이라 같은 몫으로 5배쯤)
-    ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 35),
-    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 20),
-    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 35),
+    # 11/7 오전: 물건상세 첫 바퀴(모든 진행 물건, 약 9,700번 · 일주일 남짓) — 서류 보관 35 → 20, 사진 35 → 30, 다음 회차 20 → 15
+    ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 30),
+    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 15),
+    ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 25),
+    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 20),
     ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"], 10),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]

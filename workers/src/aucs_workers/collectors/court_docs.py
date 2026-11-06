@@ -4,10 +4,11 @@
     uv run python -m aucs_workers.collectors.court_docs --watched        # 관심에 담은 뒤 아직 서류를 안 받은 물건만(낮에 매시)
     uv run python -m aucs_workers.collectors.court_docs --next           # 유찰된 물건의 다음 회차·사진 미리(11/4, 하루 300)
     uv run python -m aucs_workers.collectors.court_docs --picks          # 홈에 뜰 물건 중 사진 없는 것(11/7, 가볍게)
+    uv run python -m aucs_workers.collectors.court_docs --details        # 진행 물건 중 물건상세를 한 번도 안 받은 것(11/7, 가볍게)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
-가볍게(11/7 — --picks·--next·--photos): 물건상세만 받음. 사진·명세서 내용·감정 요점·기일 목록이 그 한 요청에 다 있음.
+가볍게(11/7 — --picks·--next·--photos·--details): 물건상세만 받음. 사진·명세서 내용·감정 요점·기일 목록이 그 한 요청에 다 있음.
 사건내역(물건 번호는 우리 목록에 있음)·기일내역(물건상세의 기일 목록으로 대신)은 건너뛰고, 감정평가서 정보는 사건당 한 번.
 현황조사·문건송달은 입찰 2주 안에 서류 보관(--archive)이 받음. 사건 하나에 7번 → 1~2번.
 명세서 PDF 는 받지 않습니다(데이터만). 감정평가서는 번호·가격시점만 받고 원본은 kapa_pdf(11/4). 원본은 raw 에 추가만 하므로
@@ -36,6 +37,8 @@ CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/
 ARCHIVE_MAX = 150  # 11/4 오후: 300 → 150 (법원이 집 IP 를 막음), 대상은 모든 부동산 그대로
 QUEUE_MAX = 10  # 5분마다: 손님이 연 물건의 서류(요청 줄) — 11/4 40 → 10
 NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4, 300 → 100)
+DETAILS_MAX = 300  # 한 번에: 물건상세 첫 바퀴(11/7 — 요항·토지건물 나눔·제시외·대지권을 모든 진행 물건에, 실제 양은 시간 몫이 정함)
+DETAILS_DAYS = 45  # 입찰 이만큼 안의 진행 물건
 PICKS_MAX = 300  # 한 번에: 홈에 뜰 물건 중 사진 없는 것(11/7 가볍게 받으므로 50 → 300, 실제 양은 시간 몫이 정함)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
 ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
@@ -156,6 +159,27 @@ def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str,
             limit %(n)s""",
         {"today": today, "to": today + timedelta(days=14), "to_next": today + timedelta(days=35),
          "usages": list(ARCHIVE_USAGES), "n": PICKS_MAX},
+    ).fetchall()  # fmt: skip
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
+
+
+def details_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """진행 물건(입찰 45일 안) 가운데 물건상세를 한 번도 안 받은 사건 — 입찰 가까운 순, 아파트류 먼저(11/7).
+
+    요항·사진·명세서 내용·토지건물 감정가·제시외 건물·대지권이 물건상세 한 번에 있어 모든 진행 물건에 한 번씩 받음.
+    물건 번호가 많은 사건(6개 넘음)은 요청이 많아 뒤로."""
+    rows = conn.execute(
+        f"""select c.court_code, c.case_no
+            from core.items i join core.cases c using (case_id)
+            where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone'
+              and i.sale_date between %(today)s and %(to)s
+              and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                              and (r.doc_kind like 'item_detail_%%' or r.fetched_at > now() - interval '3 days'))
+            group by c.case_id, c.court_code, c.case_no
+            order by (count(distinct i.item_no) > 6), min(i.sale_date), min({LIVE_FIRST})
+            limit %(n)s""",
+        {"today": today, "to": today + timedelta(days=DETAILS_DAYS), "usages": list(ARCHIVE_USAGES),
+         "n": DETAILS_MAX},
     ).fetchall()  # fmt: skip
     return [(court, case_no) for court, case_no in rows if court in COURTS]
 
@@ -364,6 +388,7 @@ def main() -> None:
         "--next", action="store_true", help="유찰된 물건의 다음 회차·사진 미리 받기(11/4)"
     )
     ap.add_argument("--picks", action="store_true", help="추천 후보 중 사진 없는 것(11/4)")
+    ap.add_argument("--details", action="store_true", help="물건상세를 안 받은 진행 물건(11/7)")
     ap.add_argument(
         "--queue", action="store_true", help="손님이 연 물건의 서류 요청(11/4, 5분마다)"
     )
@@ -404,12 +429,14 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
             req_ids.extend(ids)
         elif a.picks:
             targets = pick_photo_targets(conn, date.today())
+        elif a.details:
+            targets = details_targets(conn, date.today())
         else:
             targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
         if not targets:
             return
-        light = bool(a.picks or a.next or a.photos)
+        light = bool(a.picks or a.next or a.photos or a.details)
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
             page = browser.new_page()
@@ -418,7 +445,10 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
                 for court, case_no in targets:
                     try:
                         seqs, has_apr = _known(conn, court, case_no) if light else ([], False)
-                        docs = fetch_case(page, polite, court, case_no, seqs or None, not has_apr)
+                        # 첫 바퀴(--details)는 물건상세만 — 감정평가서 정보(가격시점)는 홈 사진·서류 보관 때 받음
+                        docs = fetch_case(
+                            page, polite, court, case_no, seqs or None, not (has_apr or a.details)
+                        )
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
                         break
