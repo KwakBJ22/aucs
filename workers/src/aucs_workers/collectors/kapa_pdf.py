@@ -9,6 +9,9 @@
 
     uv run python -m aucs_workers.collectors.kapa_pdf            # 관심 → 입찰 가까운 순, 하루 150건
     uv run python -m aucs_workers.collectors.kapa_pdf --probe    # 한 건만 — 무슨 일이 있었는지 logs/kapa_probe.txt
+    uv run python -m aucs_workers.collectors.kapa_pdf --probe --headless   # 예전처럼 창 없는 크롬으로(견줘 보기)
+
+11/7: 창 없는 크롬(headless)에서는 KAPA 화면이 비어 나옴(휴대폰·보통 크롬은 열림) → 기본을 「창을 화면 밖에 띄운 보통 크롬」으로.
     uv run python -m aucs_workers.collectors.kapa_pdf --probe --show --case B000210 2023타경106499   # 그 사건, 창을 띄워서
 """
 
@@ -126,7 +129,8 @@ def download(page: Any, url: str, probe: list[str] | None) -> bytes | None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true")
-    ap.add_argument("--show", action="store_true")
+    ap.add_argument("--show", action="store_true", help="창을 화면 안에 띄움")
+    ap.add_argument("--headless", action="store_true", help="예전처럼 창 없는 크롬(견줘 보기용)")
     ap.add_argument("--case", nargs=2, metavar=("법원코드", "사건번호"), help="이 사건만(시험용)")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
@@ -154,7 +158,7 @@ def main() -> None:
                 print("   감정서 번호가 있는 진행 사건이 없어요 — court_docs 가 사건을 받으면 생김")
             return
         with sync_playwright() as p:
-            browser = launch_chrome(p, headless=not a.show)
+            browser = launch_chrome(p, headless=a.headless, offscreen=not a.show)
             ctx = browser.new_context(accept_downloads=True)
             page = ctx.new_page()
             probe: list[str] | None = [] if a.probe else None
