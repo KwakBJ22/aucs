@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 from typing import Any
 
+from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
 from aucs_rules.fmt import won
 from aucs_rules.risk import FAILURE_TYPES
@@ -318,16 +319,20 @@ def appraisal_section(
     """「감정평가 요점」 칸(11/4 대표님 — 개인정보 가리고 쓰기 허락, 평가사 이름을 곁에 붙임).
 
     법원 물건상세의 감정평가요항표 요약 글. 회사 이름은 이 자료에 없어(문건송달에도 가려져 있음)
-    감정평가서 원본(kapa_pdf)을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음. 가격시점은 법원 감정평가서 정보."""
+    감정평가서 원본(kapa_pdf)을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음. 가격시점은 법원 감정평가서 정보.
+    감정가 나눔(11/7): 토지·건물 금액 · 제시외 건물 · 대지권도 같은 물건상세에서."""
     dr = (payload or {}).get("dma_result") or {}
     points = parse_points(dr.get("aeeWevlMnpntLst"))
     a = apr or {}
     ymd = str(((a.get("appraisal") or {}).get("info") or {}).get("dspslPrcCrtrYmd") or "")
     price_date = f"{ymd[:4]}.{ymd[4:6]}.{ymd[6:8]}" if len(ymd) == 8 else None
     firm = (a.get("appraisal_pdf") or {}).get("firm")
-    if not points and not price_date:
+    parts = appraisal_parts(
+        dr.get("gdsDspslObjctLst"), dr.get("gdsNotSugtBldLsstAll"), dr.get("rgltLandLstAll")
+    ).value
+    if not points and not price_date and not parts:
         return None
-    return {"points": points, "firm": firm, "price_date": price_date}
+    return {"points": points, "firm": firm, "price_date": price_date, "parts": parts or None}
 
 
 def photos(item_id: str) -> list[str]:

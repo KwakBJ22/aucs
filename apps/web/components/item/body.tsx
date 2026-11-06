@@ -36,7 +36,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             {b.note}
           </p>
         )}
-        {d.appraisal && <AppraisalPoints a={d.appraisal} />}
+        {d.appraisal && <AppraisalPoints a={d.appraisal} court={d.court} caseNo={d.case_no} />}
       </>
     );
   if (q.key === "hold")

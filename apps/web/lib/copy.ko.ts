@@ -895,6 +895,19 @@ export const copy = {
       more: (n: number) => `${n}가지 더 보기`,
       less: "접기",
       asOf: (d: string) => `${d} 기준`,
+      // 감정가 나눔(11/7) — 물건상세의 목록별 감정가 · 제시외 건물 · 대지권
+      land: "토지",
+      building: "건물",
+      buildingPct: (p: number) => `건물값이 감정가의 ${p}%`,
+      landOnly: "땅만 팔려요(건물은 빠져요)",
+      buildingOnly: "건물만 팔려요(땅은 빠져요)",
+      landRight: "대지권",
+      landRightV: (m: string, all: string) => `${m}㎡ (땅 전체 ${all}㎡ 가운데)`,
+      extras: "제시외 건물",
+      extrasV: (n: number, v: string | null) => (v ? `${n}개 · ${v}` : `${n}개`),
+      original: "감정평가서 원본 보기 (법원)",
+      originalHint: (court: string, no: string) =>
+        `법원 화면에서 ${court} ${no} 를 찾아 「감정평가서」를 누르세요`,
     },
     bldg: {
       built: "건물 나이",

@@ -16,6 +16,7 @@ from typing import Any
 
 import psycopg
 from aucs_rules import ENGINE_VERSION
+from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.costs import commercial_over_limit
@@ -215,6 +216,12 @@ def analyze_item(
     points = parse_points(detail.get("aeeWevlMnpntLst"))
     af = appraisal_facts(points).value
     hint = bool(af.get("overcrowded")) if points else None
+    # 감정가 나눔(11/7): 토지·건물 금액 · 제시외 건물 · 대지권 — 원본 없이 물건상세로
+    parts = appraisal_parts(
+        detail.get("gdsDspslObjctLst"),
+        detail.get("gdsNotSugtBldLsstAll"),
+        detail.get("rgltLandLstAll"),
+    ).value
     over = commercial_over(item, tenants, commercial_table, today, hint)
     market = load_market(conn, item, today)
     facts = build_facts(item, events, tenants, has_sr, over)
@@ -284,6 +291,7 @@ def analyze_item(
         "tenant_count": len(tenants),
         "redev": redev,
         "building": bldg,
+        "parts": parts or None,
         # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
         "appraisal": {
             k: af[k]
@@ -304,7 +312,7 @@ def analyze_item(
         else None,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
-               "tenants": tenants, "market": market, "building": bldg, "engine": ENGINE_VERSION})  # fmt: skip
+               "tenants": tenants, "market": market, "building": bldg, "parts": parts, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),

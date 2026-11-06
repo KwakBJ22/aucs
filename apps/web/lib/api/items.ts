@@ -206,9 +206,28 @@ export type ItemDetail = ItemCard & {
     points: { label: string; text: string }[];
     firm: string | null;
     price_date?: string | null; // 가격시점 2022.03.22
+    parts?: AppraisalParts | null; // 감정가 나눔(11/7)
   } | null; // 감정평가 요점(11/4)
   outcome?: Outcome | null; // 지난 기일 결과(앞으로 잡힌 기일이 없을 때, 11/1) // 법원 현장 사진(휴대폰 크기, 매각 뒤 30일 지나면 없음)
   computed_at: string | null;
+};
+
+// 감정가 나눔(11/7, 물건상세): 토지·건물 금액 · 제시외 건물 · 대지권
+export type AppraisalParts = {
+  kind: "land_only" | "building_only" | "land_and_building" | "unit" | null;
+  land_krw: number | null;
+  building_krw: number | null;
+  unit_krw: number | null;
+  building_pct: number | null;
+  extras: {
+    use: string | null;
+    area_m2: number | null;
+    structure: string | null;
+    krw: number | null;
+  }[];
+  extras_krw: number | null;
+  land_right_m2: number | null;
+  land_total_m2: number | null;
 };
 
 export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
