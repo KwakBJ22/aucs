@@ -3,10 +3,13 @@
     uv run python -m aucs_workers.collectors.court_docs --archive        # 보관 수집 (서울·경기 아파트·다세대·오피스텔, 관심 물건 먼저)
     uv run python -m aucs_workers.collectors.court_docs --watched        # 관심에 담은 뒤 아직 서류를 안 받은 물건만(낮에 매시)
     uv run python -m aucs_workers.collectors.court_docs --next           # 유찰된 물건의 다음 회차·사진 미리(11/4, 하루 300)
-    uv run python -m aucs_workers.collectors.court_docs --picks          # 추천 후보 중 사진 없는 것(11/4, 하루 100)
+    uv run python -m aucs_workers.collectors.court_docs --picks          # 홈에 뜰 물건 중 사진 없는 것(11/7, 가볍게)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
+가볍게(11/7 — --picks·--next·--photos): 물건상세만 받음. 사진·명세서 내용·감정 요점·기일 목록이 그 한 요청에 다 있음.
+사건내역(물건 번호는 우리 목록에 있음)·기일내역(물건상세의 기일 목록으로 대신)은 건너뛰고, 감정평가서 정보는 사건당 한 번.
+현황조사·문건송달은 입찰 2주 안에 서류 보관(--archive)이 받음. 사건 하나에 7번 → 1~2번.
 명세서 PDF 는 받지 않습니다(데이터만). 감정평가서는 번호·가격시점만 받고 원본은 kapa_pdf(11/4). 원본은 raw 에 추가만 하므로
 다시 받을 때 비어 온 종류는 예전 것이 그대로 남습니다.
 """
@@ -24,7 +27,7 @@ from aucs_workers.collectors.court_site import COURTS
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
-from aucs_workers.extract.case_docs import apply_case_docs
+from aucs_workers.extract.case_docs import apply_case_docs, apply_next_sales, detail_schedule
 from aucs_workers.jobs.runlog import run
 from aucs_workers.photos import pull_pics
 from aucs_workers.photos import store as store_photos
@@ -33,7 +36,7 @@ CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/
 ARCHIVE_MAX = 150  # 11/4 오후: 300 → 150 (법원이 집 IP 를 막음), 대상은 모든 부동산 그대로
 QUEUE_MAX = 10  # 5분마다: 손님이 연 물건의 서류(요청 줄) — 11/4 40 → 10
 NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4, 300 → 100)
-PICKS_MAX = 50  # 하루: 추천 후보(입찰 1~6주 남음) 중 사진 없는 것(11/4 100 → 50)
+PICKS_MAX = 300  # 한 번에: 홈에 뜰 물건 중 사진 없는 것(11/7 가볍게 받으므로 50 → 300, 실제 양은 시간 몫이 정함)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
 ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
 
@@ -114,7 +117,7 @@ LIVE_FIRST = "case when i.usage_name = any(%(usages)s) then 0 else 1 end"
 def next_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     """유찰된 뒤 아직 다음 기일을 모르는 사건(지난 2주) — 아파트류 먼저, 감정가 대비 싼 순(11/4).
 
-    기일내역을 받으면 apply_next_sales 가 다음 기일·최저가를 넣음. 사진도 같이 받음.
+    물건상세의 기일 목록으로 apply_next_sales 가 다음 기일·최저가를 넣음(11/7). 사진도 같이 받음.
     """
     rows = conn.execute(
         f"""select c.court_code, c.case_no
@@ -123,7 +126,8 @@ def next_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]
               and exists (select 1 from core.sale_results s where s.item_id = i.item_id and s.result = 'failed'
                           and s.sale_date = i.sale_date)
               and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
-                              and r.doc_kind = 'schedule' and r.fetched_at::date > i.sale_date)
+                              and (r.doc_kind = 'schedule' or r.doc_kind like 'item_detail_%%')
+                              and r.fetched_at::date > i.sale_date)
             group by c.case_id, c.court_code, c.case_no
             order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
             limit %(n)s""",
@@ -133,12 +137,16 @@ def next_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]
 
 
 def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
-    """추천 후보(입찰 7~45일 남음) 가운데 사진이 없는 사건 — 아파트류 먼저, 감정가 대비 싼 순(11/4)."""
+    """홈에 뜰 물건(11/7) 가운데 사진이 없는 사건 — 입찰 14일 안 공고된 것 + 유찰 뒤 다음 회차(35일 안).
+
+    홈은 사진 있는 물건만 띄우므로 이것이 먼저. 아파트류 먼저, 감정가 대비 싼 순.
+    """
     rows = conn.execute(
         f"""select c.court_code, c.case_no
             from core.items i join core.cases c using (case_id)
-            where {AREA} and {REAL_ESTATE} and i.sale_date between %(from)s and %(to)s
-              and i.status_code is distinct from 'gone'
+            where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone'
+              and (i.sale_date between %(today)s and %(to)s
+                   or (i.status_code = 'preview' and i.sale_date between %(today)s and %(to_next)s))
               and not exists (select 1 from core.item_photos p where p.case_id = c.case_id)
               -- 매시 돌므로(11/4) 법원에 사진이 없는 사건을 매번 다시 받지 않게 사흘에 한 번만
               and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
@@ -146,7 +154,7 @@ def pick_photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str,
             group by c.case_id, c.court_code, c.case_no
             order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
             limit %(n)s""",
-        {"from": today + timedelta(days=7), "to": today + timedelta(days=45),
+        {"today": today, "to": today + timedelta(days=14), "to_next": today + timedelta(days=35),
          "usages": list(ARCHIVE_USAGES), "n": PICKS_MAX},
     ).fetchall()  # fmt: skip
     return [(court, case_no) for court, case_no in rows if court in COURTS]
@@ -194,8 +202,13 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
     return (first + rest)[:ARCHIVE_MAX]
 
 
-def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str, dict[str, Any]]:
-    """한 사건의 서류 데이터를 종류별로 받습니다. 물건상세가 실패하면 그 종류만 빠집니다."""
+def fetch_case(
+    page: Any, polite: Polite, court: str, case_no: str,
+    light_seqs: list[int] | None = None, need_appraisal: bool = True,
+) -> dict[str, dict[str, Any]]:  # fmt: skip
+    """한 사건의 서류 데이터를 종류별로 받습니다. 물건상세가 실패하면 그 종류만 빠집니다.
+
+    light_seqs 가 있으면(11/7 가볍게) 그 물건 번호의 물건상세만 — 사건내역·기일·문건송달·현황조사는 건너뜀."""
     cs = internal_no(case_no)
 
     def post(path: str, body: dict[str, Any], label: str) -> dict[str, Any]:
@@ -203,6 +216,11 @@ def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str,
         return dict(res.get("data") or {})
 
     out: dict[str, dict[str, Any]] = {}
+    if light_seqs:
+        _details(post, court, cs, light_seqs, out)
+        if need_appraisal:
+            out["appraisal"] = fetch_appraisal_info(post, court, cs, out)
+        return out
     out["case_info"] = post(
         "/pgj/pgj15A/selectAuctnCsSrchRslt.on",
         {"dma_srchCsDtlInf": {"cortOfcCd": court, "csNo": case_no}},
@@ -237,6 +255,15 @@ def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str,
         }
         or {1}
     )
+    _details(post, court, cs, seqs, out)
+    out["appraisal"] = fetch_appraisal_info(post, court, cs, out)
+    return out
+
+
+def _details(
+    post: Any, court: str, cs: str, seqs: list[int], out: dict[str, dict[str, Any]]
+) -> None:
+    """물건상세(물건 번호마다 한 번) — 사진·명세서 내용·감정 요점·기일 목록이 다 들어 있음."""
     for seq in seqs:
         body = {
             "dma_srchGdsDtlSrch": {
@@ -256,8 +283,6 @@ def fetch_case(page: Any, polite: Polite, court: str, case_no: str) -> dict[str,
         except Exception as e:  # noqa: BLE001 — 물건상세만 실패하면 나머지는 저장
             if type(e).__name__ == "Blocked" and "물건상세" not in str(e):
                 raise
-    out["appraisal"] = fetch_appraisal_info(post, court, cs, out)
-    return out
 
 
 def fetch_appraisal_info(
@@ -307,7 +332,24 @@ def save_case(
             (case_id, kind, Jsonb(data), checksum(data)),
         )
     apply_case_docs(conn, case_id, docs)
+    if "schedule" not in docs:  # 가볍게 받았으면 물건상세의 기일 목록으로 다음 회차(11/7)
+        for kind, data in docs.items():
+            if kind.startswith("item_detail_") and data:
+                apply_next_sales(conn, case_id, detail_schedule(data, int(kind.rsplit("_", 1)[1])))
     store_photos(conn, case_id, pics)
+
+
+def _known(conn: psycopg.Connection, court: str, case_no: str) -> tuple[list[int], bool]:
+    """우리 목록에 있는 물건 번호들과 감정평가서 정보를 이미 받았는지 — 가볍게 받을 때 법원에 다시 묻지 않으려고."""
+    case_id = f"{court}-{case_no}"
+    seqs = [r[0] for r in conn.execute(
+        "select distinct item_no from core.items where case_id = %s and item_no is not null order by 1", (case_id,)
+    ).fetchall()]  # fmt: skip
+    apr = conn.execute(
+        "select 1 from raw.court_doc_raw where case_id = %s and doc_kind = 'appraisal' limit 1",
+        (case_id,),
+    ).fetchone()
+    return seqs, apr is not None
 
 
 def main() -> None:
@@ -367,6 +409,7 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
         print(f"대상 {len(targets)}건")
         if not targets:
             return
+        light = bool(a.picks or a.next or a.photos)
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
             page = browser.new_page()
@@ -374,7 +417,8 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
             try:
                 for court, case_no in targets:
                     try:
-                        docs = fetch_case(page, polite, court, case_no)
+                        seqs, has_apr = _known(conn, court, case_no) if light else ([], False)
+                        docs = fetch_case(page, polite, court, case_no, seqs or None, not has_apr)
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
                         break

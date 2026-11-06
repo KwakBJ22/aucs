@@ -2,7 +2,7 @@
 
 작업 스케줄러가 매시 10분에 부르고, PC 가 꺼져 있다 켜지면 바로 한 번 돕니다(StartWhenAvailable).
 법원 서비스 시간(06~24시)에만 돌고, 시간마다 몫(하루 한도 ÷ 18, polite.py)을 다 쓰면 그 단계는 멈추고 다음 시간에 이어 받습니다.
-받는 순서(손님 눈에 먼저 띄는 것부터): 관심 물건 → 추천 후보 사진 → 다음 회차 미리 → 서류 보관 → 감정평가서 원본 → 분석.
+받는 순서(손님 눈에 먼저 띄는 것부터): 관심 물건 → 홈에 뜰 물건 사진(물건상세만, 11/7) → 다음 회차 미리 → 서류 보관 → 감정평가서 원본 → 분석.
 앞 차례가 아직 돌고 있으면(70분 안) 겹쳐 띄우지 않습니다.
 
     uv run python -m aucs_workers.jobs.court_hourly
@@ -22,9 +22,10 @@ SERVICE = range(6, 24)  # 법원 06:00~24:00 (00~01시도 열리지만 하루 �
 # (이름, 명령, 시간 몫 가운데 이 단계 몫 %) — 11/5: 앞 단계가 몫을 다 써서 서류 보관·다음 회차가 한 번도 못 돌았음
 STEPS = [
     ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"], None),
-    ("추천 후보 사진", ["aucs_workers.collectors.court_docs", "--picks"], 25),
-    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 25),
-    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 40),
+    # 11/7: 홈은 사진 있는 물건만 띄움 → 홈에 뜰 물건 사진을 가장 크게(물건상세 한 번이라 같은 몫으로 5배쯤)
+    ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 35),
+    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 20),
+    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 35),
     ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"], 10),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]

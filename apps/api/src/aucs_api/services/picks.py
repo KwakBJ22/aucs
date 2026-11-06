@@ -1,7 +1,9 @@
 """홈 「오늘의 추천」·「마감 임박」·「다음 달 더 싸지는 물건」(11/4 대표님).
 
 점수는 규칙 PICK-01(packages/rules/pick.py) 하나로 — 분석 결과(매일 아침 갱신)에서 그때 셈하므로 그날은 누구에게나 같은 값.
-- 추천: 입찰까지 10일 이상(현장 확인·서류 볼 시간) · 점수 순 · 같은 단지 1건·같은 구 2건까지
+11/7 대표님: 사진 없는 물건은 홈 세 칸 어디에도 띄우지 않음(법원은 입찰 2주 전쯤 사진을 올림).
+- 추천: 공고된 물건은 입찰 14일 안(1~14일) + 유찰 뒤 다음 회차(공고 전, 30일 안 — 지난 회차 사진이 있음) ·
+  점수 순 · 같은 단지 1건·같은 구 2건까지
 - 마감 임박: 7일 안 · 점수 70 이상만 짧게
 - 다음 달 더 싸지는 물건: ① 유찰 뒤 다음 기일이 잡힌 물건(공고 전, status_code='preview') ② 지금 최저가가
   같은 법원 낙찰가율보다 높아 이번엔 유찰될 것 같은 물건 — 「유찰되면 ○○원부터」
@@ -36,6 +38,12 @@ def _photo_url(path: str | None) -> str | None:
     if not path or not settings.SUPABASE_URL:
         return None
     return f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{path}"
+
+
+def _pick_window(x: dict[str, Any]) -> bool:
+    """추천 칸에 넣을 때(11/7): 공고된 물건 입찰 1~14일 남음, 유찰 뒤 다음 회차는 30일 안."""
+    d = x["d_day"] if x["d_day"] is not None else -1
+    return 1 <= d <= 30 if x["preview"] else 1 <= d <= 14
 
 
 def home_picks(
@@ -81,6 +89,8 @@ left join lateral (select result""",
 
     scored: list[dict[str, Any]] = []
     for r in rows:
+        if not r["photo"]:  # 사진 없는 물건은 홈에 안 띄움(11/7)
+            continue
         an = r["analysis"] or {}
         p = pick_score(
             PickInput(
@@ -109,7 +119,7 @@ left join lateral (select result""",
         scored.append(cd)
     scored.sort(key=lambda x: -x["score"])
 
-    picks = diversify([x for x in scored if (x["d_day"] or 0) >= 10], 8)
+    picks = diversify([x for x in scored if _pick_window(x)], 8)
     seen = {x["item_id"] for x in picks}
     soon = diversify(
         [x for x in scored if 0 <= (x["d_day"] or 0) <= 7 and x["score"] >= 70 and x["item_id"] not in seen], 4

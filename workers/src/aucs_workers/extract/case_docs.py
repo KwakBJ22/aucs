@@ -151,6 +151,26 @@ def next_sales(schedule: dict[str, Any], today: date) -> dict[int, dict[str, Any
     return out
 
 
+def detail_schedule(detail: dict[str, Any], seq: int) -> dict[str, Any]:
+    """물건상세의 기일 목록(gdsDspslDxdyLst) → 기일내역 꼴(11/7 — 기일내역 요청을 따로 하지 않으려고, 순수 함수).
+
+    종류 01 = 매각기일, 결과 002 = 유찰, 결과 없음 = 아직 안 열림. 다른 결과(매각 등)는 「기타」로 넣어 다음 기일로 보지 않음."""
+    rows = []
+    for r in (detail.get("dma_result") or {}).get("gdsDspslDxdyLst") or []:
+        ymd = str(r.get("dxdyYmd") or "")
+        if len(ymd) != 8:
+            continue
+        code = r.get("auctnDxdyRsltCd")
+        rows.append({
+            "auctnDxdyKndNm": "매각기일" if r.get("auctnDxdyKndCd") == "01" else "기타",
+            "dspslGdsSeq": seq,
+            "dxdyRslt": "" if not code else ("유찰" if code == "002" else "기타"),
+            "dxdyTime": f"{ymd[:4]}.{ymd[4:6]}.{ymd[6:]}",
+            "tsLwsDspslPrc": str(r.get("tsLwsDspslPrc") or ""),
+        })  # fmt: skip
+    return {"dlt_dxdyDtsLst": rows}
+
+
 def apply_next_sales(conn: psycopg.Connection, case_id: str, schedule: dict[str, Any]) -> int:
     """지난 회차에 머물러 있는 물건(기일이 지남)에 다음 기일·최저가를 넣고 「공고 전」으로 표시."""
     n = 0

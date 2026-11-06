@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from aucs_workers.extract.case_docs import next_sales
+from aucs_workers.extract.case_docs import detail_schedule, next_sales
 
 SCHED = {
     "dlt_dxdyDtsLst": [
@@ -23,3 +23,14 @@ def test_next_sale_after_failure() -> None:
 
 def test_past_next_date_ignored() -> None:
     assert next_sales(SCHED, date(2026, 11, 5)) == {}
+
+
+def test_detail_schedule_gives_next_round() -> None:
+    """물건상세 기일 목록만으로 다음 회차를 앎(11/7 — 기일내역 요청 생략)."""
+    detail = {"dma_result": {"gdsDspslDxdyLst": [
+        {"dxdyYmd": "20261013", "tsLwsDspslPrc": 164352000, "auctnDxdyKndCd": "01", "auctnDxdyRsltCd": "002"},
+        {"dxdyYmd": "20261117", "tsLwsDspslPrc": 131482000, "auctnDxdyKndCd": "01", "auctnDxdyRsltCd": None},
+        {"dxdyYmd": "20261124", "tsLwsDspslPrc": 0, "auctnDxdyKndCd": "02", "auctnDxdyRsltCd": None},
+    ]}}  # fmt: skip
+    got = next_sales(detail_schedule(detail, 1), date(2026, 11, 7))
+    assert got == {1: {"date": date(2026, 11, 17), "min_price_krw": 131482000, "failed_count": 1}}
