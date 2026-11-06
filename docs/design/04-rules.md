@@ -60,3 +60,9 @@
 - 추천: 역 이름·초등학교로 실거주·임대 가산(10-pick 3절).
 - 원본(11/4 KAPA 허락 — 「법원에서 받아 모두 활용」): court_docs 가 사건마다 `selectAeeWevlInfo.on`(화면 「감정평가서 보기」 팝업과 같은 요청)으로 감정서 번호·가격시점·작성일을 raw `appraisal` 에 · `kapa_pdf` 수집기가 `ca.kapanet.or.kr/view/{법원}/{사건}/{명령횟차}/{감정서 번호}/{작성일}` 에서 원본을 받아 회사 이름·쪽수·앞 6쪽 글만 raw `appraisal_pdf` 에(PDF 는 저장 안 함, 하루 300건).
 - 가격시점 → `appraisal_date` 사실: 감정가 저평가(risk.low_appraisal)가 제대로 돌고, 1년 넘으면 「감정한 지 N년」 알림(risk.old_appraisal, info).
+- 원본 받기(11/7): 창 없는 크롬에서는 KAPA 화면이 비어 나옴 → `kapa_pdf` 는 창을 화면 밖에 띄운 보통 크롬(`--headless` 로 예전 방식 견줘 보기). 손님은 상세 「감정평가서 원본 보기 (법원)」로 법원 화면에서 직접 열어 봄.
+
+## 감정가 나눔 (appraisal_parts.py, APPRAISAL-02, 11/7)
+- 원천: 같은 물건상세 — 목록별 감정가 `gdsDspslObjctLst.aeeEvlAmt`(`auctnLstDvsCd` 01 토지 · 02 건물 · 03 집합건물), 제시외 건물 `gdsNotSugtBldLsstAll`(목록마다 같은 줄이 되풀이 → 목록 번호·순번으로 하나만), 대지권 `rgltLandLstAll`(땅 면적 × 분자/분모).
+- 값: `kind`(land_only 땅만 · building_only 건물만 · land_and_building · unit) · 토지/건물 금액 · 건물값 비중 % · 제시외(쓰임·면적·구조·금액) · 대지권 ㎡. 분석 결과 `parts`, 상세 「감정평가 요점」 위에 걸린 것만.
+- 원본에만 있는 것: 위치도·지적도·평면도 · 평가 근거 · 회사 이름.
