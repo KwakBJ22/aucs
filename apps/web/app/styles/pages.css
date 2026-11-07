@@ -415,7 +415,7 @@
 }
 .board-col {
   flex: 1 1 0;
-  min-width: 140px;
+  min-width: 120px;
   background: var(--bg);
   border-radius: 12px;
   padding: 8px;
@@ -1275,4 +1275,12 @@ textarea.adm-input {
 }
 .legal-item li + li {
   margin-top: 6px;
+}
+/* 관리자 본문이 긴 오류 문장 때문에 화면 밖으로 늘어나던 것(11/7) */
+.adm-body {
+  min-width: 0;
+}
+.adm-job summary > .ellipsis {
+  flex: 1 1 auto;
+  min-width: 0;
 }
