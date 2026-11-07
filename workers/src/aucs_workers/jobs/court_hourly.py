@@ -26,9 +26,9 @@ STEPS = [
     # 11/7 오전: 물건상세 첫 바퀴(모든 진행 물건, 약 9,700번 · 일주일 남짓) — 서류 보관 35 → 20, 사진 35 → 30, 다음 회차 20 → 15
     ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 30),
     ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 15),
-    ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 25),
+    ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 35),
     ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 20),
-    ("감정평가서 원본", ["aucs_workers.collectors.kapa_pdf"], 10),
+    # 11/7 대표님: 당분간 이 노트북에서 감정평가서 원본(KAPA)을 받지 않음 — KAPA 가 자동 조회로 막음. 몫 10% 는 첫 바퀴로
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]
 
