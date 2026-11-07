@@ -87,8 +87,23 @@ def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | N
             if u.lower().split("?")[0].endswith(".pdf"):
                 seen.append(u)
 
+    def on_response(res: Any) -> None:
+        # 11/7: 열람 주소(/view/…)가 PDF 를 바로 돌려줄 수도 있음 — 이름이 .pdf 가 아니어도 내용 종류로 잡음
+        if "kapanet" not in res.url:
+            return
+        ctype = str(res.headers.get("content-type") or "")
+        kapa.append(f"  ← {res.status} {ctype[:40]} {res.url[:120]}")
+        if "pdf" in ctype.lower() and res.url not in seen:
+            seen.append(res.url)
+
+    def on_console(msg: Any) -> None:
+        kapa.append(f"  console {msg.type}: {str(msg.text)[:160]}")
+
     pid = f"aucsAeeWevl{n}"
     page.context.on("request", on_request)
+    page.context.on("response", on_response)
+    if probe is not None:
+        page.on("console", on_console)
     try:
         # 사람이 하듯 물건상세를 먼저 연 뒤 단추를 누름(11/4 — 대표님 화면은 물건상세에서 눌렀을 때 원본이 떴음)
         seq = int(info.get("dspslGdsSeq") or 1)
@@ -106,6 +121,17 @@ def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | N
             page.wait_for_timeout(500)
     finally:
         page.context.remove_listener("request", on_request)
+        page.context.remove_listener("response", on_response)
+        if probe is not None:
+            page.remove_listener("console", on_console)
+            # 열람 화면이 무엇을 그렸는지(빈 화면 원인 찾기) — KAPA 틀의 주소와 앞부분 HTML
+            for f in page.frames:
+                if "kapanet" in f.url:
+                    try:
+                        html = f.content()
+                    except Exception as e:  # noqa: BLE001
+                        html = f"(못 읽음 {type(e).__name__})"
+                    probe.append(f"KAPA 틀 {f.url[:160]}\n{html[:2500]}")
         try:
             page.evaluate(JS_CLOSE, pid)
             page.evaluate(JS_CLOSE, "aeeWevlPopUp")
