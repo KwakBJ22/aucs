@@ -41,7 +41,7 @@ def collections(
     if max_cash:
         sql += " and i.min_price_krw / 10 <= %(max_cash)s"
         params["max_cash"] = max_cash
-    sql += " order by i.sale_date limit 6000"
+    sql += " order by i.sale_date limit 20000"  # 전체 지역도 빠짐없이(11/7 — 6000 이면 먼 날 물건이 빠졌음)
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
         reduction = load_reduction(c, today)

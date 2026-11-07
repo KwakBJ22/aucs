@@ -15,7 +15,7 @@ def _x(**kw: object) -> CollectInput:
 
 def test_cheap_rising_safe() -> None:
     v = collect(_x()).value
-    assert v["cheap"]["reason"] == "시세보다 2억 원 낮게 살 여지"  # 예상 4억 vs 시세 6억
+    assert v["cheap"]["reason"] == "시세보다 2억 원(33%) 낮게 살 여지"  # 예상 4억 vs 시세 6억
     assert v["rising"]["reason"] == "감정가보다 지금 시세가 20% 높아요"
     assert v["safe"]["reason"] == "위험 신호 없음 · 임차인 없음"
     assert "special" not in v and "station" not in v

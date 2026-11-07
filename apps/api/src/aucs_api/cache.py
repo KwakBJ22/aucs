@@ -19,10 +19,11 @@ PREFIXES = ("/items", "/regions", "/pro/", "/home-feed", "/collections")
 # 공개 자료를 바꾸는 건 관리자 요청뿐 — 관심·메모·사용 기록 같은 회원 요청으로는 비우지 않음(10/27)
 CLEAR_ON = ("/admin",)
 
-LONG = {"/regions": 1800.0}  # 지역별 물건 수는 하루 한 번 바뀜 → 30분
+# 지역별 물건 수는 하루 한 번 바뀜 → 30분, 모아 보기는 분석(아침)마다 바뀜 → 10분
+LONG = {"/regions": 1800.0, "/collections": 600.0}
 # 보관 시간이 지나도 지난 값을 바로 주고 새 값은 뒤에서 받는 시간(11/4). 지역 수는 하루 한 번 바뀌므로 하루 —
 # 첫 손님이 잠든 서버가 깨는 몇 초를 기다리지 않게. 나머지는 1분.
-STALE = {"/regions": 86400}
+STALE = {"/regions": 86400, "/collections": 3600}
 _store: "OrderedDict[str, tuple[float, int, list[tuple[bytes, bytes]], bytes]]" = OrderedDict()
 _memos: list[dict[Any, Any]] = []
 

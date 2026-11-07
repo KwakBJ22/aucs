@@ -51,8 +51,9 @@ def collect(x: CollectInput) -> RuleResult:
     if market and not fatal:
         gap = market - expect
         if gap >= max(10_000_000, market * 0.1):
+            pct = round(gap * 100 / market)  # 비율 순으로 늘어놓으므로 이유에도 비율을(11/7)
             out["cheap"] = {
-                "reason": f"시세보다 {_won_short(gap)} 낮게 살 여지",
+                "reason": f"시세보다 {_won_short(gap)}({pct}%) 낮게 살 여지",
                 "sort": gap / market,
             }
         if market > app * 1.1:

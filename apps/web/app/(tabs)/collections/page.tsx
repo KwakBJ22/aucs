@@ -72,18 +72,20 @@ function CollectionsView() {
       )}
 
       <div className="col-chips quiet-scroll" role="tablist">
-        {t.list.map(([k, name]) => (
-          <button
-            key={k}
-            role="tab"
-            aria-selected={k === key}
-            className={`col-chip${k === key ? " on" : ""}`}
-            onClick={() => go(k, all)}
-          >
-            <b>{name}</b>
-            <span className="num">{sum ? t.count(sum[k]?.total ?? 0) : "·"}</span>
-          </button>
-        ))}
+        {t.list
+          .filter(([k]) => k === key || !sum || (sum[k]?.total ?? 0) > 0) // 빈 모음 칩은 숨김(11/7)
+          .map(([k, name]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={k === key}
+              className={`col-chip${k === key ? " on" : ""}`}
+              onClick={() => go(k, all)}
+            >
+              <b>{name}</b>
+              <span className="num">{sum ? t.count(sum[k]?.total ?? 0) : "·"}</span>
+            </button>
+          ))}
       </div>
 
       {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}

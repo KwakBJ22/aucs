@@ -1325,7 +1325,8 @@ textarea.adm-input {
 @media (min-width: 1024px) {
   .col-chips {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     margin: 20px 0 0;
     padding: 0;
     overflow: visible;
@@ -1350,5 +1351,13 @@ a.col-chip span {
 @media (min-width: 1024px) {
   a.col-chip {
     width: auto;
+  }
+}
+/* 좁은 폰(400px 이하)은 화면 좌우 여백이 16px — 칩 줄도 같은 만큼만 끝까지 */
+@media (max-width: 400px) {
+  .col-chips {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px 4px;
   }
 }
