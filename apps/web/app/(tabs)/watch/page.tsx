@@ -64,7 +64,7 @@ function StepRow({
           {choices.map((s) => (
             <button
               key={s}
-              className={`chip ${s === c.step ? "green" : "gray"} b-0 mh-36`}
+              className={`chip ${s === c.step ? "on" : "gray"} b-0 mh-36`}
 
               onClick={() => {
                 setOpen(false);
@@ -176,7 +176,7 @@ export default function Watch() {
       right={
         <div className="d-flex gap-6">
           <button
-            className={`chip ${recent ? "green" : "gray"} b-0 mh-32`}
+            className={`chip ${recent ? "on" : "gray"} b-0 mh-32`}
 
             onClick={() => setRecent(recent ? null : loadRecent())}
           >
@@ -340,7 +340,7 @@ export default function Watch() {
       {list && list.length > 0 && (
         <div className="d-flex gap-6 ox-auto pb-4">
           <button
-            className={`chip ${only === null ? "green" : "gray"} b-0 mh-32 nowrap`}
+            className={`chip ${only === null ? "on" : "gray"} b-0 mh-32 nowrap`}
 
             onClick={() => {
               setOnly(null);
@@ -362,7 +362,7 @@ export default function Watch() {
           {WATCH_STEPS.filter((s) => count(s) > 0).map((s) => (
             <button
               key={s}
-              className={`chip ${only === s ? "green" : "gray"} b-0 mh-32 nowrap`}
+              className={`chip ${only === s ? "on" : "gray"} b-0 mh-32 nowrap`}
 
               onClick={() => setOnly(only === s ? null : s)}
             >

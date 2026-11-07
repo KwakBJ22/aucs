@@ -306,11 +306,7 @@ export default function Find() {
               <button
                 key={s}
                 onClick={() => setSort(s)}
-                className="chip fs-sm py-6 px-10 b-0 mh-32"
-                style={{
-                  background: sort === s ? "var(--blue)" : "var(--gray-chip)",
-                  color: sort === s ? "#fff" : "var(--gray-text)",
-                }}
+                className={`chip ${sort === s ? "on" : "gray"} fs-sm py-6 px-10 b-0 mh-32`}
               >
                 {s === "deadline" ? t.sortDeadline : t.sortRate}
               </button>

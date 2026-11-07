@@ -423,17 +423,19 @@
   gap: 6px;
 }
 .pills button {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 17px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
   border: 0;
   background: var(--panel);
-  color: var(--text);
-  font-size: 13px;
+  color: var(--gray-text);
+  font-size: var(--fs-md);
+  font-weight: 500;
 }
+/* 고른 것은 진한 바탕(11/7 토스풍) */
 .pills button.on {
-  background: var(--blue-soft);
-  color: var(--blue-text);
+  background: var(--text);
+  color: var(--surface);
   font-weight: 700;
 }
 .switch-row {
@@ -1045,5 +1047,64 @@ textarea.adm-input {
 @media (min-width: 1024px) {
   .band-grid.tiles {
     gap: 12px;
+  }
+}
+
+/* 입찰가 계산(11/7 토스풍): 집 수 고르기·낮게/보통/높게·큰 금액 */
+.seg-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--gray-text);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+.seg-btn.on {
+  background: var(--text);
+  color: var(--surface);
+  font-weight: 700;
+}
+.tier-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12px 6px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--gray-text);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+.tier-btn.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.tier-btn.on .sub {
+  color: var(--blue-text);
+}
+.calc-range {
+  width: 100%;
+  margin-top: 20px;
+  accent-color: var(--blue);
+}
+.bid-amount {
+  margin-top: 8px;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+.cash-total {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+@media (min-width: 1024px) {
+  .bid-amount {
+    font-size: 40px;
+  }
+  .cash-total {
+    font-size: 26px;
   }
 }

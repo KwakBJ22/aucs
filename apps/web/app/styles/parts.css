@@ -51,6 +51,11 @@
   background: var(--orange-soft);
   color: var(--orange);
 }
+/* 누르는 칩에서 고른 것(11/7 토스풍): 진한 바탕 — 상태 표시(확인됨 등)는 초록 그대로 */
+.chip.on {
+  background: var(--text);
+  color: var(--surface);
+}
 .chip.blue {
   background: var(--blue-soft);
   color: var(--blue-text);

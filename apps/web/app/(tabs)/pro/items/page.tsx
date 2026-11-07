@@ -237,7 +237,7 @@ function ProItems() {
           {Object.entries(t.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${f.usage?.includes(k) ? "green" : "gray"} b-0 mh-30`}
+              className={`chip ${f.usage?.includes(k) ? "on" : "gray"} b-0 mh-30`}
 
               onClick={() => toggle("usage", k)}
             >

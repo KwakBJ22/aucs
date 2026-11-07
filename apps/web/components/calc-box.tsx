@@ -155,7 +155,7 @@ export function CalcBox({ id }: { id: string }) {
         {c.homes.map((label, i) => (
           <button
             key={label}
-            className={`chip ${homes === i ? "green" : "gray"} mh-36 b-0`}
+            className={`seg-btn ${homes === i ? "on" : ""}`}
 
             onClick={() => pickHomes(i)}
           >
@@ -217,15 +217,12 @@ export function CalcBox({ id }: { id: string }) {
       {d && s && (
         <>
           {d.cases.length > 0 && (
-            <div className="d-flex gap-6 mt-12">
+            <div className="d-flex gap-8 mt-12">
               {d.cases.map((x) => (
                 <button
                   key={x.key}
                   onClick={() => setBid(x.bid_krw)}
-                  className="f-1 py-8 px-4 r-8 b-0 c-inherit fs-xs"
-                  style={{
-                    background: s.bid_krw === x.bid_krw ? "var(--green-soft)" : "var(--panel)",
-                  }}
+                  className={`tier-btn ${s.bid_krw === x.bid_krw ? "on" : ""}`}
                 >
                   <b className="fs-sm">{c.cases[x.key]}</b>
                   <div>{won(x.bid_krw)}</div>
@@ -241,10 +238,10 @@ export function CalcBox({ id }: { id: string }) {
             step={d.slider.step}
             value={s.bid_krw}
             onChange={(e) => setBid(Number(e.target.value))}
-            className="w-full mt-12"
+            className="calc-range"
             aria-label={t.bidTry}
           />
-          <div className="fs-2xl fw-7">{won(s.bid_krw)}</div>
+          <div className="bid-amount num">{won(s.bid_krw)}</div>
           {chk && (
             <div className="fs-sm">
               {chk.korean}
@@ -334,7 +331,7 @@ export function CalcBox({ id }: { id: string }) {
             {(s.assume_krw ?? 0) > 0 && (
               <Row label={c.assumeRow} value={<>+ {won(s.assume_krw ?? 0)}</>} />
             )}
-            <Row label={<b>{c.cash}</b>} value={<b className="fs-lg">{won(s.cash_krw)}</b>} />
+            <Row label={<b>{c.cash}</b>} value={<b className="cash-total num">{won(s.cash_krw)}</b>} />
             {myCash && (
               <div
                 className="fs-sm ta-right"
@@ -414,14 +411,14 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
       <div className="sub">{m.hint}</div>
       <div className="d-flex gap-6 mt-8">
         <button
-          className={`chip ${!skip ? "green" : "gray"} b-0 mh-36`}
+          className={`chip ${!skip ? "on" : "gray"} b-0 mh-36`}
 
           onClick={() => setSkip(false)}
         >
           {m.bid} · {won(bid)}
         </button>
         <button
-          className={`chip ${skip ? "green" : "gray"} b-0 mh-36`}
+          className={`chip ${skip ? "on" : "gray"} b-0 mh-36`}
 
           onClick={() => setSkip(true)}
         >

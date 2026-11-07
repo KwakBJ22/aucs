@@ -143,7 +143,7 @@ function Cases() {
       <div className="sub mb-8">{t.sub}</div>
       <div className="d-flex gap-6 f-wrap mb-8">
         <button
-          className={`chip ${!cat ? "green" : "gray"} b-0 mh-30`}
+          className={`chip ${!cat ? "on" : "gray"} b-0 mh-30`}
 
           onClick={() => go({ category: "" })}
         >
@@ -152,7 +152,7 @@ function Cases() {
         {cats.map((c) => (
           <button
             key={c}
-            className={`chip ${cat === c ? "green" : "gray"} b-0 mh-30`}
+            className={`chip ${cat === c ? "on" : "gray"} b-0 mh-30`}
 
             onClick={() => go({ category: c })}
           >

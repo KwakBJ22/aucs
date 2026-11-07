@@ -112,7 +112,7 @@ function ProMarket() {
           {Object.entries(copy.pro.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${usage.includes(k) ? "green" : "gray"} b-0 mh-30`}
+              className={`chip ${usage.includes(k) ? "on" : "gray"} b-0 mh-30`}
 
               onClick={() =>
                 setUsage(usage.includes(k) ? usage.filter((x) => x !== k) : [...usage, k])

@@ -119,7 +119,7 @@ export function WorkspacePanel({
           {(w.step === "result" ? (["result", "after"] as WatchStep[]) : MOVABLE).map((s) => (
             <button
               key={s}
-              className={`chip ${s === w.step ? "green" : "gray"} b-0 mh-36`}
+              className={`chip ${s === w.step ? "on" : "gray"} b-0 mh-36`}
 
               disabled={s === "result"}
               onClick={() => setStep(s)}
