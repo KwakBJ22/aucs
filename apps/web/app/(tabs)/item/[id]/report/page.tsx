@@ -4,6 +4,7 @@ import { SkDetail } from "@/components/skeleton";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
+import { PrintHead } from "@/components/print-head";
 import { LoadError } from "@/components/load-error";
 import {
   fetchCalc,
@@ -106,12 +107,12 @@ function Report() {
       </div>
 
       <article className="report">
-        <header className="report-head">
-          <div>
-            <b>{t.brand}</b> · {ob ? `${t.onbid} ${d.case_no}` : `${d.court} ${d.case_no}`}
-          </div>
-          <div>{t.basis((d.computed_at ?? "").slice(0, 10))}</div>
-        </header>
+        <PrintHead
+          screen
+          title={t.brand}
+          sub={ob ? `${t.onbid} ${d.case_no}` : `${d.court} ${d.case_no}`}
+          date={(d.computed_at ?? "").slice(0, 10)}
+        />
         <h1 className="report-title">
           {d.place} {(ob ? null : d.building) ?? d.usage ?? ""}
         </h1>
@@ -149,7 +150,7 @@ function Report() {
             {risks.length ? (
               <ul>
                 {risks.slice(0, 8).map((r) => (
-                  <li key={r}>{r}</li>
+                  <li key={r}>● {r.replace(/^[●◆•·]\s*/, "")}</li>
                 ))}
               </ul>
             ) : (

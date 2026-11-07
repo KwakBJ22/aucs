@@ -9,6 +9,7 @@ export type NavItem = {
   ready: boolean;
   match: string[]; // 이 주소로 시작하면 이 메뉴가 켜짐
   pcHide?: boolean; // PC 머리 메뉴에서 뺌(홈은 로고를 누르면 가므로, 11/4)
+  // 하위 메뉴: 같은 메뉴 안의 화면·자리만, 두 개 이상일 때만 줄을 보임(11/7 — 다른 메뉴로 넘어가는 항목 뺌)
   sub: SubItem[];
 };
 
@@ -34,10 +35,7 @@ export const NAV: NavItem[] = [
     group: "basic",
     ready: true,
     match: ["/find", "/item"],
-    sub: [
-      { label: "조건으로 찾기", href: "/find" },
-      { label: "표로 전부 보기", href: "/pro/items" },
-    ],
+    sub: [],
   },
   {
     key: "watch",
@@ -46,11 +44,7 @@ export const NAV: NavItem[] = [
     group: "basic",
     ready: true,
     match: ["/watch"],
-    sub: [
-      { label: "관심 물건", href: "/watch" },
-      { label: "비교함", href: "/compare" },
-      { label: "물건 알림", href: "/notifications" },
-    ],
+    sub: [],
   },
   {
     key: "me",
@@ -59,7 +53,7 @@ export const NAV: NavItem[] = [
     group: "basic",
     ready: true,
     match: ["/me"],
-    sub: [{ label: "모의입찰과 복기", href: "/me" }],
+    sub: [],
   },
   {
     key: "pro-items",
@@ -68,7 +62,7 @@ export const NAV: NavItem[] = [
     group: "pro",
     ready: true,
     match: ["/pro/items"],
-    sub: [{ label: "표 보기", href: "/pro/items" }],
+    sub: [],
   },
   {
     key: "pro-map",
@@ -86,7 +80,7 @@ export const NAV: NavItem[] = [
     group: "pro",
     ready: true,
     match: ["/compare"],
-    sub: [{ label: "비교 중과 뺀 물건", href: "/compare" }],
+    sub: [],
   },
   {
     key: "pro-cases",
@@ -95,7 +89,7 @@ export const NAV: NavItem[] = [
     group: "pro",
     ready: true,
     match: ["/pro/cases"],
-    sub: [{ label: "사건 목록과 문건 흐름", href: "/pro/cases" }],
+    sub: [],
   },
   {
     key: "pro-market",
@@ -105,9 +99,9 @@ export const NAV: NavItem[] = [
     ready: true,
     match: ["/pro/market"],
     sub: [
+      { label: "성적표", href: "/pro/market#score" },
       { label: "지역 시장", href: "/pro/market#region" },
       { label: "낙찰 사례", href: "/pro/market#cases" },
-      { label: "성적표", href: "/pro/market#score" },
     ],
   },
 ];

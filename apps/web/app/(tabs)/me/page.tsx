@@ -261,30 +261,32 @@ export default function Me() {
       ))}
       {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
       {d && d.history.length > 0 && (
-        <table className="pro-table mt-8">
-          <thead>
-            <tr>
-              <th>{t.cols.place}</th>
-              <th>{t.cols.outcome}</th>
-              <th>{t.cols.my}</th>
-              <th>{t.cols.win}</th>
-              <th>{t.cols.second}</th>
-              <th>{t.cols.n}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {d.history.map((b) => (
-              <tr key={b.bid_id}>
-                <td>{b.place}</td>
-                <td>{t.outcome[b.outcome]}</td>
-                <td>{won(b.my_bid_krw)}</td>
-                <td>{won(b.winning_bid_krw)}</td>
-                <td>{won(b.second_bid_krw)}</td>
-                <td>{b.bidder_count != null ? `${b.bidder_count}명` : "-"}</td>
+        <div className="ox-auto mt-8">
+          <table className="pro-table wrap-first">
+            <thead>
+              <tr>
+                <th>{t.cols.place}</th>
+                <th>{t.cols.outcome}</th>
+                <th>{t.cols.my}</th>
+                <th>{t.cols.win}</th>
+                <th>{t.cols.second}</th>
+                <th>{t.cols.n}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {d.history.map((b) => (
+                <tr key={b.bid_id}>
+                  <td>{b.place}</td>
+                  <td>{t.outcome[b.outcome]}</td>
+                  <td>{won(b.my_bid_krw)}</td>
+                  <td>{won(b.winning_bid_krw)}</td>
+                  <td>{won(b.second_bid_krw)}</td>
+                  <td>{b.bidder_count != null ? `${b.bidder_count}명` : "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>,
     Boolean(d && (d.todo.length > 0 || d.history.length > 0)),

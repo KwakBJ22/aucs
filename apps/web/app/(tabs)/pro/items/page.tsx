@@ -200,6 +200,7 @@ function ProItems() {
             <option value="">{t.allSido}</option>
             <option value="서울특별시">서울</option>
             <option value="경기도">경기</option>
+            <option value="인천광역시">인천</option>
           </select>
           <select
             value={f.sigungu ?? ""}
@@ -390,7 +391,7 @@ function ProItems() {
 
       <div className={pc && pick ? "pc-grid g-58-42" : ""}>
         <section className="section p-0 ox-auto">
-          <table className="pro-table">
+          <table className="pro-table items-table">
             <thead>
               <tr>
                 {cols.map((c) => (

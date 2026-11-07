@@ -259,7 +259,6 @@ export const copy = {
     sortDeadline: "마감 가까운 순",
     sortRate: "최저가율 낮은 순",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
-    mapSoon: "지도는 카카오 지도 키를 받으면 붙여요",
     searchPlaceholder: "수지 30평대 7억 이하",
     talkLabel: "알아들은 조건",
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
@@ -464,7 +463,7 @@ export const copy = {
     title: "전체 물건",
     csv: "CSV 받기",
     pcHint: "넓은 화면(PC)에서 보기 좋게 만든 화면이에요",
-    allSido: "서울·경기",
+    allSido: "서울·경기·인천",
     allSigungu: "모든 시군구",
     search: "주소·단지·사건번호",
     sorts: {
@@ -723,6 +722,7 @@ export const copy = {
     print: "인쇄 · PDF로 저장",
     printHint: "인쇄 창에서 「PDF로 저장」을 고르면 파일로 남아요",
     formTitle: "기일입찰표 (작성 연습지)",
+    printBrand: "옥스 입찰표 연습지",
     f: {
       court: "법원",
       date: "입찰기일",
@@ -803,6 +803,7 @@ export const copy = {
   },
   proCases: {
     report: "보고서 PDF",
+    printBrand: "옥스 사건·문건 보고서",
     cards: {
       progress: "진행 판단",
       normal: "정상 진행",

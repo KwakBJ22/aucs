@@ -47,6 +47,13 @@
     flex-grow: 1;
   }
   /* PC 본문(11/7): 가운데 1200px, 좌우 24px — 머리·바닥도 같은 폭(--pc-side) */
+  /* 머리 높이: 하위 메뉴 줄이 있을 때만 48px 더함(11/7) */
+  .app-shell {
+    --head-h: 64px;
+  }
+  .app-shell:has(.ph-sub) {
+    --head-h: 112px;
+  }
   .app-shell {
     --pc-side: max(24px, calc((100% - var(--wrap)) / 2 + 24px));
   }
@@ -342,7 +349,7 @@
   }
   .pc-sticky {
     position: sticky;
-    top: 124px;
+    top: calc(var(--head-h) + 12px);
   }
   .card-grid {
     display: grid;
@@ -401,5 +408,12 @@
   .pc-actions .pc-act:hover {
     background: none;
     color: var(--blue);
+  }
+}
+
+/* PC에서는 숨김(하위 메뉴 줄이 대신하는 화면 안 바로가기 등, 11/7) */
+@media (min-width: 1024px) {
+  .pc-none {
+    display: none !important;
   }
 }

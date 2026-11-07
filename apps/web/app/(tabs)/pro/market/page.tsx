@@ -72,7 +72,7 @@ function ProMarket() {
         ))}
       </div>
       {!onbid && (
-        <nav className="seg mb-4">
+        <nav className="seg mb-4 pc-none">
           <a href="#region">{t.tabRegion}</a>
           <a href="#cases">{t.cases}</a>
           <a href="#score">{t.score}</a>
@@ -88,6 +88,7 @@ function ProMarket() {
             <option value="">{onbid ? t.onbidAllSido : copy.pro.allSido}</option>
             <option value="서울특별시">서울</option>
             <option value="경기도">경기</option>
+            <option value="인천광역시">인천</option>
           </select>
           <select value={sigungu} onChange={(e) => setSigungu(e.target.value)} style={sel}>
             <option value="">{copy.pro.allSigungu}</option>
@@ -198,7 +199,7 @@ function ProMarket() {
             </div>
           )}
 
-          <section className="section q-sec p-0 ox-auto mt-12" id="cases">
+          <section className="section q-sec p-0 ox-auto mt-12 market-cases" id="cases">
             <div className="pt-14 pb-0 px-14">
               <h2 className="fs-base">{t.cases}</h2>
             </div>

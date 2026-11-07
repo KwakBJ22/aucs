@@ -3,7 +3,7 @@
 import { Logo } from "@/components/logo";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { NAV, activeNav } from "@/lib/nav";
@@ -32,7 +32,9 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
   const [q, setQ] = useState("");
   const cur = admin ? undefined : activeNav(path);
   const guest = !session;
-  const subOn = cur?.sub.findIndex((x) => x.href.split("#")[0] === path) ?? -1;
+  const sub = cur && cur.sub.length > 1 ? cur.sub : [];
+  const spy = useSectionSpy(sub);
+  const subOn = spy >= 0 ? spy : sub.findIndex((x) => x.href.split("#")[0] === path);
 
   function search(e: React.FormEvent) {
     e.preventDefault();
@@ -140,9 +142,9 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
             </Link>
           ))}
       </div>
-      {cur && cur.sub.length > 0 && (
+      {sub.length > 0 && (
         <nav aria-label="하위 메뉴" className="ph-sub">
-          {cur.sub.map((s, i) => (
+          {sub.map((s, i) => (
             <Link key={s.href + i} href={s.href} className={i === subOn ? "on" : ""}>
               {s.label}
             </Link>
@@ -151,4 +153,29 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
       )}
     </header>
   );
+}
+
+// 하위 메뉴가 한 화면 안의 자리(#id)일 때: 지금 보이는 자리의 순번. 자리가 아니면 -1
+function useSectionSpy(sub: { href: string }[]): number {
+  const ids = sub.map((s) => s.href.split("#")[1] ?? "").join(",");
+  const [on, setOn] = useState(-1);
+  useEffect(() => {
+    const list = ids.split(",");
+    if (!list.some(Boolean)) {
+      setOn(-1);
+      return;
+    }
+    const pick = () => {
+      let cur = 0;
+      list.forEach((id, i) => {
+        const el = id ? document.getElementById(id) : null;
+        if (el && el.getBoundingClientRect().top < 160) cur = i;
+      });
+      setOn(cur);
+    };
+    pick();
+    window.addEventListener("scroll", pick, { passive: true });
+    return () => window.removeEventListener("scroll", pick);
+  }, [ids]);
+  return on;
 }

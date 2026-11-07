@@ -62,7 +62,8 @@
   top: 0;
   background: var(--surface);
 }
-.pro-table td:nth-child(3) {
+/* 전체 물건 표: 3번째 칸(소재지)만 줄바꿈 */
+.items-table td:nth-child(3) {
   white-space: normal;
   min-width: 220px;
 }
@@ -157,24 +158,78 @@
   width: 22px;
   height: 22px;
 }
+/* 인쇄·PDF 공통 틀(11/7): 보고서·입찰표·사건 문건이 같은 종이 — A4, 여백 12mm, 화면 부품은 감춤.
+   !important: 화면용 표시(display) 규칙을 인쇄에서 이기려고 */
+.print-only {
+  display: none;
+}
+.report ul {
+  list-style: none;
+  padding-left: 0;
+}
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
   .no-print,
   .pc-header,
   .pc-footer,
-  .tabbar {
+  .ph-sub,
+  .tabbar,
+  .topbar,
+  .cta-bar,
+  .toast {
     display: none !important;
   }
+  .print-only {
+    display: flex !important;
+  }
   html,
-  body,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page,
+  .shell .page {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
   .section {
     background: #fff !important;
     color: #000 !important;
-  }
-  .print-area {
-    margin: 0;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
   .pc-grid {
     display: block !important;
+  }
+  .print-area {
+    width: 100%;
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .print-area .report-head {
+    margin-bottom: 12px;
+  }
+  .print-area h2 {
+    font-size: 16px;
+  }
+  .print-area a {
+    color: #000;
+  }
+  .bid-form th,
+  .bid-form td,
+  .bid-digits th,
+  .bid-digits td {
+    border-color: #555;
   }
 }
 
@@ -260,7 +315,7 @@
   display: inline-block;
 }
 .q-sec {
-  scroll-margin-top: 124px;
+  scroll-margin-top: calc(var(--head-h, 64px) + 16px);
 }
 .pc-actions {
   display: flex;
@@ -356,10 +411,11 @@
   display: flex;
   gap: 8px;
   margin-top: 10px;
+  overflow-x: auto;
 }
 .board-col {
   flex: 1 1 0;
-  min-width: 0;
+  min-width: 140px;
   background: var(--bg);
   border-radius: 12px;
   padding: 8px;
@@ -369,18 +425,20 @@
   gap: 6px;
 }
 .board-col.empty {
-  flex: 0 0 64px;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 .board-head {
   font-size: 13px;
   font-weight: 700;
   padding: 2px 4px 4px;
+  white-space: nowrap;
 }
 .board-card {
   text-align: left;
   border: 0;
   border-radius: 12px;
-  background: var(--panel);
+  background: var(--surface);
   padding: 10px;
   color: var(--text);
 }
@@ -477,20 +535,6 @@
   margin: 0 -8px;
   padding: 0 8px;
 }
-.map-box {
-  height: 260px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: repeating-linear-gradient(
-    45deg,
-    var(--bg),
-    var(--bg) 10px,
-    var(--surface) 10px,
-    var(--surface) 20px
-  );
-}
-
 .compare-table td.best {
   background: var(--green-soft);
 }
@@ -1046,6 +1090,7 @@ textarea.adm-input {
 }
 @media (min-width: 1024px) {
   .band-grid.tiles {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
   }
 }
@@ -1107,4 +1152,68 @@ textarea.adm-input {
   .cash-total {
     font-size: 26px;
   }
+}
+
+/* 시장 분석 낙찰 사례 표: 주소 칸은 줄을 바꿔 표가 카드 폭 안에 들어오게(11/7) */
+.market-cases .pro-table {
+  width: 100%;
+}
+.market-cases .pro-table td:nth-child(4) {
+  white-space: normal;
+  min-width: 220px;
+}
+/* 표 첫 칸(물건 이름)은 줄을 바꿔 카드 폭 안에 들어오게(11/7 내 경매) */
+.wrap-first td:first-child {
+  white-space: normal;
+  min-width: 160px;
+}
+/* 같은 단지 분기별 거래 막대(11/7): 막대 위 금액, 맨 끝(최근)만 진하게, 0부터 그림 */
+.q-chart {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel);
+}
+.q-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 140px;
+  margin-top: 8px;
+}
+.q-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+.q-val {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--gray-text);
+  white-space: nowrap;
+}
+.q-bar {
+  width: 100%;
+  max-width: 44px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--blue-soft);
+}
+.q-bar.last {
+  background: var(--blue);
+}
+.q-lbl {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.q-track {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }

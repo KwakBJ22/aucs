@@ -9,7 +9,7 @@ import { useSession } from "@/lib/auth";
 import { useWatch } from "@/components/watch-context";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
-import { loadProfile, saveProfile } from "@/lib/profile";
+import { loadProfile, saveProfile, type Profile } from "@/lib/profile";
 import { track } from "@/lib/track";
 import { Termed } from "@/components/term";
 
@@ -70,10 +70,18 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
 
 export function CalcBox({ id }: { id: string }) {
   const c = t.calc;
-  const prof = typeof window === "undefined" ? null : loadProfile();
-  const [homes, setHomes] = useState<number | null>(prof?.homes ?? null);
-  const [first, setFirst] = useState(Boolean(prof?.firstTime));
-  const [selling, setSelling] = useState(Boolean(prof?.selling));
+  // 내 조건은 이 기기 저장소에서 — 그린 뒤에 읽음(서버 그림과 어긋나면 고른 버튼 표시가 빠졌음, 11/7)
+  const [prof, setProf] = useState<Profile | null>(null);
+  const [homes, setHomes] = useState<number | null>(null);
+  const [first, setFirst] = useState(false);
+  const [selling, setSelling] = useState(false);
+  useEffect(() => {
+    const p = loadProfile();
+    setProf(p);
+    setHomes(p?.homes ?? null);
+    setFirst(Boolean(p?.firstTime));
+    setSelling(Boolean(p?.selling));
+  }, []);
   const [dsrOpen, setDsrOpen] = useState(false);
   const [income, setIncome] = useState<number | null>(null);
   const [otherMonthly, setOtherMonthly] = useState<number | null>(null);
@@ -331,7 +339,10 @@ export function CalcBox({ id }: { id: string }) {
             {(s.assume_krw ?? 0) > 0 && (
               <Row label={c.assumeRow} value={<>+ {won(s.assume_krw ?? 0)}</>} />
             )}
-            <Row label={<b>{c.cash}</b>} value={<b className="cash-total num">{won(s.cash_krw)}</b>} />
+            <Row
+              label={<b>{c.cash}</b>}
+              value={<b className="cash-total num">{won(s.cash_krw)}</b>}
+            />
             {myCash && (
               <div
                 className="fs-sm ta-right"

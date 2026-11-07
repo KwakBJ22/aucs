@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { PrintHead } from "@/components/print-head";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -8,7 +9,7 @@ import { fetchBidCheck, fetchBidDay, type BidCheck, type BidDay } from "@/lib/ap
 import { copy } from "@/lib/copy.ko";
 import { BidDaySheet } from "@/components/bid-day-sheet";
 import { useIsPc } from "@/lib/use-pc";
-import { won } from "@/lib/format";
+import { todayKst, won } from "@/lib/format";
 
 const t = copy.bidSheet;
 const PLACES = ["천억", "백억", "십억", "억", "천만", "백만", "십만", "만", "천", "백", "십", "일"];
@@ -152,6 +153,11 @@ function Sheet() {
         </div>
 
         <section className="section print-area">
+          <PrintHead
+            title={t.printBrand}
+            sub={[day?.court_full, day?.case_no].filter(Boolean).join(" ")}
+            date={todayKst()}
+          />
           <h2 className="ta-center fs-xl">{t.formTitle}</h2>
           <table className="bid-form">
             <tbody>

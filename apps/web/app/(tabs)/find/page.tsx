@@ -321,9 +321,7 @@ export default function Find() {
         {query
           ? t.searching
           : list && status !== "sold" && status !== "withdrawn"
-            ? pc
-              ? t.total(list.total)
-              : `${t.total(list.total)} · ${t.mapSoon}`
+            ? t.total(list.total)
             : ""}
       </p>
     </>
@@ -435,9 +433,6 @@ export default function Find() {
             className="pc-sticky oy-auto quiet-scroll"
             style={{ maxHeight: "calc(100vh - 140px)" }}
           >
-            <section className="section map-box mt-0">
-              <span className="sub">{t.mapSoon}</span>
-            </section>
             <PickPanel id={pick} />
           </div>
         </div>

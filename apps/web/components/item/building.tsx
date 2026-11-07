@@ -1,7 +1,7 @@
 "use client";
 
 import { Row } from "@/components/calc-box";
-import { won } from "@/lib/format";
+import { won, wonShort } from "@/lib/format";
 import { useIsPc } from "@/lib/use-pc";
 import { t } from "@/components/item/shared";
 
@@ -79,7 +79,6 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
   const pc = useIsPc();
   const tr = cx.trend;
   const top = Math.max(...cx.quarters.map((x) => x.price_krw), 1);
-  const low = Math.min(...cx.quarters.map((x) => x.price_krw));
   return (
     <div className="mt-10">
       {cx.auctions.length > 0 && (
@@ -135,26 +134,23 @@ export function ComplexBlock({ cx }: { cx: Complex }) {
             .join(" · ")}
         />
       )}
-      {pc && cx.quarters.length > 1 && (
-        <div
-          role="img"
-          aria-label={c.chart}
-          className="d-flex ai-end gap-6 mt-8"
-          style={{ height: 64 }}
-        >
-          {cx.quarters.map((x) => (
-            <div key={x.q} className="f-1 ta-center fs-xs">
-              <div
-                title={`${x.q} ${won(x.price_krw)} (${x.n}건)`}
-                className="bg-blue-soft"
-                style={{
-                  height: 8 + (40 * (x.price_krw - low)) / Math.max(top - low, 1),
-                  borderTop: "2px solid var(--blue)",
-                }}
-              />
-              <span className="sub m-0 fs-xs">{x.q.replace("분기", "")}</span>
-            </div>
-          ))}
+      {cx.quarters.length > 1 && (
+        <div className="q-chart" role="img" aria-label={c.chart}>
+          <div className="sub m-0 fs-xs">{c.chart}</div>
+          <div className="q-bars">
+            {cx.quarters.map((x, i) => (
+              <div key={x.q} className="q-col" title={`${x.q} ${won(x.price_krw)} (${x.n}건)`}>
+                <span className="q-val num">{wonShort(x.price_krw)}</span>
+                <div className="q-track">
+                  <div
+                    className={`q-bar${i === cx.quarters.length - 1 ? " last" : ""}`}
+                    style={{ height: `${Math.max(6, Math.round((100 * x.price_krw) / top))}%` }}
+                  />
+                </div>
+                <span className="q-lbl">{x.q.replace("분기", "")}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {!tr.area_match && <div className="sub mt-4 mb-0 mx-0 fs-xs">{c.allAreas}</div>}

@@ -33,7 +33,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
         >
           {dday(d.d_day)}
         </b>{" "}
-        {d.sale_date ?? "-"}
+        <span className="nowrap">{d.sale_date ?? "-"}</span>
       </>,
     ],
     [t.pc.appraisal, won(d.appraisal_krw)],

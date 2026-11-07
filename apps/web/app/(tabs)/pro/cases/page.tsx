@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { fetchCase, fetchCases, type CaseDetail, type CaseRow } from "@/lib/api/pro";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { dday, todayKst, won } from "@/lib/format";
+import { PrintHead } from "@/components/print-head";
 
 const t = copy.proCases;
 const DOT = { high: "var(--red)", mid: "var(--orange)", low: "var(--faint)" } as const;
@@ -17,6 +18,7 @@ function Detail({ d }: { d: CaseDetail }) {
   const ev = d.events.filter((e) => all || e.importance !== "low" || e.after_deadline);
   return (
     <div>
+      <PrintHead title={t.printBrand} sub={`${d.court} ${d.case_no}`} date={todayKst()} />
       <div className="sub">
         {d.court} {d.dept}
       </div>
@@ -140,8 +142,8 @@ function Cases() {
   return (
     <main className="page pro-page">
       <PageHeader title={t.title} />
-      <div className="sub mb-8">{t.sub}</div>
-      <div className="d-flex gap-6 f-wrap mb-8">
+      <div className="sub mb-8 no-print">{t.sub}</div>
+      <div className="d-flex gap-6 f-wrap mb-8 no-print">
         <button
           className={`chip ${!cat ? "on" : "gray"} b-0 mh-30`}
 
@@ -168,7 +170,7 @@ function Cases() {
         />
       </div>
       <div className="pc-grid g-26-74">
-        <section className="section m-0">
+        <section className="section m-0 no-print">
           {list === null && (
             <Delayed>
               <SkRows n={8} />
@@ -192,11 +194,11 @@ function Cases() {
             </button>
           ))}
         </section>
-        <section className="section m-0">
+        <section className="section m-0 print-area">
           {d ? <Detail d={d} /> : <div className="sub">{t.pick}</div>}
         </section>
       </div>
-      <div className="sub mt-8">{t.note}</div>
+      <div className="sub mt-8 no-print">{t.note}</div>
     </main>
   );
 }
