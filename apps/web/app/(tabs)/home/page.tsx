@@ -384,18 +384,20 @@ export default function Home() {
               <h2 className="mb-8">{t.calendar}</h2>
               {cal.length === 0 && <p className="sub">{t.calendarEmpty}</p>}
               {cal.map(([day, list]) => (
-                <div key={day} className="py-8 px-0">
-                  <div className="fw-7 fs-md">{day.slice(5).replace("-", "/")}</div>
-                  {list.map((x) => (
-                    <Link
-                      key={x.id}
-                      href={`/item/${encodeURIComponent(x.id)}`}
-                      className="d-block fs-md c-inherit py-2 px-0"
-                    >
-                      {x.mine && <span className="chip green mr-6">{t.mine}</span>}
-                      {x.label}
-                    </Link>
-                  ))}
+                <div key={day} className="cal-day">
+                  <div className="cal-date">{day.slice(5).replace("-", "/")}</div>
+                  <div className="cal-list">
+                    {list.map((x) => (
+                      <Link
+                        key={x.id}
+                        href={`/item/${encodeURIComponent(x.id)}`}
+                        className="cal-item"
+                      >
+                        {x.mine && <span className="chip green mr-6">{t.mine}</span>}
+                        {x.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               ))}
             </section>
@@ -422,11 +424,16 @@ export default function Home() {
                 <h2>{t.courtRate}</h2>
                 <div className="sub">{t.courtRateSub}</div>
                 {market.by_court.slice(0, 6).map((r) => (
-                  <div key={r.court_code} className="line-row fs-md">
-                    <span>{r.court}</span>
-                    <span>
-                      <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}건</span>
-                    </span>
+                  <div key={r.court_code} className="court-rate">
+                    <div className="line-row fs-md">
+                      <span>{r.court}</span>
+                      <span>
+                        <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}건</span>
+                      </span>
+                    </div>
+                    <div className="rate-bar">
+                      <i style={{ width: `${Math.min(100, Math.round(r.p50))}%` }} />
+                    </div>
                   </div>
                 ))}
                 <Link href="/pro/market" className="menu-row">

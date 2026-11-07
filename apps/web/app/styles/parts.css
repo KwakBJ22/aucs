@@ -17,7 +17,7 @@
 }
 .section {
   background: var(--surface);
-  border-radius: 18px;
+  border-radius: var(--r-card);
   padding: 20px;
   margin: 12px 0;
 }
@@ -35,8 +35,8 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 4px 8px;
+  border-radius: 7px;
   font-weight: 600;
 }
 .chip.green {
@@ -76,10 +76,10 @@
   align-items: center;
   justify-content: center;
   height: 56px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 0;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   width: 100%;
 }
 .btn.primary {
@@ -175,7 +175,7 @@
   min-height: 44px;
 }
 .tabbar a.on {
-  color: var(--blue);
+  color: var(--text);
   font-weight: 700;
 }
 .menu-row {
@@ -407,5 +407,17 @@
     overflow: visible;
     margin: 12px 0 0;
     padding: 0;
+  }
+}
+
+/* PC 카드(11/7 토스풍): 더 둥글고 넉넉하게, 소제목 한 단계 크게 */
+@media (min-width: 1024px) {
+  .section {
+    border-radius: var(--r-card-pc);
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .section h2 {
+    font-size: var(--fs-xl);
   }
 }

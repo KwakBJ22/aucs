@@ -86,7 +86,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
       />
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       <section className="section">
-        <div className="band-grid">
+        <div className="band-grid tiles">
           {stats.map(([k, v]) => (
             <div key={k}>
               <div className="sub m-0">{k}</div>

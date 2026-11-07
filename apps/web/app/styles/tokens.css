@@ -1,27 +1,31 @@
 /* 값의 원본: 색·여백·글자·둥글기. 다른 파일은 여기 이름(var)만 쓴다 — docs/design/08-look.md */
-/* 옥스 디자인 기본값 (스토리보드): 파랑 하나 + 의미색(초록 확인·회색 모름·주황 주의·빨강 치명) */
+/* 옥스 디자인 기본값 (11/7 토스풍 디자인 캔버스): 파랑 하나 + 의미색(초록 확인·회색 모름·주황 주의·빨강 치명) */
 :root {
-  --bg: #f4f5f7;
+  --bg: #f2f4f6;
   --surface: #ffffff;
-  --text: #16181d;
-  --muted: #5b616e;
-  --faint: #6b717d;
-  --line: #eef0f3;
-  --blue: #1f5eea;
-  --blue-soft: #eaf1fe;
-  --blue-text: #1647b8;
+  --text: #191f28;
+  --muted: #4e5968;
+  --faint: #6b7684;
+  --line: #e5e8eb;
+  --blue: #3182f6;
+  --blue-soft: #e8f3ff;
+  --blue-text: #1b64da;
   --green: #0f6b4c;
   --green-soft: #e7f5ef;
-  --gray-chip: #f1f2f4;
-  --gray-text: #4a505b;
-  --orange: #8a4600;
-  --orange-soft: #fff3e3;
+  --gray-chip: #f2f4f6;
+  --gray-text: #4e5968;
+  --orange: #a3540a;
+  --orange-soft: #fff4e5;
   --amber: #b25e00;
-  --red: #c23b32;
-  --panel: #f2f3f5;
-  --band: #eef0f3;
+  --red: #e42939;
+  --panel: #f2f4f6;
+  --band: #f2f4f6;
   --red-soft: #fdecea;
   --r-panel: 16px;
+  /* 카드 둥글기·PC 본문 폭(11/7 토스풍 디자인) */
+  --r-card: 20px;
+  --r-card-pc: 24px;
+  --wrap: 1200px;
   --fs-xs: 12px;
   --fs-sm: 13px;
   --fs-md: 14px;
@@ -41,7 +45,7 @@
     --muted: #a3a9b5;
     --faint: #8a909c;
     --line: #2a2e36;
-    --blue: #5b8cff;
+    --blue: #4593fc;
     --blue-soft: #1b2a4d;
     --blue-text: #a9c2ff;
     --green: #6fd3a8;
