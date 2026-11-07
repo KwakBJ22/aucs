@@ -1,3 +1,5 @@
+from datetime import date
+
 from aucs_workers.jobs.notify import Change, change_text, match_sql, watch_changes, won
 
 
@@ -23,10 +25,18 @@ def test_texts():
 
 
 def test_match_sql():
-    sql, p = match_sql({"sigungu": ["강남구"], "max_cash": 30_000_000})
-    assert "any(%(sigungu)s)" in sql and p == {"sigungu": ["강남구"], "max_cash": 30_000_000}
-    assert match_sql({})[1] == {}
-    sql, p = match_sql({"usage": ["apt"], "exclude": ["share", "lien"], "rate_max": 80})
+    d = date(2026, 11, 8)
+    sql, p = match_sql({"sigungu": ["강남구"], "max_cash": 30_000_000}, d)
+    assert "any(%(sigungu)s)" in sql and p == {
+        "today": d,
+        "sigungu": ["강남구"],
+        "max_cash": 30_000_000,
+    }
+    assert (
+        "display_policy = 'public'" in sql and "a.result is not null" in sql
+    )  # 보이는 물건만(11/8)
+    assert match_sql({}, d)[1] == {"today": d}
+    sql, p = match_sql({"usage": ["apt"], "exclude": ["share", "lien"], "rate_max": 80}, d)
     assert (
         p["usage_re"] == "(아파트)"
         and p["ex_rules"] == ["risk.share", "risk.lien"]
@@ -42,12 +52,13 @@ def test_listing_gone_text():
 def test_onbid_match_sql():
     from aucs_workers.jobs.notify import onbid_match_sql
 
-    assert onbid_match_sql({"source": "court"}) is None
+    d = date(2026, 11, 8)
+    assert onbid_match_sql({"source": "court"}, d) is None
     sql, p = onbid_match_sql(
-        {"sigungu": ["강남구"], "max_cash": 5000, "usage": ["apt"], "exclude": ["share"]}
+        {"sigungu": ["강남구"], "max_cash": 5000, "usage": ["apt"], "exclude": ["share"]}, d
     )  # type: ignore[misc]
-    assert "o.sigungu like g" in sql and "o.kind <> 'trust'" in sql
-    assert p == {"sigungu": ["강남구"], "max_cash": 5000, "usage_re": "(아파트)"}
+    assert "split_part(o.sigungu" in sql and "o.kind <> 'trust'" in sql
+    assert p["sigungu"] == ["강남구"] and p["max_cash"] == 5000 and p["usage_re"] == "(아파트)"
 
 
 def test_change_text_onbid():

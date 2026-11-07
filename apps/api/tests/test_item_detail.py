@@ -17,7 +17,12 @@ def test_detail_five_questions():
     d = build_detail(full(), [{"sale_date": date(2026, 9, 1), "min_price_krw": 1_015_000_000, "result": "failed"}],
                      [], [], {"pct": 30, "verified": False}, TODAY)  # fmt: skip
     assert [q["key"] for q in d["questions"]] == ["buy", "hold", "worth", "cost", "check"]
-    assert d["next_round"] == {"min_price_krw": 497_350_000, "reduction_pct": 30, "verified": False}
+    assert d["next_round"] == {
+        "min_price_krw": 497_350_000,
+        "reduction_pct": 30,
+        "verified": False,
+        "fail_odds": None,  # 유찰 비율은 detail() 에서 채움(11/7)
+    }
     assert d["questions"][2]["body"]["range_krw"] == [791_700_000, 913_500_000]
     assert d["rounds"][0]["result"] == "유찰" and d["tags"][0] == {"label": "현황조사", "ok": False}
 

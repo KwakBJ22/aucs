@@ -7,7 +7,7 @@ client = TestClient(app)
 
 
 def test_home_feed_bundles_lists_market_notices(monkeypatch) -> None:
-    from aucs_api.services import admin_ops, items, pro
+    from aucs_api.services import admin_ops, items, picks, pro
 
     calls: list[str] = []
 
@@ -18,6 +18,7 @@ def test_home_feed_bundles_lists_market_notices(monkeypatch) -> None:
     monkeypatch.setattr(items, "list_items", fake_list)
     monkeypatch.setattr(pro, "market", lambda f, today: {"courts": []})
     monkeypatch.setattr(admin_ops, "notices", lambda active_only: [{"title": "공지"}])
+    monkeypatch.setattr(picks, "home_picks", lambda **k: {"picks": [], "soon": [], "next": []})
     r = client.get("/home-feed?sigungu=강남구&market=true").json()
     assert sorted(calls) == ["all", "onbid"]
     assert (

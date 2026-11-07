@@ -6,34 +6,21 @@ import io
 from datetime import date
 from typing import Any
 
+from aucs_rules.find_filter import (
+    ANALYSIS_JOIN,
+    COURT_VISIBLE,
+    ONBID_VISIBLE,
+    USAGE_GROUPS,
+    VEHICLES,
+    onbid_where,
+)
+from aucs_rules.find_filter import court_where as build_where
 from aucs_rules.progress import judge_progress
 
 from aucs_api.db import batch, connect
 from aucs_api.services.items import COURT_NAME
 from aucs_api.services.onbid import KIND_KO
 
-USAGE_GROUPS = {
-    "apt": "아파트",
-    "villa": "다세대|연립|빌라",
-    "officetel": "오피스텔",
-    "house": "단독|다가구",
-    "shop": "상가|근린|점포|사무|공장|창고|숙박|업무",
-    "land": "대지|전답|임야|토지|잡종|^전$|^답$",
-}
-EXCLUDE_RULES = {
-    "share": ["risk.share"],
-    "special": ["risk.special_condition"],
-    "villa": ["risk.neighborhood_villa"],
-    "stop": ["risk.stop", "risk.withdraw"],
-    "lien": ["risk.lien"],
-    "senior": ["risk.senior_tenant", "risk.prior_rights", "risk.lease_reg"],
-    "superficies": ["risk.superficies", "risk.land_right"],
-    "illegal": ["risk.illegal"],
-    "farmland": ["risk.farmland"],
-    "resale": ["risk.resale"],
-}
-# 초보자 안전 모드: 한 번에 빼는 7가지(05 화면 설계)
-SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"]
 SORTS = {
     "deadline": "u.sale_date, u.item_id",
     "rate": "u.min_price_krw::float / nullif(u.appraisal_krw, 0), u.sale_date",
@@ -42,71 +29,18 @@ SORTS = {
     "failed": "u.failed_count desc nulls last, u.sale_date",
 }
 
-_BASE = """
+# 손님에게 보이는 물건 조건은 규칙 FIND-03 한 곳(11/8)
+_BASE = f"""
 from core.items i
 join core.cases c using (case_id)
-left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
-where i.display_policy = 'public' and i.sale_date >= %(today)s
-  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'
-  and i.status_code is distinct from 'gone' and a.result is not null
+{ANALYSIS_JOIN}
+where {COURT_VISIBLE}
 """
 
 
-def build_where(f: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
-    """조건 → SQL 조각과 값 (순수 함수, 값은 모두 바인딩)."""
-    sql = ""
-    p: dict[str, Any] = {"today": today}
-    if f.get("sido"):
-        sql += " and i.sido = %(sido)s"
-        p["sido"] = f["sido"]
-    if f.get("sigungu"):
-        sql += " and i.sigungu = any(%(sigungu)s)"
-        p["sigungu"] = list(f["sigungu"])
-    if f.get("court"):
-        sql += " and c.court_code = any(%(court)s)"
-        p["court"] = list(f["court"])
-    groups = [USAGE_GROUPS[g] for g in f.get("usage") or [] if g in USAGE_GROUPS]
-    if groups:
-        sql += " and i.usage_name ~ %(usage_re)s"
-        p["usage_re"] = "|".join(f"({g})" for g in groups)
-    for key, col, op in (
-        ("failed_min", "i.failed_count", ">="),
-        ("failed_max", "i.failed_count", "<="),
-        ("app_min", "i.appraisal_krw", ">="),
-        ("app_max", "i.appraisal_krw", "<="),
-        ("price_max", "i.min_price_krw", "<="),
-        ("area_min", "i.building_area_m2", ">="),
-        ("area_max", "i.building_area_m2", "<="),
-    ):
-        if f.get(key) is not None:
-            sql += f" and coalesce({col}, 0) {op} %({key})s"
-            p[key] = f[key]
-    if f.get("rate_max") is not None:
-        sql += " and i.min_price_krw * 100 <= %(rate_max)s * i.appraisal_krw"
-        p["rate_max"] = f["rate_max"]
-    if f.get("days_max") is not None:
-        sql += " and i.sale_date <= %(today)s + %(days_max)s"
-        p["days_max"] = f["days_max"]
-    rules = [r for k in f.get("exclude") or [] for r in EXCLUDE_RULES.get(k, [])]
-    if rules:
-        sql += """ and not exists (select 1 from jsonb_array_elements(coalesce(a.result -> 'signals', '[]'::jsonb)) s
-                   where s ->> 'rule_id' = any(%(ex_rules)s) and s ->> 'status' <> '모름')"""
-        p["ex_rules"] = rules
-    if "fatal" in (f.get("exclude") or []):
-        sql += """ and not exists (select 1 from jsonb_array_elements(coalesce(a.result -> 'signals', '[]'::jsonb)) s
-                   where s ->> 'level' = 'fatal')"""
-    if f.get("q"):
-        sql += (
-            " and (i.address ilike %(q)s or i.building_desc ilike %(q)s or c.case_no ilike %(q)s)"
-        )
-        p["q"] = f"%{f['q'].strip()}%"
-    return sql, p
-
-
-_ONBID_BASE = """
+_ONBID_BASE = f"""
 from core.onbid_items o
-where o.display_policy = 'public' and o.status_code = 'active' and o.disposal = '매각'
-  and (o.bid_end at time zone 'Asia/Seoul')::date >= %(today)s
+where {ONBID_VISIBLE}
 """
 _COURT_SEL = """select i.item_id, 'court' as source, c.court_code, c.case_no, i.item_no, i.usage_name, i.address,
        i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.sale_date,
@@ -116,39 +50,6 @@ _ONBID_SEL = """select o.item_id, 'onbid' as source, null::text as court_code, o
        coalesce(o.building_m2, o.land_m2) as building_area_m2, o.appraisal_krw, o.min_price_krw, o.failed_count,
        (o.bid_end at time zone 'Asia/Seoul')::date as sale_date, null::jsonb as signals, null::jsonb as market,
        o.kind"""
-
-
-def onbid_where(f: dict[str, Any]) -> str | None:
-    """같은 조건을 공매 표에 맞춤(값 이름은 build_where 와 같음). 경매만 보거나 법원을 고르면 None."""
-    if f.get("source") == "court" or f.get("court"):
-        return None
-    sql = ""
-    if f.get("sido"):
-        sql += " and o.sido = %(sido)s"
-    if f.get("sigungu"):
-        sql += " and exists (select 1 from unnest(%(sigungu)s::text[]) g where o.sigungu like g || '%%')"
-    if f.get("usage") and [g for g in f["usage"] if g in USAGE_GROUPS]:
-        sql += " and o.usage_name ~ %(usage_re)s"
-    for key, col, op in (
-        ("failed_min", "o.failed_count", ">="),
-        ("failed_max", "o.failed_count", "<="),
-        ("app_min", "o.appraisal_krw", ">="),
-        ("app_max", "o.appraisal_krw", "<="),
-        ("price_max", "o.min_price_krw", "<="),
-        ("area_min", "o.building_m2", ">="),
-        ("area_max", "o.building_m2", "<="),
-    ):
-        if f.get(key) is not None:
-            sql += f" and coalesce({col}, 0) {op} %({key})s"
-    if f.get("rate_max") is not None:
-        sql += " and o.min_price_krw * 100 <= %(rate_max)s * o.appraisal_krw"
-    if f.get("days_max") is not None:
-        sql += " and (o.bid_end at time zone 'Asia/Seoul')::date <= %(today)s + %(days_max)s"
-    if f.get("exclude"):
-        sql += " and o.kind <> 'trust'"  # 신탁은 판정을 못 해 위험을 뺄 때 함께 뺌
-    if f.get("q"):
-        sql += " and (o.address ilike %(q)s or o.title ilike %(q)s or o.mng_no ilike %(q)s)"
-    return sql
 
 
 def union_sql(f: dict[str, Any], where: str) -> str:
@@ -349,7 +250,7 @@ def _market_where(f: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     sql = (
         " where s.result = 'sold' and s.sale_rate is not null and s.sale_date >= %(since)s"
         " and not coalesce(s.is_special_case, false) and not coalesce(s.is_share, false)"
-        " and coalesce(s.usage_name, '') !~ '자동차|중기|선박|항공기'"  # 부동산만
+        f" and coalesce(s.usage_name, '') !~ '{VEHICLES}'"  # 부동산만
     )
     p: dict[str, Any] = {"since": f["since"]}
     if f.get("sido"):

@@ -4,6 +4,8 @@ import re
 from datetime import date
 from typing import Any
 
+from aucs_rules.find_filter import ANALYSIS_JOIN, COURT_VISIBLE, VEHICLES, court_where
+
 from aucs_api.db import batch, connect
 
 COURT_NAME = {
@@ -13,20 +15,17 @@ COURT_NAME = {
     "B000253": "평택", "B250826": "안산", "B000254": "안양", "B000240": "인천",
 }  # fmt: skip
 
-_CARD_SQL = """
+_CARD_SQL = f"""
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals,
-       coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
+       coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{{}}') as data_status
 from core.items i
 join core.cases c using (case_id)
-left join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
-where i.display_policy = 'public' and i.sale_date >= %(today)s
-  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'  -- 부동산만(10/28)
-  and i.status_code is distinct from 'gone'  -- 법원 목록에서 빠진 물건
-  and a.result is not null  -- 분석이 끝난 물건만 손님에게 보임(10/18 대표님)
-"""
+{ANALYSIS_JOIN}
+where {COURT_VISIBLE}
+"""  # 보이는 물건 조건(공개·부동산·목록에 있음·분석 끝)은 규칙 FIND-03 한 곳(11/8)
 
 
 def card(r: dict[str, Any], today: date) -> dict[str, Any]:
@@ -117,9 +116,7 @@ def search_results(*, q: str | None, status: str, sigungu: list[str], limit: int
     pq = parse_query(q)
     params: dict[str, Any] = {"limit": limit}
     kinds = RESULT_GROUPS.get(status)
-    where = (
-        "s.display_policy = 'public' and coalesce(s.usage_name, '') !~ '자동차|중기|선박|항공기'"
-    )
+    where = f"s.display_policy = 'public' and coalesce(s.usage_name, '') !~ '{VEHICLES}'"
     if kinds:
         where += " and s.result = any(%(kinds)s)"
         params["kinds"] = list(kinds)
@@ -226,27 +223,17 @@ def _court_query(
     extra: dict[str, Any] | None,
 ) -> list[tuple[str, dict[str, Any]]]:
     """경매 물건 목록 SQL 과 건수 SQL. 공매 물건관리번호 검색이면 빈 목록."""
-    from aucs_api.services.pro import build_where  # 찾기 조건(FIND-03)은 전문가 표와 같은 규칙
-
     if q and re.fullmatch(r"\d{4}-\d{4,5}-\d{3,6}", re.sub(r"\s+", "", q)):
         return []
-    sql = _CARD_SQL
-    params: dict[str, Any] = {"today": today, "limit": limit}
-    if extra and any(v not in (None, []) for v in extra.values()):
-        more, p2 = build_where({k: v for k, v in extra.items() if v not in (None, [])}, today)
-        sql += more
-        params.update(p2)
     pq = parse_query(q)
     if pq is not None:  # 검색할 때는 시작 질문의 지역·현금 조건을 빼고 찾음
         sigungu, max_cash = [], None
+    # 찾기 조건(FIND-03): 지역·현금·조건 칸 모두 전문가 표·알림과 같은 규칙 한 곳
+    more, params = court_where({**(extra or {}), "sigungu": sigungu, "max_cash": max_cash}, today)
+    params["limit"] = limit
+    sql = _CARD_SQL + more
+    if pq is not None:
         sql += _q_where(pq, "c.case_no", ["i.building_desc", "i.address"], params)
-    if sigungu:
-        sql += " and i.sigungu = any(%(sigungu)s)"
-        params["sigungu"] = sigungu
-    if max_cash:
-        # 임시 기준(2단계): 입찰보증금(최저가 10%)을 낼 수 있는 물건. 필요한 현금 전체 계산은 3단계 CALC-01
-        sql += " and i.min_price_krw / 10 <= %(max_cash)s"
-        params["max_cash"] = max_cash
     order = {
         "deadline": "i.sale_date, i.item_id",
         "rate": "i.min_price_krw::float / nullif(i.appraisal_krw, 0), i.sale_date",

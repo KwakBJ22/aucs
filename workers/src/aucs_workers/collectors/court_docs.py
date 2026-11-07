@@ -21,6 +21,7 @@ from datetime import date, timedelta
 from typing import Any
 
 import psycopg
+from aucs_rules.find_filter import VEHICLES
 from psycopg.types.json import Jsonb
 
 from aucs_workers.collectors.browser import launch_chrome
@@ -112,7 +113,7 @@ def photo_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]
     return [(court, case_no) for court, case_no, _, _ in rows if court in COURTS]
 
 
-REAL_ESTATE = "coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'"
+REAL_ESTATE = f"coalesce(i.usage_name, '') !~ '{VEHICLES}'"  # 부동산만 — 규칙 FIND-03 한 곳
 AREA = "i.sido in ('서울특별시', '경기도', '인천광역시')"
 LIVE_FIRST = "case when i.usage_name = any(%(usages)s) then 0 else 1 end"
 
@@ -207,10 +208,10 @@ def queue_targets(conn: psycopg.Connection) -> tuple[list[tuple[str, str]], list
 
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     rows = conn.execute(
-        """select c.court_code, c.case_no, min(i.sale_date),
+        f"""select c.court_code, c.case_no, min(i.sale_date),
                   (select max(fetched_at)::date from raw.court_doc_raw r where r.case_id = c.case_id)
            from core.items i join core.cases c using (case_id)
-           where coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기' and i.sido in ('서울특별시', '경기도', '인천광역시')
+           where {REAL_ESTATE} and {AREA}
              and i.sale_date between %s and %s
            group by c.case_id, c.court_code, c.case_no""",
         (today - timedelta(days=7), today + timedelta(days=14)),

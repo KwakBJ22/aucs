@@ -8,6 +8,7 @@ from datetime import date
 from typing import Any
 
 from aucs_rules.collect import KEYS, CollectInput, collect
+from aucs_rules.find_filter import court_where
 from aucs_rules.fmt import won
 from aucs_rules.pick import diversify
 
@@ -35,12 +36,11 @@ def collections(
         "left join lateral (select result", _STATION + "left join lateral (select result", 1
     )
     params: dict[str, Any] = {"today": today}
-    if sigungu:
-        sql += " and i.sigungu = any(%(sigungu)s)"
-        params["sigungu"] = sigungu
-    if max_cash:
-        sql += " and i.min_price_krw / 10 <= %(max_cash)s"
-        params["max_cash"] = max_cash
+    more, fp = court_where(
+        {"sigungu": sigungu, "max_cash": max_cash}, today
+    )  # 찾기와 같은 규칙(FIND-03)
+    sql += more
+    params.update(fp)
     sql += " order by i.sale_date limit 20000"  # 전체 지역도 빠짐없이(11/7 — 6000 이면 먼 날 물건이 빠졌음)
     with connect() as c:
         rows = c.execute(sql, params).fetchall()

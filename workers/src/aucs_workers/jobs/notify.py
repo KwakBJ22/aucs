@@ -16,6 +16,13 @@ from datetime import date
 from typing import Any
 
 import psycopg
+from aucs_rules.find_filter import (
+    ANALYSIS_JOIN,
+    COURT_VISIBLE,
+    ONBID_VISIBLE,
+    court_where,
+    onbid_where,
+)
 from aucs_rules.fmt import won_unit as won
 from aucs_rules.schedule import after_sale, short
 
@@ -75,105 +82,20 @@ def change_text(place: str, ch: Change, *, onbid: bool = False) -> tuple[str, st
     return f"{place} {RESULT_KO.get(ch.new, ch.new)}", "결과를 확인해 보세요"
 
 
-USAGE_GROUPS = {
-    "apt": "아파트",
-    "villa": "다세대|연립|빌라",
-    "officetel": "오피스텔",
-    "house": "단독|다가구",
-    "shop": "상가|근린|점포|사무|공장|창고|숙박|업무",
-    "land": "대지|전답|임야|토지|잡종|^전$|^답$",
-}  # API pro.USAGE_GROUPS 와 같게
-EXCLUDE_RULES = {
-    "share": ["risk.share"],
-    "special": ["risk.special_condition"],
-    "villa": ["risk.neighborhood_villa"],
-    "stop": ["risk.stop", "risk.withdraw"],
-    "lien": ["risk.lien"],
-    "senior": ["risk.senior_tenant", "risk.prior_rights", "risk.lease_reg"],
-    "superficies": ["risk.superficies", "risk.land_right"],
-    "illegal": ["risk.illegal"],
-    "farmland": ["risk.farmland"],
-    "resale": ["risk.resale"],
-}  # API pro.EXCLUDE_RULES 와 같게
+def match_sql(filters: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
+    """저장한 조건 → 경매 물건 조건. 손님에게 보이는 물건(공개·부동산·목록에 있음·분석 끝)과 찾기 조건 모두
+    규칙 FIND-03 한 곳(11/8 — 예전엔 API를 베껴 적어 공개·분석 끝 조건이 빠져 있었음). 별칭 i·c·a."""
+    cond, p = court_where(filters, today)
+    return COURT_VISIBLE + cond, p
 
 
-def match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """찾기 화면과 같은 기준(시군구, 최저가/10 ≤ 현금, 찾기 조건 칸, 피하고 싶은 것)."""
-    sql = (
-        "i.sale_date >= current_date and i.status_code is distinct from 'gone'"
-        " and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'"
-    )
-    p: dict[str, Any] = {}
-    if filters.get("sigungu"):
-        sql += " and i.sigungu = any(%(sigungu)s)"
-        p["sigungu"] = list(filters["sigungu"])
-    if filters.get("max_cash"):
-        sql += " and i.min_price_krw / 10 <= %(max_cash)s"
-        p["max_cash"] = int(filters["max_cash"])
-    groups = [USAGE_GROUPS[g] for g in filters.get("usage") or [] if g in USAGE_GROUPS]
-    if groups:
-        sql += " and i.usage_name ~ %(usage_re)s"
-        p["usage_re"] = "|".join(f"({g})" for g in groups)
-    for key, col, op in (
-        ("failed_min", "i.failed_count", ">="),
-        ("price_max", "i.min_price_krw", "<="),
-        ("area_min", "i.building_area_m2", ">="),
-        ("area_max", "i.building_area_m2", "<="),
-    ):
-        if filters.get(key) is not None:
-            sql += f" and coalesce({col}, 0) {op} %({key})s"
-            p[key] = filters[key]
-    if filters.get("rate_max") is not None:
-        sql += " and i.min_price_krw * 100 <= %(rate_max)s * i.appraisal_krw"
-        p["rate_max"] = filters["rate_max"]
-    if filters.get("days_max") is not None:
-        sql += " and i.sale_date <= current_date + %(days_max)s"
-        p["days_max"] = int(filters["days_max"])
-    rules = [r for k in filters.get("exclude") or [] for r in EXCLUDE_RULES.get(k, [])]
-    if rules:
-        sql += """ and not exists (select 1 from analysis.item_analysis a,
-                   jsonb_array_elements(coalesce(a.result -> 'signals', '[]'::jsonb)) s
-                   where a.item_id = i.item_id
-                     and a.version = (select max(version) from analysis.item_analysis x where x.item_id = i.item_id)
-                     and s ->> 'rule_id' = any(%(ex_rules)s) and s ->> 'status' <> '모름')"""
-        p["ex_rules"] = rules
-    return sql, p
-
-
-def onbid_match_sql(filters: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
-    """저장한 조건을 공매 표(core.onbid_items o)에 맞춤. 「경매만」 조건이면 None."""
-    if filters.get("source") == "court":
+def onbid_match_sql(filters: dict[str, Any], today: date) -> tuple[str, dict[str, Any]] | None:
+    """저장한 조건 → 공매 물건 조건(FIND-03, 값 이름은 경매와 같음). 「경매만」 조건이면 None."""
+    ow = onbid_where(filters)
+    if ow is None:
         return None
-    sql = "o.status_code = 'active' and o.disposal = '매각' and (o.bid_end is null or o.bid_end >= now())"
-    p: dict[str, Any] = {}
-    if filters.get("sigungu"):
-        sql += " and exists (select 1 from unnest(%(sigungu)s::text[]) g where o.sigungu like g || '%%')"
-        p["sigungu"] = list(filters["sigungu"])
-    if filters.get("max_cash"):
-        sql += " and o.min_price_krw / 10 <= %(max_cash)s"
-        p["max_cash"] = int(filters["max_cash"])
-    groups = [USAGE_GROUPS[g] for g in filters.get("usage") or [] if g in USAGE_GROUPS]
-    if groups:
-        sql += " and o.usage_name ~ %(usage_re)s"
-        p["usage_re"] = "|".join(f"({g})" for g in groups)
-    for key, col, op in (
-        ("failed_min", "o.failed_count", ">="),
-        ("price_max", "o.min_price_krw", "<="),
-        ("area_min", "o.building_m2", ">="),
-        ("area_max", "o.building_m2", "<="),
-    ):
-        if filters.get(key) is not None:
-            sql += f" and coalesce({col}, 0) {op} %({key})s"
-            p[key] = filters[key]
-    if filters.get("rate_max") is not None:
-        sql += " and o.min_price_krw * 100 <= %(rate_max)s * o.appraisal_krw"
-        p["rate_max"] = filters["rate_max"]
-    if filters.get("days_max") is not None:
-        sql += " and o.bid_end <= now() + make_interval(days => %(days_max)s)"
-        p["days_max"] = int(filters["days_max"])
-    if filters.get("exclude"):
-        sql += " and o.kind <> 'trust'"  # 신탁은 판정을 못 하니 피하고 싶은 것이 있으면 뺌
-    return sql, p
+    _, p = court_where(filters, today)
+    return ONBID_VISIBLE + ow, p
 
 
 def _event(
@@ -201,9 +123,9 @@ def make_search_alerts(conn: psycopg.Connection) -> int:
     for sid, uid, name, filters, since in conn.execute(
         "select search_id, user_id, name, filters, created_at from app.saved_searches where active"
     ).fetchall():
-        cond, p = match_sql(filters)
+        cond, p = match_sql(filters, date.today())
         rows = conn.execute(
-            f"""select i.item_id from core.items i
+            f"""select i.item_id from core.items i join core.cases c using (case_id) {ANALYSIS_JOIN}
                 where {cond} and (select min(fetched_at) from raw.court_item_raw r where r.doc_key = i.doc_key) > %(since)s""",
             {**p, "since": since},
         ).fetchall()
@@ -226,7 +148,7 @@ def make_onbid_search_alerts(conn: psycopg.Connection) -> int:
     for sid, uid, name, filters, since in conn.execute(
         "select search_id, user_id, name, filters, created_at from app.saved_searches where active"
     ).fetchall():
-        m = onbid_match_sql(filters)
+        m = onbid_match_sql(filters, date.today())
         if m is None:
             continue
         cond, p = m

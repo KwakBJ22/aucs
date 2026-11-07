@@ -5,6 +5,7 @@ from typing import Any
 
 from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
+from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
@@ -36,8 +37,8 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
 from core.items i
 join core.cases c using (case_id)
 left join lateral (select result, computed_at from analysis.item_analysis x where x.item_id = i.item_id order by version desc limit 1) a on true
-where i.item_id = %s and i.display_policy = 'public'
-  and coalesce(i.usage_name, '') !~ '자동차|중기|선박|항공기'  -- 차·배는 다루지 않음(목록처럼 상세도 막음, 11/1)
+where i.item_id = %(id)s and i.display_policy = 'public'
+  and coalesce(i.usage_name, '') !~ %(vehicles)s  -- 차·배는 다루지 않음(목록처럼 상세도 막음, 11/1)
 """
 
 
@@ -222,7 +223,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     item_no = int(str(item_id).rsplit("-", 1)[-1] or 1)
     with connect() as c:
         with c.pipeline():
-            q_item = c.execute(_ITEM_SQL, (item_id,))
+            q_item = c.execute(_ITEM_SQL, {"id": item_id, "vehicles": VEHICLES})
             # 매각기일: 우리가 받은 회차 + 그 전 매각결과(11/1 — 유찰 12번 물건이 1줄만 보였음)
             q_rounds = c.execute(
                 """select sale_date, min_price_krw, result from core.rounds where item_id = %(id)s

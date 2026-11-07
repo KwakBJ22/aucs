@@ -5,6 +5,8 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from aucs_rules.find_filter import ONBID_VISIBLE, court_where, onbid_where
+
 KST = timezone(timedelta(hours=9))
 KIND_KO = {
     "seized": "압류",
@@ -14,17 +16,15 @@ KIND_KO = {
     "finance": "금융기관",
 }
 
-_CARD_SQL = """
+_CARD_SQL = f"""
 select o.*,
        (select json_build_object('min_price_krw', n.min_price_krw, 'bid_start', n.bid_start, 'bid_end', n.bid_end)
           from core.onbid_rounds n
          where n.item_id = o.item_id and n.bid_end > coalesce(o.bid_end, now()) and n.min_price_krw is not null
          order by n.bid_end limit 1) as next_round
 from core.onbid_items o
-where o.display_policy = 'public' and o.status_code = 'active'
-  and coalesce(o.disposal, '매각') like '%%매각%%'
-  and (o.bid_end is null or o.bid_end >= now())
-"""
+where {ONBID_VISIBLE}
+"""  # 보이는 공매 물건 조건은 규칙 FIND-03 한 곳(11/8)
 
 TRUST_SIGNAL = {
     "rule_id": "onbid.trust",
@@ -112,45 +112,22 @@ def build_query(
     today: date,
 ) -> tuple[str, dict[str, Any]] | None:
     """찾기 조건 → (SQL, 값). 공매에 해당 없는 검색이면 None. (순수 함수)"""
-    from aucs_api.services.pro import USAGE_GROUPS
-
     sql = _CARD_SQL
-    p: dict[str, Any] = {"today": today}
+    p: dict[str, Any] = {}
     qw = _q_where(q, p)
     if qw is None:
         return None
     sql += qw
     if qw:  # 검색할 때는 시작 질문의 지역·현금 조건을 빼고 찾음(경매와 같음)
         sigungu, max_cash = [], None
-    if sigungu:
-        # 경기도는 시군구 칸이 「수원시 영통구」처럼 구까지 옴 → 시 이름으로 시작하면 통과
-        sql += " and (o.sigungu = any(%(sgg)s) or split_part(o.sigungu, ' ', 1) = any(%(sgg)s))"
-        p["sgg"] = sigungu
-    if max_cash:
-        sql += " and o.min_price_krw / 10 <= %(max_cash)s"
-        p["max_cash"] = max_cash
-    f = {k: v for k, v in (extra or {}).items() if v not in (None, [])}
-    groups = [USAGE_GROUPS[g] for g in f.get("usage") or [] if g in USAGE_GROUPS]
-    if groups:
-        sql += " and coalesce(o.usage_name, '') || ' ' || coalesce(o.title, '') ~ %(o_usage)s"
-        p["o_usage"] = "|".join(f"({g})" for g in groups)
-    for key, col, op in (
-        ("failed_min", "o.failed_count", ">="),
-        ("price_max", "o.min_price_krw", "<="),
-        ("area_min", "coalesce(o.building_m2, o.land_m2)", ">="),
-        ("area_max", "coalesce(o.building_m2, o.land_m2)", "<="),
-    ):
-        if f.get(key) is not None:
-            sql += f" and coalesce({col}, 0) {op} %(o_{key})s"
-            p[f"o_{key}"] = f[key]
-    if f.get("rate_max") is not None:
-        sql += " and o.min_price_krw * 100 <= %(o_rate)s * o.appraisal_krw"
-        p["o_rate"] = f["rate_max"]
-    if f.get("days_max") is not None:
-        sql += " and o.bid_end < (%(today)s + %(o_days)s + 1)::date"
-        p["o_days"] = f["days_max"]
-    if f.get("exclude"):  # 안전하게 보기 — 판정을 미룬 신탁공매는 뺌
-        sql += " and o.kind <> 'trust'"
+    # 찾기 조건은 경매와 같은 규칙 FIND-03 한 곳(11/8) — 값 이름도 경매와 같음
+    f = {**(extra or {}), "sigungu": sigungu, "max_cash": max_cash}
+    ow = onbid_where(f)
+    if ow is None:
+        return None
+    _, fp = court_where(f, today)
+    p.update(fp)
+    sql += ow
     return sql, p
 
 

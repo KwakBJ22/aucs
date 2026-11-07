@@ -12,6 +12,7 @@
 from datetime import date
 from typing import Any
 
+from aucs_rules.find_filter import court_where
 from aucs_rules.pick import PickInput, diversify, pick_score
 from aucs_rules.sale_rate import next_round_min_price
 
@@ -97,12 +98,11 @@ def home_picks(
 left join lateral (select result""",
         )
     params: dict[str, Any] = {"today": today}
-    if sigungu:
-        sql += " and i.sigungu = any(%(sigungu)s)"
-        params["sigungu"] = sigungu
-    if max_cash:
-        sql += " and i.min_price_krw / 10 <= %(max_cash)s"
-        params["max_cash"] = max_cash
+    more, fp = court_where(
+        {"sigungu": sigungu, "max_cash": max_cash}, today
+    )  # 찾기와 같은 규칙(FIND-03)
+    sql += more
+    params.update(fp)
     sql += " order by i.sale_date limit 4000"
     with connect() as c:
         rows = c.execute(sql, params).fetchall()

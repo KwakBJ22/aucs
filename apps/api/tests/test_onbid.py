@@ -42,7 +42,7 @@ def test_query() -> None:
     assert "o.mng_no = %(mng)s" in sql and p["mng"] == "2023-05662-001"
     sql, p = build_query(sigungu=["수원시"], max_cash=150_000_000, q=None,
                          extra={"days_max": 3, "exclude": ["share"]}, today=date(2026, 6, 22)) or ("", {})  # fmt: skip
-    assert "split_part(o.sigungu" in sql and "o.kind <> 'trust'" in sql and p["o_days"] == 3
+    assert "split_part(o.sigungu" in sql and "o.kind <> 'trust'" in sql and p["days_max"] == 3
 
 
 def test_merge() -> None:
