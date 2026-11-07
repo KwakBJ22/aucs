@@ -145,6 +145,10 @@ export type HomeFeed = {
   market: import("./pro").Market | null;
   notices: { notice_id: number; title: string; body: string }[];
 };
+// 게시 중인 공지(공개) — 고객센터(11/7)
+export type PublicNotice = { notice_id: number; title: string; body: string; start_at: string };
+export const fetchNotices = () => getJson<PublicNotice[]>("/notices");
+
 export function fetchHomeFeed(opts: {
   sigungu?: string[];
   maxCash?: number | null;

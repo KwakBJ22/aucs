@@ -1217,3 +1217,62 @@ textarea.adm-input {
   align-items: flex-end;
   justify-content: center;
 }
+
+/* 고객센터·약관(11/7): 접는 질문 줄, 조항 */
+.faq {
+  padding: 14px 0;
+}
+.faq + .faq {
+  box-shadow: inset 0 1px 0 var(--panel);
+}
+.faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: "›";
+  color: var(--faint);
+  transform: rotate(90deg);
+}
+.faq[open] summary::after {
+  transform: rotate(-90deg);
+}
+.faq p {
+  margin: 10px 0 0;
+  font-size: var(--fs-md);
+  color: var(--gray-text);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.legal-item + .legal-item {
+  margin-top: 24px;
+}
+.legal h2,
+.legal-item h2 {
+  font-size: var(--fs-base);
+  margin: 0 0 8px;
+}
+.legal-item p,
+.legal-item li {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--gray-text);
+  line-height: 1.7;
+}
+.legal-item ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.legal-item li + li {
+  margin-top: 6px;
+}

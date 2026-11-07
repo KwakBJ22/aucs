@@ -42,6 +42,22 @@ def get_items(
     return out
 
 
+@router.get("/notices")
+def get_notices() -> list[dict[str, Any]]:
+    """게시 중인 공지(공개) — 고객센터 화면(11/7)."""
+    from aucs_api.services import admin_ops
+
+    return [
+        {
+            "notice_id": n["notice_id"],
+            "title": n["title"],
+            "body": n["body"],
+            "start_at": n["start_at"],
+        }
+        for n in admin_ops.notices(True)
+    ]
+
+
 @router.get("/home-feed")
 def get_home_feed(
     sigungu: Annotated[list[str] | None, Query()] = None,
