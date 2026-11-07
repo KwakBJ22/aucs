@@ -43,7 +43,8 @@ function kindLabel(u: string | null): string {
   return "기타";
 }
 
-export function ItemCard({ c }: { c: Card }) {
+// why: 모아 보기에서 이 물건이 그 모음에 든 이유 한 줄(있으면 「감정가보다 낮음」 줄 대신)
+export function ItemCard({ c, why }: { c: Card; why?: string }) {
   const urgent = c.d_day != null && c.d_day <= 7;
   const onbid = c.source === "onbid";
   return (
@@ -74,7 +75,8 @@ export function ItemCard({ c }: { c: Card }) {
           </span>
         </div>
         <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
-        {!onbid && c.below_appraisal_krw > 0 && (
+        {why && <div className="fs-xs c-blue fw-6 mt-6">{why}</div>}
+        {!why && !onbid && c.below_appraisal_krw > 0 && (
           <div className="fs-xs c-blue mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
         )}
       </div>

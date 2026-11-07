@@ -15,7 +15,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 TTL = 120.0
 MAX = 500
-PREFIXES = ("/items", "/regions", "/pro/", "/home-feed")
+PREFIXES = ("/items", "/regions", "/pro/", "/home-feed", "/collections")
 # 공개 자료를 바꾸는 건 관리자 요청뿐 — 관심·메모·사용 기록 같은 회원 요청으로는 비우지 않음(10/27)
 CLEAR_ON = ("/admin",)
 

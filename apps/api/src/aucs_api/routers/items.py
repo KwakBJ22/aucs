@@ -42,6 +42,21 @@ def get_items(
     return out
 
 
+@router.get("/collections")
+def get_collections(
+    sigungu: Annotated[list[str] | None, Query()] = None,
+    max_cash: Annotated[int | None, Query(ge=0)] = None,
+    key: Annotated[str | None, Query(pattern="^(cheap|safe|rising|next|station|special)$")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 8,
+) -> dict[str, Any]:
+    """모아 보기(11/7): 모음마다 건수와 물건(key 를 주면 그 모음만 limit 건)."""
+    from aucs_api.services.collections import collections
+
+    return collections(
+        sigungu=sigungu or [], max_cash=max_cash, key=key, limit=limit, today=date.today()
+    )
+
+
 @router.get("/notices")
 def get_notices() -> list[dict[str, Any]]:
     """게시 중인 공지(공개) — 고객센터 화면(11/7)."""

@@ -20,10 +20,11 @@ export const NAV: NavItem[] = [
     href: "/home",
     group: "basic",
     ready: true,
-    match: ["/home", "/notifications", "/guide"],
+    match: ["/home", "/notifications", "/guide", "/collections"],
     pcHide: true,
     sub: [
       { label: "오늘의 추천", href: "/home" },
+      { label: "모아 보기", href: "/collections" },
       { label: "알림함", href: "/notifications" },
       { label: "경매 처음이세요?", href: "/guide" },
     ],
@@ -108,7 +109,12 @@ export const NAV: NavItem[] = [
 
 // 휴대폰 하단 탭 5개 (찾고 → 담고 → 입찰하고 → 낙찰 뒤 → 전체)
 export const TABS = [
-  { key: "home", label: "홈", href: "/home", match: ["/home", "/notifications", "/guide"] },
+  {
+    key: "home",
+    label: "홈",
+    href: "/home",
+    match: ["/home", "/notifications", "/guide", "/collections"],
+  },
   { key: "find", label: "찾기", href: "/find", match: ["/find", "/item"] },
   { key: "watch", label: "관심", href: "/watch", match: ["/watch", "/compare"] },
   { key: "me", label: "내 경매", href: "/me", match: ["/me"] },

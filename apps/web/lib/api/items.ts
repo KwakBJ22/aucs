@@ -145,6 +145,23 @@ export type HomeFeed = {
   market: import("./pro").Market | null;
   notices: { notice_id: number; title: string; body: string }[];
 };
+// 모아 보기(11/7): 모음마다 건수와 물건(why = 이 모음에 든 이유 한 줄)
+export type CollectionCard = PickCard & { why: string };
+export type Collections = Record<string, { total: number; items: CollectionCard[] }>;
+export function fetchCollections(opts: {
+  sigungu?: string[];
+  maxCash?: number | null;
+  key?: string;
+  limit?: number;
+}) {
+  const q = new URLSearchParams();
+  (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
+  if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
+  if (opts.key) q.set("key", opts.key);
+  if (opts.limit) q.set("limit", String(opts.limit));
+  return getJson<Collections>(`/collections?${q.toString()}`);
+}
+
 // 게시 중인 공지(공개) — 고객센터(11/7)
 export type PublicNotice = { notice_id: number; title: string; body: string; start_at: string };
 export const fetchNotices = () => getJson<PublicNotice[]>("/notices");

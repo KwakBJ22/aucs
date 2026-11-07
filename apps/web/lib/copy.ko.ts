@@ -1,4 +1,6 @@
 // 화면 문구는 이 파일 한 곳에 모읍니다.
+export type CollectionKey = "cheap" | "safe" | "rising" | "next" | "station" | "special";
+
 export const copy = {
   appName: "옥스경매", // 화면 안 로고·머리 이름(11/4 「옥스」→「옥스경매」)
   siteTitle: "옥스경매", // 브라우저 탭·검색 결과에 보이는 이름(11/4)
@@ -134,6 +136,7 @@ export const copy = {
     today: "다가오는 입찰",
     toRecord: (n: number) => `입찰일이 지난 관심 물건 ${n}건 · 결과 적어 두기`,
     picks: "오늘의 추천",
+    allLink: "전체 ›",
     picksSub: "입찰까지 10일 넘게 남아 준비할 시간이 있는 물건",
     soon: "마감 임박",
     soonSub: "7일 안 · 점수 높은 것만",
@@ -156,6 +159,29 @@ export const copy = {
     courtRate: "법원별 낙찰가율",
     courtRateSub: "최근 석 달 · 가운데값",
     marketMore: "시장 분석 전체",
+  },
+  // 모아 보기(11/7 대표님 — 차별화 · 손님에게 쓸모 있는 것만, 규칙 COLLECT-01)
+  collections: {
+    title: "모아 보기",
+    sub: "옥스가 분석해서 골라 모은 물건",
+    mine: "내 조건",
+    all: "전체 지역",
+    count: (n: number) => `${n.toLocaleString("ko-KR")}건`,
+    more: (n: number) => `${n.toLocaleString("ko-KR")}건 모두 보기`,
+    empty: "지금은 이 모음에 든 물건이 없어요",
+    noProfile: "시작 질문에 답하면 내 지역·현금 안에서만 모아 드려요",
+    list: [
+      ["cheap", "시세보다 싸게 살 여지", "예상 낙찰가가 실거래 시세보다 10% 넘게 낮은 물건"],
+      ["safe", "떠안는 돈 없는 물건", "권리 위험 신호가 하나도 없어 처음 해도 안심되는 물건"],
+      ["rising", "감정 뒤 값이 오른 곳", "감정가보다 지금 실거래 시세가 10% 넘게 높은 물건"],
+      ["next", "다음 달 더 싸지는 물건", "이번엔 유찰될 것 같거나 다음 회차가 잡힌 물건"],
+      ["station", "역 가까운 곳", "지하철역까지 500m 안(직선 거리)"],
+      [
+        "special",
+        "특수 권리 물건",
+        "떠안는 권리가 있어 경험자에게 맞는 물건 · 무엇이 문제인지 함께",
+      ],
+    ] as [CollectionKey, string, string][],
   },
   card: {
     belowAppraisal: (x: string) => `감정가보다 ${x} 낮음`,

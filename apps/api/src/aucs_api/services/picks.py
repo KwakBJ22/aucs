@@ -46,6 +46,30 @@ def _pick_window(x: dict[str, Any]) -> bool:
     return 1 <= d <= 30 if x["preview"] else 1 <= d <= 14
 
 
+def load_reduction(c: Any, today: date) -> dict[str, Any]:
+    """법원별 유찰 때 깎는 비율(기준표 court_reduction_pct)."""
+    red = c.execute(
+        "select value from ref.rule_tables where rule_key = 'court_reduction_pct'"
+        " and valid_from <= %s order by valid_from desc limit 1",
+        (today,),
+    ).fetchone()
+    return dict((red or {}).get("value") or {})
+
+
+def mark_next_round(
+    cd: dict[str, Any], r: dict[str, Any], an: dict[str, Any], reduction: dict[str, Any]
+) -> None:
+    """「다음 달 더 싸지는 물건」 판단 한 곳(홈 추천·모아 보기, 11/7): 지금 최저가율이 같은 법원
+    비슷한 물건 낙찰가율 75%보다 5%p 넘게 높으면 이번엔 유찰될 것 같음 → 유찰되면 다음 최저가."""
+    cd["preview"] = r["status_code"] == PREVIEW
+    cc = (an.get("court_cell") or {}).get("p75")
+    rate = cd["min_rate"]
+    red_pct = (reduction.get(r["court_code"]) or {}).get("pct")
+    cd["likely_fail"] = bool(cc and rate and rate > float(cc) + 5 and not cd["preview"])
+    if cd["likely_fail"] and r["min_price_krw"]:
+        cd["next_min_krw"] = next_round_min_price(r["min_price_krw"], red_pct).value
+
+
 def home_picks(
     *, sigungu: list[str], max_cash: int | None, purpose: str | None, today: date
 ) -> dict[str, Any]:
@@ -80,12 +104,7 @@ left join lateral (select result""",
     sql += " order by i.sale_date limit 4000"
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
-        red = c.execute(
-            "select value from ref.rule_tables where rule_key = 'court_reduction_pct'"
-            " and valid_from <= %s order by valid_from desc limit 1",
-            (today,),
-        ).fetchone()
-    reduction: dict[str, Any] = dict((red or {}).get("value") or {})
+        reduction = load_reduction(c, today)
 
     scored: list[dict[str, Any]] = []
     for r in rows:
@@ -109,13 +128,7 @@ left join lateral (select result""",
         cd["score"] = p["score"]
         cd["reasons"] = p["reasons"]
         cd["photo"] = _photo_url(r["photo"])
-        cd["preview"] = r["status_code"] == PREVIEW
-        cc = (an.get("court_cell") or {}).get("p75")
-        rate = cd["min_rate"]
-        red_pct = (reduction.get(r["court_code"]) or {}).get("pct")
-        cd["likely_fail"] = bool(cc and rate and rate > float(cc) + 5 and not cd["preview"])
-        if cd["likely_fail"] and r["min_price_krw"]:
-            cd["next_min_krw"] = next_round_min_price(r["min_price_krw"], red_pct).value
+        mark_next_round(cd, r, an, reduction)
         scored.append(cd)
     scored.sort(key=lambda x: -x["score"])
 

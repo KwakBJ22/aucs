@@ -1284,3 +1284,71 @@ textarea.adm-input {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* 모아 보기(11/7): 모음 칩 — 휴대폰은 옆으로 넘기고 PC는 여섯 칸 */
+.col-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 16px -20px 4px;
+  padding: 0 20px 4px;
+}
+.col-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 132px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.col-chip b {
+  font-size: var(--fs-md);
+}
+.col-chip span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.col-chip.on {
+  background: var(--text);
+  color: var(--surface);
+}
+.col-chip.on span {
+  color: var(--surface);
+  opacity: 0.8;
+}
+@media (min-width: 1024px) {
+  .col-chips {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin: 20px 0 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .col-chip {
+    min-width: 0;
+  }
+  .col-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+}
+/* 홈 바로가기 칩은 설명까지 두 줄로(11/7) */
+a.col-chip {
+  width: 168px;
+  min-width: 0;
+}
+a.col-chip span {
+  line-height: 1.45;
+}
+@media (min-width: 1024px) {
+  a.col-chip {
+    width: auto;
+  }
+}

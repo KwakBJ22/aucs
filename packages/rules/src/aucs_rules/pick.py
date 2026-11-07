@@ -55,6 +55,13 @@ def _won_short(n: int) -> str:
     return f"{man}천만 원" if man else f"{round(n / 10_000):,}만 원"
 
 
+def expected_price(app: int, mn: int, analysis: dict[str, Any]) -> int:
+    """예상 낙찰가 = 감정가 × 비슷한 물건 낙찰가율 가운데값(최저가보다 낮을 수 없음). 율을 모르면 최저가.
+    추천(PICK-01)과 모아 보기(COLLECT-01)가 같은 값을 쓰도록 한 곳에(11/7)."""
+    sr = analysis.get("sale_rate") or {}
+    return max(mn, round(app * float(sr["p50"]) / 100)) if sr.get("p50") and app else mn
+
+
 def _kind(usage: str | None) -> str:
     u = usage or ""
     if "아파트" in u:
@@ -94,8 +101,7 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         excluded = "금액 모름"
 
     # ── 싼 정도: 예상 낙찰가(감정가 × 중앙 낙찰가율, 최저가보다 낮을 수 없음) vs 시세. 25% 싸면 1
-    sr = a.get("sale_rate") or {}
-    expect = max(mn, round(app * float(sr["p50"]) / 100)) if sr.get("p50") and app else mn
+    expect = expected_price(app, mn, a)
     market = (a.get("market") or {}).get("price_krw")
     if market and expect:
         gap = market - expect

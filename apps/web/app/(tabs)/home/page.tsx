@@ -268,6 +268,25 @@ export default function Home() {
       {picks && picks.picks.length > 0 && <PickRow list={picks.picks.slice(0, pc ? 8 : 5)} />}
     </section>
   );
+  // 모아 보기 바로가기(11/7) — 건수는 모아 보기 화면에서(홈에서 또 부르지 않음)
+  const collectBlock = (
+    <section className="section">
+      <div className="d-flex jc-between ai-center">
+        <h2>{copy.collections.title}</h2>
+        <Link href="/collections" className="sub fs-sm">
+          {t.allLink}
+        </Link>
+      </div>
+      <div className="col-chips quiet-scroll">
+        {copy.collections.list.map(([k, name, hint]) => (
+          <Link key={k} href={`/collections?key=${k}`} className="col-chip c-inherit">
+            <b>{name}</b>
+            <span>{hint}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
   const soonBlock = picks && picks.soon.length > 0 && (
     <section className="section">
       <h2>{t.soon}</h2>
@@ -375,6 +394,7 @@ export default function Home() {
           <div>
             {todayBlock}
             {picksBlock}
+            {collectBlock}
             {soonBlock}
             {nextBlock}
             {forMeBlock}
@@ -458,6 +478,7 @@ export default function Home() {
       {loginBanner}
       {todayBlock}
       {picksBlock}
+      {collectBlock}
       {soonBlock}
       {nextBlock}
       {onbidBlock}
