@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { SessionProvider } from "@/lib/auth";
+import { meApi } from "@/lib/api/me";
+import { SessionProvider, useSession } from "@/lib/auth";
+import { pushProfile } from "@/lib/profile";
 import { listenErrors } from "@/lib/report-error";
 import { track } from "@/lib/track";
 
@@ -21,12 +23,23 @@ function ErrorListener() {
   return null;
 }
 
+// 로그인하면 시작 질문 답(내 조건)을 계정에 옮겨 둠 — 어느 화면으로 들어와도 한 곳에서(11/8)
+function ProfileSync() {
+  const { session } = useSession();
+  const token = session?.access_token;
+  useEffect(() => {
+    if (token) pushProfile(token, (b) => meApi.saveProfile(token, b));
+  }, [token]);
+  return null;
+}
+
 // 모든 화면이 같이 쓰는 것(로그인 세션)을 맨 위에서 한 번만 준비합니다.
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <PageViews />
       <ErrorListener />
+      <ProfileSync />
       {children}
     </SessionProvider>
   );

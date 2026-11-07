@@ -9,6 +9,7 @@ import { Row } from "@/components/calc-box";
 import type { OnbidDetail, Question } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import { useIsPc } from "@/lib/use-pc";
 import { DOT } from "@/components/item/shared";
 import { SameHouse } from "@/components/item/same-house";
@@ -200,7 +201,6 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
   const [open, setOpen] = useState<Question["key"] | null>(null);
   const [copied, setCopied] = useState(false);
   const pc = useIsPc();
-  const urgent = d.d_day != null && d.d_day <= 3;
   const solo = d.expected.find((e) => e.bucket === "혼자");
   const qs: { key: Question["key"]; answer: string; tone: Question["tone"] }[] = [
     { key: "buy", answer: [d.kind_name, d.usage].filter(Boolean).join(" · "), tone: "gray" },
@@ -227,9 +227,9 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       <section className="section">
         <div className="sub d-flex gap-8 f-wrap ai-center">
-          <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
+          <DDay d={d.d_day}>
             {d.bid_end ? `${dday(d.d_day)} ${copy.card.closes} · ${when(d.bid_end)}` : t.undecided}
-          </b>
+          </DDay>
           <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip">
             {t.badge(d.kind_name ?? "")}
           </span>

@@ -426,3 +426,14 @@
     font-size: var(--fs-xl);
   }
 }
+
+/* 입찰일 색(11/8 한 곳 — components/dday.tsx, lib/format ddayTone) */
+.dd-past {
+  color: var(--muted);
+}
+.dd-soon {
+  color: var(--red);
+}
+.dd-later {
+  color: var(--amber);
+}

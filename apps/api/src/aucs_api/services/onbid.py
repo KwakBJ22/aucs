@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from aucs_rules.find_filter import ONBID_VISIBLE, court_where, onbid_where
+from aucs_rules.pick import usage_kind
 
 KST = timezone(timedelta(hours=9))
 KIND_KO = {
@@ -60,6 +61,7 @@ def onbid_card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "d_day": (end_day - today).days if end_day else None,
         "bid_end": end.isoformat() if end else None,
         "usage": r["usage_name"],
+        "usage_kind": usage_kind(r["usage_name"]),  # 종류 판정은 규칙 한 곳(11/8)
         "place": " ".join(x for x in [r["sigungu"], r["dong"]] if x),
         "building": None,
         "area_m2": float(area) if area else None,

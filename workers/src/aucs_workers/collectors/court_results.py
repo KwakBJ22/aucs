@@ -5,7 +5,9 @@ uv run python -m aucs_workers.collectors.court_results
 
 import argparse
 
-from aucs_workers.collectors.court_site import COURTS, fetch_pages
+from aucs_rules.courts import COURTS
+
+from aucs_workers.collectors.court_site import fetch_pages
 from aucs_workers.collectors.polite import Polite
 from aucs_workers.collectors.store import save_raw, save_results
 from aucs_workers.db import connect

@@ -16,7 +16,7 @@ import {
 } from "@/lib/api/me";
 import { PageHeader } from "@/components/layout/page-header";
 import { useIsPc } from "@/lib/use-pc";
-import { dday } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { fetchCourtBidders, type CourtBidders } from "@/lib/api/items";
@@ -235,10 +235,8 @@ export default function Me() {
           className="menu-row"
         >
           <span className="minw-0">
-            <b style={{ color: w.d_day != null && w.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
-              {dday(w.d_day)}
-            </b>{" "}
-            {w.sale_date?.slice(5).replace("-", "/")} · {w.place} {w.building ?? w.usage}
+            <DDay d={w.d_day} /> {w.sale_date?.slice(5).replace("-", "/")} · {w.place}{" "}
+            {w.building ?? w.usage}
             <span className="sub d-block">
               {copy.watch.steps[w.step]} · {w.court} {w.case_no}
             </span>

@@ -16,10 +16,10 @@ from aucs_rules.find_filter import court_where
 from aucs_rules.pick import PickInput, diversify, pick_score
 from aucs_rules.sale_rate import next_round_min_price
 
-from aucs_api import settings
+from aucs_api.cache import memo
 from aucs_api.db import connect
 from aucs_api.services.fail_odds import odds_for
-from aucs_api.services.items import _CARD_SQL, card
+from aucs_api.services.items import _CARD_SQL, card, photo_url
 
 PREVIEW = "preview"  # 유찰 뒤 기일내역으로 미리 안 다음 회차(법원 공고 전)
 
@@ -36,25 +36,21 @@ _SQL = (
 )
 
 
-def _photo_url(path: str | None) -> str | None:
-    if not path or not settings.SUPABASE_URL:
-        return None
-    return f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{path}"
-
-
 def _pick_window(x: dict[str, Any]) -> bool:
     """추천 칸에 넣을 때(11/7): 공고된 물건 입찰 1~14일 남음, 유찰 뒤 다음 회차는 30일 안."""
     d = x["d_day"] if x["d_day"] is not None else -1
     return 1 <= d <= 30 if x["preview"] else 1 <= d <= 14
 
 
-def load_reduction(c: Any, today: date) -> dict[str, Any]:
-    """법원별 유찰 때 깎는 비율(기준표 court_reduction_pct)."""
-    red = c.execute(
-        "select value from ref.rule_tables where rule_key = 'court_reduction_pct'"
-        " and valid_from <= %s order by valid_from desc limit 1",
-        (today,),
-    ).fetchone()
+@memo(ttl=3600, size=4)
+def reduction_table(today: date) -> dict[str, Any]:
+    """법원별 유찰 때 깎는 비율(기준표 court_reduction_pct) — 홈 추천·모아 보기·물건 상세가 같이 씀(11/8)."""
+    with connect() as c:
+        red = c.execute(
+            "select value from ref.rule_tables where rule_key = 'court_reduction_pct'"
+            " and valid_from <= %s order by valid_from desc limit 1",
+            (today,),
+        ).fetchone()
     return dict((red or {}).get("value") or {})
 
 
@@ -106,7 +102,7 @@ left join lateral (select result""",
     sql += " order by i.sale_date limit 4000"
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
-        reduction = load_reduction(c, today)
+    reduction = reduction_table(today)
 
     scored: list[dict[str, Any]] = []
     for r in rows:
@@ -129,7 +125,7 @@ left join lateral (select result""",
         cd = card(r, today)
         cd["score"] = p["score"]
         cd["reasons"] = p["reasons"]
-        cd["photo"] = _photo_url(r["photo"])
+        cd["photo"] = photo_url(r["photo"])
         mark_next_round(cd, r, reduction, today)
         scored.append(cd)
     scored.sort(key=lambda x: -x["score"])

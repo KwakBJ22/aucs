@@ -8,7 +8,8 @@ import { fetchItem, isOnbid, type ItemDetail, type OnbidDetail } from "@/lib/api
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 
 const t = copy.find;
 const TONE: Record<string, string> = {
@@ -76,7 +77,7 @@ export function PickPanel({ id }: { id: string | null }) {
   return (
     <section className="section">
       <div className="sub m-0">
-        <b className="c-amber">{dday(d.d_day)}</b> · {d.sale_date} ·{" "}
+        <DDay d={d.d_day} /> · {d.sale_date} ·{" "}
         {isOnbid(d) ? copy.onbid.badge(d.kind_name ?? "") : d.court} {d.case_no}
       </div>
       <div className="d-flex jc-between gap-8">

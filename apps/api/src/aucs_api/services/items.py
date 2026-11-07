@@ -4,16 +4,14 @@ import re
 from datetime import date
 from typing import Any
 
+from aucs_rules.courts import COURTS
 from aucs_rules.find_filter import ANALYSIS_JOIN, COURT_VISIBLE, VEHICLES, court_where
+from aucs_rules.pick import usage_kind
 
+from aucs_api import settings
 from aucs_api.db import batch, connect
 
-COURT_NAME = {
-    "B000210": "서울중앙", "B000211": "서울동부", "B000215": "서울서부", "B000212": "서울남부",
-    "B000213": "서울북부", "B000214": "의정부", "B214807": "고양", "B214804": "남양주",
-    "B000241": "부천", "B000250": "수원", "B000251": "성남", "B000252": "여주",
-    "B000253": "평택", "B250826": "안산", "B000254": "안양", "B000240": "인천",
-}  # fmt: skip
+COURT_NAME = COURTS  # 법원 표는 규칙 courts.py 한 곳(11/8)
 
 _CARD_SQL = f"""
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
@@ -26,6 +24,13 @@ join core.cases c using (case_id)
 {ANALYSIS_JOIN}
 where {COURT_VISIBLE}
 """  # 보이는 물건 조건(공개·부동산·목록에 있음·분석 끝)은 규칙 FIND-03 한 곳(11/8)
+
+
+def photo_url(path: str | None) -> str | None:
+    """사진 저장소 경로 → 공개 주소(홈 추천·모아 보기·물건 상세가 같이 씀, 11/8)."""
+    if not path or not settings.SUPABASE_URL:
+        return None
+    return f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{path}"
 
 
 def card(r: dict[str, Any], today: date) -> dict[str, Any]:
@@ -46,6 +51,7 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
         "d_day": (r["sale_date"] - today).days if r["sale_date"] else None,
         "usage": r["usage_name"],
+        "usage_kind": usage_kind(r["usage_name"]),  # 종류 판정은 규칙 한 곳(11/8)
         "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
         "building": r["building_desc"],
         "area_m2": float(r["building_area_m2"]) if r["building_area_m2"] else None,

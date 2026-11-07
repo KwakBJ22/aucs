@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import Any
 
 from aucs_rules.result import RuleResult, Status
 
@@ -97,6 +98,30 @@ def rate_range(
         "small_sample": len(rates) < MIN_SAMPLE,
     }
     return RuleResult(value, Status.ESTIMATED, "sale_rate.range", [{"band": band}])
+
+
+def adjusted_rates(
+    rate: dict[str, Any] | None,
+    court: dict[str, Any] | None,
+    appraisal_krw: int | None,
+    min_price_krw: int | None,
+) -> dict[str, Any] | None:
+    """예상 낙찰가율(감정가 대비 %) 한 곳(11/8 — 상세 「얼마짜리인가」와 추천·모아 보기가 같은 값).
+    비슷한 물건 25·50·75% 지점 → 관할 법원 칸이 기준이면 그 차이만큼 옮김 → 최저가 아래로는 안 내려감.
+    값: lo·mid·hi(%) · shift(법원으로 옮긴 %p) · below(비슷한 물건이 이번 최저가보다 싸게 팔렸는지)."""
+    if not rate or rate.get("p50") is None:
+        return None
+    mid = float(rate["p50"])
+    lo, hi = float(rate.get("p25", mid)), float(rate.get("p75", mid))
+    shift = 0.0
+    if court and court.get("use_as_base"):
+        shift = float(court["diff"])
+        lo, mid, hi = lo + shift, mid + shift, hi + shift
+    floor = min_price_krw / appraisal_krw * 100 if min_price_krw and appraisal_krw else None
+    below = bool(floor and hi < floor)
+    if floor:
+        lo, mid, hi = max(lo, floor), max(mid, floor), max(hi, floor)
+    return {"lo": lo, "mid": mid, "hi": hi, "shift": shift, "below": below}
 
 
 def expected_price_range(market_price_krw: int | None, rates: RuleResult) -> RuleResult:

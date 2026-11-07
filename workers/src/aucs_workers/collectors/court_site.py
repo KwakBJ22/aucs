@@ -9,12 +9,7 @@ from typing import Any
 from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.collectors.polite import Polite
 
-COURTS = {
-    "B000210": "서울중앙", "B000211": "서울동부", "B000215": "서울서부", "B000212": "서울남부",
-    "B000213": "서울북부", "B000214": "의정부", "B214807": "고양", "B214804": "남양주",
-    "B000241": "부천", "B000250": "수원", "B000251": "성남", "B000252": "여주",
-    "B000253": "평택", "B250826": "안산", "B000254": "안양", "B000240": "인천",
-}  # fmt: skip
+# 법원 표(COURTS)는 규칙 aucs_rules/courts.py 한 곳(11/8) — API 화면과 같은 표
 PAGE_SIZE = 50  # 100 은 오류
 SEARCH_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ151F00.xml"
 RESULT_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ158M00.xml"

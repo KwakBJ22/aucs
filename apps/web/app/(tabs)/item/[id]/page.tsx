@@ -16,7 +16,9 @@ import {
   type OnbidDetail,
 } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { won } from "@/lib/format";
+import { DDay } from "@/components/dday";
+import { OddsLine } from "@/components/item/next-round";
 import { rememberItem } from "@/lib/recent";
 import { track } from "@/lib/track";
 import { useIsPc } from "@/lib/use-pc";
@@ -82,7 +84,6 @@ export default function Item() {
       </main>
     );
   if (isOnbid(d)) return <OnbidItem d={d as unknown as OnbidDetail} />; // 공매(10/28)
-  const urgent = d.d_day != null && d.d_day <= 7;
   if (pc)
     return (
       <RegCtx.Provider value={reg}>
@@ -117,15 +118,7 @@ export default function Item() {
           )}
           <section className="section">
             <div className="sub">
-              <b
-                style={{
-                  color:
-                    (d.d_day ?? 0) < 0 ? "var(--muted)" : urgent ? "var(--red)" : "var(--amber)",
-                }}
-              >
-                {dday(d.d_day)}
-              </b>{" "}
-              · {d.sale_date} · {d.court} {d.case_no}
+              <DDay d={d.d_day} /> · {d.sale_date} · {d.court} {d.case_no}
             </div>
             <h1 className="fs-base fw-6 mt-4 mb-0">
               {d.place} {d.building ?? d.usage}
@@ -184,11 +177,7 @@ export default function Item() {
                 }
               />
             )}
-            {d.next_round.fail_odds && !d.outcome?.closed && (
-              <div className="sub fs-xs mt-2">
-                {t.failOdds(d.next_round.fail_odds.of10, d.next_round.fail_odds.n)}
-              </div>
-            )}
+            {!d.outcome?.closed && <OddsLine odds={d.next_round.fail_odds} />}
             {d.rounds.length > 0 && <div className="fs-md fw-6 mt-10 mb-2 mx-0">{t.rounds}</div>}
             {d.rounds.map((r) => (
               <Row

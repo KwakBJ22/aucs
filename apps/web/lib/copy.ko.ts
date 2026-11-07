@@ -964,6 +964,9 @@ export const copy = {
     nextRound: "이번에 유찰되면 · 다음 최저가",
     nextRoundGuess: "(저감률 추정)",
     failOddsShort: (of10: number) => `비슷한 물건 10건 중 ${of10}건 유찰`,
+    soldOddsShort: (of10: number) => `비슷한 물건 10건 중 ${of10}건이 이 회차에 팔림`,
+    soldOdds: (of10: number, n: number) =>
+      `비슷한 물건 10건 중 ${of10}건이 이 회차에 팔렸어요 — 기다리면 놓칠 수 있어요 (최근 6개월 ${n.toLocaleString("ko-KR")}건)`,
     failOdds: (of10: number, n: number) =>
       `비슷한 물건 10건 중 ${of10}건이 이 회차에 유찰됐어요 (최근 6개월 ${n.toLocaleString("ko-KR")}건)`,
     rounds: "매각기일",

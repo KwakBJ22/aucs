@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ItemDetail } from "@/lib/api/items";
 import { meApi, WATCH_STEPS, type WatchStep, type Workspace } from "@/lib/api/me";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 
 const t = copy.ws;
 export const MOVABLE: WatchStep[] = WATCH_STEPS.filter((s) => s !== "result");
@@ -101,7 +102,7 @@ export function WorkspacePanel({
       {d && (
         <Link href={`/item/${eid}`} className="section d-block c-inherit">
           <div className="sub">
-            <b className="c-amber">{dday(d.d_day)}</b> · {d.court} {d.case_no}
+            <DDay d={d.d_day} /> · {d.court} {d.case_no}
           </div>
           <div className="fw-6 mt-4">
             {d.place} {d.building ?? d.usage}

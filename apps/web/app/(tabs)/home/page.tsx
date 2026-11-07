@@ -13,6 +13,7 @@ import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { isStale } from "@/lib/noti";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { meApi, type Noti, type WatchCard } from "@/lib/api/me";
 import type { Market } from "@/lib/api/pro";
@@ -56,27 +57,6 @@ export default function Home() {
         setWatch(h.watch);
         setNotis(h.notifications);
         setDropped(new Set(h.excluded));
-      })
-      .catch(() => {});
-  }, [token]);
-
-  // 로그인하면 처음 답한 조건을 계정에 옮겨 둠
-  useEffect(() => {
-    const p = loadProfile();
-    if (!token || !p) return;
-    const body = { regions: p.regions, cash: p.cash, purpose: p.purpose };
-    const sig = JSON.stringify(body);
-    let last: string | null = null;
-    try {
-      last = localStorage.getItem("aucs_profile_sent");
-    } catch {}
-    if (last === sig) return; // 바뀐 게 없으면 다시 보내지 않음
-    meApi
-      .saveProfile(token, body)
-      .then(() => {
-        try {
-          localStorage.setItem("aucs_profile_sent", sig);
-        } catch {}
       })
       .catch(() => {});
   }, [token]);
@@ -215,7 +195,7 @@ export default function Home() {
           className="menu-row"
         >
           <span className="minw-0">
-            <b className="c-red">{dday(w.d_day)}</b> · {w.place} {w.building ?? w.usage}
+            <DDay d={w.d_day} /> · {w.place} {w.building ?? w.usage}
             <span className="sub d-block">
               {t.todoLine(copy.watch.steps[w.step] ?? "", w.d_day ?? 9)}
             </span>

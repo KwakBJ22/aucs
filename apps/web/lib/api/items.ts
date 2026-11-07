@@ -46,6 +46,7 @@ export type ItemCard = {
   sale_date: string | null;
   d_day: number | null;
   usage: string | null;
+  usage_kind?: string; // 종류(apt·officetel·villa·house·shop·land·etc) — 판정은 API 규칙 한 곳(11/8)
   place: string;
   building: string | null;
   area_m2: number | null;

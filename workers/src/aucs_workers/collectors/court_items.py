@@ -8,8 +8,9 @@ import argparse
 from datetime import date, datetime, timedelta
 
 import psycopg
+from aucs_rules.courts import COURTS
 
-from aucs_workers.collectors.court_site import COURTS, fetch_pages
+from aucs_workers.collectors.court_site import fetch_pages
 from aucs_workers.collectors.polite import Polite
 from aucs_workers.collectors.store import save_items, save_raw
 from aucs_workers.db import connect

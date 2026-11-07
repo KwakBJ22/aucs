@@ -24,7 +24,8 @@ from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
 from aucs_api.services.item_links import same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
 from aucs_api.services.item_worth import appraisal_gap, worth
-from aucs_api.services.items import card
+from aucs_api.services.items import card, photo_url
+from aucs_api.services.picks import reduction_table
 
 _ITEM_SQL = """
 select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
@@ -246,12 +247,6 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                    from core.tenants where case_id = {_CASE} order by move_in_date nulls last""",
                 (item_id,),
             )
-            q_red = c.execute(
-                "select value -> (select c.court_code from core.items i join core.cases c using (case_id) "
-                "where i.item_id = %s) as v from ref.rule_tables where rule_key = 'court_reduction_pct' "
-                "and valid_from <= %s order by valid_from desc limit 1",
-                (item_id, today),
-            )
             q_spec = c.execute(
                 f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "
                 "and doc_kind = %s order by fetched_at desc limit 1",
@@ -290,7 +285,6 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         rounds = q_rounds.fetchall()
         events = q_events.fetchall()
         tenants = q_tenants.fetchall()
-        red = q_red.fetchone()
         sp = q_spec.fetchone()
         apr = {x["doc_kind"]: x["payload"] or {} for x in q_apr.fetchall()}
         doc_times = {x["doc_kind"]: x["t"] for x in q_docs.fetchall()}
@@ -302,7 +296,16 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     if spec_at:
         doc_times["spec_sheet"] = spec_at
     out = build_detail(
-        r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times, spec, sale
+        r,
+        rounds,
+        events,
+        tenants,
+        reduction_table(today).get(r["court_code"]),
+        today,
+        hol,
+        doc_times,
+        spec,
+        sale,
     )
     out["next_round"]["fail_odds"] = odds_for(r, today)
     cx = build_complex(trades, peers, c_area(r), today)
@@ -349,6 +352,4 @@ def photos(item_id: str) -> list[str]:
                where i.item_id = %s order by p.seq""",
             (item_id,),
         ).fetchall()
-    return [
-        f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{r['path']}" for r in rows
-    ]
+    return [u for r in rows if (u := photo_url(r["path"]))]

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from aucs_rules.result import RuleResult, Status
+from aucs_rules.sale_rate import adjusted_rates
 
 RULE_ID = "PICK-01"
 PURPOSES = ("live", "rent", "invest")
@@ -56,10 +57,10 @@ def _won_short(n: int) -> str:
 
 
 def expected_price(app: int, mn: int, analysis: dict[str, Any]) -> int:
-    """예상 낙찰가 = 감정가 × 비슷한 물건 낙찰가율 가운데값(최저가보다 낮을 수 없음). 율을 모르면 최저가.
-    추천(PICK-01)과 모아 보기(COLLECT-01)가 같은 값을 쓰도록 한 곳에(11/7)."""
-    sr = analysis.get("sale_rate") or {}
-    return max(mn, round(app * float(sr["p50"]) / 100)) if sr.get("p50") and app else mn
+    """예상 낙찰가 = 감정가 × 예상 낙찰가율 가운데(sale_rate.adjusted_rates — 상세와 같은 셈, 11/8).
+    율을 모르면 최저가. 추천(PICK-01)과 모아 보기(COLLECT-01)가 같이 씀."""
+    r = adjusted_rates(analysis.get("sale_rate"), analysis.get("court_cell"), app, mn)
+    return max(mn, round(app * r["mid"] / 100)) if r and app else mn
 
 
 def usage_kind(usage: str | None) -> str:

@@ -6,7 +6,9 @@ import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
 import type { ItemDetail } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { won } from "@/lib/format";
+import { DDay } from "@/components/dday";
+import { OddsLine } from "@/components/item/next-round";
 import Link from "next/link";
 import { WsLink, CompareAdd } from "@/components/item/actions";
 import { Body } from "@/components/item/body";
@@ -21,19 +23,11 @@ import { InterestLine } from "@/components/item/interest-line";
 export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
   const [copied, setCopied] = useState(false);
   const id = encodeURIComponent(d.item_id);
-  const urgent = d.d_day != null && d.d_day <= 7;
   const stats: [string, React.ReactNode][] = [
     [
       t.pc.sale,
       <>
-        <b
-          style={{
-            color: (d.d_day ?? 0) < 0 ? "var(--muted)" : urgent ? "var(--red)" : "var(--amber)",
-          }}
-        >
-          {dday(d.d_day)}
-        </b>{" "}
-        <span className="nowrap">{d.sale_date ?? "-"}</span>
+        <DDay d={d.d_day} /> <span className="nowrap">{d.sale_date ?? "-"}</span>
       </>,
     ],
     [t.pc.appraisal, won(d.appraisal_krw)],
@@ -53,11 +47,7 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
               <>
                 {won(d.next_round.min_price_krw)}
                 {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
-                {d.next_round.fail_odds && (
-                  <span className="sub d-block fs-xs fw-5 mt-2">
-                    {t.failOddsShort(d.next_round.fail_odds.of10)}
-                  </span>
-                )}
+                <OddsLine odds={d.next_round.fail_odds} short />
               </>
             ) : (
               "-"

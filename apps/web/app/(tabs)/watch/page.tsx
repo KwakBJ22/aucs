@@ -13,6 +13,7 @@ import { meApi, WATCH_STEPS, type WatchCard, type WatchStep } from "@/lib/api/me
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import { useIsPc } from "@/lib/use-pc";
 
 const t = copy.watch;
@@ -99,10 +100,7 @@ function BoardCard({ c, on, onPick }: { c: WatchCard; on: boolean; onPick: () =>
   return (
     <button className={`board-card${on ? " on" : ""}`} onClick={onPick}>
       <span className="sub m-0 fs-xs">
-        <b style={{ color: c.d_day != null && c.d_day <= 7 ? "var(--red)" : "var(--amber)" }}>
-          {dday(c.d_day)}
-        </b>{" "}
-        · {c.court}
+        <DDay d={c.d_day} /> · {c.court}
         {c.changed && (
           <b className="c-amber" title={t.changedHint}>
             {" "}

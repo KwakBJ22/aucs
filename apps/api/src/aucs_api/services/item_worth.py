@@ -3,7 +3,7 @@
 from typing import Any
 
 from aucs_rules.fmt import won
-from aucs_rules.sale_rate import restarted
+from aucs_rules.sale_rate import adjusted_rates, restarted
 
 # 감정가가 같은 단지 시세의 이 범위 밖이면 시세 비교를 빼고 이유를 한 줄로 (10/19 대표님)
 APPRAISAL_SANE = (0.55, 1.6)
@@ -95,10 +95,15 @@ def worth(
         return "처음 나온 물건이라 보통 감정가보다 비싸게 팔려요", notes, None
     if not rate:
         return "비교할 낙찰 사례가 부족해요", notes, None
-    lo, mid, hi, shift = rate["p25"], rate["p50"], rate["p75"], 0.0
-    if court and court.get("use_as_base"):
-        shift = court["diff"]
-        lo, mid, hi = lo + shift, mid + shift, hi + shift
+    # 범위 셈은 추천·모아 보기와 같은 규칙 한 곳(sale_rate.adjusted_rates, 11/8)
+    adj = adjusted_rates(rate, court, app, mn) or {}
+    lo, mid, hi = (
+        adj.get("lo", rate["p25"]),
+        adj.get("mid", rate["p50"]),
+        adj.get("hi", rate["p75"]),
+    )
+    shift, below = adj.get("shift", 0.0), bool(adj.get("below"))
+    if shift:
         notes.append(
             f"이 법원은 같은 조건에서 {abs(round(shift))}%p {'높게' if shift > 0 else '낮게'} 팔려요"
         )
@@ -108,11 +113,6 @@ def worth(
         )
     if not gap and any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
-    # 최저가보다 낮게는 낙찰될 수 없음 → 범위 아래쪽을 최저가에 맞춤
-    floor = mn / app * 100 if mn and app else None
-    below = bool(floor and hi < floor)
-    if floor:
-        lo, mid, hi = max(lo, floor), max(mid, floor), max(hi, floor)
     ans = f"비슷한 물건은 감정가의 {pct_range(lo, hi)}에 낙찰됐어요"
     if below:
         ans = "비슷한 물건이 이번 최저가보다 싸게 팔려서 최저가 근처에서 낙찰될 것 같아요"

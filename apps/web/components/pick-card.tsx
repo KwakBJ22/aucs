@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import type { PickCard as Pick } from "@/lib/api/items";
 
 const t = copy.home;
 
 // 홈 추천 카드(11/4): 사진을 크게, 아래에 기일·곳·최저가·고른 이유 한 줄. 사진이 없으면 종류 글자 판.
 export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next" }) {
-  const urgent = c.d_day != null && c.d_day <= 7;
   const line =
     mode === "next"
       ? c.preview
@@ -29,8 +29,10 @@ export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next"
         )}
         {c.preview && <span className="pick-tag">{t.preview}</span>}
       </div>
-      <div className="fs-xs fw-7 mt-8" style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
-        {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
+      <div className="fs-xs mt-8">
+        <DDay d={c.d_day}>
+          {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
+        </DDay>
       </div>
       <div className="fs-md fw-6 mt-2 ellipsis">
         {c.place} {c.building ?? c.usage}

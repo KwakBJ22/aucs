@@ -13,8 +13,8 @@ from aucs_rules.fmt import won
 from aucs_rules.pick import diversify
 
 from aucs_api.db import connect
-from aucs_api.services.items import card
-from aucs_api.services.picks import _SQL, _photo_url, load_reduction, mark_next_round
+from aucs_api.services.items import card, photo_url
+from aucs_api.services.picks import _SQL, mark_next_round, reduction_table
 
 # 가까운 역 하나(직선 500m 안) — 역 이름·거리
 _STATION = """ left join lateral (
@@ -44,7 +44,7 @@ def collections(
     sql += " order by i.sale_date limit 20000"  # 전체 지역도 빠짐없이(11/7 — 6000 이면 먼 날 물건이 빠졌음)
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
-        reduction = load_reduction(c, today)
+    reduction = reduction_table(today)
 
     groups: dict[str, list[dict[str, Any]]] = {k: [] for k in KEYS}
     for r in rows:
@@ -68,11 +68,12 @@ def collections(
             o = cd["fail_odds"]
             got["next"] = {
                 "reason": f"비슷한 물건 10건 중 {o['of10']}건 유찰 · 기다리면 {won(cd['next_min_krw'])}부터",
-                "sort": (cd["min_price_krw"] or 0) - cd["next_min_krw"],  # 아낄 수 있는 금액 순
+                "sort": o["pct"] * 1000
+                - (cd["d_day"] or 0),  # 유찰 비율 높은 순 → 입찰일 가까운 순(11/8)
             }
         if not got:
             continue
-        cd["photo"] = _photo_url(r["photo"])
+        cd["photo"] = photo_url(r["photo"])
         for k, v in got.items():
             groups[k].append({**cd, "why": v["reason"], "_sort": v["sort"]})
 

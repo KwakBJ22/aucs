@@ -29,6 +29,14 @@ export function todayKst(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 
+// 입찰일 색(11/8 한 곳): 지남 · 7일 안(급함) · 그 뒤. 카드·상세·관심·내 경매가 모두 이 기준
+export const SOON_DAYS = 7;
+export function ddayTone(d: number | null | undefined): "past" | "soon" | "later" {
+  if (d == null) return "later";
+  if (d < 0) return "past";
+  return d <= SOON_DAYS ? "soon" : "later";
+}
+
 // 지난 날은 「D--8」이 아니라 「8일 지남」
 export function dday(d: number | null): string {
   if (d == null) return "";

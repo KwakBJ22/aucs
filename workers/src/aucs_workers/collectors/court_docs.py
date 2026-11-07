@@ -21,11 +21,11 @@ from datetime import date, timedelta
 from typing import Any
 
 import psycopg
+from aucs_rules.courts import COURTS
 from aucs_rules.find_filter import VEHICLES
 from psycopg.types.json import Jsonb
 
 from aucs_workers.collectors.browser import launch_chrome
-from aucs_workers.collectors.court_site import COURTS
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect

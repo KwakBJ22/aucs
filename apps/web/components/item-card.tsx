@@ -2,6 +2,7 @@ import Link from "next/link";
 import { HeartButton } from "./heart-button";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 import type { ItemCard as Card } from "@/lib/api/items";
 
 const t = copy.card;
@@ -31,35 +32,33 @@ function OnbidLine({ c }: { c: Card }) {
   return <div className="sub m-0 fs-xs">{t.noNextRound}</div>;
 }
 
-// 카드 왼쪽 판 글자(사진이 없어 종류로)
-function kindLabel(u: string | null): string {
-  const s = u ?? "";
-  if (/아파트/.test(s)) return "아파트";
-  if (/오피스텔/.test(s)) return "오피스텔";
-  if (/다세대|연립|빌라/.test(s)) return "빌라";
-  if (/단독|다가구/.test(s)) return "주택";
-  if (/상가|근린|업무|사무|판매|점포/.test(s)) return "상가";
-  if (/대지|임야|전답|토지|잡종|^전$|^답$/.test(s)) return "땅";
-  return "기타";
-}
+// 카드 왼쪽 판 글자(사진이 없어 종류로) — 종류 판정은 API 규칙(usage_kind) 한 곳, 여기는 이름만(11/8)
+const KIND_LABEL: Record<string, string> = {
+  apt: "아파트",
+  officetel: "오피스텔",
+  villa: "빌라",
+  house: "주택",
+  shop: "상가",
+  land: "땅",
+};
+const kindLabel = (k?: string) => KIND_LABEL[k ?? ""] ?? "기타";
 
 // why: 모아 보기에서 이 물건이 그 모음에 든 이유 한 줄(있으면 「감정가보다 낮음」 줄 대신)
 export function ItemCard({ c, why }: { c: Card; why?: string }) {
-  const urgent = c.d_day != null && c.d_day <= 7;
   const onbid = c.source === "onbid";
   return (
     <Link
       href={`/item/${encodeURIComponent(c.item_id)}`}
       className="d-flex gap-12 py-12 px-0 c-inherit"
     >
-      <div className="thumb">{kindLabel(c.usage)}</div>
+      <div className="thumb">{kindLabel(c.usage_kind)}</div>
       <div className="f-1 minw-0">
         <div className="sub d-flex jc-between gap-8 ai-center">
           <span className="ellipsis">
-            <b style={{ color: urgent ? "var(--red)" : "var(--amber)" }}>
+            <DDay d={c.d_day}>
               {onbid && !c.bid_end ? t.undecided : dday(c.d_day)}
               {onbid && c.bid_end ? ` ${t.closes}` : ""}
-            </b>{" "}
+            </DDay>{" "}
             · {onbid ? c.case_no : `${c.court} ${c.case_no}`}
           </span>
           {onbid && <SourceBadge c={c} />}
