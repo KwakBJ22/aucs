@@ -184,6 +184,11 @@ export default function Item() {
                 }
               />
             )}
+            {d.next_round.fail_odds && !d.outcome?.closed && (
+              <div className="sub fs-xs mt-2">
+                {t.failOdds(d.next_round.fail_odds.of10, d.next_round.fail_odds.n)}
+              </div>
+            )}
             {d.rounds.length > 0 && <div className="fs-md fw-6 mt-10 mb-2 mx-0">{t.rounds}</div>}
             {d.rounds.map((r) => (
               <Row

@@ -128,7 +128,9 @@ export const fetchRegions = () => getJson<RegionRow[]>("/regions", 30 * 60_000);
 
 // 홈 공개 자료 한 번에(11/3): 내 조건 물건 20 · 이번 주 마감 공매 5 · (PC) 석 달 낙찰가율 · 게시 중 공지
 // 홈 추천 카드(11/4): 카드 + 추천 점수·이유·사진·공고 전 여부·유찰 예상
+export type FailOdds = { fail: number; n: number; pct: number; of10: number; likely: boolean };
 export type PickCard = ItemCard & {
+  fail_odds?: FailOdds | null;
   score: number;
   reasons: string[];
   photo: string | null;
@@ -207,7 +209,12 @@ export type ItemDetail = ItemCard & {
   address: string | null;
   sale_place: string | null;
   dept_name: string | null;
-  next_round: { min_price_krw: number | null; reduction_pct: number | null; verified: boolean };
+  next_round: {
+    min_price_krw: number | null;
+    reduction_pct: number | null;
+    verified: boolean;
+    fail_odds?: FailOdds | null; // 같은 법원·종류·회차 실제 유찰 비율(WAIT-01, 11/7)
+  };
   rounds: { sale_date: string; min_price_krw: number | null; result: string }[];
   tags: { label: string; ok: boolean }[];
   questions: Question[];

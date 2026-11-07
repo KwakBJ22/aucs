@@ -13,7 +13,9 @@ export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next"
       ? c.preview
         ? t.nextFixed((c.sale_date ?? "").slice(5).replace("-", "/"), won(c.min_price_krw))
         : c.next_min_krw
-          ? t.nextFrom(won(c.next_min_krw))
+          ? c.fail_odds
+            ? t.nextOdds(c.fail_odds.of10, won(c.next_min_krw))
+            : t.nextFrom(won(c.next_min_krw))
           : null
       : c.reasons[0];
   return (

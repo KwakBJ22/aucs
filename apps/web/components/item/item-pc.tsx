@@ -49,9 +49,19 @@ export function ItemPc({ d, reg }: { d: ItemDetail; reg: MyReg }) {
       : ([
           [
             t.nextRound,
-            d.next_round.min_price_krw
-              ? `${won(d.next_round.min_price_krw)}${d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}`
-              : "-",
+            d.next_round.min_price_krw ? (
+              <>
+                {won(d.next_round.min_price_krw)}
+                {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
+                {d.next_round.fail_odds && (
+                  <span className="sub d-block fs-xs fw-5 mt-2">
+                    {t.failOddsShort(d.next_round.fail_odds.of10)}
+                  </span>
+                )}
+              </>
+            ) : (
+              "-"
+            ),
           ],
           [t.pc.deposit, won(d.deposit_krw)],
         ] as [string, React.ReactNode][])),

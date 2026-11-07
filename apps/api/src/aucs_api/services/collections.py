@@ -1,7 +1,7 @@
 """모아 보기(11/7 대표님 — 차별화 · 손님에게 쓸모 있는 것만).
 
-모음 판단은 규칙 COLLECT-01(packages/rules/collect.py) 하나, 「다음 달 더 싸지는 물건」은 홈 추천과 같은
-picks.mark_next_round. 내 지역·현금 조건을 받으면 그 안에서만. 분석 결과(매일 아침 갱신)로 그때 셈.
+모음 판단은 규칙 COLLECT-01(packages/rules/collect.py) 하나, 「기다리면 더 싸질 물건」은 홈 추천과 같은
+picks.mark_next_round(실제 유찰 비율, WAIT-01). 내 지역·현금 조건을 받으면 그 안에서만. 분석 결과(매일 아침 갱신)로 그때 셈.
 """
 
 from datetime import date
@@ -58,14 +58,18 @@ def collections(
             )
         ).value  # fmt: skip
         cd = card(r, today)
-        mark_next_round(cd, r, an, reduction)
-        if "special" not in got and (cd["preview"] or cd.get("next_min_krw")):
-            why = (
-                f"다음 회차 {won(cd['min_price_krw'])}부터 · 법원 공고 전"
-                if cd["preview"]
-                else f"이번에 유찰되면 {won(cd['next_min_krw'])}부터"
-            )
-            got["next"] = {"reason": why, "sort": -(cd["d_day"] or 0)}
+        mark_next_round(cd, r, reduction, today)
+        if "special" not in got and cd["preview"]:
+            got["next"] = {
+                "reason": f"다음 회차 {won(cd['min_price_krw'])}부터 · 법원 공고 전",
+                "sort": 10**13 - (cd["d_day"] or 0),  # 값이 정해진 다음 회차가 맨 앞
+            }
+        elif "special" not in got and cd["likely_fail"] and cd.get("next_min_krw"):
+            o = cd["fail_odds"]
+            got["next"] = {
+                "reason": f"비슷한 물건 10건 중 {o['of10']}건 유찰 · 기다리면 {won(cd['next_min_krw'])}부터",
+                "sort": (cd["min_price_krw"] or 0) - cd["next_min_krw"],  # 아낄 수 있는 금액 순
+            }
         if not got:
             continue
         cd["photo"] = _photo_url(r["photo"])

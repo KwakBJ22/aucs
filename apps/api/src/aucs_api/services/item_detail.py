@@ -16,6 +16,7 @@ from aucs_api.db import connect
 from aucs_api.services.checklist import DONE, build_checklist, build_flow
 from aucs_api.services.court_stats import court_bidders
 from aucs_api.services.docs import spec_sheet, spec_text
+from aucs_api.services.fail_odds import odds_for
 from aucs_api.services.interest import interest
 from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
@@ -148,6 +149,7 @@ def build_detail(
             "min_price_krw": nxt.value if nxt else None,
             "reduction_pct": reduction["pct"] if reduction else None,
             "verified": bool(reduction and reduction.get("verified")),
+            "fail_odds": None,  # 같은 법원·종류·회차 실제 유찰 비율(WAIT-01) — detail() 에서 채움
         },
         "rounds": [
             {
@@ -301,6 +303,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out = build_detail(
         r, rounds, events, tenants, red["v"] if red else None, today, hol, doc_times, spec, sale
     )
+    out["next_round"]["fail_odds"] = odds_for(r, today)
     cx = build_complex(trades, peers, c_area(r), today)
     for q in out["questions"]:
         if q["key"] == "worth":

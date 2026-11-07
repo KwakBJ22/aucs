@@ -1,12 +1,12 @@
-"""홈 「오늘의 추천」·「마감 임박」·「다음 달 더 싸지는 물건」(11/4 대표님).
+"""홈 「오늘의 추천」·「마감 임박」·「기다리면 더 싸질 물건」(11/4 대표님).
 
 점수는 규칙 PICK-01(packages/rules/pick.py) 하나로 — 분석 결과(매일 아침 갱신)에서 그때 셈하므로 그날은 누구에게나 같은 값.
 11/7 대표님: 사진 없는 물건은 홈 세 칸 어디에도 띄우지 않음(법원은 입찰 2주 전쯤 사진을 올림).
 - 추천: 공고된 물건은 입찰 14일 안(1~14일) + 유찰 뒤 다음 회차(공고 전, 30일 안 — 지난 회차 사진이 있음) ·
   점수 순 · 같은 단지 1건·같은 구 2건까지
 - 마감 임박: 7일 안 · 점수 70 이상만 짧게
-- 다음 달 더 싸지는 물건: ① 유찰 뒤 다음 기일이 잡힌 물건(공고 전, status_code='preview') ② 지금 최저가가
-  같은 법원 낙찰가율보다 높아 이번엔 유찰될 것 같은 물건 — 「유찰되면 ○○원부터」
+- 기다리면 더 싸질 물건: ① 유찰 뒤 다음 기일이 잡힌 물건(공고 전, status_code='preview') ② 같은 법원·종류·
+  회차 물건의 최근 6개월 실제 유찰 비율이 70% 넘는 물건(WAIT-01, 11/7) — 「10건 중 9건 유찰 · 유찰되면 ○○원부터」
 """
 
 from datetime import date
@@ -17,6 +17,7 @@ from aucs_rules.sale_rate import next_round_min_price
 
 from aucs_api import settings
 from aucs_api.db import connect
+from aucs_api.services.fail_odds import odds_for
 from aucs_api.services.items import _CARD_SQL, card
 
 PREVIEW = "preview"  # 유찰 뒤 기일내역으로 미리 안 다음 회차(법원 공고 전)
@@ -57,15 +58,16 @@ def load_reduction(c: Any, today: date) -> dict[str, Any]:
 
 
 def mark_next_round(
-    cd: dict[str, Any], r: dict[str, Any], an: dict[str, Any], reduction: dict[str, Any]
+    cd: dict[str, Any], r: dict[str, Any], reduction: dict[str, Any], today: date
 ) -> None:
-    """「다음 달 더 싸지는 물건」 판단 한 곳(홈 추천·모아 보기, 11/7): 지금 최저가율이 같은 법원
-    비슷한 물건 낙찰가율 75%보다 5%p 넘게 높으면 이번엔 유찰될 것 같음 → 유찰되면 다음 최저가."""
+    """「기다리면 더 싸질 물건」 판단 한 곳(홈 추천·모아 보기, 11/7): 같은 법원·종류·회차 물건의
+    최근 6개월 실제 유찰 비율(WAIT-01)이 70% 넘으면 유찰 예상 → 유찰되면 다음 최저가.
+    (예전엔 팔린 물건 낙찰가율만 보고 판단해 늘 비어 있었음)"""
     cd["preview"] = r["status_code"] == PREVIEW
-    cc = (an.get("court_cell") or {}).get("p75")
-    rate = cd["min_rate"]
+    odds = None if cd["preview"] else odds_for(r, today)
+    cd["fail_odds"] = odds
     red_pct = (reduction.get(r["court_code"]) or {}).get("pct")
-    cd["likely_fail"] = bool(cc and rate and rate > float(cc) + 5 and not cd["preview"])
+    cd["likely_fail"] = bool(odds and odds["likely"])
     if cd["likely_fail"] and r["min_price_krw"]:
         cd["next_min_krw"] = next_round_min_price(r["min_price_krw"], red_pct).value
 
@@ -128,7 +130,7 @@ left join lateral (select result""",
         cd["score"] = p["score"]
         cd["reasons"] = p["reasons"]
         cd["photo"] = _photo_url(r["photo"])
-        mark_next_round(cd, r, an, reduction)
+        mark_next_round(cd, r, reduction, today)
         scored.append(cd)
     scored.sort(key=lambda x: -x["score"])
 

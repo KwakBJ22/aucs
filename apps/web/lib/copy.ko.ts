@@ -140,11 +140,12 @@ export const copy = {
     picksSub: "입찰까지 10일 넘게 남아 준비할 시간이 있는 물건",
     soon: "마감 임박",
     soonSub: "7일 안 · 점수 높은 것만",
-    next: "다음 달 더 싸지는 물건",
-    nextSub: "이번에 유찰될 것 같거나, 이미 다음 기일이 잡힌 물건",
+    next: "기다리면 더 싸질 물건",
+    nextSub: "비슷한 물건 대부분이 이번에 유찰됐거나, 다음 기일이 이미 잡힌 물건",
     picksEmpty: "지금 조건에 맞는 추천이 없어요 · 조건을 넓혀 보세요",
     preview: "공고 전",
     nextFrom: (x: string) => `유찰되면 ${x}부터`,
+    nextOdds: (of10: number, x: string) => `10건 중 ${of10}건 유찰 · 유찰되면 ${x}부터`,
     nextFixed: (d: string, x: string) => `다음 기일 ${d} · ${x}부터`,
     todoLine: (step: string, d: number) =>
       d <= 1 ? `${step} · 입찰일 아침 화면 보기` : `${step} · 입찰까지 ${d}일 · 확인할 것 마무리`,
@@ -174,7 +175,11 @@ export const copy = {
       ["cheap", "시세보다 싸게 살 여지", "예상 낙찰가가 실거래 시세보다 10% 넘게 낮은 물건"],
       ["safe", "떠안는 돈 없는 물건", "권리 위험 신호가 하나도 없어 처음 해도 안심되는 물건"],
       ["rising", "감정 뒤 값이 오른 곳", "감정가보다 지금 실거래 시세가 10% 넘게 높은 물건"],
-      ["next", "다음 달 더 싸지는 물건", "이번엔 유찰될 것 같거나 다음 회차가 잡힌 물건"],
+      [
+        "next",
+        "기다리면 더 싸질 물건",
+        "비슷한 물건이 이 회차에 10건 중 7건 넘게 유찰됐거나, 다음 회차가 잡힌 물건",
+      ],
       ["station", "역 가까운 곳", "지하철역까지 500m 안(직선 거리)"],
       [
         "special",
@@ -958,6 +963,9 @@ export const copy = {
     notFound: "물건을 찾을 수 없어요",
     nextRound: "이번에 유찰되면 · 다음 최저가",
     nextRoundGuess: "(저감률 추정)",
+    failOddsShort: (of10: number) => `비슷한 물건 10건 중 ${of10}건 유찰`,
+    failOdds: (of10: number, n: number) =>
+      `비슷한 물건 10건 중 ${of10}건이 이 회차에 유찰됐어요 (최근 6개월 ${n.toLocaleString("ko-KR")}건)`,
     rounds: "매각기일",
     rangeLabel: "감정가 기준 예상 낙찰가",
     sample: (n: number) => `최근 1년 비슷한 물건 ${n}건 기준`,

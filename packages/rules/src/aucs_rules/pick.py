@@ -62,7 +62,8 @@ def expected_price(app: int, mn: int, analysis: dict[str, Any]) -> int:
     return max(mn, round(app * float(sr["p50"]) / 100)) if sr.get("p50") and app else mn
 
 
-def _kind(usage: str | None) -> str:
+def usage_kind(usage: str | None) -> str:
+    """용도 글자 → 종류(apt·officetel·villa·house·shop·land·etc). 추천·유찰 기록(WAIT-01)이 같이 씀."""
     u = usage or ""
     if "아파트" in u:
         return "apt"
@@ -140,7 +141,7 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         reasons.append("위험 신호 없음")
 
     # ── 목적에 맞는 집(20점 표를 비율로)
-    kind = _kind(x.usage)
+    kind = usage_kind(x.usage)
     area = x.area_m2 or 0
     redev = bool(a.get("redev"))
     fc = x.failed_count or 0
