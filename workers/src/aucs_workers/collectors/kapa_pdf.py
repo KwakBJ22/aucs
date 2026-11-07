@@ -39,6 +39,15 @@ MISS_STOP = (
     3  # 연달아 이만큼 못 받으면 하루 쉼(KAPA 가 원본을 안 줄 때 법원·KAPA 를 헛되이 두드리지 않게)
 )
 PAUSE = Path(__file__).resolve().parents[4] / "logs" / "kapa_paused.txt"
+# 11/7: KAPA 가 「비정상적인 접근 감지 — 자동 조회 차단」 화면을 줌 → 우회하지 않고 멈춤. 이 파일은 저절로 풀리지 않음(대표님이 지울 때만)
+BLOCKED = Path(__file__).resolve().parents[4] / "logs" / "kapa_blocked.txt"
+BLOCK_MARK = "비정상적인 접근"
+
+
+class KapaBlocked(Exception):
+    """KAPA 가 자동 조회를 막는다는 화면을 보냄 — 다시 두드리지 않음."""
+
+
 PROBE_LOG = Path(__file__).resolve().parents[4] / "logs" / "kapa_probe.txt"
 
 # 법원 화면의 「감정평가서 보기」 단추가 부르는 것과 같은 팝업(PGJ15BM01.xml scwin.aeeWevlPopUp)
@@ -124,13 +133,16 @@ def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | N
         page.context.remove_listener("response", on_response)
         if probe is not None:
             page.remove_listener("console", on_console)
-            # 열람 화면이 무엇을 그렸는지(빈 화면 원인 찾기) — KAPA 틀의 주소와 앞부분 HTML
-            for f in page.frames:
-                if "kapanet" in f.url:
-                    try:
-                        html = f.content()
-                    except Exception as e:  # noqa: BLE001
-                        html = f"(못 읽음 {type(e).__name__})"
+        # 열람 화면이 무엇을 그렸는지 — 막힘 화면이면 멈춤, 시험이면 앞부분 HTML 을 적음
+        blocked = False
+        for f in page.frames:
+            if "kapanet" in f.url:
+                try:
+                    html = f.content()
+                except Exception as e:  # noqa: BLE001
+                    html = f"(못 읽음 {type(e).__name__})"
+                blocked = blocked or BLOCK_MARK in html
+                if probe is not None:
                     probe.append(f"KAPA 틀 {f.url[:160]}\n{html[:2500]}")
         try:
             page.evaluate(JS_CLOSE, pid)
@@ -140,6 +152,8 @@ def open_and_catch(page: Any, info: dict[str, Any], n: int, probe: list[str] | N
     if probe is not None:
         probe.append(f"잡은 PDF 주소: {seen[:3]}")
         probe.append("KAPA 쪽 요청:\n  " + "\n  ".join(kapa[:20]))
+    if blocked and not seen:
+        raise KapaBlocked("KAPA 가 자동 조회를 막음(「비정상적인 접근 감지」)")
     return seen[0] if seen else None
 
 
@@ -161,6 +175,9 @@ def main() -> None:
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
+    if BLOCKED.exists():  # 막힘은 시험(--probe)도 하지 않음 — 정식 길이 열릴 때까지
+        print(f"KAPA 가 자동 조회를 막아 멈춤 — 협회와 정식 길을 연 뒤 {BLOCKED} 를 지우면 다시")
+        return
     if (
         PAUSE.exists()
         and time.time() - PAUSE.stat().st_mtime < 24 * 3600
@@ -201,6 +218,11 @@ def main() -> None:
                         )
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
+                        break
+                    except KapaBlocked as e:
+                        BLOCKED.parent.mkdir(exist_ok=True)
+                        BLOCKED.write_text(f"{date.today()} {case_id} {e}\n", encoding="utf-8")
+                        print(f"   {e} — 멈춤({BLOCKED}, 저절로 풀리지 않음)")
                         break
                     pdf = download(page, res["url"], probe) if res.get("url") else None
                     if not pdf:
