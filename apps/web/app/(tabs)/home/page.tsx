@@ -17,6 +17,7 @@ import { DDay } from "@/components/dday";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { meApi, type Noti, type WatchCard } from "@/lib/api/me";
 import type { Market } from "@/lib/api/pro";
+import { SaveApp } from "@/components/save-app";
 import { PageHeader } from "@/components/layout/page-header";
 import { NoticeLine } from "@/components/notice-line";
 import { useIsPc } from "@/lib/use-pc";
@@ -464,6 +465,7 @@ export default function Home() {
       {onbidBlock}
       {forMeBlock}
       {whyBlock}
+      <SaveApp />
       {!token && (
         <Link href="/login" className="btn kakao">
           {t.kakao}

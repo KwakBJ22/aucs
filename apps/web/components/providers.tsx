@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { meApi } from "@/lib/api/me";
 import { SessionProvider, useSession } from "@/lib/auth";
 import { PROFILE_EVENT, syncProfile } from "@/lib/profile";
+import { registerSW } from "@/lib/install";
 import { listenErrors } from "@/lib/report-error";
 import { track } from "@/lib/track";
 
@@ -14,6 +15,12 @@ function PageViews() {
   useEffect(() => {
     if (!path.startsWith("/admin")) track("view");
   }, [path]);
+  return null;
+}
+
+// 서비스 워커는 모든 손님에게(11/8) — 그래야 브라우저가 「앱 설치」를 스스로 띄움(알림 켜기와 같은 파일)
+function AppInstall() {
+  useEffect(() => registerSW(), []);
   return null;
 }
 
@@ -60,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <PageViews />
       <ErrorListener />
+      <AppInstall />
       <ProfileSync />
       {children}
     </SessionProvider>

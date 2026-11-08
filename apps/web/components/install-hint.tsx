@@ -2,22 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { copy } from "@/lib/copy.ko";
+import { canPrompt, isStandalone, platform, promptInstall } from "@/lib/install";
 
 const t = copy.install;
 const KEY = "aucs_install_hint";
 
-type PromptEvent = Event & { prompt: () => Promise<void> };
-let deferred: PromptEvent | null = null; // 안드로이드 크롬이 주는 「설치」 기회(한 번 잡아 둠)
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferred = e as PromptEvent;
-  });
-}
-
 export function shouldShowInstallHint(): boolean {
   if (typeof window === "undefined") return false;
-  if (window.matchMedia("(display-mode: standalone)").matches) return false; // 이미 홈 화면에서 엶
+  if (isStandalone()) return false; // 이미 홈 화면에서 엶
   if (window.innerWidth >= 1024) return false; // PC는 안내하지 않음
   try {
     return !localStorage.getItem(KEY);
@@ -29,8 +21,10 @@ export function shouldShowInstallHint(): boolean {
 // 처음 관심 담을 때 한 번: 홈 화면에 두면 알림을 바로 받아요(아래에서 올라오는 창)
 export function InstallHint({ onClose }: { onClose: () => void }) {
   const [ios, setIos] = useState(false);
+  const [can, setCan] = useState(false);
   useEffect(() => {
-    setIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    setIos(platform() === "ios");
+    setCan(canPrompt());
     try {
       localStorage.setItem(KEY, "1");
     } catch {
@@ -38,8 +32,7 @@ export function InstallHint({ onClose }: { onClose: () => void }) {
     }
   }, []);
   const install = () => {
-    if (deferred) void deferred.prompt().finally(onClose);
-    else onClose();
+    void promptInstall().finally(onClose);
   };
   return (
     <div
@@ -58,14 +51,14 @@ export function InstallHint({ onClose }: { onClose: () => void }) {
         <div className="sheet-handle" />
         <div className="fs-lg fw-7">{t.title}</div>
         <p className="sub fs-md mt-6">{t.why}</p>
-        {ios || !deferred ? (
+        {ios || !can ? (
           <div className="bg-panel r-14 p-12 mt-12 fs-md lh-16">{ios ? t.ios : t.other}</div>
         ) : null}
         <div className="btn-pair mt-16">
           <button className="btn secondary" onClick={onClose}>
             {t.later}
           </button>
-          {!ios && deferred ? (
+          {!ios && can ? (
             <button className="btn primary" onClick={install}>
               {t.add}
             </button>

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AskBox } from "@/components/ask-box";
 import { LeaveBox } from "@/components/leave-box";
 import { PageHeader } from "@/components/layout/page-header";
+import { SaveApp } from "@/components/save-app";
 import { meApi, type MyInquiry, type SavedSearch } from "@/lib/api/me";
 import { signOut, userLabel, useSession } from "@/lib/auth";
 import { condSummary } from "@/lib/cond";
@@ -175,6 +176,7 @@ export default function More() {
             <div>
               {alerts}
               {menu}
+              <SaveApp />
               {session && <AskBox token={session.access_token} initial={inquiries} />}
             </div>
           </div>
@@ -188,6 +190,7 @@ export default function More() {
       {cond}
       {alerts}
       {menu}
+      <SaveApp />
       {session && <AskBox token={session.access_token} initial={inquiries} />}
     </main>
   );

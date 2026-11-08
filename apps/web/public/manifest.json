@@ -1,10 +1,14 @@
 {
+  "id": "/",
   "name": "옥스경매",
-  "short_name": "옥스",
-  "start_url": "/",
+  "short_name": "옥스경매",
+  "description": "법원 경매·공매 물건을 쉽게 찾고 판단하는 옥스경매",
+  "lang": "ko",
+  "start_url": "/home",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#3182F6",
   "icons": [
     {
       "src": "/brand/icon-192.png",
