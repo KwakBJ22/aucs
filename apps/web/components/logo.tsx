@@ -9,7 +9,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         srcSet="/brand/logo-dark.png"
         media="(prefers-color-scheme: dark) and (max-width: 1023px)"
       />
-      <img src="/brand/logo.png" alt={copy.appName} width={434} height={120} />
+      <img src="/brand/logo.png" alt={copy.appName} width={1066} height={240} />
     </picture>
   );
 }
