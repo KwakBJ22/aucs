@@ -58,7 +58,7 @@ def build_detail(
     c = card(r, today)
     signals = r["signals"] or []
     stxt = spec_text(spec)
-    rate_ans, rate_notes, rate = worth(r, signals, stxt)
+    rate_ans, rate_notes, rate = worth(r, signals, stxt, reduction["pct"] if reduction else None)
     analyzed = r.get("computed_at") is not None
     if not analyzed:
         rate_ans = PENDING

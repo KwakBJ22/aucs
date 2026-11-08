@@ -92,3 +92,25 @@ def test_effective_failed_restart() -> None:
     assert restarted(12, 379_000_000, 379_000_000) is True
     assert effective_failed(2, 100, 64) == 2
     assert restarted(0, 100, 100) is False
+
+
+def test_heavy_failed_not_mixed_with_light_and_capped_by_last_fail():
+    """11/8 수원 2024타경101239: 9번 유찰 오피스텔(최저가 468만, 감정가 1.16억)을
+    1~2번 유찰 물건과 견줘 「보통 7,273만」으로 냈음 → 유찰 많은 것끼리 + 지난 유찰가(669만) 위로 안 감."""
+    from datetime import date as _d
+
+    from aucs_rules.sale_rate import Sale, adjusted_rates, fail_group, last_failed_price
+
+    day = _d(2026, 10, 1)
+    light = [Sale(day, "경기도", "수원시", "오피스텔", 30.0, 1, 60.0 + i, False) for i in range(20)]
+    heavy = [Sale(day, "경기도", "수원시", "오피스텔", 30.0, 8, 5.0 + i, False) for i in range(3)]
+    r = rate_range(light + heavy, as_of=_d(2026, 11, 8), sido="경기도", sigungu="수원시",
+                   usage_name="오피스텔", area_m2=30.0, failed_count=9)  # fmt: skip
+    assert r.value is not None and r.value["p50"] < 10  # 1회 유찰 물건(60%대)이 섞이지 않음
+    assert fail_group(9) == fail_group(5) == 5 and fail_group(2) == 2
+    app, mn = 116_000_000, 4_681_000
+    assert last_failed_price(app, mn, 30) == 6_687_143
+    a = adjusted_rates({"p25": 50.5, "p50": 62.7, "p75": 68.3}, None, app, mn, 30)
+    assert a is not None and a["capped"]
+    assert mn <= app * a["mid"] / 100 <= 6_687_143 and app * a["hi"] / 100 <= 6_687_143 + 1
+    assert adjusted_rates({"p25": 50, "p50": 60, "p75": 70}, None, 100, 100)["capped"] is False

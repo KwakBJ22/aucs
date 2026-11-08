@@ -62,7 +62,10 @@ def appraisal_gap(
 
 
 def worth(
-    r: dict[str, Any], signals: list[dict[str, Any]], spec_txt: str = ""
+    r: dict[str, Any],
+    signals: list[dict[str, Any]],
+    spec_txt: str = "",
+    reduction_pct: float | None = None,
 ) -> tuple[str, list[str], Any]:
     """「얼마짜리인가」 한 줄과 경고 줄. 관할 법원 칸이 기준을 바꾸면 범위를 그만큼 옮깁니다(입찰가 산정 1C~1E)."""
     rate, court, peers = r.get("sale_rate"), r.get("court_cell"), r.get("local_peers")
@@ -96,7 +99,7 @@ def worth(
     if not rate:
         return "비교할 낙찰 사례가 부족해요", notes, None
     # 범위 셈은 추천·모아 보기와 같은 규칙 한 곳(sale_rate.adjusted_rates, 11/8)
-    adj = adjusted_rates(rate, court, app, mn) or {}
+    adj = adjusted_rates(rate, court, app, mn, reduction_pct) or {}
     lo, mid, hi = (
         adj.get("lo", rate["p25"]),
         adj.get("mid", rate["p50"]),
@@ -114,7 +117,12 @@ def worth(
     if not gap and any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
     ans = f"비슷한 물건은 감정가의 {pct_range(lo, hi)}에 낙찰됐어요"
-    if below:
+    if adj.get("capped"):  # 이미 유찰된 값보다 높게 말하지 않음(11/8)
+        ans = (
+            f"{won(adj['cap_krw'])}에도 아무도 사지 않은 물건이라 "
+            "최저가와 그 사이에서 낙찰될 것 같아요"
+        )
+    elif below:
         ans = "비슷한 물건이 이번 최저가보다 싸게 팔려서 최저가 근처에서 낙찰될 것 같아요"
     elif mkt and app:
         a, b = app * lo / mkt["price_krw"], app * hi / mkt["price_krw"]

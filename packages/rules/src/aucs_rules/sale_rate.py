@@ -42,6 +42,12 @@ def area_band(area: float | None) -> str:
     return "135~"
 
 
+def fail_group(n: int | None) -> int:
+    """유찰 횟수 묶음: 0 · 1 · 2 · 3~4 · 5 이상 — 많이 유찰된 물건은 그들끼리 견줌."""
+    n = n or 0
+    return n if n <= 2 else (3 if n <= 4 else 5)
+
+
 def _quantile(xs: list[float], q: float) -> float:
     s = sorted(xs)
     pos = (len(s) - 1) * q
@@ -63,7 +69,9 @@ def rate_range(
 ) -> RuleResult:
     """기준일(as_of)부터 12개월 안의 매각 사례로 범위를 냅니다.
 
-    표본이 10건 미만이면 차례로 넓힙니다: 시군구 → 시도 → 유찰횟수 빼기 → 면적대 빼기.
+    표본이 10건 미만이면 차례로 넓힙니다: 시군구 → 시도 → 유찰 ±1회 → 유찰 묶음 → 면적대 빼기.
+    유찰 횟수는 통째로 빼지 않습니다(11/8 — 9번 유찰된 물건을 1~2번 유찰된 물건과 견줘
+    감정가의 50~68%로 잘못 예상했음). 통째로 빼는 것은 유찰 2회 이하 물건만.
     넓힌 단계는 결과의 relaxed 에 남깁니다(화면에 「표본 적음」·「넓혀 계산」 표시).
     """
     since = as_of - timedelta(days=365)
@@ -75,11 +83,19 @@ def rate_range(
     ]  # fmt: skip
     steps: list[tuple[str, list[str], list[Sale]]] = []
     same_band = [s for s in pool0 if area_band(s.area_m2) == band]
-    same_fail = [s for s in same_band if (s.failed_count or 0) == (failed_count or 0)]
+    f = failed_count or 0
+    same_fail = [s for s in same_band if (s.failed_count or 0) == f]
+    near = [s for s in same_band if abs((s.failed_count or 0) - f) <= 1]
+    grp = [s for s in same_band if fail_group(s.failed_count) == fail_group(f)]
+    grp_any = [s for s in pool0 if fail_group(s.failed_count) == fail_group(f)]
     steps.append(("sigungu", [], [s for s in same_fail if s.sigungu == sigungu]))
     steps.append(("sido", [], [s for s in same_fail if s.sido == sido]))
-    steps.append(("sido", ["failed_count"], [s for s in same_band if s.sido == sido]))
-    steps.append(("sido", ["failed_count", "area"], [s for s in pool0 if s.sido == sido]))
+    steps.append(("sido", ["failed_near"], [s for s in near if s.sido == sido]))
+    steps.append(("sido", ["failed_group"], [s for s in grp if s.sido == sido]))
+    steps.append(("sido", ["failed_group", "area"], [s for s in grp_any if s.sido == sido]))
+    if f <= 2:  # 유찰이 적은 물건만 유찰 횟수를 통째로 뺌
+        steps.append(("sido", ["failed_count"], [s for s in same_band if s.sido == sido]))
+        steps.append(("sido", ["failed_count", "area"], [s for s in pool0 if s.sido == sido]))
     scope, relaxed, pool = steps[-1]
     for step in steps:
         if len(step[2]) >= MIN_SAMPLE:
@@ -100,15 +116,29 @@ def rate_range(
     return RuleResult(value, Status.ESTIMATED, "sale_rate.range", [{"band": band}])
 
 
+def last_failed_price(
+    appraisal_krw: int | None, min_price_krw: int | None, reduction_pct: float | None = None
+) -> int | None:
+    """지난 회차 최저가(= 아무도 사지 않은 값). 최저가가 감정가보다 낮으면 한 번 이상 유찰된 것.
+    법원 저감률을 모르면 30%로 셈 — 실제가 20%면 조금 넉넉해질 뿐 틀린 천장이 되지 않음."""
+    if not appraisal_krw or not min_price_krw or min_price_krw >= appraisal_krw:
+        return None
+    red = reduction_pct if reduction_pct else 30.0
+    return min(appraisal_krw, round(min_price_krw / (1 - red / 100)))
+
+
 def adjusted_rates(
     rate: dict[str, Any] | None,
     court: dict[str, Any] | None,
     appraisal_krw: int | None,
     min_price_krw: int | None,
+    reduction_pct: float | None = None,
 ) -> dict[str, Any] | None:
     """예상 낙찰가율(감정가 대비 %) 한 곳(11/8 — 상세 「얼마짜리인가」와 추천·모아 보기가 같은 값).
-    비슷한 물건 25·50·75% 지점 → 관할 법원 칸이 기준이면 그 차이만큼 옮김 → 최저가 아래로는 안 내려감.
-    값: lo·mid·hi(%) · shift(법원으로 옮긴 %p) · below(비슷한 물건이 이번 최저가보다 싸게 팔렸는지)."""
+    비슷한 물건 25·50·75% 지점 → 관할 법원 칸이 기준이면 그 차이만큼 옮김
+    → 최저가 아래로는 안 내려가고, 지난 회차 최저가(이미 유찰된 값) 위로는 안 올라감(11/8).
+    값: lo·mid·hi(%) · shift · below(비슷한 물건이 이번 최저가보다 싸게 팔렸는지)
+        · capped(지난 유찰가로 막았는지) · cap_krw(지난 유찰가)."""
     if not rate or rate.get("p50") is None:
         return None
     mid = float(rate["p50"])
@@ -121,7 +151,24 @@ def adjusted_rates(
     below = bool(floor and hi < floor)
     if floor:
         lo, mid, hi = max(lo, floor), max(mid, floor), max(hi, floor)
-    return {"lo": lo, "mid": mid, "hi": hi, "shift": shift, "below": below}
+    cap_krw = last_failed_price(appraisal_krw, min_price_krw, reduction_pct)
+    cap = cap_krw / appraisal_krw * 100 if cap_krw and appraisal_krw else None
+    capped = bool(cap and hi > cap)
+    if cap and capped:
+        base = floor if floor is not None else min(lo, cap)
+        hi = cap
+        if mid > cap:
+            mid = (base + cap) / 2  # 최저가와 지난 유찰가 사이 가운데
+        lo = min(lo, mid)
+    return {
+        "lo": lo,
+        "mid": mid,
+        "hi": hi,
+        "shift": shift,
+        "below": below,
+        "capped": capped,
+        "cap_krw": cap_krw,
+    }
 
 
 def expected_price_range(market_price_krw: int | None, rates: RuleResult) -> RuleResult:
