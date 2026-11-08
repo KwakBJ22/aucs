@@ -41,7 +41,7 @@ export function SaveApp({ className = "" }: { className?: string }) {
       <div className="btn-pair mt-12">
         {!installed && (
           <button className={`btn ${canPrompt() ? "primary" : "secondary"}`} onClick={addHome}>
-            {t.home}
+            {os === "ios" || os === "android" ? t.home : t.desktop}
           </button>
         )}
         <button className="btn secondary" onClick={addMark}>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TABS, activeTab } from "@/lib/nav";
+import { toTop } from "@/lib/scroll";
 
 const ICON: Record<string, string> = {
   home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
@@ -18,7 +19,17 @@ export function MobileTabbar() {
   return (
     <nav className="tabbar" aria-label="하단 탭">
       {TABS.map((t) => (
-        <Link key={t.key} href={t.href} className={on === t.key ? "on" : ""}>
+        <Link
+          key={t.key}
+          href={t.href}
+          className={on === t.key ? "on" : ""}
+          onClick={(e) => {
+            if (on === t.key && window.location.pathname === t.href) {
+              e.preventDefault(); // 지금 탭을 또 누르면 맨 위로
+              toTop();
+            }
+          }}
+        >
           <svg
             width="24"
             height="24"

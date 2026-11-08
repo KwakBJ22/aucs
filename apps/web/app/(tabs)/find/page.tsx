@@ -222,7 +222,7 @@ export default function Find() {
           placeholder={t.searchPlaceholder}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => setFocus(true)}
-          onBlur={() => setTimeout(() => setFocus(false), 150)}
+          onBlur={() => setFocus(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setQuery(q.trim());
@@ -258,9 +258,11 @@ export default function Find() {
             {recent.map((w) => (
               <button
                 key={w}
-                onMouseDown={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault(); // 칸에서 손을 떼기 전에 고른 말을 넣음(예전엔 150ms 기다렸음)
                   setQ(w);
                   setQuery(w);
+                  setFocus(false);
                 }}
                 className="d-block w-full ta-left b-0 bg-none c-inherit py-8 px-12 fs-base"
               >

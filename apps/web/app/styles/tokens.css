@@ -26,6 +26,7 @@
   --r-card: 20px;
   --r-card-pc: 24px;
   --wrap: 1200px;
+  --head-h: 56px; /* 휴대폰 머리 높이 — PC는 layout.css에서 64/112 */
   --fs-xs: 12px;
   --fs-sm: 13px;
   --fs-md: 14px;
@@ -36,6 +37,7 @@
   --fs-3xl: 30px;
   --kakao: #fee500;
   --kakao-text: #191600;
+  --on-strong: #ffffff; /* 진한 색 판 위 글자 */
 }
 @media (prefers-color-scheme: dark) and (max-width: 1023px) {
   :root {

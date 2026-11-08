@@ -225,7 +225,7 @@ export default function FieldPage() {
                 style={{
                   height: 48,
                   background: rec ? "var(--red)" : "var(--gray-chip)",
-                  color: rec ? "#fff" : "var(--text)",
+                  color: rec ? "var(--on-strong)" : "var(--text)",
                 }}
                 onClick={rec ? stopRec : startRec}
               >

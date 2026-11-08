@@ -33,6 +33,14 @@ body {
     font-size: 16px !important;
   }
 }
+/* display를 준 요소도 hidden이면 숨김(11/8) */
+[hidden] {
+  display: none !important;
+}
+/* #자리로 갈 때 고정 머리에 가리지 않게 — 모든 자리에 한 번에(11/8) */
+[id] {
+  scroll-margin-top: calc(var(--head-h) + 12px);
+}
 a {
   color: var(--blue);
   text-decoration: none;

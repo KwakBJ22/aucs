@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { meApi } from "@/lib/api/me";
 import { SessionProvider, useSession } from "@/lib/auth";
 import { PROFILE_EVENT, syncProfile } from "@/lib/profile";
 import { registerSW } from "@/lib/install";
+import { onRouteChange, startScrollMemory } from "@/lib/scroll";
 import { listenErrors } from "@/lib/report-error";
 import { track } from "@/lib/track";
 
@@ -14,6 +15,21 @@ function PageViews() {
   const path = usePathname();
   useEffect(() => {
     if (!path.startsWith("/admin")) track("view");
+  }, [path]);
+  return null;
+}
+
+// 화면 이동 때 스크롤 한 곳(11/8): 새 화면은 맨 위, #자리는 그 자리, 뒤로 가기는 보던 자리
+function ScrollMemory() {
+  const path = usePathname();
+  useEffect(() => startScrollMemory(), []);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false; // 처음 열 때는 startScrollMemory가 맞춤
+      return;
+    }
+    onRouteChange();
   }, [path]);
   return null;
 }
@@ -68,6 +84,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <PageViews />
       <ErrorListener />
       <AppInstall />
+      <ScrollMemory />
       <ProfileSync />
       {children}
     </SessionProvider>

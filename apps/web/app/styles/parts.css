@@ -11,6 +11,17 @@
   height: 56px;
   padding: 8px 4px 0;
 }
+/* 휴대폰: 화면 머리(뒤로·제목)는 위에 붙어 있음(11/8) — 페이지 여백(20px)까지 바탕을 덮음 */
+@media (max-width: 1023px) {
+  .page > .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    margin: 0 -20px;
+    padding: 8px 24px 0;
+    background: var(--bg);
+  }
+}
 .brand {
   font-size: 18px;
   font-weight: 700;

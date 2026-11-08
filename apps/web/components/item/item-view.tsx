@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DDay } from "@/components/dday";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -26,6 +26,16 @@ import { won } from "@/lib/format";
 export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // 바로가기(/item/…#q-cost)로 들어오면 그 질문을 펼쳐 둠 — 접힌 채면 자리로 가도 내용이 안 보임
+  useEffect(() => {
+    const open1 = () => {
+      const h = window.location.hash;
+      if (h.startsWith("#q-") && h !== "#q-rounds") setOpen(h.slice(3));
+    };
+    open1();
+    window.addEventListener("hashchange", open1);
+    return () => window.removeEventListener("hashchange", open1);
+  }, []);
   const id = encodeURIComponent(d.item_id);
   const closed = Boolean(d.outcome?.closed);
   const title = `${d.place} ${d.building ?? d.usage ?? ""}`.trim();

@@ -193,6 +193,7 @@ Write-Host "  시작함 — 검사가 하나라도 빨강이면 손님 주소에
 Step "2 문법 검사"
 if ($doWeb) {
   pnpm --filter web typecheck;                   if ($LASTEXITCODE) { Stop-Deploy "화면 타입 검사(tsc) 실패" }
+  node "$webDir\check\banned.mjs";              if ($LASTEXITCODE) { Stop-Deploy "금지 꼴(기본 기능 덮어쓰기 · lookbehind · 비밀 키) — 위 줄 확인" }
   Get-ChildItem "$webDir\check" -Filter *.mjs | ForEach-Object {
     node --check $_.FullName;                    if ($LASTEXITCODE) { Stop-Deploy "$($_.Name) 문법 오류" }
   }

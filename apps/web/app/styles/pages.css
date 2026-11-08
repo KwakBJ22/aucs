@@ -317,9 +317,6 @@
   flex-shrink: 0;
   display: inline-block;
 }
-.q-sec {
-  scroll-margin-top: calc(var(--head-h, 64px) + 16px);
-}
 .pc-actions {
   display: flex;
   flex-direction: column;
