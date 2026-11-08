@@ -35,8 +35,19 @@ export async function listFiles(uid: string, itemId: string): Promise<FieldFile[
 }
 
 // 사진은 긴 변 1600px JPEG로 줄여서 올림(저장 공간·데이터 아끼기)
+// 아이폰(11/8): 사진 방향(EXIF)을 따르게 하고, 줄이기에 실패하면(오래된 사파리 등) 원본을 그대로 올림
 async function shrink(file: File): Promise<Blob> {
-  const img = await createImageBitmap(file);
+  try {
+    return await shrinkImage(file);
+  } catch {
+    return file;
+  }
+}
+
+async function shrinkImage(file: File): Promise<Blob> {
+  const img = await createImageBitmap(file, {
+    imageOrientation: "from-image",
+  } as ImageBitmapOptions);
   const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
   const c = document.createElement("canvas");
   c.width = Math.round(img.width * scale);

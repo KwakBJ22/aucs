@@ -1,5 +1,6 @@
 "use client";
 
+import { parseTime } from "@/lib/format";
 import { Delayed, SkRows } from "@/components/skeleton";
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type ErrorRow, type Jobs } from "@/lib/api/admin";
@@ -90,7 +91,7 @@ export function JobsView() {
               <span className="adm-job-name">{j.name_ko}</span>
               <span className="adm-days">
                 {Array.from({ length: 14 }, (_, i) => {
-                  const day = new Date(Date.parse(d.first_day) + i * 864e5)
+                  const day = new Date(parseTime(d.first_day).getTime() + i * 864e5)
                     .toISOString()
                     .slice(0, 10);
                   const s = j.days.find((x) => x.day === day)?.s ?? "none";

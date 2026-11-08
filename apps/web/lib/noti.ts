@@ -1,3 +1,5 @@
+import { parseTime } from "./format";
+
 // 알림이 지났는지(11/1): 「오늘 입찰일」 알림이 12일 뒤에도 「할 일·마감」 맨 위에 있었음.
 // 입찰일 아침은 그날까지만, 명세서 공개는 14일, 마감 알림은 7일 지나면 「지난 할 일」로.
 const KEEP_DAYS: [(k: string) => boolean, number][] = [
@@ -17,7 +19,7 @@ export function isStale(
   const k = n.kind ?? "";
   const rule = KEEP_DAYS.find(([f]) => f(k));
   if (!rule) return false;
-  const made = new Date(n.created_at);
+  const made = parseTime(n.created_at);
   const until = new Date(made.getFullYear(), made.getMonth(), made.getDate() + rule[1]);
   return dayKey(now) > dayKey(until);
 }

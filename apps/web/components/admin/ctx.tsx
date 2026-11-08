@@ -1,5 +1,6 @@
 "use client";
 
+import { parseTime } from "@/lib/format";
 import { createContext, useCallback, useContext, useState } from "react";
 import { AdminError, can, type Role } from "@/lib/api/admin";
 
@@ -67,7 +68,7 @@ export function Confirm(props: {
 
 export const when = (s: string | null | undefined) =>
   s
-    ? new Date(s).toLocaleString("ko-KR", {
+    ? parseTime(s).toLocaleString("ko-KR", {
         month: "numeric",
         day: "numeric",
         hour: "2-digit",

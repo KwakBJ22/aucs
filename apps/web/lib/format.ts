@@ -25,6 +25,16 @@ export function wonShort(n: number | null | undefined): string {
 }
 
 // 오늘 날짜(한국 시간) 「2026-11-07」 — 인쇄 머리 기준일
+// 서버 시각 글자 → 시각(11/8). 아이폰 사파리는 「2026-11-08 12:00」(가운데 빈칸)이나
+// 「+00」(분 없는 시간대)을 못 읽어 Invalid Date가 됨 — 모든 화면이 이 한 곳으로 읽음
+export function parseTime(s: string): Date {
+  const iso = s
+    .trim()
+    .replace(" ", "T")
+    .replace(/([+-]\d\d)$/, "$1:00");
+  return new Date(iso);
+}
+
 export function todayKst(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }

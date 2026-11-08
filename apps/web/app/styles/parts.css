@@ -2,7 +2,7 @@
 .page {
   max-width: 480px;
   margin: 0 auto;
-  padding: 4px 20px 96px;
+  padding: 4px 20px calc(96px + env(safe-area-inset-bottom));
 }
 .topbar {
   display: flex;
@@ -120,7 +120,10 @@
 .sheet {
   background: var(--surface);
   border-radius: 28px 28px 0 0;
-  padding: 10px 20px 28px;
+  padding: 10px 20px calc(28px + env(safe-area-inset-bottom));
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* 창 안을 끝까지 넘겨도 뒤 화면이 같이 밀리지 않게 */
 }
 .sheet-handle {
   width: 40px;
@@ -132,7 +135,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 92px;
+  bottom: calc(92px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 70;
   display: flex;
@@ -161,12 +164,13 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 76px;
+  /* 아이폰 홈 막대 자리만큼 아래를 띄움(11/8) */
+  height: calc(62px + max(14px, env(safe-area-inset-bottom)));
   background: var(--surface);
   box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding-bottom: 14px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
   z-index: 10;
 }
 .tabbar a {
@@ -253,7 +257,7 @@
 /* 화면 아래에 붙는 주 버튼(휴대폰, 아래 탭 바로 위) */
 .cta-bar {
   position: sticky;
-  bottom: 88px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
   z-index: 5;
   margin-top: 8px;
 }

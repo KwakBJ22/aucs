@@ -355,7 +355,7 @@ export default function Find() {
         <div className="pc-grid g-18-34-48">
           <section
             className="section pc-sticky mt-0 oy-auto quiet-scroll"
-            style={{ maxHeight: "calc(100vh - 140px)" }}
+            style={{ maxHeight: "calc(100dvh - 140px)" }}
           >
             <h2>{t.cond}</h2>
             {filters}
@@ -431,7 +431,7 @@ export default function Find() {
           </section>
           <div
             className="pc-sticky oy-auto quiet-scroll"
-            style={{ maxHeight: "calc(100vh - 140px)" }}
+            style={{ maxHeight: "calc(100dvh - 140px)" }}
           >
             <PickPanel id={pick} />
           </div>

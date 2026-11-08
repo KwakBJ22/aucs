@@ -1,5 +1,6 @@
 "use client";
 
+import { parseTime } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import { adminApi, type Notice } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
@@ -30,7 +31,7 @@ export function NoticesView() {
     setEnd("");
     setPinned(false);
   };
-  const live = (n: Notice) => !n.end_at || Date.parse(n.end_at) > Date.now();
+  const live = (n: Notice) => !n.end_at || parseTime(n.end_at).getTime() > Date.now();
   return (
     <>
       {can("operator") && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { parseTime } from "@/lib/format";
 import { Delayed, SkListPage, SkRows } from "@/components/skeleton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -12,7 +13,7 @@ import { copy } from "@/lib/copy.ko";
 const t = copy.billing;
 const krw = (n: number) => `${n.toLocaleString("ko-KR")}원`;
 const day = (s: string) => s.slice(0, 10);
-const daysLeft = (s: string) => Math.ceil((Date.parse(s) - Date.now()) / 864e5);
+const daysLeft = (s: string) => Math.ceil((parseTime(s).getTime() - Date.now()) / 864e5);
 
 // 이용권·결제(11/3): 지금 이용권 → 결제 내역(누르면 상세·영수증·환불) → 환불 규칙
 export default function BillingPage() {

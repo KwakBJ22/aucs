@@ -88,6 +88,7 @@
   }
   .two-pane > section:first-child {
     max-height: calc(100vh - 180px);
+    max-height: calc(100dvh - 180px);
     overflow-y: auto;
   }
 }
@@ -304,8 +305,10 @@
   color: var(--text);
   font-size: 14px;
 }
-.toc a:hover {
-  background: var(--bg);
+@media (hover: hover) {
+  .toc a:hover {
+    background: var(--bg);
+  }
 }
 .toc-dot {
   width: 8px;
@@ -334,8 +337,10 @@
   font-size: 14px;
   font-weight: 600;
 }
-.pc-act:hover {
-  background: var(--band);
+@media (hover: hover) {
+  .pc-act:hover {
+    background: var(--band);
+  }
 }
 
 /* 작업 공간 */
@@ -368,8 +373,10 @@
   font-size: 14px;
   font-weight: 600;
 }
-.seg a:hover {
-  background: var(--surface);
+@media (hover: hover) {
+  .seg a:hover {
+    background: var(--surface);
+  }
 }
 .seg button.on {
   background: var(--surface);
@@ -1056,8 +1063,10 @@ textarea.adm-input {
   color: var(--gray-text);
   line-height: 1.5;
 }
-.cal-item:hover {
-  color: var(--blue-text);
+@media (hover: hover) {
+  .cal-item:hover {
+    color: var(--blue-text);
+  }
 }
 /* 법원별 낙찰가율 막대 */
 .court-rate {

@@ -18,6 +18,20 @@ body {
     sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  /* 아이폰(11/8): 가로로 돌려도 글자가 커지지 않게 · 누를 때 회색 판 없앰 · 가로 화면 노치 자리 비움 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 아이폰 사파리는 16px보다 작은 입력 칸을 누르면 화면을 확대함(11/8) — 아이폰에서만 16px로.
+   :not(#_)는 글자 크기 도우미(.fs-md !important)보다 이기려는 장치 */
+@supports (-webkit-touch-callout: none) {
+  :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"]):not(#_) {
+    font-size: 16px !important;
+  }
 }
 a {
   color: var(--blue);

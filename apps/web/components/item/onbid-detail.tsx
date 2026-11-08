@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Row } from "@/components/calc-box";
 import type { OnbidDetail, Question } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { dday, parseTime, won } from "@/lib/format";
 import { DDay } from "@/components/dday";
 import { useIsPc } from "@/lib/use-pc";
 import { DOT } from "@/components/item/shared";
@@ -22,7 +22,7 @@ const WD = ["일", "월", "화", "수", "목", "금", "토"];
 
 function when(iso: string | null | undefined, withTime = true): string {
   if (!iso) return "";
-  const d = new Date(iso);
+  const d = parseTime(iso);
   const k = new Date(d.getTime() + 9 * 3600_000); // 한국 시각
   const md = `${k.getUTCMonth() + 1}/${k.getUTCDate()}(${WD[k.getUTCDay()]})`;
   return withTime ? `${md} ${String(k.getUTCHours()).padStart(2, "0")}:00` : md;

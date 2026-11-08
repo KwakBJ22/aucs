@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { meApi, uploadRegistry, type RegistryUpload } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
-import { won } from "@/lib/format";
+import { parseTime, won } from "@/lib/format";
 import { useIsPc } from "@/lib/use-pc";
 import { t, JUDGE_COLOR, DocCtx } from "@/components/item/shared";
 
@@ -44,7 +44,9 @@ export function useMyRegistry(id: string): MyReg {
           setU(x);
           if (x?.status === "processing") {
             // 이 화면을 떠났다 돌아와도 올린 시각부터 막대를 이어 감
-            setStartedAt((v) => v ?? (x.created_at ? Date.parse(x.created_at) : Date.now()));
+            setStartedAt(
+              (v) => v ?? (x.created_at ? parseTime(x.created_at).getTime() : Date.now()),
+            );
             // 그림 등기부(ocr_wait)는 글자 읽기를 기다리는 중이라 1분마다만 확인(11/3)
             timer = setTimeout(load, x.method === "ocr_wait" ? 60_000 : 3000);
           } else setStartedAt(null);

@@ -74,7 +74,13 @@ export default function Home() {
     track("alert_on");
     const r = await subscribePush(token);
     setAlertMsg(
-      r === "ok" ? copy.alert.saved : r === "denied" ? copy.alert.denied : copy.alert.unsupported,
+      r === "ok"
+        ? copy.alert.saved
+        : r === "denied"
+          ? copy.alert.denied
+          : r === "ios"
+            ? copy.alert.ios
+            : copy.alert.unsupported,
     );
   }
 

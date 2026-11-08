@@ -1,5 +1,6 @@
 "use client";
 
+import { parseTime } from "@/lib/format";
 import { useContext, useState } from "react";
 import { Termed } from "@/components/term";
 import type { DocKind, Question } from "@/lib/api/items";
@@ -38,7 +39,7 @@ export function withMyRegistry(
     const unsure = u.ladder.rows.filter(
       (w) => w.judgment === "확인 필요" || w.mark === "추정",
     ).length;
-    const at = u.created_at ? new Date(u.created_at) : null;
+    const at = u.created_at ? parseTime(u.created_at) : null;
     const pad = (n: number) => String(n).padStart(2, "0");
     return {
       ...x,

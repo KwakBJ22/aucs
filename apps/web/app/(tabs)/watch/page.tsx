@@ -307,7 +307,7 @@ export default function Watch() {
             </section>
             <div
               className="pc-sticky oy-auto quiet-scroll"
-              style={{ maxHeight: "calc(100vh - 140px)" }}
+              style={{ maxHeight: "calc(100dvh - 140px)" }}
             >
               {pick && (
                 <WorkspacePanel

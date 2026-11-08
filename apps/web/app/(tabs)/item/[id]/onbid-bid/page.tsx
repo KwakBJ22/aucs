@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
 import { fetchBidCheck, fetchItem, type BidCheck, type OnbidDetail } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { dday, parseTime, won } from "@/lib/format";
 
 // 온비드 입찰 준비(GM-02, 설계서 3절). 경매 입찰표·입찰일 아침 대신. 입찰 자체는 온비드에서 손님이 함.
 const t = copy.onbidBid;
@@ -17,7 +17,7 @@ const WD = ["일", "월", "화", "수", "목", "금", "토"];
 
 function when(iso: string | null): string {
   if (!iso) return "";
-  const k = new Date(new Date(iso).getTime() + 9 * 3600_000);
+  const k = new Date(parseTime(iso).getTime() + 9 * 3600_000);
   return `${k.getUTCMonth() + 1}월 ${k.getUTCDate()}일(${WD[k.getUTCDay()]}) ${k.getUTCHours()}시`;
 }
 
