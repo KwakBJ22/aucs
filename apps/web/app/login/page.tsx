@@ -3,7 +3,7 @@
 import { Logo } from "@/components/logo";
 import { PageHeader } from "@/components/layout/page-header";
 import { useState } from "react";
-import { sendLoginLink, signOut, useSession } from "@/lib/auth";
+import { sendLoginLink, signInWithKakao, signOut, userLabel, useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.loginPage;
@@ -21,17 +21,22 @@ export default function Login() {
         <h2 className="fs-2xl">{t.title}</h2>
         {session ? (
           <>
-            <p className="sub fs-base">{t.loggedIn(session.user.email ?? "")}</p>
+            <p className="sub fs-base">{t.loggedIn(userLabel(session))}</p>
             <button className="btn bg-gray-chip" onClick={() => void signOut()}>
               {t.logout}
             </button>
           </>
         ) : (
           <>
-            <button className="btn kakao mt-16 mb-8 mx-0" disabled>
+            <button
+              className="btn kakao mt-16 mb-20 mx-0"
+              onClick={async () => {
+                const e = await signInWithKakao();
+                if (e) setMsg(e);
+              }}
+            >
               {copy.home.kakao}
             </button>
-            <p className="sub ta-center mt-0 mb-20 mx-0">{t.kakaoSoon}</p>
             <label className="sub fs-md">
               {t.emailLabel}
               <input

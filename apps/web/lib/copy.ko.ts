@@ -415,11 +415,10 @@ export const copy = {
   },
   loginPage: {
     title: "로그인",
-    kakaoSoon: "카카오 로그인은 곧 열려요",
     emailLabel: "이메일",
     send: "로그인 링크 받기",
     sent: "메일함에서 링크를 누르면 로그인돼요",
-    loggedIn: (e: string) => `${e}로 로그인했어요`,
+    loggedIn: (e: string) => (e ? `${e}로 로그인했어요` : "로그인했어요"),
     logout: "로그아웃",
   },
   watch: {

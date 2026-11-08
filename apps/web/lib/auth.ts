@@ -4,7 +4,7 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import { createContext, createElement, useContext, useEffect, useState } from "react";
 import { clearMeCache } from "@/lib/api/client";
 
-// 로그인은 Supabase Auth (이메일 링크, 카카오는 키를 받으면 추가). 공개 키만 씁니다.
+// 로그인은 Supabase Auth (카카오 · 이메일 링크, 11/8 카카오 열림). 공개 키만 씁니다.
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 export const supabase = url && key ? createClient(url, key) : null;
@@ -45,9 +45,30 @@ export async function sendLoginLink(email: string): Promise<string | null> {
   if (!supabase) return "로그인 설정이 아직 없어요";
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${window.location.origin}/home` },
+    options: { emailRedirectTo: `${window.location.origin}${nextPath()}` },
   });
   return error ? error.message : null;
+}
+
+// 로그인 뒤 돌아갈 곳: /login?next=/item/... 처럼 받은 우리 사이트 안 주소만(밖으로 새지 않게)
+export function nextPath(): string {
+  const n = new URLSearchParams(window.location.search).get("next") ?? "";
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/home";
+}
+
+export async function signInWithKakao(): Promise<string | null> {
+  if (!supabase) return "로그인 설정이 아직 없어요";
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "kakao",
+    options: { redirectTo: `${window.location.origin}${nextPath()}` },
+  });
+  return error ? error.message : null;
+}
+
+// 화면에 보일 회원 이름: 이메일이 없으면 카카오 닉네임
+export function userLabel(s: Session): string {
+  const m = s.user.user_metadata ?? {};
+  return s.user.email || m.name || m.full_name || m.nickname || m.preferred_username || "";
 }
 
 export async function signOut(): Promise<void> {

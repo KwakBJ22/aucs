@@ -7,7 +7,7 @@ import { AskBox } from "@/components/ask-box";
 import { LeaveBox } from "@/components/leave-box";
 import { PageHeader } from "@/components/layout/page-header";
 import { meApi, type MyInquiry, type SavedSearch } from "@/lib/api/me";
-import { signOut, useSession } from "@/lib/auth";
+import { signOut, userLabel, useSession } from "@/lib/auth";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
@@ -47,7 +47,7 @@ export default function More() {
       {session ? (
         <>
           <h2>{t.hello}</h2>
-          <div className="sub">{session.user.email}</div>
+          <div className="sub">{userLabel(session)}</div>
           <Link href="/more/billing" className="menu-row mt-8">
             <span>{t.plan}</span>
             <span className="sub">›</span>
