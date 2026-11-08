@@ -42,6 +42,10 @@ class PickInput:
     )  # 같은 단지 1년 월세 {monthly_krw, deposit_krw, n}
 
 
+OVERVALUED_FAILS = 5  # 시세 없이 이만큼 유찰되면 추천하지 않음
+OVERVALUED_RATE = 30  # 시세 없이 최저가가 감정가의 이 %보다 낮으면 추천하지 않음
+
+
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
@@ -101,6 +105,12 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         excluded = "지분·특수매각"
     elif not app or not mn:
         excluded = "금액 모름"
+    elif not (a.get("market") or {}).get("price_krw") and (
+        (x.failed_count or 0) >= OVERVALUED_FAILS or mn * 100 < app * OVERVALUED_RATE
+    ):
+        # 시세가 없는데 많이 유찰됐거나 감정가의 30% 아래 = 시장이 감정가를 인정하지 않은 물건(11/9 —
+        # 수원 2024타경101239: 감정가 1.16억 → 9번 유찰 · 같은 건물이 감정가 17%에 팔림). 찾기에는 그대로.
+        excluded = "시세 없이 많이 유찰"
 
     # ── 싼 정도: 예상 낙찰가(감정가 × 중앙 낙찰가율, 최저가보다 낮을 수 없음) vs 시세. 25% 싸면 1
     expect = expected_price(app, mn, a)
@@ -111,9 +121,10 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         if gap >= 10_000_000:
             reasons.append(f"시세보다 {_won_short(gap)} 낮게 살 여지")
     elif app and mn:
-        r_value = 0.35 * _clamp(
-            (app - mn) / app / 0.5
-        )  # 시세가 없으면 감정가 대비로만 — 믿을 만하지 않아 낮게
+        # 시세가 없으면 감정가 대비로만 — 믿을 만하지 않아 낮게. 유찰이 많을수록 「싸다」가 아니라
+        # 「감정가가 높게 잡혔다」는 뜻이라 2회부터 깎음(11/9)
+        stale = _clamp(1 - max(0, (x.failed_count or 0) - 1) / 4)
+        r_value = 0.35 * _clamp((app - mn) / app / 0.5) * stale
     else:
         r_value = 0.0
 

@@ -52,3 +52,19 @@ def test_diversify() -> None:
             {"place": "강남구", "building": "B"}, {"place": "강남구", "building": "C"},
             {"place": "서초구", "building": "D"}]  # fmt: skip
     assert [r["building"] for r in diversify(rows, 5)] == ["A", "B", "D"]
+
+
+def test_overvalued_without_market_not_picked() -> None:
+    """11/9 수원 2024타경101239: 시세 없이 9번 유찰(감정가의 4%) — 「아주 싸다」가 아니라 감정가가 부풀려진 것."""
+    no_mkt = {"sale_rate": {"p50": 60}, "signals": [], "tenant_count": 0}
+    heavy = _x(usage="오피스텔", appraisal_krw=116_000_000, min_price_krw=4_681_000,
+               failed_count=9, analysis=no_mkt)  # fmt: skip
+    assert pick_score(heavy).value["excluded"] == "시세 없이 많이 유찰"
+    low = _x(min_price_krw=120_000_000, failed_count=3, analysis=no_mkt)  # 감정가의 24%
+    assert pick_score(low).value["excluded"] == "시세 없이 많이 유찰"
+    one = pick_score(_x(failed_count=1, analysis=no_mkt)).value
+    three = pick_score(_x(failed_count=3, min_price_krw=256_000_000, analysis=no_mkt)).value
+    assert one["excluded"] is None and three["excluded"] is None
+    assert three["parts"]["value"] < one["parts"]["value"]  # 유찰이 많으면 「싸다」 점수를 깎음
+    # 시세가 있으면 그대로 견줌
+    assert pick_score(_x(failed_count=9, min_price_krw=50_000_000)).value["excluded"] is None
