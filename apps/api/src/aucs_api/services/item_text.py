@@ -36,6 +36,7 @@ _NEED = {
     "T10": ("building", "건축물대장"),
 }
 _OK = ("extracted", "verified", "fetched")
+T5_LATER = "입찰 뒤에 생기는 일이에요 · 대금 내기 전에 등기부를 다시 확인하세요"
 
 
 def _not_applicable(code: str, usage: str, redev: bool) -> bool:
@@ -108,6 +109,8 @@ def failure_table(
             )
         else:
             state, why = "확인함", ""
+        if code == "T5" and state == "확인함" and not why:
+            why = T5_LATER  # T1과 결과는 같지만 입찰 뒤에 생기는 일 — 언제 다시 볼지 알려 줌(11/9)
         out.append({"code": code, "title": title, "state": state, "why": why})
     return out  # fmt: skip
 
