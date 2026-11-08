@@ -29,7 +29,12 @@ from aucs_workers.collectors.browser import launch_chrome
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
-from aucs_workers.extract.case_docs import apply_case_docs, apply_next_sales, detail_schedule
+from aucs_workers.extract.case_docs import (
+    apply_case_docs,
+    apply_next_sales,
+    apply_past_rounds,
+    detail_schedule,
+)
 from aucs_workers.jobs.runlog import run
 from aucs_workers.photos import pull_pics
 from aucs_workers.photos import store as store_photos
@@ -357,10 +362,14 @@ def save_case(
             (case_id, kind, Jsonb(data), checksum(data)),
         )
     apply_case_docs(conn, case_id, docs)
+    if docs.get("schedule"):  # 지난 유찰 회차도 쌓음(11/8)
+        apply_past_rounds(conn, case_id, docs["schedule"])
     if "schedule" not in docs:  # 가볍게 받았으면 물건상세의 기일 목록으로 다음 회차(11/7)
         for kind, data in docs.items():
             if kind.startswith("item_detail_") and data:
-                apply_next_sales(conn, case_id, detail_schedule(data, int(kind.rsplit("_", 1)[1])))
+                sch = detail_schedule(data, int(kind.rsplit("_", 1)[1]))
+                apply_next_sales(conn, case_id, sch)
+                apply_past_rounds(conn, case_id, sch)
     store_photos(conn, case_id, pics)
 
 

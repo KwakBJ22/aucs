@@ -151,6 +151,47 @@ def next_sales(schedule: dict[str, Any], today: date) -> dict[int, dict[str, Any
     return out
 
 
+def past_failed_rounds(schedule: dict[str, Any]) -> list[dict[str, Any]]:
+    """기일내역 → 지난 유찰 회차들(순수 함수, 11/8). 물건 번호 · 날짜 · 그날 최저가 · 그 전 유찰 횟수.
+    예전엔 우리가 목록을 처음 받은 뒤 회차만 쌓여 9번 유찰된 물건에 유찰이 1번만 있었음."""
+    rows: dict[tuple[int, date], dict[str, Any]] = {}
+    for r in schedule.get("dlt_dxdyDtsLst") or []:
+        if (r.get("auctnDxdyKndNm") or "") != "매각기일" or (r.get("dxdyRslt") or "") != "유찰":
+            continue
+        m = re.match(r"(\d{4})\.(\d{2})\.(\d{2})", str(r.get("dxdyTime") or ""))
+        if not m:
+            continue
+        seq = int(r.get("dspslGdsSeq") or 1)
+        d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        rows[(seq, d)] = {"seq": seq, "date": d, "min_price_krw": parse_krw(r.get("tsLwsDspslPrc")),
+                          "place": r.get("dxdyPlcNm")}  # fmt: skip
+    out = sorted(rows.values(), key=lambda x: (x["seq"], x["date"]))
+    n: dict[int, int] = {}
+    for x in out:
+        x["failed_before"] = n.get(x["seq"], 0)
+        n[x["seq"]] = x["failed_before"] + 1
+    return out
+
+
+def apply_past_rounds(conn: psycopg.Connection, case_id: str, schedule: dict[str, Any]) -> int:
+    """지난 유찰 회차를 core.rounds 에(있으면 결과만 「유찰」로). 우리 목록에 있는 물건만."""
+    n = 0
+    for x in past_failed_rounds(schedule):
+        item_id = f"{case_id}-{x['seq']}"
+        n += conn.execute(
+            """insert into core.rounds (round_id, item_id, sale_date, appraisal_krw, min_price_krw,
+                 failed_count, sale_place, result, fetched_at, checked_at)
+               select %s, i.item_id, %s, i.appraisal_krw, %s, %s, %s, 'failed', now(), now()
+               from core.items i where i.item_id = %s
+               on conflict (round_id) do update set result = 'failed', checked_at = now(),
+                 min_price_krw = coalesce(core.rounds.min_price_krw, excluded.min_price_krw)
+               where core.rounds.result <> 'failed'""",
+            (f"{item_id}-{x['date']:%Y%m%d}", x["date"], x["min_price_krw"], x["failed_before"],
+             x["place"], item_id),
+        ).rowcount  # fmt: skip
+    return n
+
+
 def detail_schedule(detail: dict[str, Any], seq: int) -> dict[str, Any]:
     """물건상세의 기일 목록(gdsDspslDxdyLst) → 기일내역 꼴(11/7 — 기일내역 요청을 따로 하지 않으려고, 순수 함수).
 
@@ -167,6 +208,7 @@ def detail_schedule(detail: dict[str, Any], seq: int) -> dict[str, Any]:
             "dxdyRslt": "" if not code else ("유찰" if code == "002" else "기타"),
             "dxdyTime": f"{ymd[:4]}.{ymd[4:6]}.{ymd[6:]}",
             "tsLwsDspslPrc": str(r.get("tsLwsDspslPrc") or ""),
+            "dxdyPlcNm": r.get("dxdyPlcNm"),
         })  # fmt: skip
     return {"dlt_dxdyDtsLst": rows}
 
