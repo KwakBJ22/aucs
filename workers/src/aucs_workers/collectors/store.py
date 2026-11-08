@@ -100,8 +100,15 @@ _RESULT = (
     + ", ".join(f"{c} = excluded.{c}" for c in _RESULT_COLS[4:])
     + ", origin = 'court_collect', fetched_at = now()"
 )
-_ROUND_RESULT = """update core.rounds set result = %(result)s, checked_at = now()
-where item_id = %(item_id)s and sale_date = %(sale_date)s"""
+# 결과를 회차에도: 없던 회차(우리 목록에 늦게 들어온 물건)는 새로 넣음(11/8 — 예전엔 있는 회차만 고쳐
+# 유찰 기록이 비었음). 우리 목록에 없는 물건은 건너뜀.
+_ROUND_RESULT = """insert into core.rounds (round_id, item_id, sale_date, appraisal_krw, min_price_krw,
+  failed_count, result, fetched_at, checked_at)
+select %(item_id)s || '-' || to_char(%(sale_date)s::date, 'YYYYMMDD'), i.item_id, %(sale_date)s,
+  %(appraisal_krw)s, %(min_price_krw)s, %(failed_count)s, %(result)s, now(), now()
+from core.items i where i.item_id = %(item_id)s
+on conflict (round_id) do update set result = excluded.result, checked_at = now(),
+  min_price_krw = coalesce(core.rounds.min_price_krw, excluded.min_price_krw)"""
 
 
 def save_results(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
