@@ -159,7 +159,8 @@ def adjusted_rates(
         hi = cap
         if mid > cap:
             mid = (base + cap) / 2  # 최저가와 지난 유찰가 사이 가운데
-        lo = min(lo, mid)
+        if lo > mid:
+            lo = base  # 낮게 = 최저가(예전엔 보통과 같은 값이 나왔음)
     return {
         "lo": lo,
         "mid": mid,

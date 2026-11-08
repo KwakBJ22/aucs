@@ -112,5 +112,6 @@ def test_heavy_failed_not_mixed_with_light_and_capped_by_last_fail():
     assert last_failed_price(app, mn, 30) == 6_687_143
     a = adjusted_rates({"p25": 50.5, "p50": 62.7, "p75": 68.3}, None, app, mn, 30)
     assert a is not None and a["capped"]
+    assert round(app * a["lo"] / 100) == mn  # 낮게 = 최저가
     assert mn <= app * a["mid"] / 100 <= 6_687_143 and app * a["hi"] / 100 <= 6_687_143 + 1
     assert adjusted_rates({"p25": 50, "p50": 60, "p75": 70}, None, 100, 100)["capped"] is False
