@@ -61,7 +61,7 @@ def collections(
         mark_next_round(cd, r, reduction, today)
         if "special" not in got and cd["preview"]:
             got["next"] = {
-                "reason": f"다음 회차 {won(cd['min_price_krw'])}부터 · 법원 공고 전",
+                "reason": "이미 유찰돼 위 값으로 다음 회차가 잡혔어요 · 법원 공고 전",  # 카드 값과 같은 숫자를 또 적지 않음(11/8)
                 "sort": 10**13 - (cd["d_day"] or 0),  # 값이 정해진 다음 회차가 맨 앞
             }
         elif "special" not in got and cd["likely_fail"] and cd.get("next_min_krw"):
