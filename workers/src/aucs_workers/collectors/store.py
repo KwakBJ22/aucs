@@ -76,6 +76,27 @@ where n.round_id = %(round_id)s and o.item_id = n.item_id and o.sale_date < n.sa
   and o.result = 'scheduled'"""
 
 
+# 유찰 횟수 바로잡기(11/9): 법원 목록 숫자가 실제보다 적은 물건이 있음(서울중앙, 1회씩).
+# 유찰 기록 수가 더 크고 최저가 비율(법원 저감률로 거꾸로 센 횟수)과 맞을 때만 기록 수로.
+_FIX_FAILED = """with red as (
+  select (value -> split_part(%(item_id)s, '-', 1) ->> 'pct')::numeric as pct
+  from ref.rule_tables where rule_key = 'court_reduction_pct' and valid_from <= current_date
+  order by valid_from desc limit 1),
+f as (
+  select count(distinct r.sale_date)::int as n
+  from core.rounds r join core.items i using (item_id)
+  where r.item_id = %(item_id)s and r.result = 'failed' and r.sale_date < i.sale_date)
+update core.items i set failed_count = f.n, updated_at = now()
+from f, red
+where i.item_id = %(item_id)s and f.n > coalesce(i.failed_count, 0) and red.pct is not null
+  and i.min_price_krw > 0 and i.min_price_krw < i.appraisal_krw
+  and round(ln(i.min_price_krw::numeric / i.appraisal_krw) / ln(1 - red.pct / 100)) = f.n"""
+
+
+def fix_failed_count(cur: Any, item_id: str) -> None:
+    cur.execute(_FIX_FAILED, {"item_id": item_id})
+
+
 def save_items(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
     with conn.cursor() as cur:
         for r in rows:
@@ -85,6 +106,7 @@ def save_items(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
             if p["round"]:
                 cur.execute(_ROUND, p["round"])
                 cur.execute(_CLOSE_EARLIER, p["round"])
+                fix_failed_count(cur, p["round"]["item_id"])
     return len(rows)
 
 
@@ -120,5 +142,7 @@ def save_results(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
                 continue
             cur.execute(_RESULT, p)
             cur.execute(_ROUND_RESULT, p)
+            if p.get("item_id"):
+                fix_failed_count(cur, p["item_id"])
             n += 1
     return n

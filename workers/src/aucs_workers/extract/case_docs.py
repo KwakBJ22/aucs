@@ -6,6 +6,7 @@ from typing import Any
 
 import psycopg
 
+from aucs_workers.collectors.store import fix_failed_count
 from aucs_workers.extract.doc_events import classify, importance
 from aucs_workers.extract.mask import mask_names
 
@@ -189,6 +190,10 @@ def apply_past_rounds(conn: psycopg.Connection, case_id: str, schedule: dict[str
             (f"{item_id}-{x['date']:%Y%m%d}", x["date"], x["min_price_krw"], x["failed_before"],
              x["place"], item_id),
         ).rowcount  # fmt: skip
+    if n:
+        with conn.cursor() as cur:
+            for seq in {x["seq"] for x in past_failed_rounds(schedule)}:
+                fix_failed_count(cur, f"{case_id}-{seq}")
     return n
 
 
