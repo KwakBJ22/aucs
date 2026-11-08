@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { Delayed, SkCards, SkListPage } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -121,6 +122,7 @@ export default function Watch() {
   const { session, ready } = useSession();
   const pc = useIsPc();
   const [list, setList] = useState<WatchCard[] | null>(null);
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [only, setOnly] = useState<WatchStep | null>(null);
   const [msg, setMsg] = useState("");
   const [pick, setPick] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export default function Watch() {
         setPick((p) => p ?? l[0]?.item_id ?? null);
       })
       .catch(() => setFailed(true));
-  }, [session, tries]);
+  }, [session, tries, fresh]);
 
   if (!ready)
     return (

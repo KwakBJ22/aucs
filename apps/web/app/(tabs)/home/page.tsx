@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { Logo } from "@/components/logo";
 import { LoadError } from "@/components/load-error";
 import { Delayed, SkCards, SkListPage } from "@/components/skeleton";
@@ -31,6 +32,7 @@ export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mine, setMine] = useState<ItemList | null>(null);
+  const newData = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [onbidSoon, setOnbidSoon] = useState<ItemList | null>(null); // 이번 주 마감 공매(10/28)
   const { session, ready } = useSession();
   const token = session?.access_token ?? null;
@@ -111,7 +113,7 @@ export default function Home() {
         setPicks({ picks: f.picks ?? [], soon: f.soon ?? [], next: f.next ?? [] });
       })
       .catch(() => setFailed(true));
-  }, [router, tries, ready, token]);
+  }, [router, tries, ready, token, newData]);
 
   if (!profile)
     return (

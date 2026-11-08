@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { LoadError } from "@/components/load-error";
 import { Delayed, SkCards, SkTable } from "@/components/skeleton";
 import Link from "next/link";
@@ -75,6 +76,7 @@ function ResultRow({ r }: { r: ResultCard }) {
 export default function Find() {
   const router = useRouter();
   const [sort, setSort] = useState<"deadline" | "rate">("deadline");
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [status, setStatus] = useState<FindStatus>("active");
   const [source, setSource] = useState<Source>("all");
   const [q, setQ] = useState("");
@@ -176,7 +178,7 @@ export default function Find() {
     return () => {
       stale = true;
     };
-  }, [sort, status, source, query, filter, prefsReady, tries, talk]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sort, status, source, query, filter, prefsReady, tries, talk, fresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeFilter = (f: FindFilter) => {
     setFilter(f);

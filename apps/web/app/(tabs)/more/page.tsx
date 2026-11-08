@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { SkListPage } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -23,6 +24,7 @@ export default function More() {
   const pc = useIsPc();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   useEffect(() => setProfile(loadProfile()), []);
   const [inquiries, setInquiries] = useState<MyInquiry[]>([]);
   useEffect(() => {
@@ -35,7 +37,7 @@ export default function More() {
           setInquiries(m.inquiries);
         })
         .catch(() => {});
-  }, [session]);
+  }, [session, fresh]);
   if (!ready)
     return (
       <main className="page">

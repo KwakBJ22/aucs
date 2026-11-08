@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { Delayed, SkListPage, SkRows } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
@@ -14,6 +15,7 @@ import { isStale } from "@/lib/noti";
 export default function Notifications() {
   const { session, ready } = useSession();
   const [list, setList] = useState<Noti[] | null>(null);
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function Notifications() {
       .notifications(session.access_token)
       .then(setList)
       .catch(() => setFailed(true));
-  }, [session, tries]);
+  }, [session, tries, fresh]);
   if (!ready)
     return (
       <main className="page">

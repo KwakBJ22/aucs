@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useFresh } from "@/lib/api/fresh";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
 import { SkDetail } from "@/components/skeleton";
@@ -31,12 +32,16 @@ export default function Item() {
   const pc = useIsPc();
 
   const [failed, setFailed] = useState(false);
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
+  const seen = useRef<string | null>(null);
   const [tries, setTries] = useState(0);
   useEffect(() => {
     setFailed(false);
     fetchItem(decodeURIComponent(id))
       .then((x) => {
         setD(x);
+        if (seen.current === x.item_id) return; // 새 자료로 다시 그린 것 — 본 기록은 한 번만
+        seen.current = x.item_id;
         track("item_view", x.item_id);
         // 현황조사가 아직 없으면 서류 받기를 줄 세움(11/4) — 손님이 본 물건부터 「자료 기다림」이 채워짐
         if (!isOnbid(x) && !x.tags?.find((g) => g.label === "현황조사")?.ok) requestDocs(x.item_id);
@@ -46,7 +51,7 @@ export default function Item() {
         );
       })
       .catch((e: unknown) => (isNotFound(e) ? setD(null) : setFailed(true)));
-  }, [id, tries]);
+  }, [id, tries, fresh]);
 
   if (failed && d === undefined)
     return (

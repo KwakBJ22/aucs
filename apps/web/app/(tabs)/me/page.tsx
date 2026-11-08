@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import { Delayed, SkListPage, SkSection } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import Link from "next/link";
@@ -175,7 +176,8 @@ export default function Me() {
       })
       .catch(() => setFailed(true));
   }, [session]);
-  useEffect(load, [load]);
+  const fresh = useFresh();
+  useEffect(load, [load, fresh]);
 
   if (!ready)
     return (

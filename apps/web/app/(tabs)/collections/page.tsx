@@ -1,5 +1,6 @@
 "use client";
 
+import { useFresh } from "@/lib/api/fresh";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -25,6 +26,7 @@ function CollectionsView() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
   const [data, setData] = useState<{ key: string; all: boolean; d: Collections } | null>(null);
+  const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
 
@@ -43,7 +45,7 @@ function CollectionsView() {
       .then((d) => setData({ key, all: !mine, d }))
       .catch(() => setFailed(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, mine, key, tries]);
+  }, [ready, mine, key, tries, fresh]);
   const sum = data && data.all === !mine ? data.d : null;
 
   const go = (k: string, scope: boolean) =>
