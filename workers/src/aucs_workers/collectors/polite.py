@@ -9,6 +9,8 @@
 - 이상 응답은 3번까지만 다시 시도, 그래도 이상하면 전체 중단하고 logs/court_blocked.txt 를 남김
   → 그 뒤 1시간(같은 날 또 막히면 2·4시간)은 법원 수집기가 켜지자마자 멈춤. 풀렸으면 이 파일을 지우면 됨
 - 하루 한도를 넘기면 중단
+- 11/9 오래 막힘: 차단 기록 파일에 「until YYYY-MM-DD HH:MM」 줄이 있으면 그때까지 법원에 아예 묻지 않음.
+  그 뒤 첫 요청이 하루 한 번의 「풀렸나」 확인 — 또 막히면 24시간 뒤로 다시 미룸(풀릴 때까지 하루 1번만 접속)
 """
 
 import json
@@ -64,6 +66,20 @@ def roll(b: dict[str, Any], today: str, start_cap: int) -> dict[str, Any]:
     return {"date": today, "count": 0, "hours": {}, "cap": cap, "ok_days": ok, "blocked": False}
 
 
+DAILY_CHECK_HOURS = 24
+
+
+def read_until(text: str) -> datetime | None:
+    """차단 기록의 「until 2026-11-10 09:00」 줄 → 그 시각. 없으면 None(순수 함수)."""
+    for line in text.splitlines():
+        if line.startswith("until "):
+            try:
+                return datetime.strptime(line[6:].strip(), "%Y-%m-%d %H:%M")
+            except ValueError:
+                return None
+    return None
+
+
 def pause_hours(blocks_today: int) -> int:
     """그날 몇 번째 막힘인지 → 쉬는 시간(1·2·4시간)."""
     return min(BLOCK_MAX_HOURS, BLOCK_BASE_HOURS * 2 ** max(0, blocks_today - 1))
@@ -109,7 +125,12 @@ class Polite:
         self.step_max = int(step) if step and step.isdigit() else None
         if site:
             f = _block_file(site)
-            if f.exists():
+            until = read_until(f.read_text(encoding="utf-8")) if f.exists() else None
+            if until is not None:
+                if datetime.now() < until:
+                    raise Blocked(f"{site} 오래 막힘 — {until:%m-%d %H:%M} 까지 묻지 않음 ({f})")
+                # 지난 뒤 첫 요청이 하루 한 번의 확인(막혀 있으면 call 이 24시간 뒤로 다시 미룸)
+            elif f.exists():
                 at = datetime.fromtimestamp(f.stat().st_mtime)
                 hours = pause_hours(self._blocks_today())
                 if datetime.now() - at < timedelta(hours=hours):
@@ -201,9 +222,13 @@ class Polite:
         if self.site:
             self._shrink()
             LOGS.mkdir(exist_ok=True)
-            _block_file(self.site).write_text(
-                f"{datetime.now():%Y-%m-%d %H:%M} {what}\n", encoding="utf-8"
-            )
+            bf = _block_file(self.site)
+            line = f"{datetime.now():%Y-%m-%d %H:%M} {what}\n"
+            if bf.exists() and read_until(bf.read_text(encoding="utf-8")) is not None:
+                # 오래 막힘 중의 확인도 막힘 → 하루 뒤에 다시 한 번만
+                nxt = datetime.now() + timedelta(hours=DAILY_CHECK_HOURS)
+                line += f"until {nxt:%Y-%m-%d %H:%M}\n"
+            bf.write_text(line, encoding="utf-8")
         raise Blocked(
             f"{what}: 응답 이상 (status {res.get('status')}) {str(res.get('msg', ''))[:120]}"
         )

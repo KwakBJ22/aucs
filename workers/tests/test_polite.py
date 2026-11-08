@@ -83,3 +83,27 @@ def test_step_share_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-de
     p.call(lambda: {"ok": True}, "1")
     with pytest.raises(DailyLimitReached):
         p.call(lambda: {"ok": True}, "2")
+
+
+def test_long_block_asks_once_a_day(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # 11/9 오래 막힘: 「until」 전에는 아예 묻지 않고, 지난 뒤 1번 물어 또 막히면 24시간 뒤로
+    from datetime import datetime, timedelta
+
+    from aucs_workers.collectors import polite as m
+
+    monkeypatch.setattr(m, "LOGS", tmp_path)
+    f = tmp_path / "court_blocked.txt"
+    f.write_text(
+        f"x\nuntil {datetime.now() + timedelta(hours=3):%Y-%m-%d %H:%M}\n", encoding="utf-8"
+    )
+    with pytest.raises(Blocked):
+        Polite(sleep=lambda s: None)
+    f.write_text(
+        f"x\nuntil {datetime.now() - timedelta(minutes=1):%Y-%m-%d %H:%M}\n", encoding="utf-8"
+    )
+    p = Polite(sleep=lambda s: None, jitter=False)  # 확인 차례 — 열림
+    with pytest.raises(Blocked):
+        p.call(lambda: {"ok": False, "msg": "비정상 IP"}, "확인")
+    assert p.count == 1
+    nxt = m.read_until(f.read_text(encoding="utf-8"))
+    assert nxt is not None and nxt > datetime.now() + timedelta(hours=23)
