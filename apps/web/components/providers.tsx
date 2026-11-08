@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { meApi } from "@/lib/api/me";
 import { SessionProvider, useSession } from "@/lib/auth";
-import { pushProfile } from "@/lib/profile";
+import { PROFILE_EVENT, syncProfile } from "@/lib/profile";
 import { listenErrors } from "@/lib/report-error";
 import { track } from "@/lib/track";
 
@@ -23,12 +23,33 @@ function ErrorListener() {
   return null;
 }
 
-// 로그인하면 시작 질문 답(내 조건)을 계정에 옮겨 둠 — 어느 화면으로 들어와도 한 곳에서(11/8)
+// 로그인하면 이 기기와 계정의 내 조건을 맞춤 — 어느 화면으로 들어와도 한 곳에서(11/8).
+// 계정 것을 되살렸으면 그 조건으로 다시 그림(시작 질문 화면이면 홈으로).
 function ProfileSync() {
   const { session } = useSession();
+  const router = useRouter();
+  const path = usePathname();
   const token = session?.access_token;
   useEffect(() => {
-    if (token) pushProfile(token, (b) => meApi.saveProfile(token, b));
+    if (!token) return;
+    void syncProfile(
+      () => meApi.profile(token),
+      (b) => meApi.saveProfile(token, b),
+    ).then((restored) => {
+      if (!restored) return;
+      if (path === "/start" || path === "/") router.replace("/home");
+      else window.location.reload();
+    });
+    // 로그인한 동안 조건을 바꾸면(시작 질문·계산 화면) 계정에도 올림
+    const push = () =>
+      void syncProfile(
+        () => Promise.resolve(null),
+        (b) => meApi.saveProfile(token, b),
+      );
+    window.addEventListener(PROFILE_EVENT, push);
+    return () => window.removeEventListener(PROFILE_EVENT, push);
+    // 로그인할 때 한 번만 맞춤(화면을 옮길 때마다 부르지 않음)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   return null;
 }

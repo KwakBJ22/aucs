@@ -273,8 +273,8 @@
     color: var(--faint);
   }
 }
-/* 1024~1279px(좁은 PC): 세 칸은 두 칸으로 */
-@media (min-width: 1024px) and (max-width: 1279px) {
+/* 좁은 PC(1024~1365px): 머리 줄이 넘치지 않게 찾기 칸을 숨김(로그인 전 카카오 버튼까지 들어가게, 11/8) */
+@media (min-width: 1024px) and (max-width: 1365px) {
   .ph-search {
     display: none;
   }

@@ -1361,3 +1361,50 @@ a.col-chip span {
     padding: 0 16px 4px;
   }
 }
+/* 물건 상세 한 벌(11/8): 질문 머리(휴대폰은 눌러 펼침, PC는 늘 펼침) · 큰 최저가 · 할 일 칸 */
+.q-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.q-head:disabled {
+  cursor: default;
+  color: inherit;
+  opacity: 1;
+}
+.q-answer {
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+.item-price {
+  margin-top: 6px;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.pc-only-flex {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .q-answer {
+    font-size: var(--fs-xl);
+    font-weight: 700;
+  }
+  .item-price {
+    margin-top: 0;
+    font-size: 34px;
+  }
+  .pc-only-flex {
+    display: flex;
+  }
+  .pc-actions .btn {
+    height: 46px;
+  }
+}

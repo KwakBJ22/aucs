@@ -1,4 +1,5 @@
 import { ApiError, apiBaseUrl, clearMeCache, getMine } from "./client";
+import type { ServerProfile } from "@/lib/profile";
 import type { Calc, ItemCard, ItemDetail, OnbidDetail, Schedule } from "./items";
 
 export type WatchStep = "found" | "review" | "field" | "money" | "bid" | "result" | "after";
@@ -345,7 +346,8 @@ export const meApi = {
     }),
   removeSearch: (t: string, id: number) => call(t, `/searches/${id}`, { method: "DELETE" }),
   notifications: (t: string) => call<Noti[]>(t, "/notifications"),
-  saveProfile: (t: string, p: { regions: string[]; cash: number | null; purpose: string | null }) =>
+  profile: (t: string) => call<ServerProfile | null>(t, "/profile", { fresh: true }),
+  saveProfile: (t: string, p: Record<string, unknown>) =>
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),
   bids: (t: string) => call<Bids>(t, "/bids"),
   registry: (t: string, id: string) =>

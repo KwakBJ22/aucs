@@ -63,6 +63,9 @@ class ProfileIn(BaseModel):
     regions: list[str] = []
     cash: int | None = None
     purpose: str | None = None
+    homes: int | None = None
+    firstTime: bool | None = None  # noqa: N815 — 화면 저장 모양 그대로
+    selling: bool | None = None
 
 
 @router.get("/watch")
@@ -291,10 +294,15 @@ def get_notifications(uid: Uid) -> list[dict[str, Any]]:
     return me.notifications(uid)
 
 
+@router.get("/profile")
+def get_profile(uid: Uid) -> dict[str, Any] | None:
+    """계정에 저장한 내 조건(새 기기에서 되살림, 11/8)."""
+    return me.load_profile(uid)
+
+
 @router.put("/profile")
-def put_profile(body: ProfileIn, uid: Uid) -> dict[str, bool]:
-    me.save_profile(uid, body.regions, body.cash, body.purpose)
-    return {"ok": True}
+def put_profile(body: ProfileIn, uid: Uid) -> dict[str, Any]:
+    return {"ok": True, "at": me.save_profile(uid, body.model_dump())}
 
 
 @router.get("/bids")

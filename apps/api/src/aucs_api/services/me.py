@@ -165,16 +165,46 @@ def notifications(uid: str) -> list[dict[str, Any]]:
         ).fetchall()
 
 
-def save_profile(uid: str, regions: list[str], cash: int | None, purpose: str | None) -> None:
-    """시작 질문 답을 회원 프로필로 (로그인하면 다른 기기에서도 같게)."""
-    db_purpose = "live" if purpose == "live" else ("invest" if purpose else None)
+PURPOSES = ("live", "rent", "resell")
+
+
+def save_profile(uid: str, p: dict[str, Any]) -> str | None:
+    """내 조건(시작 질문 답 + 계산 화면의 가진 집 수)을 계정에 그대로(0035, 11/8). 저장 시각을 돌려줌."""
+    purpose = p.get("purpose") if p.get("purpose") in PURPOSES else None
+    homes = p.get("homes") if p.get("homes") in (0, 1, 2) else None
     with connect() as c:
-        c.execute(
-            "insert into app.profiles (user_id, interest_regions, cash_krw, purpose) values (%s,%s,%s,%s)"
-            " on conflict (user_id) do update set interest_regions = excluded.interest_regions,"
-            " cash_krw = excluded.cash_krw, purpose = excluded.purpose, updated_at = now()",
-            (uid, regions, cash, db_purpose),
-        )
+        row = c.execute(
+            """insert into app.profiles (user_id, interest_regions, cash_krw, purpose, homes, first_time, selling)
+               values (%s, %s, %s, %s, %s, %s, %s)
+               on conflict (user_id) do update set interest_regions = excluded.interest_regions,
+                 cash_krw = excluded.cash_krw, purpose = excluded.purpose, homes = excluded.homes,
+                 first_time = excluded.first_time, selling = excluded.selling, updated_at = now()
+               returning updated_at""",
+            (uid, p.get("regions") or [], p.get("cash"), purpose, homes,
+             p.get("firstTime"), p.get("selling")),
+        ).fetchone()  # fmt: skip
+    return row["updated_at"].isoformat() if row and row.get("updated_at") else None
+
+
+def load_profile(uid: str) -> dict[str, Any] | None:
+    """계정에 저장한 내 조건 — 새 기기에서 로그인하면 이것으로 되살림(11/8). 예전 'invest' 는 매도로."""
+    with connect() as c:
+        r = c.execute(
+            """select interest_regions, cash_krw, purpose, homes, first_time, selling, updated_at
+               from app.profiles where user_id = %s""",
+            (uid,),
+        ).fetchone()
+    if not r or not (r["interest_regions"] or r["cash_krw"] or r["purpose"]):
+        return None
+    return {
+        "regions": r["interest_regions"] or [],
+        "cash": r["cash_krw"],
+        "purpose": "resell" if r["purpose"] == "invest" else r["purpose"],
+        "homes": r["homes"],
+        "firstTime": r["first_time"],
+        "selling": r["selling"],
+        "at": r["updated_at"].isoformat() if r["updated_at"] else None,
+    }
 
 
 _BIDS_SQL = """
