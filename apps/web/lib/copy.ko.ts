@@ -295,7 +295,8 @@ export const copy = {
     talkLabel: "알아들은 조건",
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
     sourceLabel: "경매·공매",
-    status: { active: "진행 중", sold: "매각됨", withdrawn: "취하·변경", all: "전체" } as Record<
+    // 「취하·변경」은 법원 자료로 채울 길이 생길 때까지 뺌(11/9 — 지지옥션 자료를 빼서 비게 됨)
+    status: { active: "진행 중", sold: "매각됨", all: "전체" } as Record<
       string,
       string
     >,
