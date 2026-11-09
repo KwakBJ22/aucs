@@ -53,12 +53,14 @@ const KIND: Record<string, { label: string; d: string }> = {
     d: "M4 9l1.5-5h13L20 9M4 9h16v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0zM5 13v8h14v-8M10 21v-4h4v4",
   },
   land: { label: "토지", d: "M3 20h18M5 20l4-7 3 4 2-3 5 6M15 8a2 2 0 1 0 0-.01M15 10v3" },
-  etc: { label: "기타", d: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10" },
 };
+const ETC = { label: "기타", d: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10" };
 
 function Thumb({ c }: { c: Card }) {
   const [broken, setBroken] = useState(false);
-  const k = KIND[c.usage_kind ?? ""] ? (c.usage_kind as string) : "etc";
+  const known = KIND[c.usage_kind ?? ""];
+  const k = known ? (c.usage_kind as string) : "etc";
+  const kind = known ?? ETC;
   if (c.photo && !broken)
     return (
       <div className="thumb photo">
@@ -67,7 +69,7 @@ function Thumb({ c }: { c: Card }) {
       </div>
     );
   return (
-    <div className={`thumb kind k-${k}`} aria-label={KIND[k].label} role="img">
+    <div className={`thumb kind k-${k}`} aria-label={kind.label} role="img">
       <svg
         width="22"
         height="22"
@@ -79,9 +81,9 @@ function Thumb({ c }: { c: Card }) {
         strokeLinejoin="round"
         aria-hidden="true"
       >
-        <path d={KIND[k].d} />
+        <path d={kind.d} />
       </svg>
-      <span>{KIND[k].label}</span>
+      <span>{kind.label}</span>
     </div>
   );
 }
