@@ -102,8 +102,10 @@ def _rent(
 
 
 def assume_risk(signals: list[dict[str, Any]]) -> bool:
-    """낙찰 뒤 떠안는 돈이 있을 수 있는 신호(T1: 선순위 임차인·전세권 등, 심각·높음)."""
-    return any(s.get("ftype") == "T1" and s.get("level") in ("fatal", "high") for s in signals)
+    """낙찰 뒤 떠안는 돈이 있을 수 있는 신호 — 추천·모아 보기와 같은 판단 한 곳(pick.assumes_debt, 11/9)."""
+    from aucs_rules.pick import assumes_debt
+
+    return assumes_debt(signals)
 
 
 def build_calc(

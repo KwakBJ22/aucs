@@ -19,6 +19,7 @@ from aucs_rules import ENGINE_VERSION
 from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.building import lot_key, parse_jibun, summarize
+from aucs_rules.calc import CASH_TABLE_KEYS, cash_at_min
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.price import Trade, market_price, trade_region
 from aucs_rules.progress import judge_progress
@@ -192,6 +193,7 @@ def analyze_item(
     sales: list[Sale],
     today: date,
     commercial_table: dict[str, Any] | None = None,
+    cash_tables: dict[str, Any] | None = None,
 ) -> bool:
     cur = conn.cursor(row_factory=dict_row)
     item = cur.execute("select * from core.items where item_id = %s", (item_id,)).fetchone()
@@ -289,6 +291,8 @@ def analyze_item(
         "new_item": new_item(eff_failed, app, market["price_krw"] if market else None).value,
         "market": market,
         "tenant_count": len(tenants),
+        # 최저가에 낙찰받을 때 필요한 현금(집 수별) — 찾기·추천의 「가진 현금」 기준(11/9)
+        "cash_need": _cash_need(item, market, cash_tables),
         "redev": redev,
         "building": bldg,
         "parts": parts or None,
@@ -377,12 +381,45 @@ def load_sales(conn: psycopg.Connection, today: date) -> list[Sale]:
     return out
 
 
+def load_cash_tables(conn: psycopg.Connection, today: date) -> dict[str, Any] | None:
+    """「필요한 현금」 셈에 쓰는 기준표(대출 비율·취득세·규제지역). 하나라도 없으면 None(셈 안 함)."""
+    out: dict[str, Any] = {}
+    for k in CASH_TABLE_KEYS:
+        row = conn.execute(
+            "select value from ref.rule_tables where rule_key = %s and valid_from <= %s"
+            " order by valid_from desc limit 1",
+            (k, today),
+        ).fetchone()
+        if not row:
+            return None
+        out[k] = row[0]
+    return out
+
+
+def _cash_need(
+    item: dict[str, Any], market: dict[str, Any] | None, tables: dict[str, Any] | None
+) -> dict[str, int] | None:
+    if not tables or not item.get("min_price_krw"):
+        return None
+    try:
+        return cash_at_min(
+            min_price_krw=item["min_price_krw"], appraisal_krw=item.get("appraisal_krw"),
+            market_krw=(market or {}).get("price_krw"),
+            area_m2=float(item["building_area_m2"]) if item.get("building_area_m2") else None,
+            sido=item.get("sido"), address=item.get("address"), tables=tables,
+        )  # fmt: skip
+    except Exception:  # noqa: BLE001 — 기준표 모양이 바뀌어도 분석은 계속(이 칸만 비움)
+        return None
+
+
+# 분석이 없거나, 그 뒤로 물건·서류가 바뀌었거나, 규칙 버전이 바뀐 물건(11/9 — 버전은 안 봐서
+# 규칙을 고쳐도 대부분 물건이 예전 셈으로 남았음)
 STALE_SQL = """
 select i.item_id from core.items i
-left join lateral (select computed_at from analysis.item_analysis x where x.item_id = i.item_id
-                   order by version desc limit 1) a on true
+left join lateral (select computed_at, engine_version from analysis.item_analysis x
+                   where x.item_id = i.item_id order by version desc limit 1) a on true
 where i.sale_date >= %s
-  and (a.computed_at is null or i.updated_at > a.computed_at
+  and (a.computed_at is null or a.engine_version is distinct from %s or i.updated_at > a.computed_at
        or exists (select 1 from raw.court_doc_raw d where d.case_id = i.case_id and d.fetched_at > a.computed_at))
 order by i.sale_date
 """
@@ -419,15 +456,21 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
             (today,),
         ).fetchone()
         commercial_table = row[0] if row else None
+        cash_tables = load_cash_tables(conn, today)
         if a.item:
             ids = [a.item]
         elif a.stale:
-            ids = [r[0] for r in conn.execute(STALE_SQL, (today - timedelta(days=7),)).fetchall()]
+            ids = [
+                r[0]
+                for r in conn.execute(
+                    STALE_SQL, (today - timedelta(days=7), ENGINE_VERSION)
+                ).fetchall()
+            ]
         else:
             ids = [r[0] for r in conn.execute(
                 "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
         for item_id in ids:
-            if analyze_item(conn, item_id, sales, today, commercial_table):
+            if analyze_item(conn, item_id, sales, today, commercial_table, cash_tables):
                 job.count += 1
             conn.commit()
     print(f"분석 {job.count:,}건 (대상 {len(ids):,})")

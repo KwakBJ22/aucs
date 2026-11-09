@@ -134,3 +134,15 @@ def test_rent_returns():
     )
     assert rent_returns(1, cls="other", loan_krw=0, rate_pct=4.5, jeonse_krw=None,
                         wolse_deposit_krw=None, wolse_rent_krw=None) is None  # fmt: skip
+
+
+def test_cash_at_min_by_homes() -> None:
+    """11/9 찾기 「가진 현금」: 최저가에 낙찰받을 때 필요한 현금(대출·세금 감안), 가진 집 수별."""
+    from aucs_rules.calc import cash_at_min
+
+    v = cash_at_min(min_price_krw=300_000_000, appraisal_krw=400_000_000, market_krw=None,
+                    area_m2=84.0, sido="경기도", address="경기도 평택시 비전동",
+                    tables={"regulated_areas": REG, "loan_ltv": LTV, "acquisition_tax": TAX})  # fmt: skip
+    assert set(v) == {"0", "1", "2"}
+    assert v["0"] < 300_000_000 * 0.4  # 무주택은 70% 대출 → 30% + 세금쯤
+    assert v["2"] > 300_000_000  # 집이 있으면(owner 0%) 대출 없이 전액 + 세금

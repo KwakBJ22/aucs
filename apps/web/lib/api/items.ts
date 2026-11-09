@@ -107,6 +107,7 @@ export function fetchItems(opts: {
   status?: FindStatus;
   filter?: FindFilter;
   source?: Source;
+  homes?: number | null; // 가진 집 수 — 「가진 현금」을 실제 필요한 현금(대출 감안)으로 견줌(11/9)
 }): Promise<ItemList> {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(opts.filter ?? {})) {
@@ -119,6 +120,7 @@ export function fetchItems(opts: {
   if (opts.source && opts.source !== "all") q.set("source", opts.source);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
+  if (opts.maxCash && opts.homes) q.set("homes", String(opts.homes));
   if (opts.sort) q.set("sort", opts.sort);
   if (opts.limit) q.set("limit", String(opts.limit));
   return getJson<ItemList>(`/items?${q.toString()}`);
@@ -156,10 +158,12 @@ export function fetchCollections(opts: {
   maxCash?: number | null;
   key?: string;
   limit?: number;
+  homes?: number | null;
 }) {
   const q = new URLSearchParams();
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
+  if (opts.maxCash && opts.homes) q.set("homes", String(opts.homes));
   if (opts.key) q.set("key", opts.key);
   if (opts.limit) q.set("limit", String(opts.limit));
   return getJson<Collections>(`/collections?${q.toString()}`);
@@ -174,12 +178,14 @@ export function fetchHomeFeed(opts: {
   maxCash?: number | null;
   market?: boolean;
   purpose?: string | null;
+  homes?: number | null;
 }) {
   const q = new URLSearchParams();
   if (opts.purpose) q.set("purpose", opts.purpose);
   (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
   if (opts.maxCash) q.set("max_cash", String(opts.maxCash));
   if (opts.market) q.set("market", "true");
+  if (opts.maxCash && opts.homes) q.set("homes", String(opts.homes));
   return getJson<HomeFeed>(`/home-feed?${q.toString()}`);
 }
 

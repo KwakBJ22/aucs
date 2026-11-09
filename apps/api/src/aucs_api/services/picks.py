@@ -13,7 +13,7 @@ from datetime import date
 from typing import Any
 
 from aucs_rules.find_filter import court_where
-from aucs_rules.pick import PickInput, diversify, pick_score
+from aucs_rules.pick import PickInput, case_key, diversify, pick_score
 from aucs_rules.sale_rate import next_round_min_price
 
 from aucs_api.cache import memo
@@ -70,7 +70,7 @@ def mark_next_round(
 
 
 def home_picks(
-    *, sigungu: list[str], max_cash: int | None, purpose: str | None, today: date
+    *, sigungu: list[str], max_cash: int | None, purpose: str | None, today: date, homes: int = 0
 ) -> dict[str, Any]:
     """내 지역·현금 안 물건을 PICK-01 로 매겨 세 칸으로 나눔. purpose 가 없으면(로그인 전) 목적 점수 없이 점수 큰 것 위주."""
     if purpose == "resell":  # 시작 질문 「매도(되팔기)」 = 규칙의 투자 목적
@@ -95,7 +95,7 @@ left join lateral (select result""",
         )
     params: dict[str, Any] = {"today": today}
     more, fp = court_where(
-        {"sigungu": sigungu, "max_cash": max_cash}, today
+        {"sigungu": sigungu, "max_cash": max_cash, "homes": homes}, today
     )  # 찾기와 같은 규칙(FIND-03)
     sql += more
     params.update(fp)
@@ -131,12 +131,10 @@ left join lateral (select result""",
     scored.sort(key=lambda x: -x["score"])
 
     picks = diversify([x for x in scored if _pick_window(x)], 8)
-    seen = {x["item_id"] for x in picks}
+    seen = {case_key(x) for x in picks}  # 같은 사건의 다른 호실이 다음 칸에 또 나오지 않게(11/9)
     soon = diversify(
-        [x for x in scored if 0 <= (x["d_day"] or 0) <= 7 and x["score"] >= 70 and x["item_id"] not in seen], 4
+        [x for x in scored if 0 <= (x["d_day"] or 0) <= 7 and x["score"] >= 70], 4, skip_cases=seen
     )  # fmt: skip
-    seen |= {x["item_id"] for x in soon}
-    nxt = diversify(
-        [x for x in scored if (x["preview"] or x["likely_fail"]) and x["item_id"] not in seen], 6
-    )
+    seen |= {case_key(x) for x in soon}
+    nxt = diversify([x for x in scored if x["preview"] or x["likely_fail"]], 6, skip_cases=seen)
     return {"picks": picks, "soon": soon, "next": nxt}

@@ -35,7 +35,9 @@ function CollectionsView() {
     setReady(true);
   }, []);
   const mine = !all && Boolean(profile?.regions?.length);
-  const opts = mine ? { sigungu: profile?.regions ?? [], maxCash: profile?.cash ?? null } : {};
+  const opts = mine
+    ? { sigungu: profile?.regions ?? [], maxCash: profile?.cash ?? null, homes: profile?.homes }
+    : {};
 
   // 칩 건수와 고른 모음 목록을 한 번에 받음(모음을 바꿔도 건수는 지난 것을 그대로 보임)
   useEffect(() => {

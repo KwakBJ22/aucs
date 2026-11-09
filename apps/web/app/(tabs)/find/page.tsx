@@ -155,6 +155,7 @@ export default function Find() {
     fetchItems({
       sigungu: talk?.sigungu ?? p?.regions,
       maxCash: talk?.filter.price_max ? undefined : p?.cash,
+      homes: p?.homes,
       sort,
       limit: 100,
       q: query || undefined,

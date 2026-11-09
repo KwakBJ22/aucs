@@ -28,7 +28,13 @@ _STATION = """ left join lateral (
 
 
 def collections(
-    *, sigungu: list[str], max_cash: int | None, key: str | None, limit: int, today: date
+    *,
+    sigungu: list[str],
+    max_cash: int | None,
+    key: str | None,
+    limit: int,
+    today: date,
+    homes: int = 0,
 ) -> dict[str, Any]:
     """모음마다 건수는 늘 주고, 물건은 key 가 없으면 모음마다 앞 몇 건(같은 단지 1·같은 구 2건까지),
     있으면 그 모음만 limit 건 — 화면이 건수와 목록을 한 번에 받게(11/7)."""
@@ -37,7 +43,7 @@ def collections(
     )
     params: dict[str, Any] = {"today": today}
     more, fp = court_where(
-        {"sigungu": sigungu, "max_cash": max_cash}, today
+        {"sigungu": sigungu, "max_cash": max_cash, "homes": homes}, today
     )  # 찾기와 같은 규칙(FIND-03)
     sql += more
     params.update(fp)
@@ -54,7 +60,7 @@ def collections(
             CollectInput(
                 appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
                 is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
-                analysis=an, station=st,
+                analysis=an, station=st, failed_count=r["failed_count"],
             )
         ).value  # fmt: skip
         cd = card(r, today)

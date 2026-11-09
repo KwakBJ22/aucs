@@ -27,6 +27,7 @@ def get_items(
     area_max: Annotated[float | None, Query(ge=0)] = None,
     price_max: Annotated[int | None, Query(ge=0)] = None,
     source: Annotated[str, Query(pattern="^(all|court|onbid)$")] = "all",
+    homes: Annotated[int, Query(ge=0, le=2)] = 0,  # 가진 집 수 — 「필요한 현금」 대출 셈(11/9)
 ) -> dict[str, Any]:
     """진행 중 물건(items)과 끝난 사건(results). status 에 따라 한쪽 또는 둘 다."""
     out: dict[str, Any] = {"total": 0, "items": [], "results": [], "exact_item_id": None}
@@ -34,7 +35,8 @@ def get_items(
         out.update(items.list_items(
             sigungu=sigungu or [], max_cash=max_cash, sort=sort, limit=limit, today=date.today(), q=q,
             extra={"usage": usage, "exclude": exclude, "failed_min": failed_min, "rate_max": rate_max,
-                   "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max},
+                   "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max,
+                   "homes": homes},
             source=source,
         ))  # fmt: skip
     if status != "active":
@@ -48,12 +50,18 @@ def get_collections(
     max_cash: Annotated[int | None, Query(ge=0)] = None,
     key: Annotated[str | None, Query(pattern="^(cheap|safe|rising|next|station|special)$")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 8,
+    homes: Annotated[int, Query(ge=0, le=2)] = 0,  # 가진 집 수 — 「필요한 현금」 대출 셈(11/9)
 ) -> dict[str, Any]:
     """모아 보기(11/7): 모음마다 건수와 물건(key 를 주면 그 모음만 limit 건)."""
     from aucs_api.services.collections import collections
 
     return collections(
-        sigungu=sigungu or [], max_cash=max_cash, key=key, limit=limit, today=date.today()
+        sigungu=sigungu or [],
+        max_cash=max_cash,
+        key=key,
+        limit=limit,
+        today=date.today(),
+        homes=homes,
     )
 
 
@@ -79,6 +87,7 @@ def get_home_feed(
     max_cash: Annotated[int | None, Query(ge=0)] = None,
     market: bool = False,
     purpose: str | None = None,
+    homes: Annotated[int, Query(ge=0, le=2)] = 0,  # 가진 집 수 — 「필요한 현금」 대출 셈(11/9)
 ) -> dict[str, Any]:
     """홈 화면 공개 자료를 한 번에(11/3 — 예전엔 내 조건 물건·이번 주 마감 공매·석 달 낙찰가율·공지를 4번 불렀음)."""
     from concurrent.futures import ThreadPoolExecutor
@@ -91,14 +100,22 @@ def get_home_feed(
     sg = sigungu or []
     with ThreadPoolExecutor(max_workers=5) as ex:
         mine = ex.submit(
-            items.list_items, sigungu=sg, max_cash=max_cash, sort="deadline", limit=20, today=today
+            items.list_items,
+            sigungu=sg,
+            max_cash=max_cash,
+            sort="deadline",
+            limit=20,
+            today=today,
+            extra={"homes": homes},
         )
         soon = ex.submit(items.list_items, sigungu=sg, max_cash=max_cash, sort="deadline", limit=5, today=today,
                          extra={"days_max": 3}, source="onbid")  # fmt: skip
         mk = ex.submit(pro.market, {"sido": None, "sigungu": None, "court": None, "usage": None,
                                     "since": today - timedelta(days=93)}, today) if market else None  # fmt: skip
         notes = ex.submit(admin_ops.notices, True)
-        pk = ex.submit(home_picks, sigungu=sg, max_cash=max_cash, purpose=purpose, today=today)
+        pk = ex.submit(
+            home_picks, sigungu=sg, max_cash=max_cash, purpose=purpose, today=today, homes=homes
+        )
         base = {"total": 0, "items": [], "results": [], "exact_item_id": None}
         try:
             onbid_soon: dict[str, Any] | None = {**base, **soon.result()}

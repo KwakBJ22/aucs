@@ -61,6 +61,17 @@ _NUM = (  # (조건 이름, 경매 칸, 공매 칸, 비교)
 )
 
 
+def kind_sql(col: str) -> str:
+    """용도 칸 → 종류 SQL(CASE). 카드의 종류(pick.usage_kind)와 같은 표로 만듦(11/9 — 오피스텔로 찾으면 상가가 섞였음)."""
+    from aucs_rules.pick import KIND_RULES
+
+    whens = " ".join(
+        f"when coalesce({col}, '') ~ '{'|'.join(words)}' then '{kind}'"
+        for kind, words in KIND_RULES
+    )
+    return f"(case {whens} else 'etc' end)"
+
+
 def usage_re(keys: list[str] | None) -> str | None:
     """고른 종류 → 용도 글자 정규식. 모르는 종류는 버림."""
     groups = [USAGE_GROUPS[g] for g in keys or [] if g in USAGE_GROUPS]
@@ -78,15 +89,23 @@ def court_where(f: dict[str, Any], today: date) -> tuple[str, dict[str, Any]]:
     if f.get("sigungu"):
         sql += " and i.sigungu = any(%(sigungu)s)"
         p["sigungu"] = list(f["sigungu"])
-    if f.get("max_cash"):  # 입찰보증금(최저가 10%)을 낼 수 있는 물건(2단계 임시 기준)
-        sql += " and i.min_price_krw / 10 <= %(max_cash)s"
+    if f.get("max_cash"):
+        # 가진 현금으로 살 수 있는 물건(11/9 대표님): 최저가에 낙찰받을 때 실제 필요한 현금
+        # (낙찰가 − 대출 + 취득세·등기, 가진 집 수별 — 분석이 calc.cash_at_min 으로 적어 둠).
+        # 아직 분석에 없는 물건은 예전 기준(입찰보증금 = 최저가의 10%)으로.
+        sql += (
+            " and coalesce((a.result -> 'cash_need' ->> %(homes_key)s)::bigint,"
+            " i.min_price_krw / 10) <= %(max_cash)s"
+        )
         p["max_cash"] = int(f["max_cash"])
+        p["homes_key"] = str(min(2, max(0, int(f.get("homes") or 0))))
     if f.get("court"):
         sql += " and c.court_code = any(%(court)s)"
         p["court"] = list(f["court"])
     if ure := usage_re(f.get("usage")):
-        sql += " and i.usage_name ~ %(usage_re)s"
-        p["usage_re"] = ure
+        sql += f" and {kind_sql('i.usage_name')} = any(%(kinds)s)"
+        p["kinds"] = [k for k in f["usage"] if k in USAGE_GROUPS]
+        p["usage_re"] = ure  # 공매 조건(onbid_where)이 같이 씀
     for key, col, _, op in _NUM:
         if f.get(key) is not None:
             sql += f" and coalesce({col}, 0) {op} %({key})s"

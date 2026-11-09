@@ -13,7 +13,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from aucs_rules.pick import _won_short, expected_price
+from aucs_rules.pick import _won_short, assumes_debt, expected_price, overvalued
 from aucs_rules.result import RuleResult, Status
 
 RULE_ID = "COLLECT-01"
@@ -29,6 +29,7 @@ class CollectInput:
     is_special: bool
     analysis: dict[str, Any]
     station: tuple[str, int] | None = None  # (역 이름, 직선 거리 m)
+    failed_count: int | None = None
 
 
 def _station_name(name: str) -> str:
@@ -42,13 +43,14 @@ def collect(x: CollectInput) -> RuleResult:
     signals = [s for s in (a.get("signals") or []) if isinstance(s, dict)]
     live = [s for s in signals if s.get("status") not in ("없음", "모름")]
     fatal = any(s.get("level") == "fatal" for s in live)
+    debt = assumes_debt(signals)  # 떠안는 돈이 있으면 「싸다」·「시세 올랐다」가 맞지 않음(11/9)
     out: dict[str, dict[str, Any]] = {}
     if not app or not mn:
         return RuleResult(out, Status.UNKNOWN, RULE_ID, [{"note": "금액 모름"}])
 
     market = (a.get("market") or {}).get("price_krw")
     expect = expected_price(app, mn, a)
-    if market and not fatal:
+    if market and not fatal and not debt:
         gap = market - expect
         if gap >= max(10_000_000, market * 0.1):
             pct = round(gap * 100 / market)  # 비율 순으로 늘어놓으므로 이유에도 비율을(11/7)
@@ -62,7 +64,15 @@ def collect(x: CollectInput) -> RuleResult:
 
     risky = [s for s in live if s.get("level") in ("fatal", "high", "mid")]
     unknown = any(s.get("status") == "모름" for s in signals)
-    if not risky and not unknown and not x.is_share and not x.is_special:
+    if (
+        not risky
+        and not unknown
+        and not x.is_share
+        and not x.is_special
+        and not overvalued(
+            app, mn, x.failed_count, a
+        )  # 시세 없이 많이 유찰된 물건은 초보용에서 뺌(11/9)
+    ):
         tenants = a.get("tenant_count") or 0
         out["safe"] = {
             "reason": "위험 신호 없음 · 임차인 없음" if tenants == 0 else "위험 신호 없음",

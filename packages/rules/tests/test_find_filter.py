@@ -36,3 +36,31 @@ def test_onbid_uses_same_names() -> None:
 
 def test_usage_re() -> None:
     assert usage_re(["zzz"]) is None and usage_re(["officetel"]) == "(오피스텔)"
+
+
+def test_kind_sql_matches_card_kind() -> None:
+    """11/9: 「오피스텔」로 찾으면 「상가,오피스텔,근린시설」이 섞였음 — 찾기 종류 = 카드 종류."""
+    import re
+
+    from aucs_rules.find_filter import kind_sql
+    from aucs_rules.pick import usage_kind
+
+    sql = kind_sql("u")
+    whens = re.findall(r"~ '([^']+)' then '(\w+)'", sql)
+
+    def by_sql(u: str) -> str:
+        return next((k for pat, k in whens if re.search(pat, u)), "etc")
+
+    for u in [
+        "아파트",
+        "상가,오피스텔,근린시설",
+        "오피스텔",
+        "다세대",
+        "단독주택",
+        "근린시설",
+        "대지",
+        "공장",
+    ]:
+        assert by_sql(u) == usage_kind(u), u
+    sql2, p = court_where({"usage": ["officetel"], "max_cash": 1, "homes": 2}, D)
+    assert p["kinds"] == ["officetel"] and p["homes_key"] == "2" and "cash_need" in sql2

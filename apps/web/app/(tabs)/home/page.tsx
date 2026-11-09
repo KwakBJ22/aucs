@@ -101,6 +101,7 @@ export default function Home() {
     fetchHomeFeed({
       sigungu: p.regions,
       maxCash: p.cash,
+      homes: p.homes,
       market: wide,
       // 로그인 전에는 개인 목적을 빼고 점수 큰 것 위주로(11/4 대표님)
       purpose: token ? p.purpose : null,

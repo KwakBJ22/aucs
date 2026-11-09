@@ -31,6 +31,7 @@ def test_match_sql():
         "today": d,
         "sigungu": ["강남구"],
         "max_cash": 30_000_000,
+        "homes_key": "0",  # 필요한 현금은 가진 집 수별(11/9) — 알림 조건엔 없으니 무주택
     }
     assert (
         "display_policy = 'public'" in sql and "a.result is not null" in sql

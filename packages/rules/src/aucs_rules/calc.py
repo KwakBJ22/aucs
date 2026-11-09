@@ -217,3 +217,31 @@ def bid_cases(
         bid = max(int(appraisal_krw * pct / 100) // 10_000 * 10_000, min_price_krw)
         out.append({"key": key, "bid_krw": bid, "rate": pct, "chance": chance})
     return out
+
+
+# 찾기·추천의 「가진 현금」 기준에 쓰는 표(11/9) — 분석이 물건마다 적어 둠
+CASH_TABLE_KEYS = ("regulated_areas", "loan_ltv", "acquisition_tax")
+
+
+def cash_at_min(
+    *,
+    min_price_krw: int,
+    appraisal_krw: int | None,
+    market_krw: int | None,
+    area_m2: float | None,
+    sido: str | None,
+    address: str | None,
+    tables: dict[str, Any],
+) -> dict[str, int]:
+    """최저가에 낙찰받을 때 필요한 현금(낙찰가 − 규정상 최대 대출 + 취득세 · 등기), 가진 집 수별 {"0","1","2"}.
+    입찰가 계산 화면(cash_needed)과 같은 셈 — 명도·수리비와 떠안는 돈은 빼고(물건마다 달라 계산 화면에서)."""
+    cls = area_class(sido, address, tables["regulated_areas"])
+    out: dict[str, int] = {}
+    for homes in (0, 1, 2):
+        v = cash_needed(
+            min_price_krw, min_price_krw=min_price_krw, appraisal_krw=appraisal_krw,
+            market_krw=market_krw, area_m2=area_m2, cls=cls, homes=homes, first_time=False,
+            tables=tables,
+        ).value  # fmt: skip
+        out[str(homes)] = int(v["cash_krw"])
+    return out

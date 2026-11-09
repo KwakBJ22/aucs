@@ -46,6 +46,31 @@ OVERVALUED_FAILS = 5  # 시세 없이 이만큼 유찰되면 추천하지 않음
 OVERVALUED_RATE = 30  # 시세 없이 최저가가 감정가의 이 %보다 낮으면 추천하지 않음
 
 
+def assumes_debt(signals: list[dict[str, Any]]) -> bool:
+    """낙찰 뒤 떠안는 돈이 있을 수 있음(T1 선순위 임차인·전세권 등, 심각·높음) — 추천·모아 보기·계산이 같이 씀.
+    이런 물건의 「싸다」는 떠안는 돈을 뺀 값이 아니라서 추천·「시세보다 싸게」에 넣지 않음(11/9)."""
+    return any(
+        s.get("ftype") == "T1"
+        and s.get("level") in ("fatal", "high")
+        and s.get("status") not in ("없음", "모름")
+        for s in signals
+    )
+
+
+def overvalued(
+    appraisal_krw: int | None,
+    min_price_krw: int | None,
+    failed: int | None,
+    analysis: dict[str, Any],
+) -> bool:
+    """시세가 없는데 많이 유찰됐거나 감정가의 30% 아래 = 시장이 감정가를 인정하지 않은 물건(11/9)."""
+    if not appraisal_krw or not min_price_krw or (analysis.get("market") or {}).get("price_krw"):
+        return False
+    return (
+        failed or 0
+    ) >= OVERVALUED_FAILS or min_price_krw * 100 < appraisal_krw * OVERVALUED_RATE
+
+
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
@@ -67,24 +92,26 @@ def expected_price(app: int, mn: int, analysis: dict[str, Any]) -> int:
     return max(mn, round(app * r["mid"] / 100)) if r and app else mn
 
 
+# 용도 글자 → 종류. 위에서부터 처음 맞는 것(11/9 — 찾기 SQL 도 이 표로 만들어 카드 종류와 찾기 결과가 같음).
+# 「상가,오피스텔,근린시설」 묶음은 상가로(11/4 — 오피스텔로 잘못 높게 쳤음)
+KIND_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("apt", ("아파트",)),
+    ("shop", ("근린", "상가", "판매")),
+    ("officetel", ("오피스텔",)),
+    ("villa", ("다세대", "연립", "빌라")),
+    ("house", ("단독", "다가구")),
+    ("shop", ("업무", "사무")),
+    ("land", ("대지", "임야", "전", "답", "토지")),
+)
+
+
 def usage_kind(usage: str | None) -> str:
-    """용도 글자 → 종류(apt·officetel·villa·house·shop·land·etc). 추천·유찰 기록(WAIT-01)이 같이 씀."""
+    """용도 글자 → 종류(apt·officetel·villa·house·shop·land·etc). 추천·유찰 기록(WAIT-01)·찾기가 같이 씀."""
     u = usage or ""
-    if "아파트" in u:
-        return "apt"
-    if any(
-        k in u for k in ("근린", "상가", "판매")
-    ):  # 「상가,오피스텔,근린시설」 묶음은 상가로(11/4 — 오피스텔로 잘못 높게 쳤음)
-        return "shop"
-    if "오피스텔" in u:
-        return "officetel"
-    if any(k in u for k in ("다세대", "연립", "빌라")):
-        return "villa"
-    if any(k in u for k in ("단독", "다가구")):
-        return "house"
-    if any(k in u for k in ("근린", "상가", "업무", "판매", "사무")):
-        return "shop"
-    return "land" if any(k in u for k in ("대지", "임야", "전", "답", "토지")) else "etc"
+    for kind, words in KIND_RULES:
+        if any(w in u for w in words):
+            return kind
+    return "etc"
 
 
 def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
@@ -105,9 +132,9 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
         excluded = "지분·특수매각"
     elif not app or not mn:
         excluded = "금액 모름"
-    elif not (a.get("market") or {}).get("price_krw") and (
-        (x.failed_count or 0) >= OVERVALUED_FAILS or mn * 100 < app * OVERVALUED_RATE
-    ):
+    elif assumes_debt(signals):
+        excluded = "떠안는 돈 있음"
+    elif overvalued(app, mn, x.failed_count, a):
         # 시세가 없는데 많이 유찰됐거나 감정가의 30% 아래 = 시장이 감정가를 인정하지 않은 물건(11/9 —
         # 수원 2024타경101239: 감정가 1.16억 → 9번 유찰 · 같은 건물이 감정가 17%에 팔림). 찾기에는 그대로.
         excluded = "시세 없이 많이 유찰"
@@ -149,7 +176,10 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     if (a.get("tenant_count") or 0) > 0:
         safety -= 3
     r_safety = max(0.0, safety) / 25
-    if not flagged and safety >= 20:
+    unknown = any(s.get("status") == "모름" for s in signals)
+    if (
+        not flagged and not unknown and safety >= 20
+    ):  # 「미확인」이 있으면 「위험 없음」이라 하지 않음(11/9)
         reasons.append("위험 신호 없음")
 
     # ── 목적에 맞는 집(20점 표를 비율로)
@@ -219,20 +249,34 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     )  # fmt: skip
 
 
-def diversify(rows: list[dict[str, Any]], n: int, per_gu: int = 2) -> list[dict[str, Any]]:
-    """점수 순 목록에서 같은 단지는 1건, 같은 구는 per_gu 건까지만 골라 n 건."""
+def case_key(r: dict[str, Any]) -> str:
+    """같은 사건(일괄·여러 호실)을 하나로 보는 열쇠 — 공매는 물건마다."""
+    if r.get("case_no"):
+        return f"{r.get('court')}|{r.get('case_no')}"
+    return str(r.get("item_id") or id(r))
+
+
+def diversify(
+    rows: list[dict[str, Any]], n: int, per_gu: int = 2, skip_cases: set[str] | None = None
+) -> list[dict[str, Any]]:
+    """점수 순 목록에서 같은 사건·같은 단지는 1건, 같은 구는 per_gu 건까지만 골라 n 건.
+    skip_cases: 앞 칸에 이미 나온 사건(같은 사건의 다른 호실이 또 나오지 않게, 11/9)."""
     out: list[dict[str, Any]] = []
     seen_bld: set[str] = set()
+    seen_case: set[str] = set(skip_cases or ())
     gu_n: dict[str, int] = {}
     for r in rows:
         bld = f"{r.get('place')}|{r.get('building')}"
         gu = str(r.get("place") or "")
+        if case_key(r) in seen_case:
+            continue
         if r.get("building") and bld in seen_bld:
             continue
         if gu_n.get(gu, 0) >= per_gu:
             continue
         out.append(r)
         seen_bld.add(bld)
+        seen_case.add(case_key(r))
         gu_n[gu] = gu_n.get(gu, 0) + 1
         if len(out) >= n:
             break

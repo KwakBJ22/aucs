@@ -68,3 +68,25 @@ def test_overvalued_without_market_not_picked() -> None:
     assert three["parts"]["value"] < one["parts"]["value"]  # 유찰이 많으면 「싸다」 점수를 깎음
     # 시세가 있으면 그대로 견줌
     assert pick_score(_x(failed_count=9, min_price_krw=50_000_000)).value["excluded"] is None
+
+
+def test_assumed_debt_not_picked_and_unknown_not_safe() -> None:
+    """11/9 강남 논현동: 선순위 임차권 인수 물건이 「시세보다 2억 싸게」로 추천 1위였음."""
+    t1 = {"ftype": "T1", "level": "high", "status": "추정", "title": "선순위 임차권 인수"}
+    a = {"market": {"price_krw": 520_000_000}, "sale_rate": {"p50": 80}, "signals": [t1]}
+    assert pick_score(_x(analysis=a)).value["excluded"] == "떠안는 돈 있음"
+    unk = {"level": "info", "status": "모름", "title": "임차인 자료 미확인"}
+    b = {"market": {"price_krw": 520_000_000}, "sale_rate": {"p50": 80}, "signals": [unk]}
+    assert "위험 신호 없음" not in pick_score(_x(analysis=b)).value["reasons"]
+
+
+def test_diversify_one_per_case() -> None:
+    rows = [
+        {"item_id": f"B1-2025타경1839-{n}", "court": "수원", "case_no": "2025타경1839",
+         "place": f"구{n}", "building": None}
+        for n in (1, 2)
+    ] + [{"item_id": "B1-2025타경1-1", "court": "수원", "case_no": "2025타경1", "place": "구9",
+          "building": None}]  # fmt: skip
+    got = diversify(rows, 5)
+    assert [r["item_id"] for r in got] == ["B1-2025타경1839-1", "B1-2025타경1-1"]
+    assert diversify(rows, 5, skip_cases={"수원|2025타경1839"})[0]["item_id"] == "B1-2025타경1-1"
