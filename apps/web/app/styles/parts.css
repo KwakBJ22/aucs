@@ -219,7 +219,7 @@
 .kv-v {
   text-align: right;
 }
-/* 물건 카드 왼쪽 판(사진 대신 종류 글자) */
+/* 물건 카드 왼쪽 판(11/9): 사진이 있으면 사진, 없으면 종류 색 · 아이콘 */
 .thumb {
   width: 56px;
   height: 56px;
@@ -232,6 +232,46 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.thumb.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.thumb.kind {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+}
+.k-apt {
+  background: var(--k-apt-bg);
+  color: var(--k-apt);
+}
+.k-villa {
+  background: var(--k-villa-bg);
+  color: var(--k-villa);
+}
+.k-officetel {
+  background: var(--k-officetel-bg);
+  color: var(--k-officetel);
+}
+.k-house {
+  background: var(--k-house-bg);
+  color: var(--k-house);
+}
+.k-shop {
+  background: var(--k-shop-bg);
+  color: var(--k-shop);
+}
+.k-land {
+  background: var(--k-land-bg);
+  color: var(--k-land);
+}
+.k-etc {
+  background: var(--k-etc-bg);
+  color: var(--k-etc);
 }
 .ellipsis {
   overflow: hidden;
@@ -253,6 +293,9 @@
     height: 42px;
     border-radius: 13px;
     font-size: 11px;
+  }
+  .thumb.kind span {
+    display: none; /* 휴대폰은 아이콘만(칸이 작아 글자가 겹침) — 종류 이름은 aria-label */
   }
 }
 @media (max-width: 400px) {

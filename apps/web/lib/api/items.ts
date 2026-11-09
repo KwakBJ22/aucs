@@ -36,6 +36,7 @@ export type BidCheck = {
 export type Source = "all" | "court" | "onbid";
 export type ItemCard = {
   item_id: string;
+  photo?: string | null; // 첫 사진(없으면 카드에 종류 아이콘, 11/9)
   source?: "court" | "onbid"; // 공매(온비드)는 경매와 같은 카드 + 아래 칸(10/28)
   kind?: string;
   kind_name?: string;
@@ -136,7 +137,6 @@ export type PickCard = ItemCard & {
   fail_odds?: FailOdds | null;
   score: number;
   reasons: string[];
-  photo: string | null;
   preview: boolean; // 유찰 뒤 다음 기일이 잡힌 물건(법원 공고 전)
   likely_fail: boolean; // 이번엔 유찰될 것 같은 물건
   next_min_krw?: number | null; // 유찰되면 다음 최저가

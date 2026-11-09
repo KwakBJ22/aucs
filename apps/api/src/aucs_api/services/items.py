@@ -18,7 +18,8 @@ select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals,
-       coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{{}}') as data_status
+       coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{{}}') as data_status,
+       (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo
 from core.items i
 join core.cases c using (case_id)
 {ANALYSIS_JOIN}
@@ -68,6 +69,7 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "top_signal": flagged[0] if flagged else None,
         "unknown_count": len(unknown),
         "data_status": r["data_status"],
+        "photo": photo_url(r.get("photo")),  # 카드 왼쪽 사진(없으면 화면이 종류 아이콘, 11/9)
     }
 
 

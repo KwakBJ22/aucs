@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { HeartButton } from "./heart-button";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
@@ -32,16 +35,56 @@ function OnbidLine({ c }: { c: Card }) {
   return <div className="sub m-0 fs-xs">{t.noNextRound}</div>;
 }
 
-// 카드 왼쪽 판 글자(사진이 없어 종류로) — 종류 판정은 API 규칙(usage_kind) 한 곳, 여기는 이름만(11/8)
-const KIND_LABEL: Record<string, string> = {
-  apt: "아파트",
-  officetel: "오피스텔",
-  villa: "빌라",
-  house: "주택",
-  shop: "상가",
-  land: "땅",
+// 카드 왼쪽(11/9 대표님 — 회색 네모에 글자만 있어 사진이 덜 뜬 것 같았음):
+// 법원 사진이 있으면 사진, 없으면 종류마다 색 · 아이콘. 종류 판정은 API 규칙(usage_kind) 한 곳.
+const KIND: Record<string, { label: string; d: string }> = {
+  apt: {
+    label: "아파트",
+    d: "M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M15 10h3a1 1 0 0 1 1 1v10M3 21h18M8 8h1M11 8h1M8 12h1M11 12h1M8 16h1M11 16h1",
+  },
+  villa: { label: "빌라", d: "M4 21V10l8-6 8 6v11M3 21h18M9 21v-5h6v5M8 12h2M14 12h2" },
+  officetel: {
+    label: "오피스텔",
+    d: "M6 21V3h12v18M3 21h18M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2",
+  },
+  house: { label: "주택", d: "M3 11l9-7 9 7M5 9.5V21h14V9.5M10 21v-6h4v6" },
+  shop: {
+    label: "상가",
+    d: "M4 9l1.5-5h13L20 9M4 9h16v2a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0zM5 13v8h14v-8M10 21v-4h4v4",
+  },
+  land: { label: "토지", d: "M3 20h18M5 20l4-7 3 4 2-3 5 6M15 8a2 2 0 1 0 0-.01M15 10v3" },
+  etc: { label: "기타", d: "M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10" },
 };
-const kindLabel = (k?: string) => KIND_LABEL[k ?? ""] ?? "기타";
+
+function Thumb({ c }: { c: Card }) {
+  const [broken, setBroken] = useState(false);
+  const k = KIND[c.usage_kind ?? ""] ? (c.usage_kind as string) : "etc";
+  if (c.photo && !broken)
+    return (
+      <div className="thumb photo">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 저장소 사진을 그대로(크기는 저장할 때 줄여 둠) */}
+        <img src={c.photo} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} />
+      </div>
+    );
+  return (
+    <div className={`thumb kind k-${k}`} aria-label={KIND[k].label} role="img">
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d={KIND[k].d} />
+      </svg>
+      <span>{KIND[k].label}</span>
+    </div>
+  );
+}
 
 // why: 모아 보기에서 이 물건이 그 모음에 든 이유 한 줄(있으면 「감정가보다 낮음」 줄 대신)
 export function ItemCard({ c, why }: { c: Card; why?: string }) {
@@ -51,7 +94,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
       href={`/item/${encodeURIComponent(c.item_id)}`}
       className="d-flex gap-12 py-12 px-0 c-inherit"
     >
-      <div className="thumb">{kindLabel(c.usage_kind)}</div>
+      <Thumb c={c} />
       <div className="f-1 minw-0">
         <div className="sub d-flex jc-between gap-8 ai-center">
           <span className="ellipsis">

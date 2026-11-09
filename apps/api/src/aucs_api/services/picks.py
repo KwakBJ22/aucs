@@ -19,7 +19,7 @@ from aucs_rules.sale_rate import next_round_min_price
 from aucs_api.cache import memo
 from aucs_api.db import connect
 from aucs_api.services.fail_odds import odds_for
-from aucs_api.services.items import _CARD_SQL, card, photo_url
+from aucs_api.services.items import _CARD_SQL, card
 
 PREVIEW = "preview"  # 유찰 뒤 기일내역으로 미리 안 다음 회차(법원 공고 전)
 
@@ -29,8 +29,7 @@ _SQL = (
         "a.result -> 'top' as top, jsonb_build_object('market', a.result -> 'market', 'sale_rate', a.result -> 'sale_rate',"
         " 'court_cell', a.result -> 'court_cell', 'redev', a.result -> 'redev', 'new_item', a.result -> 'new_item',"
         " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals', 'appraisal', a.result -> 'appraisal') as analysis,"
-        " i.is_special_case, i.status_code,"
-        " (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo,",
+        " i.is_special_case, i.status_code,",
     )
     # 공고 전 다음 회차는 「법원 목록에서 빠짐」과 다름 — _CARD_SQL 의 gone 걸러내기는 그대로 둠
 )
@@ -125,7 +124,6 @@ left join lateral (select result""",
         cd = card(r, today)
         cd["score"] = p["score"]
         cd["reasons"] = p["reasons"]
-        cd["photo"] = photo_url(r["photo"])
         mark_next_round(cd, r, reduction, today)
         scored.append(cd)
     scored.sort(key=lambda x: -x["score"])

@@ -38,6 +38,21 @@
   --kakao: #fee500;
   --kakao-text: #191600;
   --on-strong: #ffffff; /* 진한 색 판 위 글자 */
+  /* 물건 종류 아이콘 판(11/9) — 연한 바탕 · 진한 선 */
+  --k-apt-bg: #e8f3ff;
+  --k-apt: #1b64da;
+  --k-villa-bg: #e7f5ef;
+  --k-villa: #0f6b4c;
+  --k-officetel-bg: #f1ecfe;
+  --k-officetel: #6a3fd4;
+  --k-house-bg: #e6f6f7;
+  --k-house: #0b6e78;
+  --k-shop-bg: #fff4e5;
+  --k-shop: #a3540a;
+  --k-land-bg: #f5efe7;
+  --k-land: #7a5a33;
+  --k-etc-bg: #f2f4f6;
+  --k-etc: #4e5968;
 }
 @media (prefers-color-scheme: dark) and (max-width: 1023px) {
   :root {
@@ -61,5 +76,19 @@
     --panel: #23272e;
     --band: #0a0c0f;
     --red-soft: #3a1714;
+    --k-apt-bg: #1b2a4d;
+    --k-apt: #a9c2ff;
+    --k-villa-bg: #133428;
+    --k-villa: #6fd3a8;
+    --k-officetel-bg: #2a2045;
+    --k-officetel: #c4b0ff;
+    --k-house-bg: #12313a;
+    --k-house: #7fd6df;
+    --k-shop-bg: #3a2a14;
+    --k-shop: #ffb766;
+    --k-land-bg: #33291d;
+    --k-land: #d9b98c;
+    --k-etc-bg: #23272e;
+    --k-etc: #c3c8d1;
   }
 }

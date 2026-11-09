@@ -13,7 +13,7 @@ from aucs_rules.fmt import won
 from aucs_rules.pick import diversify
 
 from aucs_api.db import connect
-from aucs_api.services.items import card, photo_url
+from aucs_api.services.items import card
 from aucs_api.services.picks import _SQL, mark_next_round, reduction_table
 
 # 가까운 역 하나(직선 500m 안) — 역 이름·거리
@@ -79,7 +79,6 @@ def collections(
             }
         if not got:
             continue
-        cd["photo"] = photo_url(r["photo"])
         for k, v in got.items():
             groups[k].append({**cd, "why": v["reason"], "_sort": v["sort"]})
 
