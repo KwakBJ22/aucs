@@ -167,11 +167,11 @@ function Sheet() {
                   {day?.court_full} {day?.dept}
                 </td>
                 <th>{t.f.date}</th>
-                <td>{day?.sale_date}</td>
+                <td className="nowrap">{day?.sale_date}</td>
               </tr>
               <tr>
                 <th>{t.f.caseNo}</th>
-                <td>{day?.case_no}</td>
+                <td className="nowrap">{day?.case_no}</td>
                 <th>{t.f.itemNo}</th>
                 <td>{day?.item_no}</td>
               </tr>

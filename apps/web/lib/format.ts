@@ -1,4 +1,6 @@
 // 금액은 억·만 단위로 (「7억 1,050만」), 퍼센트는 정수.
+// 「3억 2,400만」의 빈칸은 줄이 안 갈라지는 빈칸(NBSP) — 좁은 칸에서 금액이 두 줄로 쪼개지지 않게(11/11)
+const NB = "\u00a0";
 export function won(n: number | null | undefined): string {
   if (n == null) return "-";
   const man = Math.round(n / 10_000);
@@ -6,12 +8,12 @@ export function won(n: number | null | undefined): string {
     // 1조 이상: 「4조 7,624억」
     const jo = Math.floor(man / 100_000_000);
     const restEok = Math.floor((man % 100_000_000) / 10_000);
-    return restEok ? `${jo}조 ${restEok.toLocaleString("ko-KR")}억` : `${jo}조`;
+    return restEok ? `${jo}조${NB}${restEok.toLocaleString("ko-KR")}억` : `${jo}조`;
   }
   const eok = Math.floor(man / 10_000);
   const rest = man % 10_000;
   const e = eok.toLocaleString("ko-KR");
-  if (eok && rest) return `${e}억 ${rest.toLocaleString("ko-KR")}만`;
+  if (eok && rest) return `${e}억${NB}${rest.toLocaleString("ko-KR")}만`;
   if (eok) return `${e}억`;
   return `${rest.toLocaleString("ko-KR")}만`;
 }

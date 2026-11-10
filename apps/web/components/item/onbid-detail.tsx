@@ -127,8 +127,8 @@ function ExpectRow({ e }: { e: OnbidDetail["expected"][number] }) {
       <span className="fw-6" style={{ color: few ? "var(--muted)" : undefined }}>
         {e.bucket} <span className="sub">({e.share ?? "-"}%)</span>
       </span>
-      <span className="ta-right">{few ? "—" : `${e.p50}%`}</span>
-      <span className="ta-right fw-7" style={{ color: few ? "var(--muted)" : undefined }}>
+      <span className="ta-right num">{few ? "—" : `${e.p50}%`}</span>
+      <span className="ta-right fw-7 num" style={{ color: few ? "var(--muted)" : undefined }}>
         {few ? `${t.fewSample} (${e.n}건)` : won(e.price_krw)}
       </span>
     </>

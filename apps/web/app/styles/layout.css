@@ -396,6 +396,10 @@
     display: grid;
     grid-template-columns: 140px minmax(0, 1fr);
   }
+  .kv-left .kv > :first-child {
+    display: block; /* 이름표가 비어도 칸은 지킴(값이 왼쪽 칸으로 밀리지 않게) */
+    white-space: normal;
+  }
   .kv-left .kv-v {
     text-align: left;
   }

@@ -19,6 +19,11 @@ body {
   font-size: 16px;
   /* 줄 간격(11/11): 본문 1.5 — 제목·큰 숫자는 아래에서 1.3 */
   line-height: 1.5;
+  /* 줄바꿈(11/11): 한국어는 낱말 중간에서 끊지 않음(keep-all), 칸보다 긴 낱말만 끊김.
+     한두 글자만 다음 줄로 떨어지지 않게 고르게 접음(pretty — 되는 브라우저에서만) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
   -webkit-font-smoothing: antialiased;
   /* 아이폰(11/8): 가로로 돌려도 글자가 커지지 않게 · 누를 때 회색 판 없앰 · 가로 화면 노치 자리 비움 */
   -webkit-text-size-adjust: 100%;

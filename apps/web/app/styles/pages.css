@@ -12,9 +12,14 @@
   padding: 12px;
   min-width: 180px;
 }
+/* 물건 이름 칸은 접힘 — 첫 칸(이름표)은 낱말 단위로만 접히고 옆으로 넘겨도 제자리(11/11) */
+.compare-table thead th {
+  white-space: normal;
+}
 .compare-table th:first-child,
 .compare-table td:first-child {
-  min-width: 84px;
+  min-width: 7em;
+  max-width: 8em;
   position: sticky;
   left: 0;
   background: var(--surface);
@@ -145,10 +150,28 @@
   padding: 8px;
   text-align: left;
 }
+.bid-form td {
+  overflow-wrap: anywhere;
+}
 .bid-form th {
   width: 84px;
   white-space: nowrap;
   font-weight: 600;
+}
+/* 좁은 폰: 네 칸(이름표·값·이름표·값)이 안 들어가 날짜가 쪼개졌음 → 이름표·값 한 쌍씩 한 줄로(인쇄는 종이 그대로 네 칸) */
+@media screen and (max-width: 480px) {
+  .bid-form tr {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+  .bid-form th,
+  .bid-form td {
+    margin: 0 0 -1px;
+  }
+  .bid-form th {
+    width: auto;
+    margin-right: -1px;
+  }
 }
 .bid-form .handwrite {
   color: var(--faint);
@@ -634,6 +657,9 @@
   text-align: left;
   vertical-align: top;
 }
+.report-table td {
+  overflow-wrap: anywhere;
+}
 .report-table th {
   width: 30%;
   font-weight: 600;
@@ -1114,6 +1140,7 @@ textarea.adm-input {
   color: var(--gray-text);
   font-size: var(--fs-xs);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 .tier-btn.on {
   background: var(--blue-soft);

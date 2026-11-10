@@ -190,8 +190,26 @@
   color: #fff;
   font-size: 14px;
 }
+/* 숫자: 폭 고정, 통째로(금액·날짜·퍼센트·면적이 중간에서 갈라지지 않음) */
 .num {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* 표 머리칸(짧은 이름표)은 접히지 않음, 숫자 칸(.num)은 오른쪽 맞춤 */
+th {
+  white-space: nowrap;
+}
+td.num,
+th.num {
+  text-align: right;
+}
+/* 줄 끝의 금액·수치는 통째로 */
+.line-row > b,
+.menu-row > b,
+.line-row > .num,
+.menu-row > .num {
+  flex: none;
+  white-space: nowrap;
 }
 .btn.kakao {
   background: var(--kakao);
@@ -251,23 +269,31 @@
 }
 
 /* 이름·값 한 줄(Row). 휴대폰은 양 끝, PC 본문(.kv-left 안)은 이름 옆에 값 */
+/* 줄바꿈(11/11): 이름표는 접히지 않고(내용만큼), 값만 남은 폭에서 접히며 오른쪽 맞춤.
+   이름표가 줄의 6할을 넘으면(글자를 키운 폰) 값이 아랫줄로 내려가 쌓임 */
 .kv {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 2px 12px;
   padding: 6px 0;
   font-size: var(--fs-md);
 }
-.kv-v {
-  text-align: right;
-}
-.kv-has-note {
-  flex-wrap: wrap;
-  row-gap: 2px;
-}
-.kv-has-note > .sub:first-child,
-.kv-has-note > .kv-v {
+.kv > :first-child {
+  flex: 0 0 auto;
+  max-width: 100%;
   white-space: nowrap;
+}
+.kv-v {
+  flex: 1 1 40%;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+/* 이름표가 없는 줄(경고 한 줄 등)은 값이 줄 전체 */
+.kv > :first-child:empty {
+  display: none;
 }
 .kv-note {
   flex-basis: 100%;

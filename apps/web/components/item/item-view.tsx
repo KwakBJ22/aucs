@@ -225,15 +225,15 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
               <thead>
                 <tr>
                   <th>{t.pc.date}</th>
-                  <th>{t.pc.min}</th>
+                  <th className="num">{t.pc.min}</th>
                   <th>{t.pc.result}</th>
                 </tr>
               </thead>
               <tbody>
                 {d.rounds.map((r) => (
                   <tr key={r.sale_date}>
-                    <td>{r.sale_date}</td>
-                    <td>{won(r.min_price_krw)}</td>
+                    <td className="num">{r.sale_date}</td>
+                    <td className="num">{won(r.min_price_krw)}</td>
                     <td>{r.result}</td>
                   </tr>
                 ))}
