@@ -56,19 +56,21 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
     ...(closed
       ? []
       : ([
+          [t.pc.deposit, won(d.deposit_krw)],
           [
             t.nextRound,
             d.next_round.min_price_krw ? (
               <>
                 {won(d.next_round.min_price_krw)}
-                {d.next_round.verified ? "" : ` ${t.nextRoundGuess}`}
+                {d.next_round.verified ? null : (
+                  <span className="fs-xs fw-5 c-muted"> {t.nextRoundGuess}</span>
+                )}
                 <OddsLine odds={d.next_round.fail_odds} short />
               </>
             ) : (
               "-"
             ),
           ],
-          [t.pc.deposit, won(d.deposit_krw)],
         ] as [string, React.ReactNode][])),
   ];
 
@@ -155,7 +157,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         </div>
         <div className="band-grid tiles mt-14">
           {nums.map(([k, v]) => (
-            <div key={k}>
+            <div key={k} className={k === t.nextRound ? "tile-wide" : undefined}>
               <div className="sub m-0">{k}</div>
               <div className="fs-base fw-7 mt-2">{v}</div>
             </div>

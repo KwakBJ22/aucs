@@ -979,8 +979,8 @@ export const copy = {
     },
     back: "뒤로",
     notFound: "물건을 찾을 수 없어요",
-    nextRound: "이번에 유찰되면 · 다음 최저가",
-    nextRoundGuess: "(저감률 추정)",
+    nextRound: "이번에 유찰되면 다음 최저가",
+    nextRoundGuess: "저감률 추정",
     failOddsShort: (of10: number) => `비슷한 물건 10건 중 ${of10}건 유찰`,
     soldOddsShort: (of10: number) => `비슷한 물건 10건 중 ${of10}건이 이 회차에 팔림`,
     soldOdds: (of10: number, n: number) =>

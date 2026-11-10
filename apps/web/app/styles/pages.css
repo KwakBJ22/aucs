@@ -93,6 +93,15 @@
   }
 }
 
+.band-grid.tiles > .tile-wide {
+  grid-column: 1 / -1;
+}
+@media (min-width: 1024px) {
+  .band-grid.tiles > .tile-wide {
+    grid-column: auto;
+  }
+}
+
 .stat-grid {
   display: grid;
   gap: 12px;
