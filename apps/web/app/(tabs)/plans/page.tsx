@@ -56,12 +56,17 @@ export default function Plans() {
               </div>
             ))}
             {p.key === "one" ? (
-              <Link href="/find" className="btn secondary md mt-12">
+              <Link href="/find" className="btn bg-gray-chip fs-base mt-12" style={{ height: 46 }}>
                 {t.toFind}
               </Link>
             ) : p.key !== "free" ? (
               <>
-                <button className="btn primary md mt-12" disabled title={t.payLater}>
+                <button
+                  className="btn primary fs-base mt-12"
+                  style={{ height: 46, opacity: 0.5 }}
+                  disabled
+                  title={t.payLater}
+                >
                   {p.cta}
                 </button>
                 {/* 눌러도 반응이 없던 것(11/1) — 왜 안 되는지 바로 아래에 */}

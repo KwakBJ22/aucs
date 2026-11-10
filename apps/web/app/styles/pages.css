@@ -79,7 +79,6 @@
 /* PC 두 칸(왼쪽 목록·오른쪽 상세), 휴대폰은 위아래 */
 .two-pane {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 @media (min-width: 1024px) {
@@ -105,7 +104,6 @@
 
 .stat-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 @media (min-width: 1024px) {
@@ -417,7 +415,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
   min-height: 48px;
   padding: 10px 0;
 }
@@ -516,8 +513,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  min-height: 44px;
+  gap: 10px;
 }
 .switch-row input {
   width: 22px;
@@ -536,8 +532,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  min-height: 48px;
   width: 100%;
   margin-top: 10px;
   padding: 12px 14px;
@@ -1019,7 +1013,7 @@ textarea.adm-input {
 /* 공지 한 줄(홈 맨 위) */
 .notice-line {
   display: block;
-  margin: 12px 0 0;
+  margin: 8px 16px 0;
   padding: 10px 14px;
   border-radius: 12px;
   background: var(--blue-soft);
@@ -1032,7 +1026,7 @@ textarea.adm-input {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  margin: 12px 0 0;
+  margin: 8px 16px 0;
   padding: 10px 14px;
   border-radius: 12px;
   background: var(--panel);
@@ -1379,6 +1373,14 @@ a.col-chip span {
     width: auto;
   }
 }
+/* 좁은 폰(400px 이하)은 화면 좌우 여백이 16px — 칩 줄도 같은 만큼만 끝까지 */
+@media (max-width: 400px) {
+  .col-chips {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px 4px;
+  }
+}
 /* 물건 상세 한 벌(11/8): 질문 머리(휴대폰은 눌러 펼침, PC는 늘 펼침) · 큰 최저가 · 할 일 칸 */
 .q-head {
   display: flex;
@@ -1423,6 +1425,6 @@ a.col-chip span {
     display: flex;
   }
   .pc-actions .btn {
-    min-height: 46px;
+    height: 46px;
   }
 }

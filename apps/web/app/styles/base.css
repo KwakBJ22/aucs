@@ -17,8 +17,6 @@ body {
     "Malgun Gothic",
     sans-serif;
   font-size: 16px;
-  /* 줄 간격(11/11): 본문 1.5 — 제목·큰 숫자는 아래에서 1.3 */
-  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   /* 아이폰(11/8): 가로로 돌려도 글자가 커지지 않게 · 누를 때 회색 판 없앰 · 가로 화면 노치 자리 비움 */
   -webkit-text-size-adjust: 100%;
@@ -42,22 +40,6 @@ body {
 /* #자리로 갈 때 고정 머리에 가리지 않게 — 모든 자리에 한 번에(11/8) */
 [id] {
   scroll-margin-top: calc(var(--head-h) + 12px);
-}
-/* 줄 간격(11/11): 제목·큰 숫자는 1.3 — 두 줄로 접혀도 위아래 줄과 붙지 않음 */
-h1,
-h2,
-h3,
-h4 {
-  line-height: 1.3;
-}
-/* 문단 사이는 8px 한 값(11/11) — 예전엔 브라우저 기본(글자 크기만큼)이라 화면마다 달랐음 */
-p {
-  margin: 8px 0;
-}
-/* 그림·영상은 칸 폭을 넘지 않음(11/11 가로 넘침) */
-img,
-video {
-  max-width: 100%;
 }
 a {
   color: var(--blue);

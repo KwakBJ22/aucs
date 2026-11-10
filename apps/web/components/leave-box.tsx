@@ -31,11 +31,12 @@ export function LeaveBox({ token }: { token: string }) {
         className="w-full fs-base py-8 px-10 b-0 r-14 bg-bg c-inherit"
       />
       <div className="btn-pair mt-10">
-        <button className="btn secondary md" onClick={() => setOpen(false)}>
+        <button className="btn secondary" style={{ height: 44 }} onClick={() => setOpen(false)}>
           {t.cancel}
         </button>
         <button
-          className="btn danger md"
+          className="btn primary"
+          style={{ height: 44, background: "var(--red)" }}
           disabled={word.trim() !== t.word || busy}
           onClick={() => {
             setBusy(true);

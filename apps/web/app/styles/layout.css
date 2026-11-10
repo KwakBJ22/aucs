@@ -282,15 +282,9 @@
 }
 
 /* PC 배치(%): 휴대폰은 한 줄로 쌓이고, PC에서 비율로 나눔 */
-/* 칸 폭은 화면 폭까지만(minmax 0) — 안에 옆으로 넘기는 줄(사건 흐름·표)이 있어도 칸이 내용만큼 늘어나
-   화면 전체가 옆으로 밀리지 않음(11/11: 상세 「무엇을 확인하나」를 펴면 360폭에서 136px 넘쳤음) */
 .pc-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-}
-.pc-grid > * {
-  min-width: 0;
 }
 @media (min-width: 1024px) {
   .pc-grid {
