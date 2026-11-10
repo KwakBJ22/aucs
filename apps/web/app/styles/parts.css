@@ -576,7 +576,7 @@ th.num {
 
 /* ══ 누를 것 표시(11/11, 08-look 5절) ══
    누를 수 있는 것은 네 꼴뿐: ① 면 버튼(.btn) ② 글자 링크(.link — 파란 글자 + ›) ③ 목록 줄·카드(끝에 회색 ›, .go)
-   ④ 고르는 칩·탭(.pill·.pills·.seg — 알약, 고른 것은 연파랑). 그 밖의 글자·꼬리표는 이 꼴을 쓰지 않는다. */
+   ④ 고르는 칩·탭(.pill·.pills·.seg — 알약, 고른 것은 진한 바탕). 그 밖의 글자·꼬리표는 이 꼴을 쓰지 않는다. */
 
 /* 놓인 자리에 따라 달라지는 두 값: 칩·보조 버튼 바탕(--chip-bg), 누르는 순간 바탕(--press).
    화면 바탕(--bg)과 연한 판(--panel)이 같은 색이라, 바탕 위에서는 흰 판 · 카드 안에서는 연한 판이어야 보인다 */
@@ -718,7 +718,7 @@ button:disabled,
   line-height: 1;
 }
 
-/* ④ 고르는 칩 — 알약. 고른 것은 연파랑 바탕 + 파란 글자 */
+/* ④ 고르는 칩 — 알약. 고른 것은 진한 바탕 + 밝은 글자(11/7 대표님이 정한 것 그대로) */
 .pill,
 .pills button,
 .seg-btn {
@@ -742,8 +742,8 @@ button:disabled,
 .pill.on,
 .pills button.on,
 .seg-btn.on {
-  background: var(--blue-soft);
-  color: var(--blue-text);
+  background: var(--text);
+  color: var(--surface);
   font-weight: 700;
 }
 .pills {
@@ -782,8 +782,8 @@ button:disabled,
   text-align: left;
 }
 .choice.on {
-  background: var(--blue-soft);
-  color: var(--blue-text);
+  background: var(--text);
+  color: var(--surface);
 }
 .choice:active {
   filter: brightness(0.94);
