@@ -8,12 +8,14 @@
 
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from aucs_workers.db import connect
 
 ROOT = Path(__file__).resolve().parents[4]
 RUN_JOB = ROOT / "scripts" / "run-job.ps1"
+NIGHT_END = 6  # 이 시각 전에는 손님 서류 요청도 법원에 묻지 않음
 KEYS = {"daily", "results", "items", "docs", "analyze", "notify", "buildings", "onbid", "trades",
         "redev", "watched", "regions"}  # fmt: skip
 
@@ -36,7 +38,11 @@ def command(key: str) -> list[str] | None:
 
 
 def queue_docs() -> None:
-    """손님이 연 물건의 서류 요청(case_docs:, 11/4)을 한 번에 받고, 바뀐 물건만 다시 분석. 실패해도 관리자 요청은 계속."""
+    """손님이 연 물건의 서류 요청(case_docs:, 11/4)을 한 번에 받고, 바뀐 물건만 다시 분석. 실패해도 관리자 요청은 계속.
+
+    11/11 대표님: 밤(00~06시)에는 법원에 묻지 않음 — 요청은 줄에 남아 있다가 06시 뒤 첫 차례에 받음."""
+    if datetime.now().hour < NIGHT_END:
+        return
     with connect() as c:
         if c.execute(  # 앞 차례가 아직 받는 중이면 겹쳐 띄우지 않음(법원에 한 번에 한 창만)
             "select 1 from ops.job_requests where status = 'running' and job_key like 'case_docs:%%'"
