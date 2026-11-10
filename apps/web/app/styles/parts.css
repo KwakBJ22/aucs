@@ -201,6 +201,9 @@
   color: var(--text);
   font-weight: 700;
 }
+.section .menu-row:last-child {
+  padding-bottom: 0;
+}
 .menu-row {
   display: flex;
   justify-content: space-between;

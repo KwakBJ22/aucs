@@ -261,7 +261,29 @@ export default function Me() {
       ))}
       {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
       {d && d.history.length > 0 && (
-        <div className="ox-auto mt-8">
+        <div className="m-block mt-8">
+          {d.history.map((b) => (
+            <div key={b.bid_id} className="py-10 px-0">
+              <div className="d-flex jc-between gap-8 fs-md">
+                <span className="fw-6">{b.place}</span>
+                <span className="sub nowrap">{t.outcome[b.outcome]}</span>
+              </div>
+              <div className="sub fs-xs">
+                {[
+                  b.my_bid_krw ? `${t.cols.my} ${won(b.my_bid_krw)}` : "",
+                  b.winning_bid_krw ? `${t.cols.win} ${won(b.winning_bid_krw)}` : "",
+                  b.second_bid_krw ? `${t.cols.second} ${won(b.second_bid_krw)}` : "",
+                  b.bidder_count != null ? `${t.cols.n} ${b.bidder_count}명` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {d && d.history.length > 0 && (
+        <div className="pc-only ox-auto mt-8">
           <table className="pro-table wrap-first">
             <thead>
               <tr>
