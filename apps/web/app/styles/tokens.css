@@ -54,41 +54,7 @@
   --k-etc-bg: #f2f4f6;
   --k-etc: #4e5968;
 }
-@media (prefers-color-scheme: dark) and (max-width: 1023px) {
-  :root {
-    --bg: #0f1115;
-    --surface: #1a1d23;
-    --text: #eceef2;
-    --muted: #a3a9b5;
-    --faint: #8a909c;
-    --line: #2a2e36;
-    --blue: #4593fc;
-    --blue-soft: #1b2a4d;
-    --blue-text: #a9c2ff;
-    --green: #6fd3a8;
-    --green-soft: #133428;
-    --gray-chip: #2a2e36;
-    --gray-text: #c3c8d1;
-    --orange: #ffb766;
-    --orange-soft: #3a2a14;
-    --amber: #ffb766;
-    --red: #ff6b61;
-    --panel: #23272e;
-    --band: #0a0c0f;
-    --red-soft: #3a1714;
-    --k-apt-bg: #1b2a4d;
-    --k-apt: #a9c2ff;
-    --k-villa-bg: #133428;
-    --k-villa: #6fd3a8;
-    --k-officetel-bg: #2a2045;
-    --k-officetel: #c4b0ff;
-    --k-house-bg: #12313a;
-    --k-house: #7fd6df;
-    --k-shop-bg: #3a2a14;
-    --k-shop: #ffb766;
-    --k-land-bg: #33291d;
-    --k-land: #d9b98c;
-    --k-etc-bg: #23272e;
-    --k-etc: #c3c8d1;
-  }
+/* 11/10 대표님: 휴대폰도 늘 밝은 화면(어두운 화면 색은 뺌 — 다시 쓰려면 git 기록에서) */
+:root {
+  color-scheme: light;
 }
