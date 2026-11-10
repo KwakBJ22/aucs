@@ -1,6 +1,6 @@
 ﻿# 옥스 작업 스케줄러 등록 — 지금 쓰는 작업 전부 (한 번 돌리면 같은 상태가 됨, 여러 번 돌려도 됨)
 # 10/28 정리: 예전 register-tasks-2~5 를 이 파일 하나로 합침.
-#   켜 둠: 아침_묶음 매일 07:00(매각결과→물건→건축물대장→공매→분석→알림) · 법원_매시 매시 10분(11/4) · 입찰일_아침 매일 07:30
+#   켜 둠: 아침_묶음 매일 06:00(11/11, 07→06시 · 매각결과→물건→건축물대장→공매→분석→알림) · 법원_매시 매시 10분(11/4) · 입찰일_아침 매일 07:30
 #          관심_바로_준비 09:05~21:05 매시(10/29, 관심 담은 뒤 서류·건축물대장·분석)
 #          관리자_요청 5분마다(11/2) · DB_백업 매주 일요일 12:00(10/29, backup-db.ps1) · 실거래 매월 2일 10:00 · 정비사업 1·4·7·10월 3일 11:00
 #   꺼 둠(지우지 않음): \Aucs\ 매각결과·물건·서류보관·분석·알림(아침 묶음으로 바뀜, 10/18)
@@ -16,8 +16,8 @@ function Set-Opts($name, $hours) {
   Set-ScheduledTask -TaskPath '\Aucs\' -TaskName $name -Settings $s | Out-Null
 }
 
-schtasks /Create /TN "\Aucs\아침_묶음" /SC DAILY /ST 07:00 /TR "$tr daily" /F | Out-Null; Set-Opts '아침_묶음' 5
-Write-Host "등록: \Aucs\아침_묶음 — 매일 07:00"
+schtasks /Create /TN "\Aucs\아침_묶음" /SC DAILY /ST 06:00 /TR "$tr daily" /F | Out-Null; Set-Opts '아침_묶음' 5
+Write-Host "등록: \Aucs\아침_묶음 — 매일 06:00"
 schtasks /Create /TN "\Aucs\입찰일_아침" /SC DAILY /ST 07:30 /TR "$tr morning" /F | Out-Null; Set-Opts '입찰일_아침' 1
 Write-Host "등록: \Aucs\입찰일_아침 — 매일 07:30"
 schtasks /Create /TN "\Aucs\관심_바로_준비" /SC DAILY /ST 09:05 /RI 60 /DU 12:00 /TR "$tr watched" /F | Out-Null; Set-Opts '관심_바로_준비' 1
