@@ -51,7 +51,9 @@ export function WorkspacePanel({
     return (
       <section className="section">
         <p className="sub">{t.notWatched}</p>
-        <Link href={`/item/${encodeURIComponent(id)}`}>{t.toDetail} ›</Link>
+        <Link href={`/item/${encodeURIComponent(id)}`} className="link">
+          {t.toDetail}
+        </Link>
       </section>
     );
   if (!w)
@@ -108,7 +110,7 @@ export function WorkspacePanel({
             {d.place} {d.building ?? d.usage}
           </div>
           <div className="fs-2xl fw-7 mt-4">
-            {won(d.min_price_krw)} <span className="sub">{t.toDetail} ›</span>
+            {won(d.min_price_krw)} <span className="link in fs-md">{t.toDetail}</span>
           </div>
           {d.fatal && <div className="fatal">{d.fatal}</div>}
         </Link>
@@ -120,7 +122,7 @@ export function WorkspacePanel({
           {(w.step === "result" ? (["result", "after"] as WatchStep[]) : MOVABLE).map((s) => (
             <button
               key={s}
-              className={`chip ${s === w.step ? "on" : "gray"} b-0 mh-36`}
+              className={`pill${s === w.step ? " on" : ""}`}
 
               disabled={s === "result"}
               onClick={() => setStep(s)}
@@ -208,7 +210,7 @@ export function WorkspacePanel({
                   {x.cash_krw ? t.cashNeed(won(x.cash_krw)) : ""} · {x.saved_at}
                 </span>
               </span>
-              <button className="chip gray b-0 mh-32" onClick={() => removeCalc(x.bid_krw)}>
+              <button className="btn secondary sm" onClick={() => removeCalc(x.bid_krw)}>
                 {t.remove}
               </button>
             </div>

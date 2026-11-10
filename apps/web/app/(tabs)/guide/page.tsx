@@ -20,7 +20,7 @@ export default function Guide() {
         {t.steps.map(([name, body, href, where], i) => (
           <div key={name} className="d-flex gap-12 py-12 px-0">
             <div
-              className="r-14 bg-blue-soft c-blue-text fw-7 d-flex ai-center jc-center f-none"
+              className="r-14 bg-panel fw-7 d-flex ai-center jc-center f-none"
               style={{ width: 28, height: 28 }}
             >
               {i + 1}
@@ -29,8 +29,8 @@ export default function Guide() {
               <div className="fw-7">{name}</div>
               <div className="fs-md mt-2">{body}</div>
               {href ? (
-                <Link href={href} className="sub c-blue">
-                  {where} ›
+                <Link href={href} className="link">
+                  {where}
                 </Link>
               ) : (
                 <span className="sub">{where}</span>
@@ -46,9 +46,10 @@ export default function Guide() {
           <div key={w} style={{}}>
             <button
               onClick={() => setOpen(open === w ? null : w)}
-              className="w-full d-flex jc-between ai-center b-0 bg-none py-12 px-0 fs-base fw-6 ta-left mh-44"
+              aria-expanded={open === w}
+              className="line-row fold w-full fs-base fw-6 ta-left"
             >
-              {w} <span className="sub">{open === w ? "⌃" : "⌄"}</span>
+              {w}
             </button>
             {open === w && <div className="fs-md pb-12">{body}</div>}
           </div>

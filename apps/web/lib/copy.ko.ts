@@ -54,7 +54,7 @@ export const copy = {
     unknown: "결과를 아직 못 받았어요",
     within: "옥스 예상 범위 안",
     outside: (lo: string, hi: string) => `옥스 예상 ${lo}~${hi} 밖`,
-    sameComplex: "같은 단지 다른 물건 보기 ›",
+    sameComplex: "같은 단지 다른 물건 보기",
   },
   leave: {
     open: "회원 탈퇴",
@@ -118,10 +118,10 @@ export const copy = {
     login: "로그인",
     loginBanner: "로그인하면 관심 물건이 바뀔 때 알려 드려요",
     forMe: "나에게 맞는 물건",
-    changeAnswers: "조건 바꾸기 ›",
+    changeAnswers: "조건 바꾸기",
     closing: "마감 임박",
     onbidClosing: "이번 주 마감 공매",
-    onbidAll: "전체 ›",
+    onbidAll: "전체",
     onbidClosingSub: "시작 질문의 지역·현금으로 골랐어요 · 마감 3일 안만",
     whyTitle: "옥스는 이렇게 달라요",
     why: [
@@ -136,7 +136,7 @@ export const copy = {
     today: "다가오는 입찰",
     toRecord: (n: number) => `입찰일이 지난 관심 물건 ${n}건 · 결과 적어 두기`,
     picks: "오늘의 추천",
-    allLink: "전체 ›",
+    allLink: "전체",
     picksSub: "입찰까지 10일 넘게 남아 준비할 시간이 있는 물건",
     soon: "마감 임박",
     soonSub: "7일 안 · 점수 높은 것만",
@@ -224,7 +224,7 @@ export const copy = {
       "안내받은 계좌로 보증금 넣기 · 마감 전까지",
       "개찰 다음 날 옥스가 결과를 알려 드려요",
     ],
-    go: "온비드에서 입찰하기 ›",
+    go: "온비드에서 입찰하기",
     foot: "입찰은 온비드에서 직접 해요 · 옥스는 입찰을 대신하지 않아요",
   },
   sameHouse: {
@@ -282,7 +282,7 @@ export const copy = {
     checkAnswer: (n: number) => (n ? `확인할 것 ${n}개` : "다 확인했어요"),
     copyNo: "물건관리번호 복사",
     copied: "복사했어요",
-    openOnbid: "온비드에서 보기 ›",
+    openOnbid: "온비드에서 보기",
     onbidUrl: "https://www.onbid.co.kr",
     footer: (t: string) => `온비드(한국자산관리공사) 공개 자료 · 기준 ${t} · 투자 권유가 아니에요`,
   },
@@ -296,10 +296,7 @@ export const copy = {
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
     sourceLabel: "경매·공매",
     // 「취하·변경」은 법원 자료로 채울 길이 생길 때까지 뺌(11/9 — 지지옥션 자료를 빼서 비게 됨)
-    status: { active: "진행 중", sold: "매각됨", all: "전체" } as Record<
-      string,
-      string
-    >,
+    status: { active: "진행 중", sold: "매각됨", all: "전체" } as Record<string, string>,
     recent: "최근 검색",
     noResult: "찾는 물건이 없어요",
     searching: "검색 중에는 내 지역·현금 조건을 빼고 찾아요",
@@ -674,8 +671,8 @@ export const copy = {
   },
   onbidNotice: {
     title: "공고문",
-    open: "온비드 공고 원문 ›",
-    link: "공고문 보기 ›",
+    open: "온비드 공고 원문",
+    link: "공고문 보기",
     checkOriginal:
       "잔금 기한·특이 조건·현장 설명은 온비드 공고 원문에 있어요 · 물건관리번호를 복사해 온비드에서 찾아보세요",
   },
@@ -1134,8 +1131,8 @@ export const copy = {
     doc: {
       closed:
         "끝난 사건은 개인정보 보호를 위해 원문을 보여 드리지 않아요 · 주요 사항은 위 요약에 남아 있어요",
-      open: "원문 ›",
-      openSr: "현황조사서 원문 보기 ›",
+      open: "원문",
+      openSr: "현황조사서 원문 보기",
       close: "닫기",
       names: {
         status_report: "현황조사서",
@@ -1301,7 +1298,7 @@ export const copy = {
     thanksBidders: (avg: number, n: number) => `이 법원 평균 응찰 ${avg}명 (회원 기록 ${n}건)`,
     thanksWait: (n: number, min: number) =>
       `이 법원 응찰자 수 기록이 ${n}건 모였어요 · ${min}건부터 평균을 보여 드려요`,
-    toScore: "관할 법원 낙찰가 성적표 ›",
+    toScore: "관할 법원 낙찰가 성적표",
     ok: "확인",
     payDate: "잔금 낸 날(정했으면)",
     save: "저장",

@@ -64,10 +64,10 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
           {done.avg != null ? t.thanksBidders(done.avg, done.n) : t.thanksWait(done.n, done.min_n)}
         </div>
         <div className="d-flex jc-between ai-center mt-10">
-          <Link href="/pro/market" className="fs-md">
+          <Link href="/pro/market" className="link">
             {t.toScore}
           </Link>
-          <button className="chip gray b-0 mh-36" onClick={onSaved}>
+          <button className="btn secondary sm" onClick={onSaved}>
             {t.ok}
           </button>
         </div>
@@ -98,8 +98,7 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
         {Object.entries(t.outcome).map(([k, v]) => (
           <button
             key={k}
-            className={`chip ${outcome === k ? "on" : "gray"} mh-36 b-0`}
-
+            className={`pill${outcome === k ? " on" : ""}`}
             onClick={() => setOutcome(k)}
           >
             {v}
@@ -130,7 +129,7 @@ function WonCard({ b }: { b: Bid }) {
   const rng = (a: [string, string]) => `${md(a[0])} ~ ${md(a[1])}`;
   return (
     <div className="py-12 px-0">
-      <Link href={`/item/${b.item_id}`} className="fw-6 c-inherit">
+      <Link href={`/item/${b.item_id}`} className="link in fw-6">
         {b.place}
       </Link>
       <div className="sub m-0">
@@ -322,10 +321,10 @@ export default function Me() {
       {mocks.map((x) => (
         <div key={x.mock_id} className="py-10 px-0">
           <div className="d-flex jc-between gap-8">
-            <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="c-inherit fw-6 fs-md">
+            <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="link in fw-6 fs-md">
               {x.place} <span className="sub">{md(x.sale_date)}</span>
             </Link>
-            <button className="chip gray b-0 mh-28" onClick={() => dropMock(x.mock_id)}>
+            <button className="btn secondary sm" onClick={() => dropMock(x.mock_id)}>
               {copy.mock.remove}
             </button>
           </div>
@@ -346,12 +345,12 @@ export default function Me() {
                 <Link
                   key={s.item_id}
                   href={`/item/${encodeURIComponent(s.item_id)}`}
-                  className="line-row c-inherit fs-md"
+                  className="line-row go c-inherit fs-md"
                 >
                   <span className="ellipsis minw-0">
                     {s.place} <span className="sub">{md(s.sale_date)}</span>
                   </span>
-                  <b className="nowrap">{won(s.min_price_krw)} ›</b>
+                  <b className="nowrap">{won(s.min_price_krw)}</b>
                 </Link>
               ))}
             </div>

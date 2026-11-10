@@ -70,8 +70,8 @@ function CollectionsView() {
         </div>
       </div>
       {!all && ready && !profile?.regions?.length && (
-        <Link href="/start" className="note blue d-block mt-12">
-          {t.noProfile} ›
+        <Link href="/start" className="note blue d-flex go mt-12">
+          {t.noProfile}
         </Link>
       )}
 

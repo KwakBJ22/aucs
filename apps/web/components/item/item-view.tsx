@@ -117,7 +117,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                 {d.sale_place ? ` · ${d.sale_place}` : ""}
               </span>
               <button
-                className="chip gray b-0 mh-28"
+                className="btn secondary sm"
                 onClick={() => void copyText(d.case_no).then(() => setCopied(true))}
               >
                 {copied ? t.pc.copied : t.pc.copy}
@@ -134,8 +134,8 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
       />
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       {d.d_day != null && d.d_day >= 0 && d.d_day <= 1 && (
-        <Link href={`/item/${id}/bid-day`} className="chip orange mh-36 mt-8 d-inline-flex">
-          {copy.bidDay.title} ›
+        <Link href={`/item/${id}/bid-day`} className="btn soft sm mt-8">
+          {copy.bidDay.title}
         </Link>
       )}
 
@@ -200,7 +200,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             return (
               <section key={q.key} id={`q-${q.key}`} className="section q-sec">
                 <button
-                  className="q-head"
+                  className={pc ? "q-head" : "q-head fold"}
                   disabled={pc}
                   aria-expanded={shown}
                   onClick={() => setOpen(open === q.key ? null : q.key)}
@@ -210,11 +210,6 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                     <span className="sub d-block m-0 fs-sm">{q.title}</span>
                     <span className="q-answer">{answerOf(q, reg.u)}</span>
                   </span>
-                  {!pc && (
-                    <span aria-hidden="true" className="c-faint">
-                      {shown ? "⌃" : "›"}
-                    </span>
-                  )}
                 </button>
                 {shown && (
                   <div className="mt-12">

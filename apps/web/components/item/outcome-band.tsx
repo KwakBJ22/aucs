@@ -33,10 +33,7 @@ export function OutcomeBand({ d }: { d: ItemDetail }) {
       <div className="fs-base fw-7">{main}</div>
       {sub && <div className="sub fs-sm mt-2">{sub}</div>}
       {o.closed && (
-        <Link
-          href={`/find?q=${encodeURIComponent(complexName(d))}`}
-          className="fs-sm c-blue mt-6 d-inline-block"
-        >
+        <Link href={`/find?q=${encodeURIComponent(complexName(d))}`} className="link">
           {t.sameComplex}
         </Link>
       )}

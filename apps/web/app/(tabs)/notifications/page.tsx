@@ -70,12 +70,14 @@ export default function Notifications() {
               </h2>
               <div className="sub">{copy.noti.groupSub[g]}</div>
               {rows.map((n) => (
-                <Link key={n.noti_id} href={n.link ?? "/home"} className="menu-row d-block">
-                  <div style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</div>
-                  {n.body && <div className="sub">{n.body}</div>}
-                  <div className="sub fs-xs">
-                    {n.created_at.slice(5, 16).replace("T", " ").replace("-", "/")}
-                  </div>
+                <Link key={n.noti_id} href={n.link ?? "/home"} className="menu-row go">
+                  <span className="minw-0">
+                    <div style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</div>
+                    {n.body && <div className="sub">{n.body}</div>}
+                    <div className="sub fs-xs">
+                      {n.created_at.slice(5, 16).replace("T", " ").replace("-", "/")}
+                    </div>
+                  </span>
                 </Link>
               ))}
             </section>

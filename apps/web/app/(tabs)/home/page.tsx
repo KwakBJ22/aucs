@@ -150,8 +150,7 @@ export default function Home() {
     <Link
       href="/notifications"
       aria-label={copy.noti.title}
-      className="m-only mh-44 d-flex ai-center jc-end"
-      style={{ minWidth: 44 }}
+      className="icon-btn m-only d-flex jc-end"
     >
       <svg
         width="22"
@@ -166,7 +165,7 @@ export default function Home() {
       </svg>
     </Link>
   ) : (
-    <Link href="/login" className="m-only fs-md fw-6">
+    <Link href="/login" className="link m-only d-flex">
       {t.login}
     </Link>
   );
@@ -192,7 +191,7 @@ export default function Home() {
   const todayBlock = token && todo.length > 0 && (
     <section className="section">
       <h2>
-        {t.today} <span className="c-blue">{todo.length}</span>
+        {t.today} <span className="c-muted">{todo.length}</span>
       </h2>
       {todo.map((w) => (
         <Link
@@ -227,12 +226,12 @@ export default function Home() {
           {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
         </span>
         {c.source === "onbid" && (
-          <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip c-text">
+          <span className="chip gray">
             {c.kind === "trust" ? copy.card.trust : copy.card.onbid}
           </span>
         )}
       </div>
-      <div className="fs-md fw-6 mt-6">{c.place}</div>
+      <div className="fs-md fw-6 mt-6 d-flex go">{c.place}</div>
       <div className="sub fs-xs nowrap" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
         {c.building ?? c.usage}
       </div>
@@ -263,7 +262,7 @@ export default function Home() {
     <section className="section">
       <div className="d-flex jc-between ai-center">
         <h2>{copy.collections.title}</h2>
-        <Link href="/collections" className="sub fs-sm">
+        <Link href="/collections" className="link">
           {t.allLink}
         </Link>
       </div>
@@ -295,7 +294,7 @@ export default function Home() {
     <section className="section">
       <div className="d-flex jc-between ai-baseline">
         <h2>{t.onbidClosing}</h2>
-        <Link href="/find?source=onbid" className="sub fs-sm">
+        <Link href="/find?source=onbid" className="link">
           {t.onbidAll}
         </Link>
       </div>
@@ -310,9 +309,9 @@ export default function Home() {
     <section className="section">
       <div className="d-flex jc-between ai-baseline">
         <h2>
-          {t.forMe} <span className="c-blue">{mine?.total ?? ""}</span>
+          {t.forMe} <span className="c-muted">{mine?.total ?? ""}</span>
         </h2>
-        <Link href="/start" className="sub">
+        <Link href="/start" className="link">
           {t.changeAnswers}
         </Link>
       </div>
@@ -334,8 +333,8 @@ export default function Home() {
         ))}
       </div>
       {mine && mine.total > 5 && (
-        <Link href="/find?source=all" className="d-block ta-center pt-12 pb-0 px-0 fs-md fw-6">
-          {copy.find.total(mine.total)} 모두 보기 ›
+        <Link href="/find?source=all" className="link d-flex jc-center mt-4">
+          {copy.find.total(mine.total)} 모두 보기
         </Link>
       )}
     </section>
@@ -422,7 +421,7 @@ export default function Home() {
               <div className="sub">{summary}</div>
               <Link href="/start" className="menu-row">
                 <span>{t.changeAnswers}</span>
-                <span className="sub"></span>
+                <span className="sub">›</span>
               </Link>
             </section>
             {market && market.by_court.length > 0 && (

@@ -275,6 +275,12 @@
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
 }
+/* 사진 지우기: 보이는 크기는 28, 누르는 자리는 44 */
+.field-item button::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
 .field-voice {
   grid-column: 1 / -1;
   display: flex;
@@ -337,7 +343,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
+  min-height: 44px;
+  padding: 4px 12px;
+  line-height: 1.3;
   border-radius: 14px;
   border: 0;
   background: var(--panel);
@@ -359,21 +367,25 @@
   gap: 4px;
   padding: 4px;
   margin: 12px 0 0;
-  border-radius: 12px;
-  background: var(--gray-chip);
+  border-radius: 14px;
+  background: var(--chip-bg);
 }
+/* 탭: 누르는 자리 44(판 안쪽 여백 4 + 40). 고른 것은 연파랑(11/11 누를 것 표시) */
 .seg button {
-  height: 38px;
+  min-height: 40px;
+  padding: 0 4px;
   border: 0;
-  border-radius: 9px;
+  position: relative;
+  border-radius: 10px;
   background: transparent;
   color: var(--gray-text);
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
+  line-height: 1.3;
 }
 .seg a {
-  height: 38px;
-  border-radius: 9px;
+  min-height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,8 +399,9 @@
   }
 }
 .seg button.on {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-weight: 700;
 }
 .memo-box {
   width: 100%;
@@ -491,27 +504,7 @@
   color: var(--text);
   font-size: 15px;
 }
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.pills button {
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
-  border: 0;
-  background: var(--panel);
-  color: var(--gray-text);
-  font-size: var(--fs-md);
-  font-weight: 500;
-}
-/* 고른 것은 진한 바탕(11/7 토스풍) */
-.pills button.on {
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 700;
-}
+/* 고르는 칩(.pills)은 parts.css 「누를 것 표시」 한 곳(11/11) */
 .switch-row {
   display: flex;
   justify-content: space-between;
@@ -524,14 +517,6 @@
   height: 22px;
   flex-shrink: 0;
 }
-.link-btn {
-  border: 0;
-  background: none;
-  padding: 8px 0 0;
-  color: var(--blue);
-  font-size: 14px;
-  font-weight: 600;
-}
 .cond-row {
   display: flex;
   justify-content: space-between;
@@ -543,7 +528,7 @@
   padding: 12px 14px;
   border: 0;
   border-radius: 14px;
-  background: var(--surface);
+  background: var(--chip-bg);
   color: var(--text);
   text-align: left;
   font-size: 15px;
@@ -1019,6 +1004,7 @@ textarea.adm-input {
 /* 공지 한 줄(홈 맨 위) */
 .notice-line {
   display: block;
+  min-height: 44px;
   margin: 12px 0 0;
   padding: 10px 14px;
   border-radius: 12px;
@@ -1032,6 +1018,7 @@ textarea.adm-input {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   margin: 12px 0 0;
   padding: 10px 14px;
   border-radius: 12px;
@@ -1117,21 +1104,6 @@ textarea.adm-input {
 }
 
 /* 입찰가 계산(11/7 토스풍): 집 수 고르기·낮게/보통/높게·큰 금액 */
-.seg-btn {
-  min-height: 40px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--panel);
-  color: var(--gray-text);
-  font-size: var(--fs-md);
-  font-weight: 500;
-}
-.seg-btn.on {
-  background: var(--text);
-  color: var(--surface);
-  font-weight: 700;
-}
 .tier-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -1241,7 +1213,7 @@ textarea.adm-input {
 
 /* 고객센터·약관(11/7): 접는 질문 줄, 조항 */
 .faq {
-  padding: 14px 0;
+  padding: 6px 0;
 }
 .faq + .faq {
   box-shadow: inset 0 1px 0 var(--panel);
@@ -1251,7 +1223,7 @@ textarea.adm-input {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  min-height: 28px;
+  min-height: 44px;
   font-size: var(--fs-base);
   font-weight: 600;
   cursor: pointer;
@@ -1315,10 +1287,6 @@ textarea.adm-input {
   padding: 0 var(--sec-x, var(--page-x, 20px)) 4px;
   scroll-padding-inline: var(--sec-x, var(--page-x, 20px));
 }
-/* 흰 구역 안(홈)에서는 칩이 바탕과 같아 안 보였음(11/10) → 회색 판 */
-.section .col-chip:not(.on) {
-  background: var(--panel);
-}
 .col-chip {
   flex: 0 0 auto;
   display: flex;
@@ -1329,7 +1297,7 @@ textarea.adm-input {
   padding: 14px 16px;
   border: 0;
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--chip-bg); /* 흰 구역 안에서는 회색 판, 바탕 위에서는 흰 판 */
   color: var(--text);
   text-align: left;
 }
@@ -1341,12 +1309,22 @@ textarea.adm-input {
   color: var(--muted);
 }
 .col-chip.on {
-  background: var(--text);
-  color: var(--surface);
+  background: var(--blue-soft);
+  color: var(--blue-text);
 }
 .col-chip.on span {
-  color: var(--surface);
-  opacity: 0.8;
+  color: var(--blue-text);
+}
+/* 홈 바로가기 칩은 눌러서 가는 카드 — 제목 끝에 › */
+a.col-chip b {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+a.col-chip b::after {
+  content: "›";
+  color: var(--faint);
+  font-weight: 400;
 }
 @media (min-width: 1024px) {
   .col-chips {

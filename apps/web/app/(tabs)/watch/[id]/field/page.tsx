@@ -142,13 +142,8 @@ export default function FieldPage() {
               )}
               <div className="d-flex gap-6 mt-10 f-wrap">
                 {d.address && (
-                  <a
-                    href={mapQ(d.address)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="chip gray mh-36"
-                  >
-                    {t.route} ›
+                  <a href={mapQ(d.address)} target="_blank" rel="noreferrer" className="link">
+                    {t.route}
                   </a>
                 )}
                 {name && (
@@ -156,9 +151,9 @@ export default function FieldPage() {
                     href={mapQ(`${name} 관리사무소`)}
                     target="_blank"
                     rel="noreferrer"
-                    className="chip gray mh-36"
+                    className="link"
                   >
-                    {t.office} ›
+                    {t.office}
                   </a>
                 )}
               </div>
@@ -173,7 +168,7 @@ export default function FieldPage() {
               </div>
             ))}
             <button
-              className="chip gray b-0 mh-36 mt-8"
+              className="btn secondary sm mt-8"
               onClick={() =>
                 void copyText(askText).then(() => {
                   setCopied(true);
@@ -261,7 +256,7 @@ export default function FieldPage() {
                   <div key={f.path} className="field-voice">
                     <audio controls src={f.url} />
                     <span className="sub">{f.at}</span>
-                    <button className="chip gray b-0" onClick={() => del(f)}>
+                    <button className="btn secondary sm" onClick={() => del(f)}>
                       {t.remove}
                     </button>
                   </div>

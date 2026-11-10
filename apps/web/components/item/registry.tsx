@@ -143,11 +143,8 @@ export function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["pay
   const r = t.reg;
   return (
     <div className="mt-8">
-      <button
-        onClick={() => setOpen(!open)}
-        className="b-0 bg-none py-8 px-0 mh-44 fs-md fw-6 c-inherit"
-      >
-        {r.payTitle(won(p.price_krw))} {open ? "⌃" : "›"}
+      <button onClick={() => setOpen(!open)} aria-expanded={open} className="link fold">
+        {r.payTitle(won(p.price_krw))}
       </button>
       {open && (
         <>
@@ -217,8 +214,8 @@ export function RegistryBox() {
               <span className="sub m-0">{r.addrItem}</span> {addr.item}
             </div>
           </div>
-          <button onClick={accept} className="b-0 bg-none c-muted fs-sm pt-10 pb-0 px-0 mh-44">
-            {r.addrStill} ›
+          <button onClick={accept} className="link">
+            {r.addrStill}
           </button>
         </div>
       )}
@@ -243,7 +240,11 @@ export function RegistryBox() {
             </div>
           )}
           {!pc && (
-            <button className="cond-row bg-bg" onClick={() => setLadOpen(!ladOpen)}>
+            <button
+              className="cond-row fold bg-bg"
+              aria-expanded={ladOpen}
+              onClick={() => setLadOpen(!ladOpen)}
+            >
               <span>
                 <b>
                   {r.foldTitle(
@@ -257,14 +258,13 @@ export function RegistryBox() {
                   </span>
                 )}
               </span>
-              <span className="sub">{ladOpen ? "▴" : "›"}</span>
             </button>
           )}
           <div className="mt-6" style={{ display: pc || ladOpen ? "block" : "none" }}>
             {lad.rows.map((x) => (
               <div key={`${x.section}${x.rank_no}`}>
                 {x.is_base && lad.base && (
-                  <div className="fs-xs c-blue py-6 px-0">
+                  <div className="fs-xs fw-7 py-6 px-0">
                     {r.baseLine(lad.base.name, lad.base.date ?? "")}
                   </div>
                 )}
@@ -287,7 +287,7 @@ export function RegistryBox() {
                     aria-label={r.fixTitle}
                     value=""
                     onChange={(e) => e.target.value && fix(x.section, x.rank_no, e.target.value)}
-                    className="fs-sm mt-0 mb-6 mx-0 py-6 px-8 r-14 b-0 bg-panel c-blue"
+                    className="fs-sm mt-0 mb-6 mx-0 py-6 px-8 r-14 b-0 bg-panel"
                   >
                     <option value="">{r.fixTitle}</option>
                     {(u.choices?.[x.section] ?? []).map((n) => (
@@ -341,10 +341,7 @@ export function RegistryBox() {
 export function HoldDocLink() {
   const openDoc = useContext(DocCtx);
   return (
-    <button
-      onClick={() => openDoc("status_report")}
-      className="b-0 bg-none c-blue fs-sm py-8 px-0 mh-44"
-    >
+    <button onClick={() => openDoc("status_report")} className="link">
       {t.doc.openSr}
     </button>
   );

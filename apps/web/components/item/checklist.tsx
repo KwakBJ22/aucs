@@ -145,9 +145,10 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
       {done.length > 0 && (
         <button
           onClick={() => setShowDone(!showDone)}
-          className="b-0 bg-none c-muted fs-sm py-10 px-0 mh-44"
+          aria-expanded={showDone}
+          className="link fold"
         >
-          ✓ {t.doneFold(done.length)} {showDone ? "⌃" : "›"}
+          ✓ {t.doneFold(done.length)}
         </button>
       )}
       {showDone &&
@@ -160,10 +161,7 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
               {x.note ? ` · ${x.note}` : ""}
             </span>
             {(x.key === "status_report" || x.key === "deliveries" || x.key === "spec_sheet") && (
-              <button
-                onClick={() => openDoc(x.key as DocKind)}
-                className="b-0 bg-none c-blue fs-sm py-0 pl-6 pr-0"
-              >
+              <button onClick={() => openDoc(x.key as DocKind)} className="link in ml-6">
                 {t.doc.open}
               </button>
             )}

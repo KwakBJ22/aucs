@@ -150,7 +150,7 @@ export default function OnbidBid() {
           <li>
             {t.steps[1]}{" "}
             <button
-              className="chip gray b-0 mh-28"
+              className="btn secondary sm"
               onClick={() =>
                 void copyText(d.case_no).then(
                   () => setCopied(true),

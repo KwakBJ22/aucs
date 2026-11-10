@@ -143,10 +143,7 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
         {d.area_m2 && <Row label={t.area} value={`${Math.round(d.area_m2 * 100) / 100}㎡`} />}
         {d.notice.name && <Row label={t.notice} value={d.notice.name} />}
         {d.notice.org && <Row label={t.org} value={d.notice.org} />}
-        <Link
-          href={`/item/${encodeURIComponent(d.item_id)}/notice`}
-          className="d-inline-block fs-md my-6 mx-0"
-        >
+        <Link href={`/item/${encodeURIComponent(d.item_id)}/notice`} className="link">
           {copy.onbidNotice.link}
         </Link>
         {d.building && <BuildingRows g={d.building} />}
@@ -230,9 +227,7 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
           <DDay d={d.d_day}>
             {d.bid_end ? `${dday(d.d_day)} ${copy.card.closes} · ${when(d.bid_end)}` : t.undecided}
           </DDay>
-          <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip">
-            {t.badge(d.kind_name ?? "")}
-          </span>
+          <span className="chip gray">{t.badge(d.kind_name ?? "")}</span>
         </div>
         <h1 className="fs-base fw-6 mt-4 mb-0">
           {d.place} {d.usage ?? ""}
@@ -264,13 +259,6 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
     </>
   );
   const live = Boolean(d.bid_end && (d.d_day ?? -1) >= 0);
-  const linkStyle = {
-    border: 0,
-    background: "none",
-    color: "var(--blue)",
-    fontSize: 14,
-    padding: 0,
-  };
   // 주 버튼 하나(폭 가득) + 덜 중요한 일은 아래 글자 링크(08-look 5절)
   const actions = (
     <>
@@ -280,14 +268,14 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
             {copy.onbidBid.title}
           </Link>
         )}
-        <div className="d-flex jc-center gap-16 f-wrap" style={{ marginTop: live ? 14 : 0 }}>
-          <button onClick={copyNo} style={linkStyle}>
+        <div className={`d-flex jc-center ai-center gap-16 f-wrap${live ? " mt-14" : ""}`}>
+          <button onClick={copyNo} className="btn secondary sm">
             {copied ? t.copied : t.copyNo}
           </button>
-          <Link href={`/item/${encodeURIComponent(d.item_id)}/report`} className="fs-md">
+          <Link href={`/item/${encodeURIComponent(d.item_id)}/report`} className="link">
             {copy.report.open}
           </Link>
-          <a href={t.onbidUrl} target="_blank" rel="noreferrer" className="fs-md">
+          <a href={t.onbidUrl} target="_blank" rel="noreferrer" className="link">
             {t.openOnbid}
           </a>
         </div>
@@ -338,7 +326,8 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
           <div key={q.key} style={{}}>
             <button
               onClick={() => setOpen(open === q.key ? null : q.key)}
-              className="w-full b-0 bg-none ta-left py-14 px-0 mh-44 d-flex gap-10 ai-start c-inherit"
+              aria-expanded={open === q.key}
+              className="q-head fold py-14"
             >
               <span
                 className="r-4 mt-6 f-none"
@@ -347,9 +336,6 @@ export function OnbidItem({ d }: { d: OnbidDetail }) {
               <span className="f-1">
                 <span className="sub d-block m-0 fs-sm">{t.q[q.key]}</span>
                 <span className="fs-base fw-6">{q.answer}</span>
-              </span>
-              <span aria-hidden="true" className="c-faint">
-                {open === q.key ? "⌃" : "›"}
               </span>
             </button>
             {open === q.key && (

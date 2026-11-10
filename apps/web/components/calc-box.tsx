@@ -41,8 +41,8 @@ function RentBox({ r, open: start }: { r: NonNullable<Calc["rent"]>; open: boole
   const [open, setOpen] = useState(start);
   if (!open)
     return (
-      <button className="chip gray b-0 mh-36 mt-10 d-inline-flex" onClick={() => setOpen(true)}>
-        {c.open} ›
+      <button className="link fold mt-10" onClick={() => setOpen(true)}>
+        {c.open}
       </button>
     );
   return (
@@ -174,7 +174,6 @@ export function CalcBox({ id }: { id: string }) {
           <button
             key={label}
             className={`seg-btn ${homes === i ? "on" : ""}`}
-
             onClick={() => pickHomes(i)}
           >
             {label}
@@ -276,10 +275,7 @@ export function CalcBox({ id }: { id: string }) {
               value={
                 <>
                   − {won(s.loan_krw)}{" "}
-                  <button
-                    onClick={() => setEditLoan(!editLoan)}
-                    className="b-0 bg-none c-blue fs-sm"
-                  >
+                  <button onClick={() => setEditLoan(!editLoan)} className="link in">
                     {c.loanEdit}
                   </button>
                 </>
@@ -298,7 +294,11 @@ export function CalcBox({ id }: { id: string }) {
             )}
             <div className="sub m-0 fs-xs">
               {s.loan.by_dsr && s.dsr ? c.byDsr(s.dsr.rate_pct) : (s.loan.note ?? c.loanHint)}{" "}
-              <button onClick={() => setDsrOpen(!dsrOpen)} className="b-0 bg-none c-blue fs-xs">
+              <button
+                onClick={() => setDsrOpen(!dsrOpen)}
+                aria-expanded={dsrOpen}
+                className="link in fold"
+              >
                 {c.dsrOpen}
               </button>
             </div>
@@ -367,15 +367,15 @@ export function CalcBox({ id }: { id: string }) {
             <SaveBid id={id} bid={s.bid_krw} cash={s.cash_krw} />
             <Link
               href={`/item/${encodeURIComponent(id)}/bid-sheet?bid=${s.bid_krw}`}
-              className="chip gray mh-36 mt-10 ml-6 d-inline-flex"
+              className="link ml-6"
             >
-              {copy.bidDay.toSheet} ›
+              {copy.bidDay.toSheet}
             </Link>
             <Link
               href={`/item/${encodeURIComponent(id)}/report?bid=${s.bid_krw}`}
-              className="chip gray mh-36 mt-10 ml-6 d-inline-flex"
+              className="link ml-6"
             >
-              {copy.report.open} ›
+              {copy.report.open}
             </Link>
             <MockForm id={id} bid={s.bid_krw} />
           </div>
@@ -398,8 +398,8 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
   if (done) return <div className="sub mt-8">{m.saved}</div>;
   if (!open)
     return (
-      <button className="chip gray b-0 mh-36 mt-10 ml-6" onClick={() => setOpen(true)}>
-        {m.open} ›
+      <button className="link fold ml-6" onClick={() => setOpen(true)}>
+        {m.open}
       </button>
     );
   const field = {
@@ -427,18 +427,10 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
       <div className="fw-6 fs-md">{m.title}</div>
       <div className="sub">{m.hint}</div>
       <div className="d-flex gap-6 mt-8">
-        <button
-          className={`chip ${!skip ? "on" : "gray"} b-0 mh-36`}
-
-          onClick={() => setSkip(false)}
-        >
+        <button className={`pill${!skip ? " on" : ""}`} onClick={() => setSkip(false)}>
           {m.bid} · {won(bid)}
         </button>
-        <button
-          className={`chip ${skip ? "on" : "gray"} b-0 mh-36`}
-
-          onClick={() => setSkip(true)}
-        >
+        <button className={`pill${skip ? " on" : ""}`} onClick={() => setSkip(true)}>
           {m.skip}
         </button>
       </div>
@@ -475,9 +467,8 @@ function SaveBid({ id, bid, cash }: { id: string; bid: number; cash: number }) {
   const done = saved === bid;
   return (
     <button
-      className="chip gray b-0 mh-36 mt-10"
+      className="btn secondary sm mt-10"
       disabled={done}
-
       onClick={() =>
         meApi
           .addCalc(token, id, bid, cash)

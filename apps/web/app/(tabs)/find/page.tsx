@@ -65,7 +65,7 @@ function ResultRow({ r }: { r: ResultCard }) {
     </div>
   );
   return r.item_id ? (
-    <Link href={`/item/${r.item_id}`} className="c-inherit td-none">
+    <Link href={`/item/${r.item_id}`} className="d-flex ai-center go c-inherit">
       {body}
     </Link>
   ) : (
@@ -267,7 +267,7 @@ export default function Find() {
                   setQuery(w);
                   setFocus(false);
                 }}
-                className="d-block w-full ta-left b-0 bg-none c-inherit py-8 px-12 fs-base"
+                className="d-block w-full ta-left py-12 px-12 fs-base"
               >
                 {w}
               </button>
@@ -279,11 +279,7 @@ export default function Find() {
         <div className="d-flex gap-6 f-wrap ai-center mt-10" aria-label={t.talkLabel}>
           <span className="sub m-0 fs-xs">{t.talkLabel}</span>
           {talk.parts.map((p) => (
-            <button
-              key={p.key}
-              className="chip b-0 mh-32 bg-blue-soft c-blue-text"
-              onClick={() => setTalk(dropPart(talk, p.key))}
-            >
+            <button key={p.key} className="pill on" onClick={() => setTalk(dropPart(talk, p.key))}>
               {p.label} ×
             </button>
           ))}
@@ -299,9 +295,9 @@ export default function Find() {
         </div>
       )}
       {!query && (
-        <div className="d-flex gap-8 f-wrap mt-10">
+        <div className="d-flex gap-8 f-wrap ai-center mt-10">
           {(talk?.sigungu ? [] : regions).map((r) => (
-            <span key={r} className="chip gray fs-sm py-6 px-10">
+            <span key={r} className="chip gray">
               {r}
             </span>
           ))}
@@ -311,7 +307,7 @@ export default function Find() {
               <button
                 key={s}
                 onClick={() => setSort(s)}
-                className={`chip ${sort === s ? "on" : "gray"} fs-sm py-6 px-10 b-0 mh-32`}
+                className={`pill${sort === s ? " on" : ""}`}
               >
                 {s === "deadline" ? t.sortDeadline : t.sortRate}
               </button>
@@ -448,11 +444,14 @@ export default function Find() {
     <main className="page">
       <PageHeader title={t.title} />
       {searchBox}
-      <button className="cond-row" onClick={() => setCondOpen(!condOpen)}>
+      <button
+        className="cond-row fold"
+        aria-expanded={condOpen}
+        onClick={() => setCondOpen(!condOpen)}
+      >
         <span>
           <b>{t.cond}</b> <span className="sub">{condSummary || t.condOpen}</span>
         </span>
-        <span className="sub">{condOpen ? "▴" : "›"}</span>
       </button>
       {condOpen && <section className="section">{filters}</section>}
       {countLine}

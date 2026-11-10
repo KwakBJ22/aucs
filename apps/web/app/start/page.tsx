@@ -99,10 +99,7 @@ export default function Start() {
       )}
       <Progress step={step} />
       {step > 1 && (
-        <button
-          onClick={() => setStep(step - 1)}
-          className="b-0 bg-none ta-left c-muted fs-md p-0 mb-8 mh-44"
-        >
+        <button onClick={() => setStep(step - 1)} className="btn secondary sm as-start mb-8">
           {t.back} {t.step(step)}
         </button>
       )}
@@ -130,12 +127,7 @@ export default function Start() {
                   onClick={() =>
                     setPicked(on ? picked.filter((x) => x !== r.sigungu) : [...picked, r.sigungu])
                   }
-                  className="mh-40 py-0 px-12 r-20 b-0 fs-md"
-                  style={{
-                    background: on ? "var(--blue-soft)" : "var(--panel)",
-                    color: on ? "var(--blue-text)" : "var(--text)",
-                    fontWeight: on ? 700 : 400,
-                  }}
+                  className={`pill${on ? " on" : ""}`}
                 >
                   {r.sigungu}{" "}
                   {r.items == null ? (
@@ -152,7 +144,11 @@ export default function Start() {
           {picked.length > 0 && counts && counts.length > 0 && (
             <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>
           )}
-          <button className="btn primary mt-16" disabled={!picked.length} onClick={() => setStep(2)}>
+          <button
+            className="btn primary mt-16"
+            disabled={!picked.length}
+            onClick={() => setStep(2)}
+          >
             {t.next}
           </button>
         </>
@@ -174,8 +170,7 @@ export default function Start() {
               <button
                 key={add}
                 onClick={() => setMan(String((Number(man) || 0) + add))}
-                className="f-1 r-14 b-0 bg-panel fs-md"
-                style={{ height: 40 }}
+                className="btn secondary sm f-1"
               >
                 +{won(add * 10_000)}
               </button>
@@ -193,8 +188,7 @@ export default function Start() {
                 onClick={() =>
                   setMan(k === "⌫" ? man.slice(0, -1) : (man + k).replace(/^0+/, "").slice(0, 7))
                 }
-                className="b-0 bg-none fs-2xl"
-                style={{ height: 52 }}
+                className="icon-btn key fs-2xl"
               >
                 {k}
               </button>
@@ -208,7 +202,7 @@ export default function Start() {
               setMan("");
               setStep(3);
             }}
-            className="b-0 bg-none c-muted fs-md mt-12 mh-44"
+            className="link jc-center mt-12"
           >
             {t.unsure}
           </button>
@@ -224,11 +218,7 @@ export default function Start() {
               <button
                 key={p}
                 onClick={() => setPurpose(p)}
-                className="d-flex f-col ai-start gap-4 p-20 r-16 ta-left b-0"
-                style={{
-                  background: purpose === p ? "var(--blue-soft)" : "var(--surface)",
-                  color: purpose === p ? "var(--blue-text)" : "var(--text)",
-                }}
+                className={`choice${purpose === p ? " on" : ""}`}
               >
                 <span className="fs-lg fw-7">{t.purposes[p][0]}</span>
                 <span className="sub fs-md">{t.purposes[p][1]}</span>

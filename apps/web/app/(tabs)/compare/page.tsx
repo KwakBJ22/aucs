@@ -221,7 +221,9 @@ export default function ComparePage() {
       {data && data.items.length === 0 && (
         <section className="section">
           <p className="sub">{t.empty}</p>
-          <Link href="/watch">{copy.watch.title} ›</Link>
+          <Link href="/watch" className="link">
+            {copy.watch.title}
+          </Link>
         </section>
       )}
       {cols.length > 0 && (
@@ -232,21 +234,28 @@ export default function ComparePage() {
                 <th />
                 {cols.map((c) => (
                   <th key={c.id}>
-                    <Link href={`/item/${encodeURIComponent(c.id)}`} className="c-inherit">
-                      <div className="sub">
-                        {c.d && isOnbid(c.d) ? ob.badge(c.d.kind_name ?? "") : c.d?.court}{" "}
-                        {c.d?.case_no}
-                      </div>
-                      <div className="fw-6">
-                        {c.d?.place} {(c.d && !isOnbid(c.d) ? c.d.building : null) ?? c.d?.usage}
-                      </div>
+                    <Link
+                      href={`/item/${encodeURIComponent(c.id)}`}
+                      className="d-flex ai-center go c-inherit"
+                    >
+                      <span className="minw-0">
+                        <div className="sub">
+                          {c.d && isOnbid(c.d) ? ob.badge(c.d.kind_name ?? "") : c.d?.court}{" "}
+                          {c.d?.case_no}
+                        </div>
+                        <div className="fw-6">
+                          {c.d?.place} {(c.d && !isOnbid(c.d) ? c.d.building : null) ?? c.d?.usage}
+                        </div>
+                      </span>
                     </Link>
                     {c.d?.fatal && <div className="fatal">{c.d.fatal}</div>}
                   </th>
                 ))}
                 {Array.from({ length: blank }, (_, i) => (
                   <th key={`b${i}`} className="sub fw-4">
-                    <Link href="/watch">{t.addMore} ›</Link>
+                    <Link href="/watch" className="link">
+                      {t.addMore}
+                    </Link>
                   </th>
                 ))}
               </tr>
@@ -275,7 +284,7 @@ export default function ComparePage() {
                         {REASONS.map((r) => (
                           <button
                             key={r}
-                            className="chip gray b-0 mh-36"
+                            className="btn secondary sm"
                             onClick={() => exclude(c.id, r)}
                           >
                             {t.reasons[r]}
@@ -283,7 +292,7 @@ export default function ComparePage() {
                         ))}
                       </div>
                     ) : (
-                      <button className="chip gray b-0 mh-36" onClick={() => setAsking(c.id)}>
+                      <button className="btn secondary sm" onClick={() => setAsking(c.id)}>
                         {t.drop}
                       </button>
                     )}
@@ -295,9 +304,8 @@ export default function ComparePage() {
         </section>
       )}
       {cols.length > 0 && !pc && (
-        <button className="cond-row" onClick={() => setMore(!more)}>
+        <button className="cond-row fold" aria-expanded={more} onClick={() => setMore(!more)}>
           <span>{more ? t.less : t.more}</span>
-          <span className="sub">{more ? "▴" : "›"}</span>
         </button>
       )}
       {cols.length > 0 && <div className="sub">{t.note}</div>}
@@ -313,7 +321,7 @@ export default function ComparePage() {
                   {e.at}
                 </span>
               </span>
-              <button className="chip gray b-0 mh-32" onClick={() => undo(e.item_id)}>
+              <button className="btn secondary sm" onClick={() => undo(e.item_id)}>
                 {t.undo}
               </button>
             </div>

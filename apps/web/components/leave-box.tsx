@@ -15,9 +15,9 @@ export function LeaveBox({ token }: { token: string }) {
   const [err, setErr] = useState("");
   if (!open)
     return (
-      <button className="menu-row w-full b-0 bg-none ta-left" onClick={() => setOpen(true)}>
+      <button className="menu-row w-full ta-left" onClick={() => setOpen(true)}>
         <span className="sub">{t.open}</span>
-        <span />
+        <span className="sub">›</span>
       </button>
     );
   return (

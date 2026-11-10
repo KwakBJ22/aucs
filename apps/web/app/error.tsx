@@ -12,7 +12,7 @@ export default function ScreenError({ error, reset }: { error: Error; reset: () 
       <section className="section" role="alert">
         <b className="fs-base">{copy.states.crashTitle}</b>
         <p className="sub mt-4 mb-10 mx-0">{copy.states.crashSub}</p>
-        <button className="chip gray b-0 mh-40" onClick={reset}>
+        <button className="btn secondary sm" onClick={reset}>
           {copy.states.retry}
         </button>
       </section>

@@ -145,7 +145,7 @@ export function FindFilters({
             }}
           />
         </label>
-        <button className="link-btn" onClick={() => setOwn(!own)}>
+        <button className="link" onClick={() => setOwn(!own)}>
           {t.avoid} {own ? "▴" : "›"}
         </button>
         {own && (
@@ -163,11 +163,11 @@ export function FindFilters({
         )}
       </div>
       <div className="d-flex gap-8 f-wrap">
-        <button className="chip gray b-0 mh-36" onClick={() => onChange({})}>
+        <button className="btn secondary sm" onClick={() => onChange({})}>
           {t.condReset}
         </button>
         {onSave && (
-          <button className="chip green b-0 mh-36" onClick={onSave}>
+          <button className="btn soft sm" onClick={onSave}>
             {t.saveCond}
           </button>
         )}

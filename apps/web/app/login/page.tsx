@@ -22,7 +22,7 @@ export default function Login() {
         {session ? (
           <>
             <p className="sub fs-base">{t.loggedIn(userLabel(session))}</p>
-            <button className="btn bg-gray-chip" onClick={() => void signOut()}>
+            <button className="btn secondary" onClick={() => void signOut()}>
               {t.logout}
             </button>
           </>

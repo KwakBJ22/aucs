@@ -60,11 +60,14 @@ video {
   max-width: 100%;
 }
 a {
-  color: var(--blue);
+  color: var(--blue-text);
   text-decoration: none;
 }
+/* 버튼 기본 바탕·테두리를 없앰(11/11) — 예전엔 화면마다 b-0 bg-none 을 붙였고, 그 bg-none 이 누르는 느낌(바탕 바뀜)을 막았음 */
 button {
   font: inherit;
   color: inherit;
   cursor: pointer;
+  border: 0;
+  background: none;
 }

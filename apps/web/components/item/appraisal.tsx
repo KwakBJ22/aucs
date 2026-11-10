@@ -41,9 +41,12 @@ export function AppraisalPoints({
         </div>
       ))}
       {a.points.length > 3 && (
-        <button className="cond-row bg-bg mt-6" onClick={() => setOpen(!open)}>
+        <button
+          className="cond-row fold bg-bg mt-6"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
-          <span className="sub">{open ? "▴" : "›"}</span>
         </button>
       )}
       <a className="btn soft mt-10" href={COURT_CASE_PAGE} target="_blank" rel="noreferrer">

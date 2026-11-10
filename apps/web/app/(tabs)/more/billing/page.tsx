@@ -153,7 +153,11 @@ function PayRow(props: {
   const state = p.refund_status === "waiting" ? t.refundWaiting : t.status[p.status];
   return (
     <div>
-      <button className="menu-row w-full b-0 bg-none ta-left" onClick={props.onOpen}>
+      <button
+        className="menu-row fold w-full ta-left"
+        aria-expanded={props.open}
+        onClick={props.onOpen}
+      >
         <span>
           {t.planName[p.plan] ?? p.plan} · {t.periodName[p.period]}
           <span className="d-block sub">
@@ -179,8 +183,8 @@ function PayRow(props: {
             </div>
           )}
           {p.receipt_url && (
-            <a href={p.receipt_url} target="_blank" rel="noreferrer">
-              {t.receipt} ›
+            <a href={p.receipt_url} target="_blank" rel="noreferrer" className="link">
+              {t.receipt}
             </a>
           )}
           {p.refund && (

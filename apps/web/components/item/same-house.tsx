@@ -16,9 +16,9 @@ export function SameHouse({ list }: { list?: Twin[] }) {
       <b>{toCourt ? t.toCourt : t.toOnbid}</b>
       <div className="sub fs-sm mt-2 mb-6 mx-0">{t.sub}</div>
       {list.map((x) => (
-        <Link key={x.item_id} href={`/item/${x.item_id}`} className="d-block fs-md py-4 px-0">
+        <Link key={x.item_id} href={`/item/${x.item_id}`} className="link">
           {(x.source === "court" ? t.court : t.onbid)(x.no, x.date ?? "-")}
-          {x.min_price_krw ? ` · 최저 ${won(x.min_price_krw)}` : ""} ›
+          {x.min_price_krw ? ` · 최저 ${won(x.min_price_krw)}` : ""}
         </Link>
       ))}
     </div>

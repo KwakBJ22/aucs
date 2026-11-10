@@ -30,7 +30,7 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
   if (!open)
     return (
       <button
-        className="chip gray b-0 mh-40 mt-24"
+        className="btn secondary sm mt-24"
         onClick={() => (session ? setOpen(true) : (window.location.href = "/login"))}
       >
         {r.open}
@@ -95,7 +95,7 @@ export function DocSheet({
     >
       <div className="topbar pos-sticky bg-bg" style={{ top: 0 }}>
         <b className="fs-lg">{c.names[kind]}</b>
-        <button onClick={onClose} className="b-0 bg-none fs-base mh-44" style={{ minWidth: 44 }}>
+        <button onClick={onClose} className="btn secondary sm">
           {c.close}
         </button>
       </div>
@@ -182,7 +182,7 @@ export function DocSheet({
         <>
           <div className="d-flex jc-between ai-center">
             <DocH>{c.filings}</DocH>
-            <button onClick={() => setAll(!all)} className="b-0 bg-none c-blue fs-sm mh-44">
+            <button onClick={() => setAll(!all)} className="link">
               {all ? c.keyOnly : c.all}
             </button>
           </div>

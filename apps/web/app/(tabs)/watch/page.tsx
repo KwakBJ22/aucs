@@ -32,30 +32,30 @@ function StepRow({
   const [open, setOpen] = useState(false);
   const choices = c.step === "result" ? (["after"] as WatchStep[]) : MOVABLE;
   return (
-    <div className="pt-0 pb-12 pl-48 pr-0 d-flex gap-6 f-wrap">
+    <div className="pt-0 pb-12 pl-48 pr-0 d-flex gap-8 f-wrap ai-center">
       {c.last_result && <div className="w-full fs-sm fw-6">{resultLine(c.last_result)}</div>}
       {!open ? (
         <>
           {c.changed && (
-            <span className="chip orange mh-32" title={t.changedHint}>
+            <span className="chip orange" title={t.changedHint}>
               {t.changed}
             </span>
           )}
           {/* 칩 둘까지 + 나머지는 글자 링크(08-look 5절) */}
           {c.step === "result" ? (
-            <Link href={`/me#rec-${c.item_id}`} className="chip green mh-32">
-              {t.resultShort} ›
+            <Link href={`/me#rec-${c.item_id}`} className="link">
+              {t.resultShort}
             </Link>
           ) : (
-            <button className="chip green b-0 mh-32" onClick={() => setOpen(true)}>
+            <button className="btn soft sm" onClick={() => setOpen(true)}>
               {t.steps[c.step]} ▾
             </button>
           )}
-          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="chip gray mh-32">
-            {copy.ws.open} ›
+          <Link href={`/watch/${encodeURIComponent(c.item_id)}`} className="link">
+            {copy.ws.open}
           </Link>
           {c.step !== "result" && (
-            <button className="link-btn pt-0" onClick={onCompare}>
+            <button className={`pill${c.in_compare ? " on" : ""}`} onClick={onCompare}>
               {c.in_compare ? copy.compare.added : copy.compare.add}
             </button>
           )}
@@ -66,8 +66,7 @@ function StepRow({
           {choices.map((s) => (
             <button
               key={s}
-              className={`chip ${s === c.step ? "on" : "gray"} b-0 mh-36`}
-
+              className={`pill${s === c.step ? " on" : ""}`}
               onClick={() => {
                 setOpen(false);
                 if (s !== c.step) onMove(s);
@@ -174,16 +173,15 @@ export default function Watch() {
       title={t.title}
       sub={list ? t.summary(list.length, inCompare) : undefined}
       right={
-        <div className="d-flex gap-6">
+        <div className="d-flex gap-12 ai-center">
           <button
-            className={`chip ${recent ? "on" : "gray"} b-0 mh-32`}
-
+            className={`pill${recent ? " on" : ""}`}
             onClick={() => setRecent(recent ? null : loadRecent())}
           >
             {t.recent}
           </button>
-          <Link href="/compare" className="chip gray mh-32">
-            {copy.compare.title} {inCompare} ›
+          <Link href="/compare" className="link">
+            {copy.compare.title} {inCompare}
           </Link>
         </div>
       }
@@ -198,9 +196,9 @@ export default function Watch() {
         <Link
           key={r.id}
           href={`/item/${encodeURIComponent(r.id)}`}
-          className="d-block py-10 px-0 fs-md c-inherit"
+          className="line-row go fs-md c-inherit"
         >
-          {r.label} ›
+          {r.label}
         </Link>
       ))}
     </section>
@@ -216,7 +214,9 @@ export default function Watch() {
   const empty = list && list.length === 0 && (
     <section className="section">
       <p className="sub">{t.empty}</p>
-      <Link href="/find">{copy.find.title} ›</Link>
+      <Link href="/find" className="link">
+        {copy.find.title}
+      </Link>
     </section>
   );
 
@@ -236,7 +236,7 @@ export default function Watch() {
             <section className="section mt-0">
               <div className="d-flex jc-between ai-center">
                 <h2>{t.boardTitle}</h2>
-                <button className="chip gray b-0 mh-32" onClick={() => setAsTable(!asTable)}>
+                <button className="btn secondary sm" onClick={() => setAsTable(!asTable)}>
                   {asTable ? t.asBoard : t.asTable}
                 </button>
               </div>
@@ -269,8 +269,7 @@ export default function Watch() {
                           <td>{won(c.min_price_krw)}</td>
                           <td>
                             <button
-                              className={`chip ${c.in_compare ? "green" : "gray"} b-0`}
-
+                              className={`pill${c.in_compare ? " on" : ""}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleCompare(c);
@@ -338,10 +337,9 @@ export default function Watch() {
       {errorBox}
       {msg && <div className="sub c-amber mb-6">{msg}</div>}
       {list && list.length > 0 && (
-        <div className="d-flex gap-6 ox-auto pb-4">
+        <div className="d-flex gap-8 ox-auto quiet-scroll py-4">
           <button
-            className={`chip ${only === null ? "on" : "gray"} b-0 mh-32 nowrap`}
-
+            className={`pill${only === null ? " on" : ""}`}
             onClick={() => {
               setOnly(null);
               setOnlyChanged(false);
@@ -351,8 +349,7 @@ export default function Watch() {
           </button>
           {nChanged > 0 && (
             <button
-              className={`chip ${onlyChanged ? "green" : "orange"} b-0 mh-32 nowrap`}
-
+              className={`pill${onlyChanged ? " on" : ""}`}
               onClick={() => setOnlyChanged(!onlyChanged)}
               title={t.changedHint}
             >
@@ -362,8 +359,7 @@ export default function Watch() {
           {WATCH_STEPS.filter((s) => count(s) > 0).map((s) => (
             <button
               key={s}
-              className={`chip ${only === s ? "on" : "gray"} b-0 mh-32 nowrap`}
-
+              className={`pill${only === s ? " on" : ""}`}
               onClick={() => setOnly(only === s ? null : s)}
             >
               {t.steps[s]} {count(s)}

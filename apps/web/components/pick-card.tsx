@@ -29,7 +29,7 @@ export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next"
         )}
         {c.preview && <span className="pick-tag">{t.preview}</span>}
       </div>
-      <div className="fs-xs mt-8">
+      <div className="fs-xs mt-8 d-flex ai-center go">
         <DDay d={c.d_day}>
           {dday(c.d_day)} · {c.sale_date?.slice(5).replace("-", "/")}
         </DDay>
@@ -41,7 +41,7 @@ export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next"
         {won(c.min_price_krw)}{" "}
         {c.min_rate != null && <span className="fs-xs fw-5 c-muted">{c.min_rate}%</span>}
       </div>
-      {line && <div className="fs-xs c-blue mt-4 pick-why">{line}</div>}
+      {line && <div className="fs-xs fw-6 mt-4 pick-why">{line}</div>}
     </Link>
   );
 }

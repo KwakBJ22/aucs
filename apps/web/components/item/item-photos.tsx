@@ -18,7 +18,7 @@ export function ItemPhotos({ list }: { list?: string[] }) {
           <button
             key={u}
             onClick={() => setBig(u)}
-            className="b-0 p-0 bg-none r-12"
+            className="b-0 p-0 r-12"
             style={{ flex: "0 0 auto", scrollSnapAlign: "start" }}
             aria-label={`${copy.photos.label} ${i + 1}`}
           >

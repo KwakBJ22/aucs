@@ -34,7 +34,7 @@ export function PageHeader({
     <>
       <div className="topbar">
         {back === "history" ? (
-          <button aria-label="뒤로" className="tb-back b-0 bg-none" onClick={() => router.back()}>
+          <button aria-label="뒤로" className="tb-back " onClick={() => router.back()}>
             {arrow}
           </button>
         ) : back ? (

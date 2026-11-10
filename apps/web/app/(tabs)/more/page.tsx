@@ -94,7 +94,7 @@ export default function More() {
       )}
       <Link href="/start" className="menu-row">
         <span>{copy.home.changeAnswers}</span>
-        <span />
+        <span className="sub">›</span>
       </Link>
     </section>
   );
@@ -112,7 +112,7 @@ export default function More() {
           </span>
           {session && (
             <button
-              className="link-btn"
+              className="link"
               onClick={() =>
                 void meApi
                   .removeSearch(session.access_token, x.search_id)
@@ -148,9 +148,9 @@ export default function More() {
       )}
       {session && (
         <>
-          <button className="menu-row w-full b-0 bg-none ta-left" onClick={() => void signOut()}>
+          <button className="menu-row w-full ta-left" onClick={() => void signOut()}>
             <span>{t.logout}</span>
-            <span />
+            <span className="sub">›</span>
           </button>
           <LeaveBox token={session.access_token} />
         </>

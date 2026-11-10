@@ -30,13 +30,13 @@ function Sheet({ word, text, onClose }: { word: string; text: string; onClose: (
         <div className="sheet-handle" />
         <div className="d-flex jc-between ai-center">
           <b className="fs-lg">{word}</b>
-          <button onClick={onClose} className="b-0 bg-none mh-44 fs-base" style={{ minWidth: 44 }}>
+          <button onClick={onClose} className="btn secondary sm">
             {copy.terms.close}
           </button>
         </div>
         <p className="fs-base lh-16 mt-6 mb-12 mx-0">{text}</p>
-        <Link href="/guide" className="sub" onClick={onClose}>
-          {copy.terms.more} ›
+        <Link href="/guide" className="link" onClick={onClose}>
+          {copy.terms.more}
         </Link>
       </div>
     </div>
@@ -56,13 +56,7 @@ export function Term({ word, children }: { word: string; children?: React.ReactN
           e.stopPropagation();
           setOpen(true);
         }}
-        className="b-0 bg-none p-0 c-inherit"
-        style={{
-          font: "inherit",
-          textDecoration: "underline dotted",
-          textUnderlineOffset: 3,
-          cursor: "help",
-        }}
+        className="link in term"
       >
         {children ?? word}
       </button>

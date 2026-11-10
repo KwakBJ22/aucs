@@ -80,11 +80,11 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
           {d.court_full} · {d.place}
         </div>
         <div className="d-flex gap-6 mt-10 f-wrap">
-          <a href={mapUrl} target="_blank" rel="noreferrer" className="chip gray mh-36">
-            {t.map} ›
+          <a href={mapUrl} target="_blank" rel="noreferrer" className="link">
+            {t.map}
           </a>
           {d.tel && (
-            <a href={`tel:${d.tel}`} className="chip gray mh-36">
+            <a href={`tel:${d.tel}`} className="link">
               {t.call(d.tel)}
             </a>
           )}

@@ -8,7 +8,7 @@ export function LoadError({ onRetry }: { onRetry: () => void }) {
     <section className="section" role="alert">
       <b className="fs-base">{copy.states.errorTitle}</b>
       <p className="sub mt-4 mb-10 mx-0">{copy.states.errorSub}</p>
-      <button className="chip gray b-0 mh-40" onClick={onRetry}>
+      <button className="btn secondary sm" onClick={onRetry}>
         {copy.states.retry}
       </button>
     </section>

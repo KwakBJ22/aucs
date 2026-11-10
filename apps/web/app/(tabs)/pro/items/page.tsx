@@ -238,7 +238,7 @@ function ProItems() {
           {Object.entries(t.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${f.usage?.includes(k) ? "on" : "gray"} b-0 mh-30`}
+              className={`pill${f.usage?.includes(k) ? " on" : ""}`}
 
               onClick={() => toggle("usage", k)}
             >
@@ -446,7 +446,7 @@ function ProItems() {
             className="pc-sticky oy-auto quiet-scroll"
             style={{ maxHeight: "calc(100dvh - 140px)" }}
           >
-            <button className="link-btn mb-8" onClick={() => setPick(null)}>
+            <button className="link" onClick={() => setPick(null)}>
               {t.pickClose}
             </button>
             <PickPanel id={pick} />

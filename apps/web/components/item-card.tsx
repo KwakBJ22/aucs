@@ -21,17 +21,13 @@ function Chip({ c }: { c: Card }) {
 
 // 공매는 출처 칩(테두리)만 — 상태 색(초록·회색·주황)과 섞지 않음. 확인 상태는 상세에서.
 function SourceBadge({ c }: { c: Card }) {
-  return (
-    <span className="fs-xs fw-6 py-0 px-6 r-4 b-0 bg-gray-chip f-none">
-      {c.kind === "trust" ? t.trust : t.onbid}
-    </span>
-  );
+  return <span className="chip gray f-none">{c.kind === "trust" ? t.trust : t.onbid}</span>;
 }
 
 function OnbidLine({ c }: { c: Card }) {
   if (c.top_signal) return <Chip c={c} />;
   if (c.next_round)
-    return <div className="fs-xs c-blue">{t.nextRound(won(c.next_round.min_price_krw))}</div>;
+    return <div className="fs-xs fw-6">{t.nextRound(won(c.next_round.min_price_krw))}</div>;
   return <div className="sub m-0 fs-xs">{t.noNextRound}</div>;
 }
 
@@ -94,7 +90,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
   return (
     <Link
       href={`/item/${encodeURIComponent(c.item_id)}`}
-      className="d-flex gap-12 py-12 px-0 c-inherit"
+      className="card-go d-flex gap-12 py-12 px-0 c-inherit"
     >
       <Thumb c={c} />
       <div className="f-1 minw-0">
@@ -119,9 +115,9 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
           </span>
         </div>
         <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
-        {why && <div className="fs-xs c-blue fw-6 mt-6">{why}</div>}
+        {why && <div className="fs-xs fw-6 mt-6">{why}</div>}
         {!why && !onbid && c.below_appraisal_krw > 0 && (
-          <div className="fs-xs c-blue mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
+          <div className="fs-xs fw-6 mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
         )}
       </div>
       <HeartButton id={c.item_id} />
