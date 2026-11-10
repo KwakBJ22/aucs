@@ -191,7 +191,7 @@ export default function Home() {
   );
   const todayBlock = token && todo.length > 0 && (
     <section className="section">
-      <h2 className="mb-8">
+      <h2>
         {t.today} <span className="c-blue">{todo.length}</span>
       </h2>
       {todo.map((w) => (
@@ -294,7 +294,7 @@ export default function Home() {
   const onbidBlock = onbidClosing.length > 0 && (
     <section className="section">
       <div className="d-flex jc-between ai-baseline">
-        <h2 className="mb-12">{t.onbidClosing}</h2>
+        <h2>{t.onbidClosing}</h2>
         <Link href="/find?source=onbid" className="sub fs-sm">
           {t.onbidAll}
         </Link>
@@ -318,11 +318,7 @@ export default function Home() {
       </div>
       <div className="sub mb-4">{summary}</div>
       {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
-      <button
-        className="btn bg-blue-soft c-blue-text mt-8 mb-4 mx-0 fs-md"
-        style={{ height: 44 }}
-        onClick={() => void turnOnAlert(profile)}
-      >
+      <button className="btn soft md mt-8" onClick={() => void turnOnAlert(profile)}>
         {copy.alert.button}
       </button>
       {alertMsg && <p className="sub mt-0 mb-4 mx-0">{alertMsg}</p>}
@@ -347,7 +343,7 @@ export default function Home() {
 
   const whyBlock = !token && (
     <section className="section">
-      <h2 className="mb-8">{t.whyTitle}</h2>
+      <h2>{t.whyTitle}</h2>
       <div className="d-flex f-col gap-10 fs-md" style={{ lineHeight: 1.45 }}>
         {t.why.map(([a, b]) => (
           <div key={a}>
@@ -391,7 +387,7 @@ export default function Home() {
           </div>
           <div>
             <section className="section">
-              <h2 className="mb-8">{t.calendar}</h2>
+              <h2>{t.calendar}</h2>
               {cal.length === 0 && <p className="sub">{t.calendarEmpty}</p>}
               {cal.map(([day, list]) => (
                 <div key={day} className="cal-day">

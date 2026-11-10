@@ -460,7 +460,7 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
           style={field}
         />
       </label>
-      <button className="btn primary mt-10" style={{ height: 44 }} onClick={save}>
+      <button className="btn primary md mt-10" onClick={save}>
         {m.save}
       </button>
     </div>

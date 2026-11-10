@@ -10,8 +10,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  min-height: 56px;
   padding: 8px 4px 0;
+}
+/* 긴 제목은 두 줄까지 접힘 — 화면 밖으로 밀지 않음(11/11) */
+.topbar .brand {
+  min-width: 0;
+  line-height: 1.3;
 }
 /* 휴대폰: 화면 머리(뒤로·제목)는 위에 붙어 있음(11/8) — 페이지 여백(20px)까지 바탕을 덮음 */
 @media (max-width: 1023px) {
@@ -35,20 +40,33 @@
   padding: 20px var(--sec-x);
   margin: 12px 0;
 }
+/* 소제목 아래 12px, 바로 아래가 설명 한 줄(.sub)이면 4px(11/11 — 화면마다 mb-8·mb-12 로 달랐음) */
 .section h2 {
-  margin: 0 0 4px;
+  margin: 0 0 12px;
   font-size: var(--fs-lg);
   font-weight: 700;
 }
+.section h2 + .sub {
+  margin-top: -8px;
+}
+/* 카드 맨 위·맨 아래에 문단 여백이 겹쳐 벌어지지 않게 */
+.section > :first-child {
+  margin-top: 0;
+}
+.section > :last-child {
+  margin-bottom: 0;
+}
 .sub {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  max-width: 100%;
+  line-height: 1.3;
+  font-size: var(--fs-xs);
   padding: 4px 8px;
   border-radius: 7px;
   font-weight: 600;
@@ -90,11 +108,15 @@
   font-size: 12px;
   font-weight: 700;
 }
+/* 높이는 56px 부터 — 글자를 키운 폰(1.3배)에서 긴 글이 두 줄이 되면 버튼이 따라 커짐(11/11) */
 .btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 56px;
+  min-height: 56px;
+  padding: 6px 16px;
+  line-height: 1.3;
+  text-align: center;
   border-radius: 16px;
   border: 0;
   font-size: 17px;
@@ -117,6 +139,17 @@
   background: var(--blue-soft);
   color: var(--blue-text);
 }
+/* 되돌릴 수 없는 일(탈퇴) */
+.btn.danger {
+  background: var(--red);
+  color: var(--on-strong);
+}
+/* 덜 큰 버튼(44px) — 카드 안·창 안에서 쓰는 한 꼴(11/11, 예전엔 화면마다 style 로 높이를 줬음) */
+.btn.md {
+  min-height: 44px;
+  font-size: var(--fs-base);
+  border-radius: 14px;
+}
 .btn-pair {
   display: flex;
   gap: 8px;
@@ -128,7 +161,7 @@
 .band {
   height: 10px;
   background: var(--band);
-  margin: 16px -20px;
+  margin: 16px calc(-1 * var(--page-x, 20px));
 }
 /* 아래에서 올라오는 창 · 잠깐 뜨는 알림 (08-look 5절) */
 .sheet {
@@ -167,7 +200,7 @@
 .btn.kakao {
   background: var(--kakao);
   color: var(--kakao-text);
-  height: 52px;
+  min-height: 52px;
   font-size: 15px;
 }
 .btn:disabled {
@@ -195,7 +228,9 @@
   gap: 3px;
   color: var(--faint);
   font-size: 11px;
+  line-height: 1.3;
   min-height: 44px;
+  min-width: 0;
 }
 .tabbar a.on {
   color: var(--text);
@@ -204,10 +239,18 @@
 .section .menu-row:last-child {
   padding-bottom: 0;
 }
+/* 줄 안 칸은 좁아지면 접힘(min-width:0) — 긴 글이 줄을 화면 밖으로 밀지 않음(11/11) */
+.menu-row > *,
+.line-row > *,
+.cond-row > *,
+.switch-row > * {
+  min-width: 0;
+}
 .menu-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   min-height: 56px;
   padding: 16px 0;
   color: var(--text);
@@ -313,6 +356,10 @@
   }
   .thumb.kind span {
     display: none; /* 휴대폰은 아이콘만(칸이 작아 글자가 겹침) — 종류 이름은 aria-label */
+  }
+  /* 맨 아래 내용이 아래 메뉴에 가려지지 않게: 메뉴 높이(62 + 홈 막대 자리) + 숨 쉴 자리 24(11/11) */
+  .page {
+    padding-bottom: calc(62px + max(14px, env(safe-area-inset-bottom)) + 24px);
   }
 }
 @media (max-width: 400px) {
