@@ -6,6 +6,6 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <picture className={`logo logo-${size}`}>
       <img src="/brand/logo.png" alt={copy.appName} width={973} height={240} />
-    </span>
+    </picture>
   );
 }
