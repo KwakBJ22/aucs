@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SAFE_MODE, type FindFilter } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.find;
 const EOK = 100_000_000;
+const KEY_SAFE_OPEN = "aucs_find_safe_open";
+const AVOID_KEYS = Object.keys(t.avoids);
 
 function Pills<T extends string | number | null>({
   opts,
@@ -40,8 +42,25 @@ export function FindFilters({
   saveMsg?: string;
 }) {
   const ex = new Set(f.exclude ?? []);
-  const safe = SAFE_MODE.every((k) => ex.has(k));
-  const [own, setOwn] = useState(!safe && ex.size > 0);
+  const allPicked = AVOID_KEYS.every((k) => ex.has(k));
+  // 여닫음은 이 기기에 기억(찾기 화면의 다른 조건과 같은 방식) — 닫아도 고른 것은 그대로
+  const [safeOpen, setSafeOpen] = useState(false);
+  useEffect(() => {
+    try {
+      setSafeOpen(localStorage.getItem(KEY_SAFE_OPEN) === "1");
+    } catch {
+      /* 못 읽어도 계속 */
+    }
+  }, []);
+  const toggleSafeOpen = () => {
+    const next = !safeOpen;
+    setSafeOpen(next);
+    try {
+      localStorage.setItem(KEY_SAFE_OPEN, next ? "1" : "0");
+    } catch {
+      /* 저장 못 해도 계속 */
+    }
+  };
   const set = (p: Partial<FindFilter>) => onChange({ ...f, ...p });
   const toggle = (arr: string[] | undefined, k: string) =>
     (arr ?? []).includes(k) ? (arr ?? []).filter((x) => x !== k) : [...(arr ?? []), k];
@@ -128,38 +147,40 @@ export function FindFilters({
         />
       </div>
       <div className="f-block">
-        <label className="switch-row">
+        <button
+          className="line-row fold w-full ta-left"
+          aria-expanded={safeOpen}
+          onClick={toggleSafeOpen}
+        >
           <span>
             <b>{t.safe}</b>
-            <span className="sub d-block">{t.safeSub}</span>
+            {ex.size > 0 && <span className="sub ml-6">{t.safePicked(ex.size)}</span>}
           </span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={safe}
-            onChange={() => {
-              setOwn(false);
-              set({
-                exclude: safe ? [] : Array.from(new Set([...(f.exclude ?? []), ...SAFE_MODE])),
-              });
-            }}
-          />
-        </label>
-        <button className="link" onClick={() => setOwn(!own)}>
-          {t.avoid} {own ? "▴" : "›"}
         </button>
-        {own && (
-          <div className="pills mt-6">
-            {Object.entries(t.avoids).map(([k, v]) => (
+        {safeOpen && (
+          <>
+            <div className="d-flex jc-between ai-center gap-8">
+              <span className="sub">{t.safeHint}</span>
               <button
-                key={k}
-                className={ex.has(k) ? "on" : ""}
-                onClick={() => set({ exclude: toggle(f.exclude, k) })}
+                className="btn secondary sm"
+                onClick={() => set({ exclude: allPicked ? [] : AVOID_KEYS })}
               >
-                {v} {ex.has(k) ? "빼기" : ""}
+                {allPicked ? t.safeNone : t.safeAll}
               </button>
-            ))}
-          </div>
+            </div>
+            <div className="pills mt-10">
+              {Object.entries(t.avoids).map(([k, v]) => (
+                <button
+                  key={k}
+                  className={ex.has(k) ? "on" : ""}
+                  aria-pressed={ex.has(k)}
+                  onClick={() => set({ exclude: toggle(f.exclude, k) })}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
       <div className="d-flex gap-8 f-wrap">

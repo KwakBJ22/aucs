@@ -89,7 +89,7 @@ function Sheet() {
                   setText(v);
                   setBid(v ? Number(v) * 10_000 : null);
                 }}
-                className="w-full fs-2xl py-10 px-12 b-0 r-14 bg-panel c-text"
+                className="f-input big"
               />
             </label>
             {chk && (

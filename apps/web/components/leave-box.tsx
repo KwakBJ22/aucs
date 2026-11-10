@@ -28,7 +28,7 @@ export function LeaveBox({ token }: { token: string }) {
         value={word}
         onChange={(e) => setWord(e.target.value)}
         placeholder={t.type}
-        className="w-full fs-base py-8 px-10 b-0 r-14 bg-bg c-inherit"
+        className="f-input"
       />
       <div className="btn-pair mt-10">
         <button className="btn secondary md" onClick={() => setOpen(false)}>

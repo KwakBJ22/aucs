@@ -54,7 +54,7 @@ export function ReportBox({ id, section }: { id: string; section: string }) {
           rows={3}
           placeholder={r.placeholder}
           onChange={(e) => setNote(e.target.value)}
-          className="d-block w-full mt-6 fs-base p-8"
+          className="memo-box"
         />
       </label>
       <p className="sub my-6 mx-0">{state === "fail" ? r.fail : r.hint}</p>

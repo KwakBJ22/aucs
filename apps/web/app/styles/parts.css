@@ -642,7 +642,8 @@ button:disabled,
   border-radius: 12px;
   font-size: var(--fs-md);
   font-weight: 600;
-  white-space: nowrap;
+  flex: none;
+  max-width: 100%;
 }
 .btn.sm::before,
 .pill::before,
@@ -794,4 +795,68 @@ button:disabled,
 /* 줄 안 맨 앞에 붙는 것(뒤로 버튼 등) */
 .as-start {
   align-self: flex-start;
+}
+
+/* ══ 입력 칸(11/11, 08-look 5절) — 한 겹: 연한 판 바탕 · 테두리 없음 · 둥글기 14, 높이 48.
+   찾기 검색 칸이 매끄럽지 않던 까닭: ① 칸 바탕(--panel)이 화면 바탕과 같은 색이라 판이 안 보이고
+   ② 그 위에 브라우저 기본 모양(search 칸의 안쪽 그림자·둥글기, 아이폰)과 ③ 둥글기를 안 따르는 네모 focus 선만 보였음.
+   → 바탕은 놓인 자리와 다르게(--chip-bg), 기본 모양은 끄고, focus 는 같은 둥글기의 안쪽 선으로 */
+.f-input,
+.memo-box {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--chip-bg);
+  background-clip: padding-box;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  outline: 0;
+  box-shadow: none;
+  transition: box-shadow 0.1s;
+}
+.f-input {
+  height: 48px;
+  padding: 0 14px;
+}
+input.f-input,
+textarea.memo-box {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.memo-box {
+  margin-top: 8px;
+  padding: 14px;
+  resize: vertical;
+}
+.f-input:focus-visible,
+.memo-box:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.f-input::placeholder,
+.memo-box::placeholder {
+  color: var(--faint);
+}
+/* search 칸의 브라우저 기본 장식(돋보기·안쪽 여백)은 끔 — 지우기(×)는 둠 */
+input.f-input[type="search"]::-webkit-search-decoration,
+input.f-input[type="search"]::-webkit-search-results-button {
+  -webkit-appearance: none;
+  display: none;
+}
+input.f-input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+/* 큰 숫자 칸(입찰가) · 내용만큼만 차지하는 칸(상태 고르기) */
+.f-input.big {
+  height: 56px;
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+}
+.f-input.fit {
+  width: auto;
+  flex: none;
 }

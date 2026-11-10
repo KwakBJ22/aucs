@@ -426,17 +426,6 @@
   color: var(--blue-text);
   font-weight: 700;
 }
-.memo-box {
-  width: 100%;
-  margin-top: 8px;
-  font-size: 16px;
-  padding: 14px;
-  border: 0;
-  border-radius: var(--r-panel);
-  background: var(--panel);
-  color: var(--text);
-  resize: vertical;
-}
 .check-row {
   display: flex;
   gap: 10px;
@@ -516,17 +505,7 @@
 .f-label:first-child {
   margin-top: 12px;
 }
-.f-input {
-  width: 100%;
-  min-width: 0;
-  height: 48px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 15px;
-}
+/* 입력 칸(.f-input·.memo-box)은 parts.css 한 곳(11/11) */
 /* 고르는 칩(.pills)은 parts.css 「누를 것 표시」 한 곳(11/11) */
 .switch-row {
   display: flex;

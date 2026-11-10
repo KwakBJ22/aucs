@@ -23,7 +23,7 @@ export function AskBox({ token, initial }: { token: string; initial: MyInquiry[]
     <section className="section" id="ask">
       <h2>{t.title}</h2>
       <textarea
-        className="adm-input w-full mt-8"
+        className="memo-box"
         rows={3}
         maxLength={2000}
         placeholder={t.ph}

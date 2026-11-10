@@ -339,9 +339,10 @@ export const copy = {
       [50, "50% 이하"],
     ] as [number | null, string][], // PC 표와 같은 칸(11/1, 예전 64·51%)
     safe: "초보자 안전 모드",
-    safeSub:
-      "지분·유치권·선순위 임차인·법정지상권·근생빌라 의심·특별매각조건·기일 변동 가능을 한 번에 빼요",
-    avoid: "피하고 싶은 것",
+    safeHint: "피하고 싶은 것만 눌러요",
+    safeAll: "전체선택",
+    safeNone: "전체해제",
+    safePicked: (n: number) => `${n}개 고름`,
     avoids: {
       share: "지분",
       lien: "유치권",

@@ -112,8 +112,7 @@ export default function Start() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.regionSearch}
-            className="r-14 b-0 py-0 px-14 fs-base bg-panel c-text"
-            style={{ height: 48 }}
+            className="f-input"
           />
           <div
             className="d-flex f-wrap gap-8 mt-14 oy-auto f-1"

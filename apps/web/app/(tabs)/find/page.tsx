@@ -232,13 +232,13 @@ export default function Find() {
               remember(q.trim());
             }
           }}
-          className="f-1 minw-0 fs-base py-10 px-12 b-0 r-14 bg-panel c-inherit"
+          className="f-input f-1"
         />
         <select
           value={status}
           onChange={(e) => pickStatus(e.target.value as FindStatus)}
           aria-label="상태"
-          className="fs-base py-0 px-8 b-0 r-14 bg-panel c-inherit"
+          className="f-input fit"
         >
           {Object.entries(t.status).map(([k, v]) => (
             <option key={k} value={k}>

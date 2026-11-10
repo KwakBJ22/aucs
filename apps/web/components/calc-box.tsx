@@ -159,7 +159,7 @@ export function CalcBox({ id }: { id: string }) {
           const n = Number(e.target.value.replace(/[^0-9]/g, ""));
           set(n ? n * 10_000 : null);
         }}
-        className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
+        className="f-input"
       />
     </label>
   );
@@ -215,7 +215,7 @@ export function CalcBox({ id }: { id: string }) {
                 setAssume(v === "" ? null : Number(v) * 10_000); // 0 = 떠안는 돈 없음 확인
                 setBid(null); // 추천 입찰가가 새로 나오므로 다시 받음(11/1 — 최저가에 머물렀음)
               }}
-              className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
+              className="f-input"
             />
           </label>
           {assume == null && <div className="fs-sm mt-6 c-amber">{c.assumeNeed}</div>}
@@ -289,7 +289,7 @@ export function CalcBox({ id }: { id: string }) {
                   const n = Number(e.target.value.replace(/[^0-9]/g, ""));
                   setLoan(e.target.value ? n : null);
                 }}
-                className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
+                className="f-input"
               />
             )}
             <div className="sub m-0 fs-xs">

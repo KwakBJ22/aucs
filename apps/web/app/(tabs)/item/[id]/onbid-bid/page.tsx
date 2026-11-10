@@ -128,7 +128,7 @@ export default function OnbidBid() {
             value={bidMan}
             onChange={(e) => setBidMan(e.target.value.replace(/[^0-9]/g, ""))}
             aria-label={t.bidLabel}
-            className="f-1 minw-0 fs-2xl fw-7 py-10 px-12 b-0 r-14 bg-panel c-inherit"
+            className="f-input big f-1"
           />
           <span className="sub">{t.man}</span>
         </label>

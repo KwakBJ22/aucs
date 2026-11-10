@@ -44,8 +44,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                className="d-block w-full r-14 b-0 py-0 px-14 fs-base mt-6 mb-12 mx-0 bg-panel c-text"
-                style={{ height: 52 }}
+                className="f-input mt-6 mb-12"
               />
             </label>
             <button

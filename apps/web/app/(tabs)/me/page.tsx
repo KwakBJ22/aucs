@@ -85,7 +85,7 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
         inputMode={type === "text" ? "numeric" : undefined}
         value={f[k]}
         onChange={(e) => setF({ ...f, [k]: e.target.value })}
-        className="w-full fs-base py-8 px-10 b-0 bg-panel r-14"
+        className="f-input"
       />
     </label>
   );
