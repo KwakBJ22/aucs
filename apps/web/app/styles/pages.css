@@ -1410,3 +1410,16 @@ a.col-chip span {
     min-height: 46px;
   }
 }
+
+/* 찾기 — 최근 검색 한 줄: 왼쪽 검색어(눌러 다시 찾기), 오른쪽 끝 ×(이 말만 지우기) (11/11) */
+.recent-word {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-x {
+  color: var(--muted);
+  font-size: var(--fs-lg);
+}

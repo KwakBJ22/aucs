@@ -298,6 +298,7 @@ export const copy = {
     // 「취하·변경」은 법원 자료로 채울 길이 생길 때까지 뺌(11/9 — 지지옥션 자료를 빼서 비게 됨)
     status: { active: "진행 중", sold: "매각됨", all: "전체" } as Record<string, string>,
     recent: "최근 검색",
+    recentRemove: (w: string) => `최근 검색에서 ${w} 지우기`,
     noResult: "찾는 물건이 없어요",
     searching: "검색 중에는 내 지역·현금 조건을 빼고 찾아요",
     sold: (price: string, rate: number | null) =>

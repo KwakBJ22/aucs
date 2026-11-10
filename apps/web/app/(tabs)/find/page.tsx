@@ -206,6 +206,11 @@ export default function Find() {
     setRecent(next);
     save(KEY_RECENT, JSON.stringify(next));
   };
+  const forget = (word: string) => {
+    const next = recent.filter((x) => x !== word);
+    setRecent(next);
+    save(KEY_RECENT, JSON.stringify(next));
+  };
   const pickStatus = (s: FindStatus) => {
     setStatus(s);
     save(KEY_STATUS, s);
@@ -259,18 +264,29 @@ export default function Find() {
           >
             <div className="sub mt-0 mb-4 mx-12 fs-xs">{t.recent}</div>
             {recent.map((w) => (
-              <button
-                key={w}
-                onMouseDown={(e) => {
-                  e.preventDefault(); // 칸에서 손을 떼기 전에 고른 말을 넣음(예전엔 150ms 기다렸음)
-                  setQ(w);
-                  setQuery(w);
-                  setFocus(false);
-                }}
-                className="d-block w-full ta-left py-12 px-12 fs-base"
-              >
-                {w}
-              </button>
+              <div key={w} className="d-flex ai-center">
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // 칸에서 손을 떼기 전에 고른 말을 넣음(예전엔 150ms 기다렸음)
+                    setQ(w);
+                    setQuery(w);
+                    setFocus(false);
+                  }}
+                  className="recent-word d-block ta-left py-12 px-12 fs-base"
+                >
+                  {w}
+                </button>
+                <button
+                  aria-label={t.recentRemove(w)}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // 칸을 닫지 않고 이 말만 지움
+                    forget(w);
+                  }}
+                  className="icon-btn recent-x"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
