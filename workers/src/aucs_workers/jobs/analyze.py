@@ -123,6 +123,7 @@ def load_appraisal(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
     return {
         "price_date": date(int(ymd[:4]), int(ymd[4:6]), int(ymd[6:8])) if len(ymd) == 8 else None,
         "firm": (by.get("appraisal_pdf") or {}).get("firm"),
+        "points": (by.get("appraisal_pdf") or {}).get("points") or [],  # 원본 요항표(11/11)
     }
 
 
@@ -215,7 +216,9 @@ def analyze_item(
     )
     detail = load_detail(cur, item)
     # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
-    points = parse_points(detail.get("aeeWevlMnpntLst"))
+    # 법원 요항을 아직 못 받았으면 받아 둔 감정평가서 원본의 요항표로(11/11)
+    apr = load_appraisal(cur, item)
+    points = parse_points(detail.get("aeeWevlMnpntLst") or apr["points"])
     af = appraisal_facts(points).value
     hint = bool(af.get("overcrowded")) if points else None
     # 감정가 나눔(11/7): 토지·건물 금액 · 제시외 건물 · 대지권 — 원본 없이 물건상세로
@@ -229,7 +232,6 @@ def analyze_item(
     facts = build_facts(item, events, tenants, has_sr, over)
     for k, v in af.items():
         facts.setdefault(k, v)
-    apr = load_appraisal(cur, item)
     if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음
         facts.update(appraisal_date=apr["price_date"], as_of=today)
     # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도

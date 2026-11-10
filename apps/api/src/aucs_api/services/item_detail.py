@@ -329,8 +329,9 @@ def appraisal_section(
     감정평가서 원본(kapa_pdf)을 받으면 채움 — 그 전에는 None 이고 화면은 출처만 적음. 가격시점은 법원 감정평가서 정보.
     감정가 나눔(11/7): 토지·건물 금액 · 제시외 건물 · 대지권도 같은 물건상세에서."""
     dr = (payload or {}).get("dma_result") or {}
-    points = parse_points(dr.get("aeeWevlMnpntLst"))
     a = apr or {}
+    # 법원 요항을 아직 못 받았으면 받아 둔 감정평가서 원본의 요항표로(11/11)
+    points = parse_points(dr.get("aeeWevlMnpntLst") or (a.get("appraisal_pdf") or {}).get("points"))
     ymd = str(((a.get("appraisal") or {}).get("info") or {}).get("dspslPrcCrtrYmd") or "")
     price_date = f"{ymd[:4]}.{ymd[4:6]}.{ymd[6:8]}" if len(ymd) == 8 else None
     firm = (a.get("appraisal_pdf") or {}).get("firm")
