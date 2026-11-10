@@ -15,11 +15,21 @@ import { Termed } from "@/components/term";
 
 const t = copy.item;
 
-export function Row({ label, value }: { label: React.ReactNode; value: React.ReactNode }) {
+// note: 값 아래 설명(범위·까닭) — 이름 아래 줄에 왼쪽부터 펼침(11/10 휴대폰에서 이름·설명이 좁은 칸에 접혀 깨졌음)
+export function Row({
+  label,
+  value,
+  note,
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  note?: React.ReactNode;
+}) {
   return (
-    <div className="kv">
+    <div className={note ? "kv kv-has-note" : "kv"}>
       <span className="sub m-0">{typeof label === "string" ? <Termed text={label} /> : label}</span>
       <span className="kv-v">{value}</span>
+      {note && <span className="kv-note sub m-0 fs-xs">{note}</span>}
     </div>
   );
 }
@@ -311,13 +321,11 @@ export function CalcBox({ id }: { id: string }) {
             {d.move_out && s.move_out_krw > 0 && (
               <Row
                 label={c.moveOut}
-                value={
+                value={`+ ${won(s.move_out_krw)}`}
+                note={
                   <>
-                    + {won(s.move_out_krw)}
-                    <span className="sub d-block m-0 fs-xs">
-                      {c.range(won(d.move_out.low_krw), won(d.move_out.high_krw))}
-                      {d.move_out.stairs ? ` · ${c.stairs}` : ""}
-                    </span>
+                    {c.range(won(d.move_out.low_krw), won(d.move_out.high_krw))}
+                    {d.move_out.stairs ? ` · ${c.stairs}` : ""}
                   </>
                 }
               />
@@ -325,13 +333,11 @@ export function CalcBox({ id }: { id: string }) {
             {d.repair && s.repair_krw > 0 && (
               <Row
                 label={c.repair}
-                value={
+                value={`+ ${won(s.repair_krw)}`}
+                note={
                   <>
-                    + {won(s.repair_krw)}
-                    <span className="sub d-block m-0 fs-xs">
-                      {c.range(won(d.repair.low_krw), won(d.repair.high_krw))}
-                      {d.repair.basis === "unknown_age" ? ` · ${c.ageUnknown}` : ""}
-                    </span>
+                    {c.range(won(d.repair.low_krw), won(d.repair.high_krw))}
+                    {d.repair.basis === "unknown_age" ? ` · ${c.ageUnknown}` : ""}
                   </>
                 }
               />

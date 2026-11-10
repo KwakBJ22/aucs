@@ -1,8 +1,10 @@
 /* 부품: 화면 틀·구역(section)·칩·버튼·아래 창·알림·목록 줄 */
 .page {
+  /* 좌우 여백 한 값(11/10) — 머리·옆으로 넘기는 줄이 이 값으로 맞춰야 삐뚤어지지 않음 */
+  --page-x: 20px;
   max-width: 480px;
   margin: 0 auto;
-  padding: 4px 20px calc(96px + env(safe-area-inset-bottom));
+  padding: 4px var(--page-x) calc(96px + env(safe-area-inset-bottom));
 }
 .topbar {
   display: flex;
@@ -17,8 +19,8 @@
     position: sticky;
     top: 0;
     z-index: 15;
-    margin: 0 -20px;
-    padding: 8px 24px 0;
+    margin: 0 calc(-1 * var(--page-x));
+    padding: 8px calc(4px + var(--page-x)) 0;
     background: var(--bg);
   }
 }
@@ -27,9 +29,10 @@
   font-weight: 700;
 }
 .section {
+  --sec-x: 20px; /* 구역 좌우 여백 — 옆으로 넘기는 줄(.pick-row·.col-chips)이 같은 값을 씀 */
   background: var(--surface);
   border-radius: var(--r-card);
-  padding: 20px;
+  padding: 20px var(--sec-x);
   margin: 12px 0;
 }
 .section h2 {
@@ -219,6 +222,17 @@
 .kv-v {
   text-align: right;
 }
+.kv-has-note {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.kv-has-note > .sub:first-child,
+.kv-has-note > .kv-v {
+  white-space: nowrap;
+}
+.kv-note {
+  flex-basis: 100%;
+}
 /* 물건 카드 왼쪽 판(11/9): 사진이 있으면 사진, 없으면 종류 색 · 아이콘 */
 .thumb {
   width: 56px;
@@ -300,11 +314,12 @@
 }
 @media (max-width: 400px) {
   .page {
-    padding-left: 16px;
-    padding-right: 16px;
+    --page-x: 16px;
   }
   .section {
-    padding: 18px 16px;
+    --sec-x: 16px;
+    padding-top: 18px;
+    padding-bottom: 18px;
   }
 }
 
@@ -414,13 +429,15 @@
 }
 
 /* 홈 추천 카드(11/4): 휴대폰은 옆으로 넘기는 줄, PC는 네 칸 격자. 선 없이 사진 판과 여백만 */
+/* 옆으로 넘기는 줄은 구역 끝까지 펼치되, 첫 카드·멈추는 자리는 글자와 같은 선(11/10 — 여백 값이 달라 카드가 삐뚤게 붙었음) */
 .pick-row {
   display: flex;
   gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  margin: 12px -20px 0;
-  padding: 0 20px 4px;
+  margin: 12px calc(-1 * var(--sec-x, 20px)) 0;
+  padding: 0 var(--sec-x, 20px) 4px;
+  scroll-padding-inline: var(--sec-x, 20px);
 }
 .pick-card {
   flex: 0 0 62%;

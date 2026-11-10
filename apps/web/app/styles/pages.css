@@ -1296,8 +1296,13 @@ textarea.adm-input {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  margin: 16px -20px 4px;
-  padding: 0 20px 4px;
+  margin: 16px calc(-1 * var(--sec-x, var(--page-x, 20px))) 4px;
+  padding: 0 var(--sec-x, var(--page-x, 20px)) 4px;
+  scroll-padding-inline: var(--sec-x, var(--page-x, 20px));
+}
+/* 흰 구역 안(홈)에서는 칩이 바탕과 같아 안 보였음(11/10) → 회색 판 */
+.section .col-chip:not(.on) {
+  background: var(--panel);
 }
 .col-chip {
   flex: 0 0 auto;
