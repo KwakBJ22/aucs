@@ -13,6 +13,20 @@ from aucs_api.db import batch, connect
 
 COURT_NAME = COURTS  # 법원 표는 규칙 courts.py 한 곳(11/8)
 
+# 가까운 역 하나(직선 800m 안 ≈ 걸어서 15분 안, 11/12) — 목록·지도 카드의 「○○역 도보 약 8분」.
+# 한 물건에 1ms 넘게 걸려 목록 SQL·건수 SQL 에 넣지 않고, 화면에 나갈 카드에만 따로 한 번에 붙임.
+_STATION_SQL = """
+select i.item_id, stn.station_name, stn.station_line, stn.station_m
+from core.items i
+join lateral (
+  select st.name_ko as station_name, st.line_name as station_line,
+         round(st_distance(st.geom, i.geom::geography))::int as station_m
+  from ref.stations st
+  where st.closed_date is null and st_dwithin(st.geom, i.geom::geography, 800)
+  order by st.geom <-> i.geom::geography limit 1) stn on true
+where i.item_id = any(%s) and i.geom is not null
+"""
+
 _CARD_SQL = f"""
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
@@ -32,6 +46,18 @@ def photo_url(path: str | None) -> str | None:
     if not path or not settings.SUPABASE_URL:
         return None
     return f"{settings.SUPABASE_URL}/storage/v1/object/public/item-photos/{path}"
+
+
+def near_station(
+    name: str | None, line: str | None, straight_m: int | None
+) -> dict[str, Any] | None:
+    """역 이름 · 직선거리 → 「○○역 도보 약 N분」 재료(WALK-01). 걸어서 15분 넘으면 None."""
+    from aucs_rules.walk import NEAR_MIN, walk_estimate
+
+    w = walk_estimate(straight_m).value if name else None
+    if not w or w["walk_min"] > NEAR_MIN:
+        return None
+    return {"name": name, "line": line, "straight_m": straight_m, **w}
 
 
 def card(r: dict[str, Any], today: date) -> dict[str, Any]:
@@ -70,7 +96,23 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "unknown_count": len(unknown),
         "data_status": r["data_status"],
         "photo": photo_url(r.get("photo")),  # 카드 왼쪽 사진(없으면 화면이 종류 아이콘, 11/9)
+        # 역(11/12): 모아보기는 SQL 에 이미 있고, 목록·지도는 attach_stations 가 나중에 붙임
+        "station": near_station(r.get("station_name"), r.get("station_line"), r.get("station_m")),
     }
+
+
+def attach_stations(c: Any, cards: list[dict[str, Any]]) -> None:
+    """화면에 나갈 경매 카드에만 가까운 역을 한 번에 붙임."""
+    ids = [
+        x["item_id"] for x in cards if x.get("source", "court") == "court" and not x.get("station")
+    ]
+    if not ids:
+        return
+    got = {r["item_id"]: r for r in c.execute(_STATION_SQL, (ids,)).fetchall()}
+    for x in cards:
+        r = got.get(x["item_id"])
+        if r:
+            x["station"] = near_station(r["station_name"], r["station_line"], r["station_m"])
 
 
 def parse_query(q: str | None) -> dict[str, Any] | None:
@@ -210,6 +252,8 @@ def list_items(
         onbid_items = [onbid.onbid_card(r, today) for r in res[i].fetchall()]
         total += (res[i + 1].fetchone() or {"n": 0})["n"]
     items = onbid.merge(court_items, onbid_items, sort, limit)
+    with connect() as c:
+        attach_stations(c, items)
     pq = parse_query(q)
     exact = None
     if (
@@ -278,7 +322,9 @@ def map_items(
             ("select count(*) as n from (" + sql + ") q", params),
         ])  # fmt: skip
         rows, total = q_rows.fetchall(), (q_n.fetchone() or {"n": 0})["n"]
-    return {"total": total, "items": [card(r, today) for r in rows], "max": MAP_MAX}
+        cards = [card(r, today) for r in rows]
+        attach_stations(c, cards[:60])  # 목록에 보이는 앞쪽만(점 800개 모두에 붙이면 1초 넘음)
+    return {"total": total, "items": cards, "max": MAP_MAX}
 
 
 def regions() -> list[dict[str, Any]]:

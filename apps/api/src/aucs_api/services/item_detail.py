@@ -277,6 +277,17 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             # 같은 단지 지난 낙찰(같은 동 이름·지번이 주소에 있는 매각 결과, 이 사건은 빼고)
             q_peers = c.execute(PEERS_SQL, (item_id,))
+            # 가까운 역 두 곳(직선 1.5km 안) — 상세 「역까지 걸어서」(11/12)
+            q_stn = c.execute(
+                """select st.name_ko as name, st.line_name as line,
+                          st_y(st.geom::geometry) as lat, st_x(st.geom::geometry) as lon,
+                          round(st_distance(st.geom, i.geom::geography))::int as straight_m
+                   from core.items i join ref.stations st
+                     on st.closed_date is null and i.geom is not null
+                    and st_dwithin(st.geom, i.geom::geography, 1500)
+                   where i.item_id = %s order by st.geom <-> i.geom::geography limit 6""",
+                (item_id,),
+            )
             q_sale = c.execute(
                 """select result, winning_bid_krw, sale_rate, sale_date from core.sale_results
                    where item_id = %s order by sale_date desc limit 1""",
@@ -296,6 +307,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         trades = q_trades.fetchall()
         peers = q_peers.fetchall()
         sale = q_sale.fetchone()
+        stations = q_stn.fetchall()
     spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     if spec_at:
         doc_times["spec_sheet"] = spec_at
@@ -320,9 +332,35 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
+    out["stations"] = walk_stations(stations)
     out["appraisal"] = appraisal_section(
         sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)
     )
+    return out
+
+
+def walk_stations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """가까운 역 두 곳 — 같은 역 이름(환승역 노선 여럿)은 하나로 묶어 노선을 합침(WALK-01 어림)."""
+    from aucs_rules.walk import walk_estimate
+
+    by: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        x = by.setdefault(
+            r["name"],
+            {
+                "name": r["name"],
+                "lines": [],
+                "straight_m": r["straight_m"],
+                "lat": r["lat"],
+                "lon": r["lon"],
+            },
+        )
+        if r["line"] and r["line"] not in x["lines"]:
+            x["lines"].append(r["line"])
+    out = []
+    for x in list(by.values())[:2]:
+        w = walk_estimate(x["straight_m"]).value or {}
+        out.append({**x, **w})
     return out
 
 

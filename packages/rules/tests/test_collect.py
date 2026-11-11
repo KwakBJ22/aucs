@@ -35,8 +35,8 @@ def test_fatal_goes_only_to_special() -> None:
 
 
 def test_station_name_and_limit() -> None:
-    assert collect(_x(station=("공덕", 320))).value["station"]["reason"] == "공덕역 320m"
-    assert collect(_x(station=("서울역", 100))).value["station"]["reason"] == "서울역 100m"
+    assert collect(_x(station=("공덕", 320))).value["station"]["reason"] == "공덕역 도보 약 7분"
+    assert collect(_x(station=("서울역", 100))).value["station"]["reason"] == "서울역 도보 약 2분"
     assert "station" not in collect(_x(station=("공덕", 700))).value
 
 

@@ -62,6 +62,8 @@ export type ItemCard = {
   top_signal: Signal | null;
   unknown_count: number;
   data_status: Record<string, string>;
+  // 가까운 역(걸어서 15분 안, 어림 WALK-01, 11/12)
+  station?: { name: string; line: string | null; walk_m: number; walk_min: number } | null;
 };
 export type ResultCard = {
   result_id: number;
@@ -257,6 +259,15 @@ export type ItemDetail = ItemCard & {
   interest?: Interest | null;
   court_bidders?: CourtBidders | null;
   photos?: string[];
+  // 가까운 역 두 곳(어림 — 직선 × 1.3, 분당 67m, 11/12)
+  stations?: {
+    name: string;
+    lines: string[];
+    lat: number;
+    lon: number;
+    walk_m: number;
+    walk_min: number;
+  }[];
   appraisal?: {
     points: { label: string; text: string }[];
     firm: string | null;

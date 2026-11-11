@@ -115,6 +115,11 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
           </span>
         </div>
         <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
+        {c.station && (
+          <div className="fs-xs c-muted mt-4 ellipsis">
+            {copy.walk.card(c.station.name, c.station.walk_min)}
+          </div>
+        )}
         {why && <div className="fs-xs fw-6 mt-6">{why}</div>}
         {!why && !onbid && c.below_appraisal_krw > 0 && (
           <div className="fs-xs fw-6 mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>

@@ -15,6 +15,7 @@ from typing import Any
 
 from aucs_rules.pick import _won_short, assumes_debt, expected_price, overvalued
 from aucs_rules.result import RuleResult, Status
+from aucs_rules.walk import walk_estimate
 
 RULE_ID = "COLLECT-01"
 KEYS = ("cheap", "safe", "rising", "next", "station", "special")
@@ -81,7 +82,8 @@ def collect(x: CollectInput) -> RuleResult:
 
     if x.station and x.station[1] <= STATION_M and not fatal:
         name, m = x.station
-        out["station"] = {"reason": f"{_station_name(name)} {m}m", "sort": -m}
+        walk = walk_estimate(m).value or {}  # 11/12: 직선 m 대신 도보 어림(WALK-01)
+        out["station"] = {"reason": f"{_station_name(name)} 도보 약 {walk.get('walk_min', '-')}분", "sort": -m}
 
     hard = [s for s in live if s.get("level") in ("fatal", "high")]
     if hard or x.is_share or x.is_special:

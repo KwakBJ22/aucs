@@ -7,7 +7,7 @@ import { won } from "@/lib/format";
 import { BuildingRows, ComplexBlock } from "@/components/item/building";
 import { CheckBody } from "@/components/item/checklist";
 import { AppraisalPoints, OriginalLink } from "@/components/item/appraisal";
-import { ItemMap } from "@/components/item/item-map";
+import { ItemMap, Stations } from "@/components/item/item-map";
 import { FailMobile } from "@/components/item/failure";
 import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { t } from "@/components/item/shared";
@@ -62,6 +62,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
       <>
         <Row label="주소" value={b.address ?? "-"} />
         <ItemMap lat={d.lat} lon={d.lon} address={b.address ?? d.address} />
+        <Stations d={d} />
         {b.area_m2 && (
           <Row
             label="면적"

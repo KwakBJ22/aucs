@@ -67,6 +67,14 @@ export const copy = {
     failed: "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요",
   },
   map: { label: "물건 위치 지도", openNaver: "네이버 지도에서 보기" },
+  // 역까지 걸어서(11/12 — 어림이라 「약」, 정확한 길은 네이버 지도 앱)
+  walk: {
+    title: "가까운 역",
+    line: (min: number, m: number) => `도보 약 ${min}분 · 약 ${m.toLocaleString("ko-KR")}m`,
+    card: (name: string, min: number) => `${name} 도보 약 ${min}분`,
+    route: "네이버 지도로 길찾기",
+    note: "직선거리로 어림한 값이에요 · 실제 길은 네이버 지도로 확인하세요",
+  },
   // 지도 분석(11/12)
   mapView: {
     title: "지도 분석",
