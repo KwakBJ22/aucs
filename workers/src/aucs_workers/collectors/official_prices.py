@@ -27,7 +27,7 @@ from aucs_workers.jobs.runlog import run
 
 BASE = "https://api.vworld.kr/ned/data"
 OPS = {"apt": "getApartHousingPriceAttr", "house": "getIndvdHousingPriceAttr", "land": "getIndvdLandPriceAttr"}
-GAP = 0.25
+GAP = 0.1
 ROWS = 1000
 APT = re.compile(r"(아파트|연립|다세대|빌라|공동주택)")
 HOUSE = re.compile(r"(단독|다가구|근린주택|주택)")
@@ -125,7 +125,9 @@ def main() -> None:
     this_year = date.today().year
     with connect() as conn, run(conn, "official_prices", "공시가격") as job:
         rows = conn.execute(TARGETS_SQL, (1 if a.probe else a.cap,)).fetchall()
+        rows.sort(key=lambda r: (r[1], r[2]))  # 같은 필지끼리 붙여 한 번 받은 것을 바로 다시 씀(관심·날짜 순은 cap 안에서만)
         print(f"[시작] 물건 {len(rows):,}건")
+        cache: dict[tuple[str, str], dict[str, Any]] = {}  # 같은 필지(한 단지 여러 집)는 한 번만 묻기
         with httpx.Client(timeout=30, headers={"Accept": "application/json"}) as client:
             for i, (item_id, code, lot, usage, address) in enumerate(rows, 1):
                 pnu = pnu_of(code, lot)
@@ -133,9 +135,12 @@ def main() -> None:
                     continue
                 for kind in kinds_for(usage):
                     try:
-                        got = fetch(client, key, domain, kind, pnu, this_year)
-                        if not got["items"]:  # 올해 공시 전이거나 없음 → 지난해
-                            got = fetch(client, key, domain, kind, pnu, this_year - 1)
+                        got = cache.get((kind, pnu))
+                        if got is None:
+                            got = fetch(client, key, domain, kind, pnu, this_year)
+                            if not got["items"]:  # 올해 공시 전이거나 없음 → 지난해
+                                got = fetch(client, key, domain, kind, pnu, this_year - 1)
+                            cache[(kind, pnu)] = got
                     except ApiError as e:
                         print(f"\n[멈춤] {kind} {pnu}: {e}\n  키·서비스(국가중점데이터)·하루 한도를 확인하세요. 받은 데까지 저장했어요.")
                         conn.commit()
