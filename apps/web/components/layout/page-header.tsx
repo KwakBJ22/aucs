@@ -23,8 +23,8 @@ export function PageHeader({
     !back && !path.startsWith("/more") ? (
       <Link href="/more" aria-label="내 정보" className="icon-btn m-only d-flex jc-end">
         <svg
-          width="22"
-          height="22"
+          width="26"
+          height="26"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -63,7 +63,7 @@ export function PageHeader({
         {title ? <h1 className="brand">{title}</h1> : null}
         <span className="f-1" />
         {right || menu ? (
-          <span className="d-flex ai-center gap-8">
+          <span className={`d-flex ai-center ${menu ? "tb-tools" : "gap-8"}`}>
             {right}
             {menu}
           </span>

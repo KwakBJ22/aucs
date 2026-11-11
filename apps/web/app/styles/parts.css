@@ -768,6 +768,14 @@ button:disabled,
   font-size: var(--fs-base);
 }
 
+/* 머리 오른쪽 끝 단추 묶음(종 · 내 정보, 11/12 대표님): 앞 단추를 종 크기(22)만큼 오른쪽으로 붙임 */
+.tb-tools {
+  gap: 0;
+}
+.tb-tools > :not(:last-child) {
+  margin-right: -22px;
+}
+
 /* 크게 고르는 카드(시작 화면 「무엇을 하려고」) — 고르는 칩과 같은 규칙, 모양만 카드 */
 .choice {
   display: flex;
