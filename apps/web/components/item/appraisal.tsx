@@ -74,6 +74,8 @@ export function OriginalLink({
 }) {
   const [copied, setCopied] = useState(false);
   const c = t.appraisal;
+  // 「2024타경12345」 → 연도 2024 · 번호 12345 (법원 화면은 법원·연도를 따로 고름)
+  const [year = "", num = caseNo] = caseNo.split("타경");
   const cls = compact ? "btn soft sm" : "btn soft mt-10";
   if (pdf)
     return (
@@ -89,7 +91,7 @@ export function OriginalLink({
         target="_blank"
         rel="noreferrer"
         onClick={() => {
-          navigator.clipboard?.writeText(caseNo).then(
+          navigator.clipboard?.writeText(num).then(
             () => setCopied(true),
             () => setCopied(false),
           );
@@ -99,7 +101,7 @@ export function OriginalLink({
       </a>
       {(!compact || copied) && (
         <p className={`sub fs-sm ${compact ? "w-full m-0" : "mt-6"}`}>
-          {copied ? c.copied(caseNo) : c.courtHint(court, caseNo)}
+          {copied ? c.copied(court, year, num) : c.courtHint(court, year, num)}
         </p>
       )}
       {earn && (

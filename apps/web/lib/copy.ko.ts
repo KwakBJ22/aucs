@@ -1029,9 +1029,11 @@ export const copy = {
       original: "감정평가서 원본 보기",
       short: "감정평가서",
       court: "법원에서 감정평가서 보기",
-      courtHint: (court: string, no: string) =>
-        `누르면 사건번호가 복사돼요 · 법원 화면에서 ${court} ${no} 를 찾아 「감정평가서」를 누르세요`,
-      copied: (no: string) => `${no} 복사했어요 · 법원 화면 사건번호 칸에 붙여 넣으세요`,
+      // 법원 사건검색은 법원·연도를 따로 고르고 「타경」 뒤 숫자만 넣음(11/12 대표님)
+      courtHint: (court: string, year: string, num: string) =>
+        `누르면 번호 ${num} 이 복사돼요 · 법원 화면에서 ${court} · ${year}년을 고르고 붙여 넣은 뒤 「감정평가서」를 누르세요`,
+      copied: (court: string, year: string, num: string) =>
+        `${num} 복사했어요 · ${court} · ${year}년을 고르고 사건번호 칸에 붙여 넣으세요`,
     },
     bldg: {
       built: "건물 나이",

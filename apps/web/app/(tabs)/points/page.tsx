@@ -20,7 +20,11 @@ import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
 
 const t = copy.points;
-const IROS = "https://www.iros.go.kr";
+// 휴대폰은 처음부터 모바일 인터넷등기소로(PC 주소로 가면 「모바일 화면으로 이동」 창이 한 번 더 뜸, 11/12)
+const iros = () =>
+  /iphone|ipad|ipod|android/i.test(navigator.userAgent)
+    ? "https://m.iros.go.kr/index.jsp"
+    : "https://www.iros.go.kr/index.jsp";
 const KINDS: DocKind[] = ["registry", "appraisal"];
 
 const dDay = (iso: string | null) =>
@@ -202,10 +206,13 @@ export default function PointsPage() {
                     {/* 인터넷등기소는 열람 화면으로 바로 가는 주소가 없음(첫 화면 검색칸이 열람 입구) → 주소를 복사해 감 */}
                     <a
                       className="btn soft mt-10"
-                      href={IROS}
+                      href="https://www.iros.go.kr/index.jsp"
                       target="_blank"
                       rel="noreferrer"
-                      onClick={() => r.address && void navigator.clipboard?.writeText(r.address)}
+                      onClick={(e) => {
+                        e.currentTarget.href = iros();
+                        if (r.address) void navigator.clipboard?.writeText(r.address);
+                      }}
                     >
                       {t.getRegistry}
                     </a>
