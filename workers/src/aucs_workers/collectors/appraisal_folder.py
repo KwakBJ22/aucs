@@ -3,6 +3,7 @@
 폴더의 PDF 를 읽어 회사 이름 · 쪽수 · 앞부분 글 · 요항표를 남깁니다(kapa_pdf 와 같은 꼴, PDF 자체는 저장하지 않음).
 어느 사건인지는 ① 글 속 사건번호(「2025타경56683」) ② 파일 이름 = 감정서 번호(법원 감정평가서 정보) 순으로 찾습니다.
 법원 · KAPA 에 접속하지 않습니다. 같은 파일(이름만 다른 복사본)은 한 번만.
+11/11 대표님: 원본 PDF 를 손님이 열어 보게 Storage(appraisal-pdfs)에 올리고 core.appraisal_files 에 적음(이미 올린 사건은 건너뜀).
 
     cd D:\\Auction\\auction-platform\\workers
     uv run python -m aucs_workers.collectors.appraisal_folder D:\\Auction\\감정평가서
@@ -22,6 +23,32 @@ from aucs_workers.collectors.parse import checksum
 from aucs_workers.db import connect
 from aucs_workers.extract.appraisal_pdf import case_numbers, read_pdf
 from aucs_workers.jobs.runlog import run
+from aucs_workers.photos import client, safe_name
+
+BUCKET = "appraisal-pdfs"
+
+
+def upload(conn: psycopg.Connection, case_id: str, data: dict[str, Any], raw: bytes) -> bool:
+    """원본 PDF 를 Storage 에 올리고 core.appraisal_files 에 적음. 이미 있으면 건너뜀. 올렸으면 True."""
+    if conn.execute("select 1 from core.appraisal_files where case_id = %s", (case_id,)).fetchone():
+        return False
+    c = client()
+    if not c:
+        print("   [원본] .env 의 SUPABASE_URL·SUPABASE_SECRET_KEY 가 비어 원본을 올리지 못함")
+        return False
+    path = f"{safe_name(case_id)}.pdf"
+    r = c.post(f"/object/{BUCKET}/{path}", content=raw,
+               headers={"Content-Type": "application/pdf", "x-upsert": "true"})  # fmt: skip
+    if r.status_code >= 300:
+        print(f"   [원본] {case_id} 올리기 실패 {r.status_code}")
+        return False
+    conn.execute(
+        """insert into core.appraisal_files (case_id, appraisal_no, path, firm, pages, bytes)
+           values (%s,%s,%s,%s,%s,%s) on conflict (case_id) do nothing""",
+        (case_id, data.get("no"), path, data.get("firm"), data.get("pages"), len(raw)),
+    )
+    conn.commit()
+    return True
 
 
 def appraisal_no(path: Path) -> str:
@@ -43,6 +70,12 @@ def find_case(conn: psycopg.Connection, data: dict[str, Any], no: str, court: st
            where doc_kind = 'appraisal' and payload -> 'info' ->> 'aeeWevlNo' = %s""",
         (no,),
     ).fetchall()
+    if not rows:  # 그림 PDF 처럼 글이 없으면 — 전에 이 파일 이름으로 넣어 둔 사건(11/11 손으로 맞춘 것 포함)
+        rows = conn.execute(
+            """select distinct case_id from raw.court_doc_raw
+               where doc_kind = 'appraisal_pdf' and payload ->> 'no' = %s""",
+            (no,),
+        ).fetchall()
     return [r[0] for r in rows]
 
 
@@ -75,9 +108,11 @@ def main() -> None:
                 (cases[0], Jsonb(data), checksum(data)),
             )
             conn.commit()
+            up = upload(conn, cases[0], data, raw)
             job.count += 1
             print(f"   {cases[0]} {data['firm'] or '회사 이름 못 찾음'} · {data['pages']}쪽 · 요항 {len(data['points'])}칸"
-                  + (" · 그림 PDF(글 없음)" if data["scanned"] else ""))  # fmt: skip
+                  + (" · 그림 PDF(글 없음)" if data["scanned"] else "")
+                  + (" · 원본 올림" if up else ""))  # fmt: skip
     print(f"끝: {job.count}건" + (f" · 못 넣은 것 {len(miss)}건" if miss else ""))
     for m in miss:
         print(f"   - {m}")

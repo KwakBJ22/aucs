@@ -956,9 +956,11 @@ export const copy = {
       landRightV: (m: string, all: string) => `${m}㎡ (땅 전체 ${all}㎡ 가운데)`,
       extras: "제시외 건물",
       extrasV: (n: number, v: string | null) => (v ? `${n}개 · ${v}` : `${n}개`),
-      original: "감정평가서 원본 보기 (법원)",
-      originalHint: (court: string, no: string) =>
-        `법원 화면에서 ${court} ${no} 를 찾아 「감정평가서」를 누르세요`,
+      original: "감정평가서 원본 보기",
+      court: "법원에서 감정평가서 보기",
+      courtHint: (court: string, no: string) =>
+        `누르면 사건번호가 복사돼요 · 법원 화면에서 ${court} ${no} 를 찾아 「감정평가서」를 누르세요`,
+      copied: (no: string) => `${no} 복사했어요 · 법원 화면 사건번호 칸에 붙여 넣으세요`,
     },
     bldg: {
       built: "건물 나이",

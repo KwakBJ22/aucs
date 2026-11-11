@@ -257,6 +257,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                     and doc_kind in ('appraisal', 'appraisal_pdf') order by doc_kind, fetched_at desc""",
                 (item_id,),
             )
+            q_file = c.execute(
+                f"select path from core.appraisal_files where case_id = {_CASE}", (item_id,)
+            )
             q_docs = c.execute(
                 f"select doc_kind, max(fetched_at) as t from raw.court_doc_raw where case_id = {_CASE} group by 1",
                 (item_id,),
@@ -287,6 +290,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         tenants = q_tenants.fetchall()
         sp = q_spec.fetchone()
         apr = {x["doc_kind"]: x["payload"] or {} for x in q_apr.fetchall()}
+        pdf = q_file.fetchone()
         doc_times = {x["doc_kind"]: x["t"] for x in q_docs.fetchall()}
         hol = [x["holiday_date"] for x in q_hol.fetchall()]
         trades = q_trades.fetchall()
@@ -316,12 +320,23 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
-    out["appraisal"] = appraisal_section(sp["payload"] if sp else None, apr)
+    out["appraisal"] = appraisal_section(
+        sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)
+    )
     return out
 
 
+def pdf_url(path: str | None) -> str | None:
+    """감정평가서 원본 저장소 경로 → 공개 주소(11/11 대표님 — 원본 그대로 보임)."""
+    if not path or not settings.SUPABASE_URL:
+        return None
+    return f"{settings.SUPABASE_URL}/storage/v1/object/public/appraisal-pdfs/{path}"
+
+
 def appraisal_section(
-    payload: dict[str, Any] | None, apr: dict[str, dict[str, Any]] | None = None
+    payload: dict[str, Any] | None,
+    apr: dict[str, dict[str, Any]] | None = None,
+    pdf: str | None = None,
 ) -> dict[str, Any] | None:
     """「감정평가 요점」 칸(11/4 대표님 — 개인정보 가리고 쓰기 허락, 평가사 이름을 곁에 붙임).
 
@@ -338,9 +353,15 @@ def appraisal_section(
     parts = appraisal_parts(
         dr.get("gdsDspslObjctLst"), dr.get("gdsNotSugtBldLsstAll"), dr.get("rgltLandLstAll")
     ).value
-    if not points and not price_date and not parts:
+    if not points and not price_date and not parts and not pdf:
         return None
-    return {"points": points, "firm": firm, "price_date": price_date, "parts": parts or None}
+    return {
+        "points": points,
+        "firm": firm,
+        "price_date": price_date,
+        "parts": parts or None,
+        "pdf_url": pdf,  # 원본이 있으면 바로 열고, 없으면 화면이 법원으로 안내(11/11)
+    }
 
 
 def photos(item_id: str) -> list[str]:

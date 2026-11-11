@@ -49,11 +49,48 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <a className="btn soft mt-10" href={COURT_CASE_PAGE} target="_blank" rel="noreferrer">
+      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} />
+    </div>
+  );
+}
+
+// 감정평가서 원본(11/11 대표님): 받아 둔 원본이 있으면 바로 열고, 없으면 사건번호를 복사해 법원 사건검색 화면으로
+// (법원 사이트에는 물건별 감정평가서 창으로 바로 가는 주소가 없음)
+export function OriginalLink({
+  pdf,
+  court,
+  caseNo,
+}: {
+  pdf?: string | null;
+  court: string;
+  caseNo: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const c = t.appraisal;
+  if (pdf)
+    return (
+      <a className="btn soft mt-10" href={pdf} target="_blank" rel="noreferrer">
         {c.original}
       </a>
-      <p className="sub fs-sm mt-6">{c.originalHint(court, caseNo)}</p>
-    </div>
+    );
+  return (
+    <>
+      <a
+        className="btn soft mt-10"
+        href={COURT_CASE_PAGE}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => {
+          navigator.clipboard?.writeText(caseNo).then(
+            () => setCopied(true),
+            () => setCopied(false),
+          );
+        }}
+      >
+        {c.court}
+      </a>
+      <p className="sub fs-sm mt-6">{copied ? c.copied(caseNo) : c.courtHint(court, caseNo)}</p>
+    </>
   );
 }
 

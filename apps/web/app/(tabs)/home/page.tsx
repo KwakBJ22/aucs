@@ -25,6 +25,7 @@ import { useIsPc } from "@/lib/use-pc";
 import { useSession } from "@/lib/auth";
 import { subscribePush } from "@/lib/push";
 import { track } from "@/lib/track";
+import { CollectionIcon } from "@/components/collection-icon";
 
 const t = copy.home;
 
@@ -269,6 +270,7 @@ export default function Home() {
       <div className="col-chips quiet-scroll">
         {copy.collections.list.map(([k, name, hint]) => (
           <Link key={k} href={`/collections?key=${k}`} className="col-chip c-inherit">
+            <CollectionIcon k={k} />
             <b>{name}</b>
             <span>{hint}</span>
           </Link>

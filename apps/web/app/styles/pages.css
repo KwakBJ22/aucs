@@ -1310,6 +1310,21 @@ textarea.adm-input {
 .col-chip b {
   font-size: var(--fs-md);
 }
+/* 모음 그림(11/11) — 연한 판 위 파란 선 그림, 고른 칩에서는 흰 판 */
+.col-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.col-chip.on .col-ico {
+  background: var(--surface);
+}
 .col-chip span {
   font-size: var(--fs-sm);
   color: var(--muted);
@@ -1335,8 +1350,8 @@ a.col-chip b::after {
 @media (min-width: 1024px) {
   .col-chips {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr)); /* PC 는 가로 3 · 세로 2 (11/11 대표님) */
+    gap: 12px;
     margin: 20px 0 0;
     padding: 0;
     overflow: visible;

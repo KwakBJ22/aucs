@@ -4,6 +4,7 @@ import { useFresh } from "@/lib/api/fresh";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { CollectionIcon } from "@/components/collection-icon";
 import { ItemCard } from "@/components/item-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
@@ -86,6 +87,7 @@ function CollectionsView() {
               className={`col-chip${k === key ? " on" : ""}`}
               onClick={() => go(k, all)}
             >
+              <CollectionIcon k={k} />
               <b>{name}</b>
               <span className="num">{sum ? t.count(sum[k]?.total ?? 0) : "·"}</span>
             </button>
