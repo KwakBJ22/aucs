@@ -468,6 +468,7 @@ export const copy = {
   needLogin: {
     title: "로그인이 필요해요",
     body: "관심 물건과 내 경매 기록은 로그인하면 저장돼요.",
+    item: "물건 상세는 로그인하면 볼 수 있어요 · 정식 오픈 전까지 무료예요",
   },
   more: {
     title: "내 정보",

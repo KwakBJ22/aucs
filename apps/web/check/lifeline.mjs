@@ -18,7 +18,10 @@ try {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const BASE = (process.argv[2] ?? process.env.LIFELINE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const BASE = (process.argv[2] ?? process.env.LIFELINE_URL ?? "http://localhost:3000").replace(
+  /\/$/,
+  "",
+);
 const REF = process.env.LIFELINE_REF ?? "ewwdcrtlsdjyvqfqzznv";
 const FAILED = path.join(here, "failed");
 const ITEM = JSON.parse(readFileSync(path.join(here, "fixtures", "item.json"), "utf8"));
@@ -45,7 +48,10 @@ const JWT = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({
   aud: "authenticated",
   role: "authenticated",
   aal: "aal2",
-  amr: [{ method: "otp", timestamp: now }, { method: "totp", timestamp: now }],
+  amr: [
+    { method: "otp", timestamp: now },
+    { method: "totp", timestamp: now },
+  ],
   session_id: "lifeline",
   iat: now,
   exp: now + 3600,
@@ -62,7 +68,14 @@ const SESSION = {
 // ── 가짜 서버 답 ──
 const BILLING = {
   current: [
-    { plan: "personal", until: "2027-11-01", auto_renew: false, period: "year", amount_krw: 290000, item_id: null },
+    {
+      plan: "personal",
+      until: "2027-11-01",
+      auto_renew: false,
+      period: "year",
+      amount_krw: 290000,
+      item_id: null,
+    },
   ],
   payments: [
     {
@@ -136,17 +149,30 @@ async function wire(ctx, hit) {
     };
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
     const supa = u.hostname.endsWith("supabase.co");
-    const body = supa ? supaAnswer(req.method(), u.pathname, hit) : apiAnswer(req.method(), u.pathname, hit);
+    const body = supa
+      ? supaAnswer(req.method(), u.pathname, hit)
+      : apiAnswer(req.method(), u.pathname, hit);
     if (body === undefined)
-      return route.fulfill({ status: 404, headers: cors, contentType: "application/json", body: '{"detail":"lifeline"}' });
-    return route.fulfill({ status: 200, headers: cors, contentType: "application/json", body: JSON.stringify(body) });
+      return route.fulfill({
+        status: 404,
+        headers: cors,
+        contentType: "application/json",
+        body: '{"detail":"lifeline"}',
+      });
+    return route.fulfill({
+      status: 200,
+      headers: cors,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
   });
 }
 
 // ── 길 6개 ──
 const phone = { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true };
 const pc = { viewport: { width: 1440, height: 900 } };
-const seen = (page, text) => page.getByText(text, { exact: false }).first().waitFor({ state: "visible", timeout: STEP });
+const seen = (page, text) =>
+  page.getByText(text, { exact: false }).first().waitFor({ state: "visible", timeout: STEP });
 
 const PATHS = [
   {
@@ -202,7 +228,7 @@ const PATHS = [
   {
     name: "물건 상세 열기",
     dev: phone,
-    login: false,
+    login: true, // 11/12 대표님: 물건 상세는 로그인한 분만
     run: async (page) => {
       await page.goto(`${BASE}/item/${encodeURIComponent(ITEM.item_id)}`);
       await seen(page, ITEM.verdict);
@@ -236,7 +262,10 @@ try {
   browser = await chromium.launch();
 }
 const headers = process.env.LIFELINE_BYPASS
-  ? { "x-vercel-protection-bypass": process.env.LIFELINE_BYPASS, "x-vercel-set-bypass-cookie": "true" }
+  ? {
+      "x-vercel-protection-bypass": process.env.LIFELINE_BYPASS,
+      "x-vercel-set-bypass-cookie": "true",
+    }
   : undefined;
 
 const fails = [];

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { copy } from "@/lib/copy.ko";
 
-export function NeedLogin({ title }: { title: string }) {
+export function NeedLogin({ title, body }: { title: string; body?: string }) {
   const here = usePathname(); // 로그인 뒤 이 화면으로 돌아옴
   return (
     <main className="page">
@@ -13,7 +13,7 @@ export function NeedLogin({ title }: { title: string }) {
       </div>
       <section className="section ta-center py-32 px-18">
         <h2>{copy.needLogin.title}</h2>
-        <p className="sub mt-8 mb-20 mx-0">{copy.needLogin.body}</p>
+        <p className="sub mt-8 mb-20 mx-0">{body ?? copy.needLogin.body}</p>
         <Link href={`/login?next=${encodeURIComponent(here)}`} className="btn kakao">
           {copy.home.kakao}
         </Link>
