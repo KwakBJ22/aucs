@@ -4,7 +4,7 @@ from aucs_rules.points import points_for
 
 T = {
     "registry": 1000,
-    "appraisal": 500,
+    "appraisal": 300,
     "daily_max": {"registry": 5, "appraisal": 5},
     "registry_fresh_days": 30,
 }
@@ -23,7 +23,7 @@ def _p(kind: str, **kw: object) -> dict[str, object]:
 
 def test_points_rules() -> None:
     assert _p("registry") == {"points": 1000, "why": "first"}
-    assert _p("appraisal") == {"points": 500, "why": "first"}
+    assert _p("appraisal") == {"points": 300, "why": "first"}
     assert _p("registry", matched=False)["points"] == 0
     assert _p("registry", today_count=5) == {"points": 0, "why": "limit"}
     assert _p("appraisal", paid_before=True, days_since_last_paid=400)["why"] == "already"

@@ -416,7 +416,7 @@ export const copy = {
       no_item: "없는 물건이에요",
     } as Record<string, string | ((p: string) => string)>,
     shared: "다른 회원이 올린 등기부예요",
-    earn: "감정평가서를 올리면 500P",
+    earn: "감정평가서를 올리면 300P",
   },
   needLogin: {
     title: "로그인이 필요해요",
