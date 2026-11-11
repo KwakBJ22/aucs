@@ -341,14 +341,14 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
 
 def walk_stations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """가까운 역 두 곳 — 같은 역 이름(환승역 노선 여럿)은 하나로 묶어 노선을 합침(WALK-01 어림)."""
-    from aucs_rules.walk import walk_estimate
+    from aucs_rules.walk import station_name, walk_estimate
 
     by: dict[str, dict[str, Any]] = {}
     for r in rows:
         x = by.setdefault(
             r["name"],
             {
-                "name": r["name"],
+                "name": station_name(r["name"]),
                 "lines": [],
                 "straight_m": r["straight_m"],
                 "lat": r["lat"],

@@ -22,3 +22,8 @@ def walk_estimate(straight_m: int | float | None) -> RuleResult:
     value = {"walk_m": int(round(walk, -1)), "walk_min": max(1, math.ceil(walk / M_PER_MIN))}
     ev = [{"straight_m": straight_m, "detour": DETOUR, "m_per_min": M_PER_MIN}]
     return RuleResult(value, Status.ESTIMATED, RULE_ID, ev)
+
+
+def station_name(name: str) -> str:
+    """역 기준표 이름(「오리」) → 손님이 부르는 이름(「오리역」). 이미 「역」으로 끝나면 그대로(11/12 대표님)."""
+    return name if name.endswith("역") else f"{name}역"

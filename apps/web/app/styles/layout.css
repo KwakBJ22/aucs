@@ -56,7 +56,10 @@
     --head-h: 112px;
   }
   .app-shell {
-    --pc-side: max(24px, calc((100% - var(--wrap)) / 2 + 24px));
+    --pc-side: max(
+      24px,
+      calc((100% - var(--wrap)) / 2)
+    ); /* 본문 글줄(가운데 1200px)과 같은 선(11/12 — 24px 어긋났음) */
   }
   .shell .page {
     max-width: calc(var(--wrap) + 48px);

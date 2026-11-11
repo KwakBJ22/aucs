@@ -1580,7 +1580,7 @@ a.col-chip span {
 .mv-map {
   width: 100%;
   height: 60vh;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-map);
   border-radius: var(--r-panel);
   overflow: hidden;
   background: var(--panel);

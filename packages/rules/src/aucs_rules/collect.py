@@ -15,7 +15,7 @@ from typing import Any
 
 from aucs_rules.pick import _won_short, assumes_debt, expected_price, overvalued
 from aucs_rules.result import RuleResult, Status
-from aucs_rules.walk import walk_estimate
+from aucs_rules.walk import station_name, walk_estimate
 
 RULE_ID = "COLLECT-01"
 KEYS = ("cheap", "safe", "rising", "next", "station", "special")
@@ -31,10 +31,6 @@ class CollectInput:
     analysis: dict[str, Any]
     station: tuple[str, int] | None = None  # (역 이름, 직선 거리 m)
     failed_count: int | None = None
-
-
-def _station_name(name: str) -> str:
-    return name if name.endswith("역") else f"{name}역"
 
 
 def collect(x: CollectInput) -> RuleResult:
@@ -83,7 +79,7 @@ def collect(x: CollectInput) -> RuleResult:
     if x.station and x.station[1] <= STATION_M and not fatal:
         name, m = x.station
         walk = walk_estimate(m).value or {}  # 11/12: 직선 m 대신 도보 어림(WALK-01)
-        out["station"] = {"reason": f"{_station_name(name)} 도보 약 {walk.get('walk_min', '-')}분", "sort": -m}
+        out["station"] = {"reason": f"{station_name(name)} 도보 약 {walk.get('walk_min', '-')}분", "sort": -m}
 
     hard = [s for s in live if s.get("level") in ("fatal", "high")]
     if hard or x.is_share or x.is_special:

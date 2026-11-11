@@ -52,12 +52,12 @@ def near_station(
     name: str | None, line: str | None, straight_m: int | None
 ) -> dict[str, Any] | None:
     """역 이름 · 직선거리 → 「○○역 도보 약 N분」 재료(WALK-01). 걸어서 15분 넘으면 None."""
-    from aucs_rules.walk import NEAR_MIN, walk_estimate
+    from aucs_rules.walk import NEAR_MIN, station_name, walk_estimate
 
     w = walk_estimate(straight_m).value if name else None
-    if not w or w["walk_min"] > NEAR_MIN:
+    if not name or not w or w["walk_min"] > NEAR_MIN:
         return None
-    return {"name": name, "line": line, "straight_m": straight_m, **w}
+    return {"name": station_name(name), "line": line, "straight_m": straight_m, **w}
 
 
 def card(r: dict[str, Any], today: date) -> dict[str, Any]:

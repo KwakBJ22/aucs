@@ -7,6 +7,7 @@
   --muted: #4e5968;
   --faint: #6b7684;
   --line: #e5e8eb;
+  --line-map: #d1d6db; /* 지도 테두리 — 지도 그림이 옅어 --line 은 안 보임(11/12) */
   --blue: #3182f6;
   --blue-soft: #e8f3ff;
   --blue-text: #1b64da;
