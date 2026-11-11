@@ -84,7 +84,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         {d.appraisal ? (
           <AppraisalPoints a={d.appraisal} court={d.court} caseNo={d.case_no} />
         ) : (
-          <OriginalLink court={d.court} caseNo={d.case_no} />
+          <OriginalLink court={d.court} caseNo={d.case_no} earn />
         )}
       </>
     );

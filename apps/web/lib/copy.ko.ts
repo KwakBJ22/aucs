@@ -380,6 +380,44 @@ export const copy = {
       sig: "신호",
     },
   },
+  // 포인트 벌기(11/12, docs/design/11-points.md)
+  points: {
+    title: "포인트 벌기",
+    balance: "내 포인트",
+    use: "이용권 결제 때 1P = 1원 할인 · 받은 날부터 1년",
+    today: (reg: number, regMax: number, app: number, appMax: number) =>
+      `오늘 등기부 ${reg}/${regMax} · 감정평가서 ${app}/${appMax}`,
+    listTitle: "서류가 비어 있는 물건",
+    listSub: "매각일 가까운 순 · 채워지면 목록에서 빠져요",
+    empty: "지금은 비어 있는 물건이 없어요",
+    kind: { registry: "등기부", appraisal: "감정평가서" } as Record<
+      "registry" | "appraisal",
+      string
+    >,
+    pt: (n: number) => `${n.toLocaleString("ko-KR")}P`,
+    left: (m: number, s: number) => `${m}:${String(s).padStart(2, "0")} 동안 맡아 둘게요`,
+    more: "10분 더",
+    taken: "다른 분이 먼저 맡았어요",
+    getRegistry: "인터넷등기소에서 떼기",
+    registryHint: "주소로 찾아 열람(700원) 뒤 PDF로 저장해 올려 주세요",
+    upload: "PDF 올리기",
+    sending: "올리는 중…",
+    registrySent: "읽고 있어요 · 주소가 맞으면 포인트가 들어와요",
+    result: {
+      first: (p: string) => `${p} 받았어요`,
+      fresh: (p: string) => `새 등기부라 ${p} 받았어요`,
+      review: "글을 못 읽는 PDF라 확인 뒤 넣어 드려요",
+      mismatch: "이 물건 서류가 아닌 것 같아요",
+      limit: "오늘 받을 수 있는 건수를 다 채웠어요",
+      already: "이미 다른 분이 올린 서류예요",
+      same_file: "이미 올라온 파일이에요",
+      unreadable: "PDF를 읽지 못했어요",
+      no_file: "파일을 받지 못했어요 · 다시 올려 주세요",
+      no_item: "없는 물건이에요",
+    } as Record<string, string | ((p: string) => string)>,
+    shared: "다른 회원이 올린 등기부예요",
+    earn: "감정평가서를 올리면 500P",
+  },
   needLogin: {
     title: "로그인이 필요해요",
     body: "관심 물건과 내 경매 기록은 로그인하면 저장돼요.",
@@ -389,6 +427,7 @@ export const copy = {
     sub: "로그인하면 관심·알림·계산 저장을 쓸 수 있어요",
     items: [
       ["이용권 보기", "/plans"],
+      ["서류 올리고 포인트 받기", "/points"],
       ["낙찰가 성적표", "/pro/market"],
       ["경매 처음이세요? 쉬운 안내", "/guide"],
       ["공지·고객센터", "/help"],
@@ -1116,7 +1155,7 @@ export const copy = {
       ocrWait: "그림으로 된 등기부라 글자 읽기에 시간이 더 걸려요 · 이 화면을 닫아도 계속 읽어요",
       left: (n: number) => (n > 3 ? `약 ${n}초 남음` : "거의 다 됐어요"),
       steps: ["올리기", "글자 읽기", "권리 정리"],
-      hint: "인터넷등기소에서 받은 PDF 그대로 올리면 더 빠르고 정확해요",
+      hint: "인터넷등기소에서 받은 PDF 그대로 올려 주세요 · 이 물건에 처음 올리면 1,000P",
       fixTitle: "이 줄 고치기",
       failed: "등기부를 읽지 못했어요. 인터넷등기소에서 받은 PDF인지 확인해 주세요",
       baseLine: (name: string, d: string) =>
@@ -1598,6 +1637,12 @@ export const copy = {
       string
     >,
     reviewTabs: { reports: "제보", fields: "읽은 칸", signals: "위험 신호" },
+    points: {
+      title: (n: number) => `올라온 감정평가서 확인 ${n}건 (글 없는 PDF)`,
+      open: "원본 보기",
+      ok: "이 사건 맞음 · 넣기",
+      no: "아님",
+    },
     reportAction: { fixed: "고침", rejected: "안 고침" },
     fieldOk: "맞음",
     fieldNew: "고친 값",

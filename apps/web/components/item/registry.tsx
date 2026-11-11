@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { meApi, uploadRegistry, type RegistryUpload } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { parseTime, won } from "@/lib/format";
+import { copy } from "@/lib/copy.ko";
 import { useIsPc } from "@/lib/use-pc";
 import { t, JUDGE_COLOR, DocCtx } from "@/components/item/shared";
 
@@ -179,6 +180,12 @@ export function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["pay
   );
 }
 
+// 내가 올린 등기부의 포인트 결과 한 줄(11/12)
+function pointsLine(why: string, pts: number): string {
+  const x = copy.points.result[why];
+  return typeof x === "function" ? x(copy.points.pt(pts)) : (x ?? "");
+}
+
 export function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
@@ -223,6 +230,10 @@ export function RegistryBox() {
         <p className="fs-sm c-amber mt-0 mb-6 mx-0">{r.addrUnknown}</p>
       )}
       {u?.status === "failed" && <p className="c-amber fs-md">{r.failed}</p>}
+      {u?.mine === false && <p className="sub fs-sm mt-0 mb-6">{copy.points.shared}</p>}
+      {u?.points && (
+        <p className="sub fs-sm mt-0 mb-6">{pointsLine(u.points.why, u.points.points)}</p>
+      )}
       {lad && (
         <>
           <div className="fs-base fw-7">{lad.line}</div>

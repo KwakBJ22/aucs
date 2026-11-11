@@ -233,7 +233,27 @@ export type Screens = {
     audit: AuditRow[];
   };
 };
+export type PointReview = {
+  contrib_id: number;
+  item_id: string;
+  case_id: string;
+  created_at: string;
+};
+
+// 포인트 벌기 확인용 원본(잠긴 보관함이라 서버가 대신 받아 줌, 11/12) — 새 창에서 열 수 있게 파일 주소로
+export async function pointReviewPdf(token: string, id: number): Promise<string> {
+  const res = await fetch(`${apiBaseUrl}/admin/points/review/${id}/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new AdminError(res.status, `HTTP ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+
 export const adminApi = {
+  pointReviews: (t: string) => call<PointReview[]>(t, "/points/review"),
+  decidePoint: (t: string, id: number, ok: boolean) =>
+    call(t, `/points/review/${id}`, "PUT", { ok }),
   // 메뉴 한 화면 자료 한 번에(11/3 — 예전 메뉴마다 2~5번)
   screen: <K extends keyof Screens>(t: string, menu: K, days?: number) =>
     call<Screens[K]>(t, `/screen/${menu}${days ? `?days=${days}` : ""}`),

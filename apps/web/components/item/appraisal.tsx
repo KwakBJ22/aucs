@@ -1,16 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { AppraisalParts, ItemDetail } from "@/lib/api/items";
 import { Row } from "@/components/calc-box";
 import { won } from "@/lib/format";
 import { t } from "@/components/item/shared";
+import { copy } from "@/lib/copy.ko";
 
 // 법원 사건 검색 화면 — 감정평가서 원본은 손님이 법원에서 직접 열어 봄(11/7)
 const COURT_CASE_PAGE =
   "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml";
 
-// 감정평가 요점(11/4 대표님 — 개인정보 가리고 사용 허락, 평가사 이름을 곁에 붙임). 처음엔 세 칸만, 누르면 전부
+// 감정평가 요점(11/4 평가사 쪽 사용 허락 · 11/12 가리지 않음, 평가사 이름을 곁에 붙임). 처음엔 세 칸만, 누르면 전부
 export function AppraisalPoints({
   a,
   court,
@@ -49,7 +51,7 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} />
+      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} earn />
     </div>
   );
 }
@@ -61,11 +63,13 @@ export function OriginalLink({
   court,
   caseNo,
   compact = false,
+  earn = false,
 }: {
   pdf?: string | null;
   court: string;
   caseNo: string;
   compact?: boolean; // 머리 서류 줄에 놓는 작은 단추(11/11) — 안내 글 없이
+  earn?: boolean; // 원본이 없을 때 「올리면 500P」(포인트 벌기로, 11/12)
 }) {
   const [copied, setCopied] = useState(false);
   const c = t.appraisal;
@@ -96,6 +100,11 @@ export function OriginalLink({
         <p className={`sub fs-sm ${compact ? "w-full m-0" : "mt-6"}`}>
           {copied ? c.copied(caseNo) : c.courtHint(court, caseNo)}
         </p>
+      )}
+      {earn && (
+        <Link href="/points" className="link fs-sm mt-6 d-inline-block">
+          {copy.points.earn}
+        </Link>
       )}
     </>
   );

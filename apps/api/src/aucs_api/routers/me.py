@@ -1,7 +1,7 @@
 """내 자료 주소 (로그인 필요). 라우터는 서비스만 부릅니다."""
 
 from datetime import date
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import (
     APIRouter,
@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from aucs_api import settings
 from aucs_api.auth.user import current_user_id
-from aucs_api.services import admin_ops, billing, me, mock, registry
+from aucs_api.services import admin_ops, billing, me, mock, points, registry
 
 
 def not_limited(request: Request, authorization: str = Header(default="")) -> None:
@@ -401,6 +401,40 @@ def post_registry_from_storage(
     if not data.startswith(b"%PDF"):
         raise HTTPException(415, "PDF 파일만 올릴 수 있어요")
     return _registry_saved(uid, item_id, body.file_name, data, tasks)
+
+
+# 포인트 벌기(11/12, docs/design/11-points.md)
+@router.get("/points")
+def get_points(uid: Uid) -> dict[str, Any]:
+    return points.summary(uid)
+
+
+@router.get("/points/board")
+def get_points_board(uid: Uid) -> list[dict[str, Any]]:
+    return points.board(uid)
+
+
+@router.post("/points/hold/{item_id}/{kind}")
+def post_points_hold(
+    item_id: str,
+    kind: Literal["registry", "appraisal"],
+    uid: Uid,
+    extend: bool = Query(default=False),
+) -> dict[str, Any]:
+    r = points.hold(uid, item_id, kind, extend)
+    if r is None:
+        raise HTTPException(409, "다른 분이 먼저 맡았어요" if not extend else "더 늘릴 수 없어요")
+    return r
+
+
+class AppraisalIn(BaseModel):
+    path: str = Field(min_length=3, max_length=200)
+
+
+@router.post("/appraisals/{item_id}/from-storage")
+def post_appraisal_from_storage(item_id: str, uid: Uid, body: AppraisalIn) -> dict[str, Any]:
+    """화면이 보관함(appraisal-uploads/<회원>/…)에 바로 올린 감정평가서 — 맞으면 원본 보관 + 포인트."""
+    return points.save_appraisal(uid, item_id, body.path)
 
 
 @router.delete("/account")

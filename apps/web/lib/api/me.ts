@@ -119,6 +119,8 @@ export type RegistryUpload = {
   delete_after: string;
   ladder: Ladder | null;
   created_at?: string;
+  mine?: boolean; // false 면 다른 회원이 올려 공개된 등기부(11/12)
+  points?: { points: number; why: string } | null;
   choices?: Record<string, string[]>;
   address?: {
     result: "same" | "unit_differs" | "different" | "unknown";
@@ -168,6 +170,47 @@ export async function uploadRegistry(token: string, itemId: string, file: File):
     const j = (await res.json().catch(() => null)) as { detail?: string } | null;
     throw new Error(j?.detail ?? `HTTP ${res.status}`);
   }
+}
+
+// 포인트 벌기(11/12, docs/design/11-points.md)
+export type DocKind = "registry" | "appraisal";
+export type PointSummary = {
+  balance: number;
+  today: Record<DocKind, number>;
+  max: Partial<Record<DocKind, number>>;
+  points: Partial<Record<DocKind, number>>;
+  hold_minutes: number | null;
+};
+export type PointHold = { until: string | null; extended: boolean };
+export type PointRow = {
+  item_id: string;
+  court: string;
+  case_no: string;
+  sale_date: string | null;
+  place: string;
+  building: string | null;
+  need: Partial<Record<DocKind, PointHold>>;
+};
+export type PointResult = { ok?: boolean; points: number; why: string };
+
+// 감정평가서 PDF 올리기: 등기부와 같이 보관함(appraisal-uploads/<회원>/…)에 바로 → API 가 받아 사건번호를 맞춰 봄
+export async function uploadAppraisal(
+  token: string,
+  itemId: string,
+  file: File,
+): Promise<PointResult> {
+  const { supabase } = await import("@/lib/auth");
+  const uid = supabase ? (await supabase.auth.getSession()).data.session?.user.id : undefined;
+  if (!supabase || !uid) throw new Error("로그인이 필요해요");
+  const path = `${uid}/${crypto.randomUUID()}.pdf`;
+  const up = await supabase.storage
+    .from("appraisal-uploads")
+    .upload(path, file, { contentType: "application/pdf" });
+  if (up.error) throw new Error(up.error.message);
+  return call<PointResult>(token, `/appraisals/${encodeURIComponent(itemId)}/from-storage`, {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
 }
 
 // 로그인한 사람의 자료. 토큰은 Supabase 세션에서.
@@ -350,6 +393,12 @@ export const meApi = {
   saveProfile: (t: string, p: Record<string, unknown>) =>
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),
   bids: (t: string) => call<Bids>(t, "/bids"),
+  points: (t: string) => call<PointSummary>(t, "/points", { fresh: true }),
+  pointsBoard: (t: string) => call<PointRow[]>(t, "/points/board", { fresh: true }),
+  hold: (t: string, id: string, kind: DocKind, extend = false) =>
+    call<PointHold>(t, `/points/hold/${encodeURIComponent(id)}/${kind}?extend=${extend}`, {
+      method: "POST",
+    }),
   registry: (t: string, id: string) =>
     call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}`, { fresh: true }),
   acceptAddress: (t: string, id: string) =>

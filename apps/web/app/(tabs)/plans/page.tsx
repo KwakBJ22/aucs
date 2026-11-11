@@ -71,6 +71,12 @@ export default function Plans() {
           </section>
         ))}
       </div>
+      <Link href="/points" className="menu-row section">
+        <span>
+          <b>{copy.points.title}</b>
+          <span className="sub d-block">{copy.points.use}</span>
+        </span>
+      </Link>
       <section className="section">
         <h2>{t.refundTitle}</h2>
         {t.refund.map((x) => (

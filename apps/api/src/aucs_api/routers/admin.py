@@ -6,12 +6,12 @@
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
 from aucs_api.auth.admin import Admin, admin_login, require_admin, require_role
 from aucs_api.db import connect
-from aucs_api.services import admin, admin_ops, billing
+from aucs_api.services import admin, admin_ops, billing, points
 
 router = APIRouter(prefix="/admin")
 Any_ = Annotated[Admin, Depends(require_admin)]
@@ -262,6 +262,31 @@ class RefundDecideIn(BaseModel):
 def put_refund(a: Owner, request_id: int, body: RefundDecideIn) -> dict[str, bool]:
     if not billing.decide_refund(a.user_id, request_id, body.ok, body.amount_krw, body.answer):
         raise HTTPException(404, "없거나 이미 처리한 요청")
+    return {"ok": True}
+
+
+# 5-2 포인트 벌기: 글 없는 그림 감정평가서 확인(11/12)
+@router.get("/points/review")
+def get_points_review(_: Any_) -> list[dict[str, Any]]:
+    return points.review_list()
+
+
+@router.get("/points/review/{contrib_id}/pdf")
+def get_points_review_pdf(_: Any_, contrib_id: int) -> Response:
+    data = points.review_pdf(contrib_id)
+    if data is None:
+        raise HTTPException(404, "원본이 없어요")
+    return Response(data, media_type="application/pdf")
+
+
+class PointsDecideIn(BaseModel):
+    ok: bool
+
+
+@router.put("/points/review/{contrib_id}")
+def put_points_review(_: Op, contrib_id: int, body: PointsDecideIn) -> dict[str, bool]:
+    if not points.review_decide(contrib_id, body.ok):
+        raise HTTPException(404, "없거나 이미 처리했어요")
     return {"ok": True}
 
 

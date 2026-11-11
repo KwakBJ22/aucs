@@ -6,6 +6,7 @@ import { AdminProvider } from "@/components/admin/ctx";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
 import { NoticesView } from "@/components/admin/notices";
+import { PointsReview } from "@/components/admin/points-review";
 import { ReviewView } from "@/components/admin/review";
 import { SettingsView } from "@/components/admin/settings";
 import { StatsView } from "@/components/admin/stats";
@@ -37,7 +38,12 @@ export default function AdminPage() {
               <h1 className="adm-h1">{t.menu[m]}</h1>
               {m === "today" && <TodayView go={go} />}
               {m === "jobs" && <JobsView />}
-              {m === "review" && <ReviewView />}
+              {m === "review" && (
+                <>
+                  <PointsReview />
+                  <ReviewView />
+                </>
+              )}
               {m === "members" && <MembersView />}
               {m === "notices" && <NoticesView />}
               {m === "stats" && <StatsView />}

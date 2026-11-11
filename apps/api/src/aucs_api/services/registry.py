@@ -253,6 +253,9 @@ def parse_upload(upload_id: int, ocr: bool = True) -> None:
                    where upload_id=%s""",
                 (meta.get("method"), Jsonb(data), meta.get("소재지"), upload_id),
             )
+        from aucs_api.services.points import settle_registry
+
+        settle_registry(upload_id)  # 주소가 맞으면 모두에게 공개 + 포인트(11/12)
     except Exception as e:  # noqa: BLE001 — 어떤 오류든 손님에게는 「못 읽었어요」로
         with connect() as c:
             c.execute(
@@ -262,16 +265,23 @@ def parse_upload(upload_id: int, ocr: bool = True) -> None:
 
 
 def latest(uid: str, item_id: str) -> dict[str, Any] | None:
-    """이 물건에 내가 올린 마지막 등기부와 사다리."""
+    """이 물건에 내가 올린 마지막 등기부와 사다리. 내 것이 없으면 다른 회원이 올려 공개된 것(11/12)."""
     case = "(select case_id from core.items where item_id = %(id)s)"
     with connect() as c:
         # 서로 상관없는 조회 5개를 한 번에 보냄(10/27 — 예전엔 차례로 5번 왕복)
-        q_u, q_meta, q_spec, q_small, q_ten = batch(
+        q_u, q_pts, q_meta, q_spec, q_small, q_ten = batch(
             c,
             [
                 (
-                    """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok
-                       from app.uploaded_registries where user_id = %(uid)s and item_id = %(id)s order by upload_id desc limit 1""",
+                    """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok,
+                              user_id = %(uid)s as mine
+                       from app.uploaded_registries where item_id = %(id)s and (user_id = %(uid)s or shared)
+                       order by (user_id = %(uid)s) desc, upload_id desc limit 1""",
+                    {"uid": uid, "id": item_id},
+                ),
+                (
+                    """select points, note from app.contrib_uploads where user_id = %(uid)s and item_id = %(id)s
+                       and kind = 'registry' order by contrib_id desc limit 1""",
                     {"uid": uid, "id": item_id},
                 ),
                 (
@@ -297,7 +307,7 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
                 ),
             ],
         )
-        u, meta, spec_row = q_u.fetchone(), q_meta.fetchone(), q_spec.fetchone()
+        u, pts, meta, spec_row = q_u.fetchone(), q_pts.fetchone(), q_meta.fetchone(), q_spec.fetchone()
         small_rows, tenants = q_small.fetchall(), q_ten.fetchall()
     if not u:
         return None
@@ -306,6 +316,8 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
         "upload_id": u["upload_id"], "file_name": u["file_name"], "status": u["status"], "method": u["method"],
         "error": u["error"], "delete_after": u["delete_after"].isoformat(), "ladder": None,
         "created_at": u["created_at"].isoformat(), "choices": {"갑": names_for("갑"), "을": names_for("을")},
+        "mine": bool(u["mine"]),  # False 면 다른 회원이 올려 공개된 것(11/12)
+        "points": {"points": pts["points"], "why": pts["note"]} if pts and u["mine"] else None,
     }  # fmt: skip
     # 주소가 이 물건과 다르면(손님이 「그래도 보기」 누르기 전엔) 판정하지 않음
     if u["status"] == "parsed":
@@ -405,7 +417,7 @@ def ocr_waiting(limit: int = 5) -> list[int]:
 BUCKET = "registry-uploads"
 
 
-def take_from_storage(uid: str, path: str) -> bytes | None:
+def take_from_storage(uid: str, path: str, bucket: str = BUCKET) -> bytes | None:
     """화면이 Supabase 파일 보관함에 바로 올린 PDF 를 받아 오고 보관함에서는 지움(11/3 — Vercel 은 4.5MB 까지만 받음)."""
     import httpx
 
@@ -416,8 +428,8 @@ def take_from_storage(uid: str, path: str) -> bytes | None:
     k = settings.SUPABASE_SECRET_KEY
     h = {"apikey": k, "Authorization": f"Bearer {k}"}
     url = f"{settings.SUPABASE_URL}/storage/v1/object"
-    r = httpx.get(f"{url}/{BUCKET}/{path}", headers=h, timeout=30)
+    r = httpx.get(f"{url}/{bucket}/{path}", headers=h, timeout=60)
     if r.status_code != 200:
         return None
-    httpx.request("DELETE", f"{url}/{BUCKET}", headers=h, json={"prefixes": [path]}, timeout=15)
+    httpx.request("DELETE", f"{url}/{bucket}", headers=h, json={"prefixes": [path]}, timeout=15)
     return r.content
