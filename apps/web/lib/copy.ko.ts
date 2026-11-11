@@ -291,7 +291,7 @@ export const copy = {
     sortDeadline: "마감 가까운 순",
     sortRate: "최저가율 낮은 순",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
-    searchPlaceholder: "수지 30평대 7억 이하",
+    searchPlaceholder: "지역·평형·가격으로 찾아요",
     talkLabel: "알아들은 조건",
     source: { all: "전체", court: "경매", onbid: "공매" } as Record<string, string>,
     sourceLabel: "경매·공매",
