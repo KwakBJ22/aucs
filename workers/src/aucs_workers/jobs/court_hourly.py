@@ -41,6 +41,20 @@ def _cap() -> int:
         return SITE_DAY_MAX["court"]
 
 
+def _details_left() -> bool:
+    """물건상세 첫 바퀴로 받을 사건이 아직 남았나."""
+    try:
+        from datetime import date
+
+        from aucs_workers.collectors.court_docs import details_targets
+        from aucs_workers.db import connect
+
+        with connect() as conn:
+            return bool(details_targets(conn, date.today()))
+    except Exception:  # noqa: BLE001 — 모르면 지금처럼(몫을 옮기지 않음)
+        return True
+
+
 def busy() -> bool:
     """앞 차례가 70분 안에 시작해 아직 안 끝났으면 True."""
     return LOCK.exists() and time.time() - LOCK.stat().st_mtime < 70 * 60
@@ -57,7 +71,10 @@ def main() -> None:
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
         share = hour_share(_cap())
+        spare = 0 if _details_left() else 35  # 11/12: 물건상세 첫 바퀴가 끝나면 그 몫을 서류 보관(현황조사서)으로
         for name, mod, pct in STEPS:
+            if pct and name == "서류 보관":
+                pct += spare
             print(f"── {name}", flush=True)
             env = dict(os.environ)
             if pct:

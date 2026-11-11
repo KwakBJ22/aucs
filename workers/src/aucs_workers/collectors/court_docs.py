@@ -40,7 +40,7 @@ from aucs_workers.photos import pull_pics
 from aucs_workers.photos import store as store_photos
 
 CASE_PAGE = "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml"
-ARCHIVE_MAX = 150  # 11/4 오후: 300 → 150 (법원이 집 IP 를 막음), 대상은 모든 부동산 그대로
+ARCHIVE_MAX = 300  # 한 번에 꺼낼 사건 수 — 실제 양은 시간 몫이 정함(11/12: 물건상세 있는 사건은 2번만 써서 150 → 300)
 QUEUE_MAX = 10  # 5분마다: 손님이 연 물건의 서류(요청 줄) — 11/4 40 → 10
 NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4, 300 → 100)
 DETAILS_MAX = 300  # 한 번에: 물건상세 첫 바퀴(11/7 — 요항·토지건물 나눔·제시외·대지권을 모든 진행 물건에, 실제 양은 시간 몫이 정함)
@@ -214,7 +214,9 @@ def queue_targets(conn: psycopg.Connection) -> tuple[list[tuple[str, str]], list
 def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
     rows = conn.execute(
         f"""select c.court_code, c.case_no, min(i.sale_date),
-                  (select max(fetched_at)::date from raw.court_doc_raw r where r.case_id = c.case_id)
+                  greatest(c.docs_checked_at, (select max(fetched_at) from raw.court_doc_raw r
+                     where r.case_id = c.case_id and r.doc_kind = 'status_report'))::date
+                  -- 11/12: 물건상세 첫 바퀴를 받은 날을 「보관함」으로 잘못 셌음 → 현황조사를 물어본 날로
            from core.items i join core.cases c using (case_id)
            where {REAL_ESTATE} and {AREA}
              and i.sale_date between %s and %s
@@ -234,7 +236,7 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
 
 def fetch_case(
     page: Any, polite: Polite, court: str, case_no: str,
-    light_seqs: list[int] | None = None, need_appraisal: bool = True,
+    light_seqs: list[int] | None = None, need_appraisal: bool = True, docs_only: bool = False,
 ) -> dict[str, dict[str, Any]]:  # fmt: skip
     """한 사건의 서류 데이터를 종류별로 받습니다. 물건상세가 실패하면 그 종류만 빠집니다.
 
@@ -246,6 +248,19 @@ def fetch_case(
         return dict(res.get("data") or {})
 
     out: dict[str, dict[str, Any]] = {}
+    if docs_only:
+        # 11/12: 물건상세(사진·명세서·기일·요항)를 이미 받은 사건 — 문건송달 · 현황조사만(사건당 7번 → 2번)
+        out["deliveries"] = post(
+            "/pgj/pgj15A/selectDlvrOfdocDtsDtl.on",
+            {"dma_srchDlvrOfdocDts": {"cortOfcCd": court, "csNo": cs, "srchFlag": "F"}},
+            "문건송달",
+        )
+        out["status_report"] = post(
+            "/pgj/pgj15B/selectCurstExmndc.on",
+            {"dma_srchCurstExmn": {"cortOfcCd": court, "csNo": case_no, "auctnInfOriginDvsCd": "2", "ordTsCnt": ""}},
+            "현황조사",
+        )  # fmt: skip
+        return out
     if light_seqs:
         _details(post, court, cs, light_seqs, out)
         if need_appraisal:
@@ -347,6 +362,8 @@ def save_case(
         "insert into core.cases (case_id, court_code, case_no) values (%s,%s,%s) on conflict do nothing",
         (case_id, court, case_no),
     )
+    if "status_report" in docs:  # 내용이 같아 새 줄이 안 생겨도 물어본 날은 남김(11/12)
+        conn.execute("update core.cases set docs_checked_at = now() where case_id = %s", (case_id,))
     pics: list[tuple[str, str]] = []
     for kind in list(docs):
         if kind.startswith("item_detail_") and docs[kind]:
@@ -371,6 +388,15 @@ def save_case(
                 apply_next_sales(conn, case_id, sch)
                 apply_past_rounds(conn, case_id, sch)
     store_photos(conn, case_id, pics)
+
+
+def _fresh_detail(conn: psycopg.Connection, court: str, case_no: str) -> bool:
+    """이 사건 물건상세를 일주일 안에 받았나 — 그러면 서류 보관 때 다시 받지 않음(11/12)."""
+    return bool(conn.execute(
+        """select 1 from raw.court_doc_raw where case_id = %s and doc_kind like 'item_detail_%%'
+           and fetched_at > now() - interval '7 days' limit 1""",
+        (f"{court}-{case_no}",),
+    ).fetchone())  # fmt: skip
 
 
 def _known(conn: psycopg.Connection, court: str, case_no: str) -> tuple[list[int], bool]:
@@ -455,10 +481,13 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
                 for court, case_no in targets:
                     try:
                         seqs, has_apr = _known(conn, court, case_no) if light else ([], False)
+                        # 서류 보관: 물건상세를 일주일 안에 받았으면 문건송달·현황조사만(11/12)
+                        only = not light and _fresh_detail(conn, court, case_no)
                         # 첫 바퀴(--details)는 물건상세만 — 감정평가서 정보(가격시점)는 홈 사진·서류 보관 때 받음
                         docs = fetch_case(
-                            page, polite, court, case_no, seqs or None, not (has_apr or a.details)
-                        )
+                            page, polite, court, case_no, seqs or None,
+                            not (has_apr or a.details), docs_only=only,
+                        )  # fmt: skip
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
                         break
