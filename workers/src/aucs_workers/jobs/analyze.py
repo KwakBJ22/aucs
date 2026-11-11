@@ -34,6 +34,7 @@ from aucs_rules.sale_rate import (
 )
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import spec_facts
+from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -138,7 +139,8 @@ def load_spec(detail: dict[str, Any]) -> dict[str, Any] | None:
         return v or None
 
     return {"keep": clean("ndstrcRghCtt"), "superficies": clean("sprfcExstcDts"),
-            "remark": clean("gdsSpcfcRmk"), "item_remark": clean("dspslGdsRmk")}  # fmt: skip
+            "remark": clean("gdsSpcfcRmk"), "item_remark": clean("dspslGdsRmk"),
+            "base": clean("tprtyRnkHypthcStngDts")}  # fmt: skip
 
 
 def build_facts(
@@ -205,7 +207,7 @@ def analyze_item(
         (item["case_id"],),
     ).fetchall()
     tenants = cur.execute(
-        "select move_in_date, deposit_krw, monthly_rent_krw from core.tenants where case_id = %s",
+        "select move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
         (item["case_id"],),
     ).fetchall()
     has_sr = bool(
@@ -235,7 +237,18 @@ def analyze_item(
     if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음
         facts.update(appraisal_date=apr["price_date"], as_of=today)
     # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도
-    sf = spec_facts(load_spec(detail))
+    spec = load_spec(detail)
+    sf = spec_facts(spec)
+    # 세금이 대항력 임차인보다 먼저일 수 있음(11/11): 말소기준(명세서 최선순위) · 임차인 · 세금 교부청구 문건
+    tb = tax_before_tenant(
+        [Tenant(move_in_date=t["move_in_date"], fixed_date=t["fixed_date"],
+                deposit_krw=t["deposit_krw"], has_lease_registration=bool(t["has_lease_registration"]))
+         for t in tenants],
+        base_date_of((spec or {}).get("base")),
+        [e["event_date"] for e in events if e["category"] == "세금 교부청구" and e["event_date"]],
+    ).value  # fmt: skip
+    if tb:
+        sf["tax_before_tenant"] = tb
     spec_note = sf.pop("spec_note", "")
     if spec_note:
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()

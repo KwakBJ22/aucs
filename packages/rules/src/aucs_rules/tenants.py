@@ -45,6 +45,53 @@ def priority_date(t: Tenant) -> RuleResult:
     return RuleResult(d, Status.ESTIMATED, "tenants.priority", [{"priority_date": str(d)}])
 
 
+_BASE_DATE = re.compile(r"(\d{4})\s*\.\s*(\d{1,2})\s*\.\s*(\d{1,2})")
+TAX_NEAR_DAYS = 183  # 기준일 뒤 6개월 안 교부청구는 법정기일이 앞설 가능성이 매우 높음
+
+
+def base_date_of(text: str | None) -> date | None:
+    """명세서 「최선순위 설정」 글(「2022.05.04. 근저당권」) → 날짜. 못 읽으면 None."""
+    m = _BASE_DATE.search(text or "")
+    if not m:
+        return None
+    try:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+
+
+def tax_before_tenant(
+    tenants: list[Tenant], base_date: date | None, tax_dates: list[date]
+) -> RuleResult:
+    """세금이 대항력 임차인보다 먼저 배당될 수 있는가 (11/11 강사판 반영).
+
+    세금과 임차보증금의 순위는 압류·교부청구일이 아니라 세금의 「법정기일」로 정함(국세기본법 §35①3·②,
+    지방세기본법 §71). 법정기일은 압류보다 훨씬 앞설 수 있어 문건만으로는 모름 → 대항력·확정일자 있는 임차인이 있고
+    세금 교부청구가 하나라도 있으면, 법정기일을 확인할 때까지 세금이 먼저라고 봄.
+    임차인 기준일(전입 다음 날과 확정일자 중 늦은 날) 전이거나 그 뒤 6개월 안이면 「high」, 그보다 늦으면 「mid」.
+    대항력 있는 임차인은 배당받지 못한 잔액을 낙찰자에게 주장함(대법원 97다11195).
+    """
+    if not tax_dates:
+        return RuleResult(None, Status.ESTIMATED, "tenants.tax_first.none", [])
+    level: str | None = None
+    ev: list[dict[str, Any]] = []
+    for t in tenants:
+        if not t.deposit_krw:
+            continue
+        if opposing_power(t, base_date).value is not True:
+            continue
+        p = priority_date(t).value
+        if not isinstance(p, date):
+            continue  # 확정일자가 없으면 배당 순위가 없어 세금과 견줄 일이 없음(보증금은 이미 인수 신호)
+        near = any((d - p).days <= TAX_NEAR_DAYS for d in tax_dates)
+        lv = "high" if near else "mid"
+        level = "high" if "high" in (level, lv) else lv
+        ev.append({"tenant_date": str(p), "tax_dates": sorted(str(d) for d in tax_dates)[:5]})
+    if level is None:
+        return RuleResult(None, Status.ESTIMATED, "tenants.tax_first.no_tenant", [])
+    return RuleResult(level, Status.NEEDS_CHECK, "tenants.tax_first", ev)
+
+
 def claimed_in_time(t: Tenant, claim_deadline: date | None) -> RuleResult:
     """배당요구종기 안에 배당요구했는지."""
     if t.claim_date is None:

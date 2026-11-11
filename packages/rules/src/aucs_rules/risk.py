@@ -210,11 +210,12 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             "high",
             "상가 임차인 보증금이 보호 한도를 넘어요 — 떠안을 수 있어요",
         )
-    if f.get("tax_before_tenant"):
+    if tb := f.get("tax_before_tenant"):  # "high"/"mid" — 법정기일 확인 전까지 세금이 먼저라고 봄(11/11)
         add(
             "risk.tax_first",
-            "high",
-            "세금이 임차인보다 먼저 배당돼요 — 모자란 보증금을 떠안을 수 있어요",
+            tb if tb in ("high", "mid") else "high",
+            "세금이 임차인보다 먼저일 수 있어요 — 세금 법정기일을 확인하기 전엔 모자란 보증금을 떠안는다고 보세요",
+            Status.NEEDS_CHECK,
         )
     if f.get("small_base_mortgage") and f.get("junior_tenant"):
         add(

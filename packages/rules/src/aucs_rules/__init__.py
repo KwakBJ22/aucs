@@ -2,7 +2,8 @@
 
 from aucs_rules.result import RuleResult, Status
 
-ENGINE_VERSION = "rules-0.6.0"  # 0.6.0: 필요한 현금(cash_need)·떠안는 돈 물건 추천 제외(11/9)
+ENGINE_VERSION = "rules-0.7.0"  # 0.7.0: 세금이 대항력 임차인보다 먼저일 수 있음(11/11)
+# 0.6.0: 필요한 현금(cash_need)·떠안는 돈 물건 추천 제외(11/9)
 # 0.5.0: 낙찰가율 표본에서 유찰 횟수를 통째로 빼지 않음(11/8)
 # 0.4.0: 건축물대장(사용승인·그 층 용도로 근생빌라 확정, 10/27)
 
