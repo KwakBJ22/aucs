@@ -1,6 +1,6 @@
 from datetime import date
 
-from aucs_rules.building import parse_jibun, summarize, unit_from_address
+from aucs_rules.building import dong_key, parse_jibun, summarize, unit_from_address
 
 TODAY = date(2026, 10, 27)
 
@@ -21,6 +21,8 @@ def test_unit_from_address():
         "어딘가 가동 지하1층 101호": {"dong": "가", "floor": -1},
         "어딘가 제101동 제5층 제502호": {"dong": "101", "floor": 5},
         "화성시 동탄하나1길 61, 1409호 (능동)": {"dong": None, "floor": None},
+        "고양시 일산서구 대화동 1474-2 주건축물제1동 3층301호": {"dong": "1", "floor": 3},
+        "부천시 오정구 원종동 382-20 백합주택 에이동 지층1호": {"dong": "A", "floor": None},
     }
     for a, exp in cases.items():
         assert unit_from_address(a) == exp, a
@@ -80,3 +82,8 @@ def test_same_unit() -> None:
     assert same_unit(
         "경기도 양평군 강상면 송학리 12-3", "경기도 양평군 강상면 송학리 12-3 외 1필지"
     )
+
+
+def test_dong_key():
+    assert dong_key("주건축물제2동") == "2" and dong_key("제304동") == "304" and dong_key("105동") == "105"
+    assert dong_key("에이") == "A" and dong_key("A동") == "A" and dong_key("") == ""

@@ -19,7 +19,8 @@ from datetime import date
 from typing import Any
 
 import httpx
-from aucs_rules.building import ho_from_address, parse_jibun, unit_from_address
+from aucs_rules.building import dong_key, ho_from_address, parse_jibun, unit_from_address
+from aucs_rules.holding_tax import dong_matches
 from psycopg.types.json import Jsonb
 
 from aucs_workers.db import connect
@@ -42,6 +43,14 @@ where i.sale_date >= current_date and i.status_code is distinct from 'gone'
                   and r.fetched_at > now() - interval '180 days')
 order by exists (select 1 from app.watch_items w where w.item_id = i.item_id) desc, i.sale_date
 limit %s
+"""
+
+
+RECHECK_SQL = """
+select i.item_id, i.region_code, i.lot_no, coalesce(i.usage_name, '') || ' ' || coalesce(i.building_desc, '') as usage,
+       i.address, r.payload -> 'items' -> 0 ->> 'dongNm'
+from core.items i join raw.official_price_raw r on r.item_id = i.item_id and r.kind = 'apt'
+where i.sale_date >= current_date and length(i.region_code) = 10 and coalesce(i.lot_no, '') <> ''
 """
 
 
@@ -102,12 +111,14 @@ def pick_unit(items: list[dict[str, Any]], address: str | None) -> list[dict[str
     """공동주택은 단지 전체가 옴 → 이 물건의 동·호(dongNm·hoNm) 한 줄만 남김. 같은 집이 여러 줄이면 최근 고친 것.
     못 고르면 빈 목록(DB 를 아끼려고 단지 전체는 두지 않음)."""
     ho = _digits(ho_from_address(address))
-    dong = _digits(unit_from_address(address)["dong"])
+    dong = dong_key(unit_from_address(address)["dong"])
     if not ho:
         return []
     hits = [x for x in items
             if _digits(x.get("hoNm")) == ho
-            and (not dong or not _digits(x.get("dongNm")) or _digits(x.get("dongNm")) == dong)]  # fmt: skip
+            and (not dong or not dong_key(x.get("dongNm")) or dong_key(x.get("dongNm")) == dong)]  # fmt: skip
+    if not dong and len({dong_key(x.get("dongNm")) for x in hits}) > 1:
+        return []  # 주소에 동이 없는데 같은 호수가 여러 동에 있음 → 어느 집인지 모름(11/11 — 다른 동 값이 붙던 것)
     if not hits:
         return []
     return [max(hits, key=lambda x: (str(x.get("stdrYear")), str(x.get("stdrMt")), str(x.get("lastUpdtDt"))))]
@@ -117,6 +128,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cap", type=int, default=800)
     ap.add_argument("--probe", action="store_true", help="한 건만 받아 응답을 보여 줌(저장도 함)")
+    ap.add_argument("--recheck", action="store_true", help="이미 받은 아파트·빌라 중 동이 안 맞는 것만 다시 받음(11/11)")
     a = ap.parse_args()
     key = os.getenv("VWORLD_API_KEY", "").strip().strip("\"'")
     domain = os.getenv("VWORLD_DOMAIN", "https://aucs.co.kr").strip()
@@ -124,7 +136,14 @@ def main() -> None:
         raise SystemExit("VWORLD_API_KEY 가 비어 있습니다 (.env)")
     this_year = date.today().year
     with connect() as conn, run(conn, "official_prices", "공시가격") as job:
-        rows = conn.execute(TARGETS_SQL, (1 if a.probe else a.cap,)).fetchall()
+        if a.recheck:
+            rows = [
+                (x[0], x[1], x[2], x[3], x[4])
+                for x in conn.execute(RECHECK_SQL).fetchall()
+                if not dong_matches(x[4], x[5])
+            ][: a.cap]
+        else:
+            rows = conn.execute(TARGETS_SQL, (1 if a.probe else a.cap,)).fetchall()
         rows.sort(key=lambda r: (r[1], r[2]))  # 같은 필지끼리 붙여 한 번 받은 것을 바로 다시 씀(관심·날짜 순은 cap 안에서만)
         print(f"[시작] 물건 {len(rows):,}건")
         cache: dict[tuple[str, str], dict[str, Any]] = {}  # 같은 필지(한 단지 여러 집)는 한 번만 묻기

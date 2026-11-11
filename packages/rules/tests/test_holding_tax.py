@@ -60,3 +60,10 @@ def test_official_price_drops_other_unit() -> None:
     h = {"items": [{"housePc": "300000000", "stdrYear": "2026"}]}
     assert official_price("house", h, appraisal_krw=140000000) is None  # 2.1배
     assert official_price("house", h, appraisal_krw=500000000) is not None
+
+
+def test_official_price_drops_other_dong() -> None:
+    p = {"items": [{"pblntfPc": "173000000", "prvuseAr": "53.02", "dongNm": "주건축물제2동"}]}
+    assert official_price("apt", p, 51.73, 314000000, "대화동 1474-2 주건축물제1동 3층301호") is None
+    assert official_price("apt", p, 51.73, 314000000, "대화동 1474-2 주건축물제2동 3층301호") is not None
+    assert official_price("apt", p, 51.73, 314000000, "대화동 1474-2 3층301호") is not None

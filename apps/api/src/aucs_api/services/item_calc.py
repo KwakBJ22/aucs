@@ -85,13 +85,14 @@ def _holding(
     tables: dict[str, Any],
     area: float | None,
     appraisal_krw: int | None,
+    address: str | None = None,
 ) -> dict[str, Any] | None:
     """해마다 내는 세금(재산세·종부세) 어림 — 공시가격이 있는 주택만(11/11). 이 집을 산 뒤 집 수로 셈."""
     from aucs_rules.holding_tax import comprehensive_tax_home, official_price, property_tax_home
 
     pt, ct = tables.get("property_tax_home"), tables.get("comprehensive_tax_home")
     op = (
-        official_price(official["kind"], official["payload"], area, appraisal_krw)
+        official_price(official["kind"], official["payload"], area, appraisal_krw, address)
         if official
         else None
     )
@@ -220,7 +221,7 @@ def build_calc(
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,
         "assume": {"risk": risk, "krw": assume_krw if risk else None},
-        "holding": _holding(official, homes, tables, area, app),
+        "holding": _holding(official, homes, tables, area, app, r.get("address")),
     }
 
 

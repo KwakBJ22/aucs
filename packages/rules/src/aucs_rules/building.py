@@ -34,14 +34,34 @@ def lot_key(plat: str, bun: str, ji: str) -> str:
 
 # 「304동 2층」·「가동 지하1층」만 동으로 봄(「신당동 217」 같은 동네 이름은 앞 글자가 한글이라 뺌)
 _DONG = re.compile(
-    r"(?<![가-힣\d])제?\s*(\d{1,4}|[가-하A-Z])\s*동\s*(?=제?\s*(?:지하\s*)?\d+\s*(?:층|호))"
+    r"(?<![가-힣\d])제?\s*(\d{1,4}|[가-하A-Z])\s*동\s*(?=제?\s*(?:지하|지층|지)?\s*\d+\s*(?:층|호))"
 )
 _FLOOR = re.compile(r"(지하)?\s*제?\s*(\d{1,3})\s*층")
 
 
+_LETTER = {"에이": "A", "비": "B", "씨": "C", "디": "D", "이": "E"}
+
+
+def _norm_dong(a: str) -> str:
+    """「주건축물제1동」→「제1동」, 「에이동」→「A동」 — 대장·공시가격에 흔한 꼴도 동으로 읽게(11/11)."""
+    a = re.sub(r"주건축물\s*", " ", a)
+    return re.sub(
+        r"(?<![가-힣])(에이|비|씨|디|이)(?=\s*동)", lambda m: " " + _LETTER[m.group(1)], a
+    )
+
+
+def dong_key(v: Any) -> str:
+    """동 이름 비교용 열쇠: 「제304동」·「304동」·「주건축물제2동」 → 「304」·「2」, 「에이동」·「A동」 → 「A」."""
+    s = _norm_dong(str(v or ""))
+    s = re.sub(r"(제|동|\s)", "", s)
+    s = _LETTER.get(s, s).upper()
+    d = re.sub(r"\D", "", s)
+    return d.lstrip("0") or d if d else s
+
+
 def unit_from_address(address: str | None) -> dict[str, Any]:
     """주소 → {'dong': '304' | None, 'floor': 2 | -1(지하1) | None}."""
-    a = address or ""
+    a = _norm_dong(address or "")
     d = _DONG.search(a)
     f = _FLOOR.search(a)
     floor = None
