@@ -32,44 +32,46 @@ export default function Plans() {
           {t.yearly}
         </button>
       </div>
-      <div className="pc-grid g-4 mt-12">
-        {t.list.map((p) => (
-          <section
-            key={p.key}
-            className="section mt-0"
-            style={{ outline: pick === p.key ? "2px solid var(--blue)" : undefined }}
-            onClick={() => setPick(p.key)}
-          >
-            <div className="d-flex jc-between ai-baseline">
-              <h2>{p.name}</h2>
-              {p.tag && <span className="chip green">{p.tag}</span>}
-            </div>
-            <div className="fs-3xl fw-7 mt-4">
-              {yearly && p.yearly ? p.yearly : p.price}
-              <span className="sub fs-md fw-4"> {yearly && p.yearly ? t.perYear : p.per}</span>
-            </div>
-            <div className="sub">{p.what}</div>
-            {p.items.map((x) => (
-              <div key={x} className="line-row fs-md">
-                <span>{x}</span>
-                <b className="c-green">✓</b>
+      <div className="pc-grid g-3 mt-12">
+        {t.list
+          .filter((p) => !("hidden" in p && p.hidden))
+          .map((p) => (
+            <section
+              key={p.key}
+              className="section mt-0"
+              style={{ outline: pick === p.key ? "2px solid var(--blue)" : undefined }}
+              onClick={() => setPick(p.key)}
+            >
+              <div className="d-flex jc-between ai-baseline">
+                <h2>{p.name}</h2>
+                {p.tag && <span className="chip green">{p.tag}</span>}
               </div>
-            ))}
-            {p.key === "one" ? (
-              <Link href="/find" className="btn secondary md mt-12">
-                {t.toFind}
-              </Link>
-            ) : p.key !== "free" ? (
-              <>
-                <button className="btn primary md mt-12" disabled title={t.payLater}>
-                  {p.cta}
-                </button>
-                {/* 눌러도 반응이 없던 것(11/1) — 왜 안 되는지 바로 아래에 */}
-                <div className="sub fs-xs mt-4 ta-center">{t.payNote}</div>
-              </>
-            ) : null}
-          </section>
-        ))}
+              <div className="fs-3xl fw-7 mt-4">
+                {yearly && p.yearly ? p.yearly : p.price}
+                <span className="sub fs-md fw-4"> {yearly && p.yearly ? t.perYear : p.per}</span>
+              </div>
+              <div className="sub">{p.what}</div>
+              {p.items.map((x) => (
+                <div key={x} className="line-row fs-md">
+                  <span>{x}</span>
+                  <b className="c-green">✓</b>
+                </div>
+              ))}
+              {p.key === "one" ? (
+                <Link href="/find" className="btn secondary md mt-12">
+                  {t.toFind}
+                </Link>
+              ) : p.key !== "free" ? (
+                <>
+                  <button className="btn primary md mt-12" disabled title={t.payLater}>
+                    {p.cta}
+                  </button>
+                  {/* 눌러도 반응이 없던 것(11/1) — 왜 안 되는지 바로 아래에 */}
+                  <div className="sub fs-xs mt-4 ta-center">{t.payNote}</div>
+                </>
+              ) : null}
+            </section>
+          ))}
       </div>
       <Link href="/points" className="menu-row section">
         <span>
