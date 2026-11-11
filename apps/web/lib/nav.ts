@@ -57,6 +57,15 @@ export const NAV: NavItem[] = [
     sub: [],
   },
   {
+    key: "points",
+    label: "포인트 벌기",
+    href: "/points",
+    group: "basic",
+    ready: true,
+    match: ["/points"],
+    sub: [],
+  },
+  {
     key: "pro-items",
     label: "전체 물건",
     href: "/pro/items",
@@ -107,7 +116,7 @@ export const NAV: NavItem[] = [
   },
 ];
 
-// 휴대폰 하단 탭 5개 (찾고 → 담고 → 입찰하고 → 낙찰 뒤 → 전체)
+// 휴대폰 하단 탭 5개 (찾고 → 담고 → 입찰하고 → 서류 채우기). 내 정보는 화면 머리 오른쪽 끝(11/12)
 export const TABS = [
   {
     key: "home",
@@ -118,12 +127,7 @@ export const TABS = [
   { key: "find", label: "찾기", href: "/find", match: ["/find", "/item"] },
   { key: "watch", label: "관심", href: "/watch", match: ["/watch", "/compare"] },
   { key: "me", label: "내 경매", href: "/me", match: ["/me"] },
-  {
-    key: "more",
-    label: "내 정보",
-    href: "/more",
-    match: ["/more", "/pro", "/plans", "/help", "/terms", "/privacy", "/refund"],
-  },
+  { key: "points", label: "포인트", href: "/points", match: ["/points"] },
 ] as const;
 
 export function activeNav(path: string): NavItem | undefined {

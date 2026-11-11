@@ -189,6 +189,7 @@ export type PointRow = {
   sale_date: string | null;
   place: string;
   building: string | null;
+  address: string | null; // 인터넷등기소 첫 화면 검색칸에 붙여 넣을 주소
   need: Partial<Record<DocKind, PointHold>>;
 };
 export type PointResult = { ok?: boolean; points: number; why: string };

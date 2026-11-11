@@ -8,9 +8,10 @@ import { won } from "@/lib/format";
 import { t } from "@/components/item/shared";
 import { copy } from "@/lib/copy.ko";
 
-// 법원 사건 검색 화면 — 감정평가서 원본은 손님이 법원에서 직접 열어 봄(11/7)
+// 법원 경매사건검색 화면 — 감정평가서 원본은 손님이 법원에서 직접 열어 봄(11/7).
+// pgjId 까지 붙여야 휴대폰에서도 첫 화면이 아니라 사건검색으로 바로 감(11/12 대표님)
 const COURT_CASE_PAGE =
-  "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml";
+  "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml&pgjId=159M00";
 
 // 감정평가 요점(11/4 평가사 쪽 사용 허락 · 11/12 가리지 않음, 평가사 이름을 곁에 붙임). 처음엔 세 칸만, 누르면 전부
 export function AppraisalPoints({

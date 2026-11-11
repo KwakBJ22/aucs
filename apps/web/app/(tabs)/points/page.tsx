@@ -113,7 +113,7 @@ export default function PointsPage() {
 
   return (
     <main className="page">
-      <PageHeader title={t.title} back="/more" />
+      <PageHeader title={t.title} />
       <section className="section">
         <div className="sub m-0">{t.balance}</div>
         <div className="item-price">{sum ? t.pt(sum.balance) : "-"}</div>
@@ -164,7 +164,14 @@ export default function PointsPage() {
                 <div className="fs-sm fw-6">{t.left(Math.floor(leftSec / 60), leftSec % 60)}</div>
                 {open.kind === "registry" ? (
                   <>
-                    <a className="btn soft mt-10" href={IROS} target="_blank" rel="noreferrer">
+                    {/* 인터넷등기소는 열람 화면으로 바로 가는 주소가 없음(첫 화면 검색칸이 열람 입구) → 주소를 복사해 감 */}
+                    <a
+                      className="btn soft mt-10"
+                      href={IROS}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => r.address && void navigator.clipboard?.writeText(r.address)}
+                    >
                       {t.getRegistry}
                     </a>
                     <p className="sub fs-sm mt-6">{t.registryHint}</p>

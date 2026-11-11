@@ -54,6 +54,7 @@ def summary(uid: str) -> dict[str, Any]:
 
 _BOARD_SQL = """
 select i.item_id, i.case_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.building_desc, i.sigungu, i.gu,
+       i.address,
        (select count(*) from app.watch_items w where w.item_id = i.item_id) as watchers,
        not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared) as need_registry,
        not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id) as need_appraisal,
@@ -90,7 +91,7 @@ def board(uid: str, limit: int = 60) -> list[dict[str, Any]]:
             "item_id": r["item_id"], "court": COURT_NAME.get(r["court_code"], r["court_code"]), "case_no": r["case_no"],
             "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
             "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
-            "building": r["building_desc"] or r["usage_name"], "need": need,
+            "building": r["building_desc"] or r["usage_name"], "address": r["address"], "need": need,
         })  # fmt: skip
         if len(out) >= limit:
             break

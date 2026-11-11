@@ -399,7 +399,8 @@ export const copy = {
     more: "10분 더",
     taken: "다른 분이 먼저 맡았어요",
     getRegistry: "인터넷등기소에서 떼기",
-    registryHint: "주소로 찾아 열람(700원) 뒤 PDF로 저장해 올려 주세요",
+    registryHint:
+      "누르면 주소가 복사돼요 · 첫 화면 검색칸에 붙여 넣고 열람(700원) 뒤 PDF로 저장해 올려 주세요",
     upload: "PDF 올리기",
     sending: "올리는 중…",
     registrySent: "읽고 있어요 · 주소가 맞으면 포인트가 들어와요",
@@ -427,7 +428,6 @@ export const copy = {
     sub: "로그인하면 관심·알림·계산 저장을 쓸 수 있어요",
     items: [
       ["이용권 보기", "/plans"],
-      ["서류 올리고 포인트 받기", "/points"],
       ["낙찰가 성적표", "/pro/market"],
       ["경매 처음이세요? 쉬운 안내", "/guide"],
       ["공지·고객센터", "/help"],
