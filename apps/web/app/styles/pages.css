@@ -1438,3 +1438,101 @@ a.col-chip span {
   color: var(--muted);
   font-size: var(--fs-lg);
 }
+
+/* ══ 포인트 벌기 맨 위(11/12 대표님 — 취지·혜택을 짧게, 너무 썰렁하지 않게) */
+.pt-hero {
+  position: relative;
+  overflow: hidden;
+  margin-top: 8px;
+  padding: 24px 20px 20px;
+  border-radius: var(--r-card);
+  background: linear-gradient(135deg, var(--blue-soft) 0%, var(--surface) 70%);
+}
+.pt-coin {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 112px;
+  height: 112px;
+  opacity: 0.18;
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pt-hero-title {
+  position: relative;
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: pre-line;
+}
+.pt-hero-body {
+  position: relative;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+.pt-perks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.pt-perks > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+.pt-perks span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.pt-perks b {
+  color: var(--blue-text);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+.pt-hero-pay {
+  margin: 10px 0 0;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.pt-steps {
+  display: flex;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pt;
+}
+.pt-steps li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: center;
+  counter-increment: pt;
+}
+.pt-steps li::before {
+  content: counter(pt);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--on-strong);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+}

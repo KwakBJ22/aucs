@@ -383,6 +383,16 @@ export const copy = {
   // 포인트 벌기(11/12, docs/design/11-points.md)
   points: {
     title: "포인트 벌기",
+    // 맨 위 취지(11/12 대표님 — 왜 올리는지 · 무엇이 좋은지 짧게)
+    heroTitle: "서류 한 장 올리면\n모두가 더 정확하게 봐요",
+    heroBody:
+      "법원이 다 주지 않는 등기부·감정평가서를 회원이 채워요. 올린 서류는 모든 회원이 같이 보고, 올린 분께는 포인트를 드려요.",
+    heroPerks: [
+      ["등기부", "1,000P"],
+      ["감정평가서", "300P"],
+    ] as [string, string][],
+    heroPay: "정식 오픈 뒤 이용권 결제 때 1P = 1원",
+    steps: ["물건 고르기", "법원·등기소에서 떼기", "PDF 올리기"],
     balance: "내 포인트",
     use: "이용권 결제 때 1P = 1원 할인 · 받은 날부터 1년",
     today: (reg: number, regMax: number, app: number, appMax: number) =>

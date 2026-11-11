@@ -114,10 +114,32 @@ export default function PointsPage() {
   return (
     <main className="page">
       <PageHeader title={t.title} />
+      <section className="pt-hero">
+        <svg className="pt-coin" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="20" />
+          <path d="M19 15h7a5 5 0 0 1 0 10h-7M19 15v18" />
+        </svg>
+        <h2 className="pt-hero-title">{t.heroTitle}</h2>
+        <p className="pt-hero-body">{t.heroBody}</p>
+        <div className="pt-perks">
+          {t.heroPerks.map(([k, v]) => (
+            <div key={k}>
+              <span>{k}</span>
+              <b>{v}</b>
+            </div>
+          ))}
+        </div>
+        <p className="pt-hero-pay">{t.heroPay}</p>
+        <ol className="pt-steps">
+          {t.steps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+      </section>
+
       <section className="section">
         <div className="sub m-0">{t.balance}</div>
         <div className="item-price">{sum ? t.pt(sum.balance) : "-"}</div>
-        <p className="sub mt-4 mb-0">{t.use}</p>
         {notice && <div className="bg-panel r-14 p-12 mt-10 fs-md">{notice}</div>}
         {sum && (
           <p className="sub mt-4 mb-0">
