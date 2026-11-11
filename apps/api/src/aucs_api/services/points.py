@@ -23,7 +23,7 @@ _TODAY_SQL = """select kind, count(*) as n from app.contrib_uploads
                 where user_id = %(uid)s and points > 0
                   and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
                 group by kind"""
-_BALANCE_SQL = """select coalesce(sum(delta) filter (where delta > 0 and expires_at > now()), 0)
+_BALANCE_SQL = """select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
                        + coalesce(sum(delta) filter (where delta < 0), 0) as balance
                   from app.point_ledger where user_id = %(uid)s"""
 
@@ -48,6 +48,7 @@ def summary(uid: str) -> dict[str, Any]:
         "today": {k: today.get(k, 0) for k in ("registry", "appraisal")},
         "max": table.get("daily_max") or {},
         "points": {k: table.get(k) for k in ("registry", "appraisal")},
+        "pay_max_pct": table.get("pay_max_pct"),
         "hold_minutes": table.get("hold_minutes"),
     }
 
@@ -179,9 +180,18 @@ def _grant(c: Any, uid: str, item_id: str, case_id: str, kind: str, sha: str, ma
         return {"points": 0, "why": "same_file"}
     if pts:
         c.execute(
+            # 무료 기간(free_period)에 받은 것은 기한 없음 — 유료 전환일에 「그날부터 1년」으로 한꺼번에 정함(11/12)
             """insert into app.point_ledger (user_id, delta, reason, item_id, ref_id, expires_at)
-               values (%s,%s,%s,%s,%s, now() + make_interval(days => %s))""",
-            (uid, pts, kind, item_id, r["contrib_id"], int(t.get("expire_days") or 365)),
+               values (%s,%s,%s,%s,%s, case when %s then null else now() + make_interval(days => %s) end)""",
+            (
+                uid,
+                pts,
+                kind,
+                item_id,
+                r["contrib_id"],
+                bool(t.get("free_period")),
+                int(t.get("expire_days") or 365),
+            ),
         )
     c.execute("delete from app.contrib_holds where item_id = %s and kind = %s", (item_id, kind))
     return {"points": pts, "why": "review" if review else res["why"]}

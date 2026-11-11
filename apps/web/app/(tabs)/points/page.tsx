@@ -145,7 +145,11 @@ export default function PointsPage() {
             </div>
           ))}
         </div>
-        <p className="pt-hero-pay">{t.heroPay}</p>
+        <p className="pt-hero-pay">
+          {t.heroPay}
+          <br />
+          {t.heroPayMax}
+        </p>
         <ol className="pt-steps">
           {t.steps.map((s) => (
             <li key={s}>{s}</li>
@@ -158,14 +162,7 @@ export default function PointsPage() {
         <div className="item-price">{sum ? t.pt(sum.balance) : "-"}</div>
         {notice && <div className="bg-panel r-14 p-12 mt-10 fs-md">{notice}</div>}
         {sum && (
-          <p className="sub mt-4 mb-0">
-            {t.today(
-              sum.today.registry,
-              sum.max.registry ?? 0,
-              sum.today.appraisal,
-              sum.max.appraisal ?? 0,
-            )}
-          </p>
+          <p className="sub mt-4 mb-0">{t.today(sum.today.registry + sum.today.appraisal)}</p>
         )}
       </section>
 
@@ -251,6 +248,15 @@ export default function PointsPage() {
           </button>
         )}
       </section>
+
+      <details className="section">
+        <summary className="fw-6">{t.rulesTitle}</summary>
+        <ul className="sub fs-sm mt-8 mb-0 lh-16">
+          {t.rules.map((x) => (
+            <li key={x}>{x}</li>
+          ))}
+        </ul>
+      </details>
     </main>
   );
 }

@@ -179,6 +179,7 @@ export type PointSummary = {
   today: Record<DocKind, number>;
   max: Partial<Record<DocKind, number>>;
   points: Partial<Record<DocKind, number>>;
+  pay_max_pct?: number | null;
   hold_minutes: number | null;
 };
 export type PointHold = { until: string | null; extended: boolean };
