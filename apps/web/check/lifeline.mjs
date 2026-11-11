@@ -180,7 +180,7 @@ const PATHS = [
       await page.goto(`${BASE}/plans`);
       await seen(page, "29,000원");
       await page.getByRole("tab", { name: /1년/ }).click();
-      await seen(page, "290,000원");
+      await seen(page, "249,000원"); // 11/12 1년 290,000 → 249,000
     },
   },
   {
