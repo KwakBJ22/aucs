@@ -67,6 +67,20 @@ export const copy = {
     failed: "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요",
   },
   map: { label: "물건 위치 지도", openNaver: "네이버 지도에서 보기" },
+  // 지도 분석(11/12)
+  mapView: {
+    title: "지도 분석",
+    open: "지도로 보기",
+    count: (shown: number, total: number) =>
+      total > shown
+        ? `이 범위 ${total.toLocaleString("ko-KR")}건 중 ${shown.toLocaleString("ko-KR")}건`
+        : `이 범위 ${total.toLocaleString("ko-KR")}건`,
+    loading: "지도를 불러오는 중…",
+    zoomIn: "물건이 많아 일부만 보여요 · 확대해 보세요",
+    empty: "이 범위에는 조건에 맞는 물건이 없어요",
+    noMap: "지도를 불러오지 못했어요 · 잠시 뒤 다시 열어 주세요",
+    toFind: "조건 바꾸러 찾기로",
+  },
   photos: {
     label: "법원 현장 사진",
     count: (n: number) => `사진 ${n}장`,

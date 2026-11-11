@@ -251,6 +251,36 @@ def _court_query(
     return [(sql, params), (count_sql, params)]
 
 
+MAP_MAX = 800  # 한 번에 지도에 올릴 점 — 넘으면 「확대해 보세요」(화면이 점을 묶어 보여 줌)
+
+
+def map_items(
+    *,
+    bbox: tuple[float, float, float, float],
+    sigungu: list[str],
+    max_cash: int | None,
+    extra: dict[str, Any] | None,
+    today: date,
+) -> dict[str, Any]:
+    """지도 분석(11/12): 보이는 범위(서·남·동·북) 안의 진행 경매 물건 — 찾기와 같은 조건(FIND-03)."""
+    more, params = court_where({**(extra or {}), "sigungu": sigungu, "max_cash": max_cash}, today)
+    w, s, e, n = bbox
+    params.update({"w": w, "s": s, "e": e, "n": n, "limit": MAP_MAX})
+    sql = (
+        _CARD_SQL
+        + more
+        + " and i.geom is not null"
+        + " and i.geom::geometry && st_makeenvelope(%(w)s, %(s)s, %(e)s, %(n)s, 4326)"
+    )
+    with connect() as c:
+        q_rows, q_n = batch(c, [
+            (sql + " order by i.sale_date, i.item_id limit %(limit)s", params),
+            ("select count(*) as n from (" + sql + ") q", params),
+        ])  # fmt: skip
+        rows, total = q_rows.fetchall(), (q_n.fetchone() or {"n": 0})["n"]
+    return {"total": total, "items": [card(r, today) for r in rows], "max": MAP_MAX}
+
+
 def regions() -> list[dict[str, Any]]:
     """시작 질문의 지역 고르기: 서울·경기·인천 시군구와 지금 진행 중인 물건 수(인천 11/4)."""
     with connect() as c:

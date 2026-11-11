@@ -1570,3 +1570,70 @@ a.col-chip span {
   font-size: var(--fs-sm);
   font-weight: 700;
 }
+
+/* ══ 지도 분석(11/12) — 휴대폰: 지도 위 · 목록 아래 / PC: 지도 왼쪽 64 · 목록 오른쪽 36 */
+.mv-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mv-map {
+  width: 100%;
+  height: 60vh;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+  background: var(--panel);
+}
+.mv-side {
+  min-width: 0;
+}
+.mv-pick {
+  margin-top: 8px;
+  padding: 0 12px;
+  border-radius: var(--r-panel);
+  background: var(--blue-soft);
+}
+@media (min-width: 1024px) {
+  .mv-wrap {
+    display: grid;
+    grid-template-columns: 64fr 36fr;
+    gap: 20px;
+  }
+  .mv-map {
+    position: sticky;
+    top: 120px;
+    height: calc(100dvh - 160px);
+  }
+}
+.mv-pin {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--on-strong);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+.mv-pin.blue {
+  background: var(--blue);
+}
+.mv-pin.orange {
+  background: var(--orange);
+}
+.mv-pin.red {
+  background: var(--red);
+}
+.mv-group {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--on-strong);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}

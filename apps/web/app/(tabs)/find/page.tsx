@@ -14,6 +14,7 @@ import { dropPart, parseTalk, type Talk } from "@/lib/talk";
 import {
   fetchRegions,
   fetchItems,
+  itemsQuery,
   type FindFilter,
   type FindStatus,
   type ItemList,
@@ -85,6 +86,7 @@ export default function Find() {
   const [recent, setRecent] = useState<string[]>([]);
   const [list, setList] = useState<ItemList | null>(null);
   const [regions, setRegions] = useState<string[]>([]);
+  const [mapHref, setMapHref] = useState("/pro/map");
   const [regionNames, setRegionNames] = useState<string[]>([]);
   const [talk, setTalk] = useState<Talk | null>(null); // 말로 찾기로 알아들은 조건(칩)
   const [filter, setFilter] = useState<FindFilter>({});
@@ -152,7 +154,7 @@ export default function Find() {
     setFailed(false);
     const p = loadProfile();
     setRegions(p?.regions ?? []);
-    fetchItems({
+    const opts = {
       sigungu: talk?.sigungu ?? p?.regions,
       maxCash: talk?.filter.price_max ? undefined : p?.cash,
       homes: p?.homes,
@@ -162,7 +164,9 @@ export default function Find() {
       status,
       filter: talk ? { ...filter, ...talk.filter } : filter,
       source: talk?.source ?? source,
-    })
+    };
+    setMapHref(`/pro/map?${itemsQuery(opts).toString()}`); // 지도로 보기도 같은 조건(11/12)
+    fetchItems(opts)
       .then((r) => {
         if (stale) return;
         if (r.exact_item_id) {
@@ -365,10 +369,16 @@ export default function Find() {
     </>
   );
 
+  const mapLink = (
+    <Link href={mapHref} className="btn soft sm">
+      {copy.mapView.open}
+    </Link>
+  );
+
   if (pc)
     return (
       <main className="page">
-        <PageHeader title={t.title} sub={regions.join(" · ")} />
+        <PageHeader title={t.title} sub={regions.join(" · ")} right={mapLink} />
         <div className="pc-grid g-18-34-48">
           <section
             className="section pc-sticky mt-0 oy-auto quiet-scroll"
@@ -458,7 +468,7 @@ export default function Find() {
 
   return (
     <main className="page">
-      <PageHeader title={t.title} />
+      <PageHeader title={t.title} right={mapLink} />
       {searchBox}
       <button
         className="cond-row fold"

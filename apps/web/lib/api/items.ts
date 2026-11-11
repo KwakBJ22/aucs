@@ -99,7 +99,7 @@ export type FindFilter = {
 };
 export const SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"];
 
-export function fetchItems(opts: {
+type ItemsOpts = {
   sigungu?: string[];
   maxCash?: number | null;
   sort?: "deadline" | "rate";
@@ -109,7 +109,10 @@ export function fetchItems(opts: {
   filter?: FindFilter;
   source?: Source;
   homes?: number | null; // 가진 집 수 — 「가진 현금」을 실제 필요한 현금(대출 감안)으로 견줌(11/9)
-}): Promise<ItemList> {
+};
+
+// 찾기 조건 → 주소 뒤 글(목록·지도가 같이 씀, 11/12)
+export function itemsQuery(opts: ItemsOpts): URLSearchParams {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(opts.filter ?? {})) {
     if (v == null) continue;
@@ -124,7 +127,24 @@ export function fetchItems(opts: {
   if (opts.maxCash && opts.homes) q.set("homes", String(opts.homes));
   if (opts.sort) q.set("sort", opts.sort);
   if (opts.limit) q.set("limit", String(opts.limit));
-  return getJson<ItemList>(`/items?${q.toString()}`);
+  return q;
+}
+
+export function fetchItems(opts: ItemsOpts): Promise<ItemList> {
+  return getJson<ItemList>(`/items?${itemsQuery(opts).toString()}`);
+}
+
+// 지도 분석(11/12): 찾기 조건(주소 뒤 글 그대로) + 보이는 범위(서·남·동·북)
+export type MapItems = { total: number; items: ItemCard[]; max: number };
+export function fetchMapItems(query: string, b: [number, number, number, number]) {
+  const q = new URLSearchParams(query);
+  ["q", "status", "sort", "limit", "source"].forEach((k) => q.delete(k));
+  const [w, s, e, n] = b.map((x) => x.toFixed(5));
+  q.set("w", w!);
+  q.set("s", s!);
+  q.set("e", e!);
+  q.set("n", n!);
+  return getJson<MapItems>(`/items/map?${q.toString()}`);
 }
 
 // 지역별 물건 수는 하루 한 번 바뀜 → 30분 기억(찾기·시작·전문가 화면을 오가도 다시 부르지 않음, 11/3)

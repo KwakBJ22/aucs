@@ -44,6 +44,33 @@ def get_items(
     return out
 
 
+@router.get("/items/map")
+def get_items_map(
+    w: Annotated[float, Query(ge=124, le=132)],
+    s: Annotated[float, Query(ge=33, le=39)],
+    e: Annotated[float, Query(ge=124, le=132)],
+    n: Annotated[float, Query(ge=33, le=39)],
+    sigungu: Annotated[list[str] | None, Query()] = None,
+    max_cash: Annotated[int | None, Query(ge=0)] = None,
+    usage: Annotated[list[str] | None, Query()] = None,
+    exclude: Annotated[list[str] | None, Query()] = None,
+    failed_min: Annotated[int | None, Query(ge=0, le=30)] = None,
+    rate_max: Annotated[int | None, Query(ge=1, le=100)] = None,
+    days_max: Annotated[int | None, Query(ge=0, le=365)] = None,
+    area_min: Annotated[float | None, Query(ge=0)] = None,
+    area_max: Annotated[float | None, Query(ge=0)] = None,
+    price_max: Annotated[int | None, Query(ge=0)] = None,
+    homes: Annotated[int, Query(ge=0, le=2)] = 0,
+) -> dict[str, Any]:
+    """지도 분석(11/12): 보이는 범위 안의 진행 물건 — 찾기와 같은 조건."""
+    return items.map_items(
+        bbox=(w, s, e, n), sigungu=sigungu or [], max_cash=max_cash, today=date.today(),
+        extra={"usage": usage, "exclude": exclude, "failed_min": failed_min, "rate_max": rate_max,
+               "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max,
+               "homes": homes},
+    )  # fmt: skip
+
+
 @router.get("/collections")
 def get_collections(
     sigungu: Annotated[list[str] | None, Query()] = None,
