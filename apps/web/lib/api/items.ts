@@ -419,6 +419,14 @@ export type Calc = {
   slider: { min: number; max: number; step: number };
   resale: boolean;
   assume?: { risk: boolean; krw: number | null }; // 떠안는 돈(선순위 전세권·대항력 임차인 등, 11/1)
+  // 해마다 내는 세금(11/11) — 공시가격이 있는 주택만. 종부세는 산 뒤 1주택일 때만 셈
+  holding?: {
+    official_krw: number;
+    year: number;
+    one_home: boolean;
+    property_krw: number | null;
+    comprehensive_krw: number | null;
+  } | null;
   check?: BidCheck | null; // 입찰표 실수 막기 검사(고른 입찰가 기준)
   rent?: {
     loan_krw: number;

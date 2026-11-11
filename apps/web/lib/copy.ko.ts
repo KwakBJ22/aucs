@@ -1002,6 +1002,11 @@ export const copy = {
       assumeNeed:
         "금액을 넣기 전에는 추천 입찰가와 「이 금액을 넘으면 비싸다」를 보여 드리지 않아요",
       assumeRow: "떠안는 돈",
+      holding: "해마다 내는 세금(어림)",
+      holdingV: (prop: string, comp: string | null) =>
+        comp ? `재산세 ${prop} · 종부세 ${comp}` : `재산세 ${prop}`,
+      holdingHint: (year: number, price: string, one: boolean) =>
+        `${year}년 공시가격 ${price} 기준${one ? " · 산 뒤 1주택" : " · 다른 집과 합치면 종부세가 붙을 수 있어요"}`,
       homesQ: "지금 집이 몇 채예요?",
       homes: ["없어요", "1채", "2채 이상"],
       firstTime: "생애 첫 집이에요",

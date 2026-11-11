@@ -73,6 +73,30 @@ _TABLE_KEYS = (
     "first_home_relief",
     "move_out_repair",
 )
+# 보유세 기준표(11/11) — 없어도 계산 상자는 돌아가게 따로 둠
+_HOLD_KEYS = ("property_tax_home", "comprehensive_tax_home")
+_OFFICIAL_SQL = """select kind, payload from raw.official_price_raw
+                   where item_id = %s and kind in ('apt', 'house') order by fetched_at desc limit 1"""
+
+
+def _holding(official: dict[str, Any] | None, homes: int, tables: dict[str, Any]) -> dict[str, Any] | None:
+    """해마다 내는 세금(재산세·종부세) 어림 — 공시가격이 있는 주택만(11/11). 이 집을 산 뒤 집 수로 셈."""
+    from aucs_rules.holding_tax import comprehensive_tax_home, official_price, property_tax_home
+
+    pt, ct = tables.get("property_tax_home"), tables.get("comprehensive_tax_home")
+    op = official_price(official["kind"], official["payload"]) if official else None
+    if not op or not pt:
+        return None
+    one = homes == 0  # 지금 집이 없으면 산 뒤 1세대 1주택
+    prop = property_tax_home(op["krw"], one, pt).value
+    comp = comprehensive_tax_home(op["krw"], one, homes + 1, ct, prop).value if ct and one else None
+    return {
+        "official_krw": op["krw"], "year": op["year"], "one_home": one,
+        "property_krw": prop["total_krw"] if prop else None,
+        "comprehensive_krw": comp["total_krw"] if comp else None,  # 집이 더 있으면 다른 집과 합쳐야 해서 셈 안 함
+    }  # fmt: skip
+
+
 
 
 def _rent(
@@ -112,6 +136,7 @@ def build_calc(
     r: dict[str, Any],
     tables: dict[str, Any],
     *,
+    official: dict[str, Any] | None = None,
     extra_move_krw: int = 0,
     bid_krw: int | None,
     homes: int,
@@ -187,6 +212,7 @@ def build_calc(
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,
         "assume": {"risk": risk, "krw": assume_krw if risk else None},
+        "holding": _holding(official, homes, tables),
     }
 
 
@@ -264,7 +290,16 @@ def calc(
                 )
                 for k in _TABLE_KEYS
             ]
-            + [(_LEASE_SQL, (item_id,))],  # 세놓으면(같은 단지 전월세 1년)
+            + [(_LEASE_SQL, (item_id,))]  # 세놓으면(같은 단지 전월세 1년)
+            + [
+                (
+                    "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
+                    "order by valid_from desc limit 1",
+                    (k,),
+                )
+                for k in _HOLD_KEYS
+            ]
+            + [(_OFFICIAL_SQL, (item_id,))],
         )
         r = qs[0].fetchone()
         if not r or not r["min_price_krw"]:
@@ -274,10 +309,15 @@ def calc(
             k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1 : n + 1], strict=True)
         }
         leases = qs[n + 1].fetchall()
+        for k, q in zip(_HOLD_KEYS, qs[n + 2 : n + 2 + len(_HOLD_KEYS)], strict=True):
+            row = q.fetchone()
+            if row:
+                tables[k] = row["value"]
+        official = qs[-1].fetchone()
     return build_calc(
         r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
         selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw, leases=leases,
-        assume_krw=assume_krw,
+        assume_krw=assume_krw, official=official,
     )  # fmt: skip
 
 

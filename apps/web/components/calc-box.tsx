@@ -357,6 +357,26 @@ export function CalcBox({ id }: { id: string }) {
                 {c.vsCash(s.cash_krw > myCash, won(Math.abs(s.cash_krw - myCash)))}
               </div>
             )}
+            {d.holding?.property_krw != null && (
+              <Row
+                label={c.holding}
+                value={
+                  <>
+                    {c.holdingV(
+                      won(d.holding.property_krw),
+                      d.holding.comprehensive_krw ? won(d.holding.comprehensive_krw) : null,
+                    )}
+                    <span className="sub d-block m-0 fs-xs">
+                      {c.holdingHint(
+                        d.holding.year,
+                        won(d.holding.official_krw),
+                        d.holding.one_home,
+                      )}
+                    </span>
+                  </>
+                }
+              />
+            )}
             {d.cap_krw != null && (
               <div className="fs-sm mt-6" style={{ color: over ? "var(--red)" : "var(--muted)" }}>
                 ◆ {c.cap(won(d.cap_krw))}
