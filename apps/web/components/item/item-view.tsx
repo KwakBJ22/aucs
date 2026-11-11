@@ -283,8 +283,8 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
 function PointsBand({ id, reg, pdf }: { id: string; reg: MyReg; pdf?: string | null }) {
   const p = copy.points;
   const parts = [
-    ...(reg.u ? [] : [p.heroPerks[0].join(" ")]),
-    ...(pdf ? [] : [p.heroPerks[1].join(" ")]),
+    ...(reg.u ? [] : [p.heroPerks[0]?.join(" ") ?? ""]),
+    ...(pdf ? [] : [p.heroPerks[1]?.join(" ") ?? ""]),
   ];
   if (!parts.length) return null;
   return (
