@@ -1,0 +1,164 @@
+"""공시가격(브이월드 국가중점데이터) — 진행 중인 경매 물건만 받아 raw.official_price_raw 에 (11/11 대표님).
+
+재산세·종부세 셈의 바탕(공시가격 × 공정시장가액비율). 법원과 다른 곳이라 법원 하루 한도와 상관없음.
+
+    uv run python -m aucs_workers.collectors.official_prices --probe   # 한 건만 — 응답을 화면에 보여 줌(처음 한 번)
+    uv run python -m aucs_workers.collectors.official_prices           # 아침 묶음: 기본 800건
+
+- 아파트·연립·다세대 → 공동주택가격(apt) · 단독·다가구·근린주택 → 개별주택가격(house) · 모든 물건 → 개별공시지가(land, ㎡당).
+- 같은 물건은 180일 안에 다시 받지 않음(공시는 한 해 한 번). 올해 것이 없으면 지난해 것.
+- 키: .env 의 VWORLD_API_KEY (브이월드 「인증키 발급」 · 서비스에 국가중점데이터 포함). 하루 한도·인증 오류면 받은 데까지 두고 멈춤.
+"""
+
+import argparse
+import json
+import os
+import re
+import time
+from datetime import date
+from typing import Any
+
+import httpx
+from aucs_rules.building import ho_from_address, parse_jibun, unit_from_address
+from psycopg.types.json import Jsonb
+
+from aucs_workers.db import connect
+from aucs_workers.jobs.runlog import run
+
+BASE = "https://api.vworld.kr/ned/data"
+OPS = {"apt": "getApartHousingPriceAttr", "house": "getIndvdHousingPriceAttr", "land": "getIndvdLandPriceAttr"}
+GAP = 0.25
+ROWS = 1000
+APT = re.compile(r"(아파트|연립|다세대|빌라|공동주택)")
+HOUSE = re.compile(r"(단독|다가구|근린주택|주택)")
+
+TARGETS_SQL = """
+select i.item_id, i.region_code, i.lot_no, coalesce(i.usage_name, '') || ' ' || coalesce(i.building_desc, '') as usage,
+       i.address
+from core.items i
+where i.sale_date >= current_date and i.status_code is distinct from 'gone'
+  and length(i.region_code) = 10 and coalesce(i.lot_no, '') <> ''
+  and not exists (select 1 from raw.official_price_raw r where r.item_id = i.item_id and r.kind = 'land'
+                  and r.fetched_at > now() - interval '180 days')
+order by exists (select 1 from app.watch_items w where w.item_id = i.item_id) desc, i.sale_date
+limit %s
+"""
+
+
+class ApiError(Exception):
+    pass
+
+
+def pnu_of(region_code: str, lot_no: str) -> str | None:
+    """법정동 10자리 + 지번 → 필지 번호 19자리(산이면 2, 아니면 1)."""
+    p = parse_jibun(lot_no)
+    if not p:
+        return None
+    plat, bun, ji = p
+    return f"{region_code}{'2' if plat == '1' else '1'}{bun}{ji}"
+
+
+def kinds_for(usage: str) -> list[str]:
+    """물건 쓰임새 → 받을 공시가격 종류(땅값은 늘)."""
+    if APT.search(usage):
+        return ["apt", "land"]
+    if HOUSE.search(usage) and "오피스텔" not in usage:
+        return ["house", "land"]
+    return ["land"]
+
+
+def fetch(client: httpx.Client, key: str, domain: str, kind: str, pnu: str, year: int) -> dict[str, Any]:
+    """한 종류 · 한 해. 응답을 그대로 돌려줌(쪽이 여럿이면 합침)."""
+    items: list[Any] = []
+    page, total, last = 1, 0, {}
+    while True:
+        time.sleep(GAP)
+        r = client.get(f"{BASE}/{OPS[kind]}", params={
+            "key": key, "domain": domain, "pnu": pnu, "stdrYear": year, "format": "json",
+            "numOfRows": ROWS, "pageNo": page})  # fmt: skip
+        text = (r.text or "").strip()
+        if r.status_code != 200 or not text.startswith("{"):
+            raise ApiError(f"HTTP {r.status_code} {text[:160]}")
+        last = json.loads(text)
+        body = next((v for v in last.values() if isinstance(v, dict)), {})  # 응답 이름이 API 마다 다름
+        err = body.get("error") or last.get("error")
+        if err:
+            raise ApiError(str(err)[:160])
+        part = body.get("field") or []
+        part = [part] if isinstance(part, dict) else part
+        items += part
+        total = int(body.get("totalCount") or len(items))
+        if not part or len(items) >= total:
+            break
+        page += 1
+    return {"year": year, "total": total, "items": items}
+
+
+def _digits(v: Any) -> str:
+    return re.sub(r"\D", "", str(v or "")).lstrip("0")
+
+
+def pick_unit(items: list[dict[str, Any]], address: str | None) -> list[dict[str, Any]]:
+    """공동주택은 단지 전체가 옴 → 이 물건의 동·호만 남김(DB 를 아끼려고). 못 고르면 빈 목록."""
+    ho = _digits(ho_from_address(address))
+    dong = _digits(unit_from_address(address)["dong"])
+    if not ho:
+        return []
+    out = [x for x in items
+           if any("ho" in k.lower() and _digits(v) == ho for k, v in x.items())
+           and (not dong or any("dong" in k.lower() and _digits(v) == dong for k, v in x.items())
+                or not any("dong" in k.lower() and _digits(v) for k, v in x.items()))]  # fmt: skip
+    return out
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cap", type=int, default=800)
+    ap.add_argument("--probe", action="store_true", help="한 건만 받아 응답을 보여 줌(저장도 함)")
+    a = ap.parse_args()
+    key = os.getenv("VWORLD_API_KEY", "").strip().strip("\"'")
+    domain = os.getenv("VWORLD_DOMAIN", "https://aucs.co.kr").strip()
+    if not key:
+        raise SystemExit("VWORLD_API_KEY 가 비어 있습니다 (.env)")
+    this_year = date.today().year
+    with connect() as conn, run(conn, "official_prices", "공시가격") as job:
+        rows = conn.execute(TARGETS_SQL, (1 if a.probe else a.cap,)).fetchall()
+        print(f"[시작] 물건 {len(rows):,}건")
+        with httpx.Client(timeout=30, headers={"Accept": "application/json"}) as client:
+            for i, (item_id, code, lot, usage, address) in enumerate(rows, 1):
+                pnu = pnu_of(code, lot)
+                if not pnu:
+                    continue
+                for kind in kinds_for(usage):
+                    try:
+                        got = fetch(client, key, domain, kind, pnu, this_year)
+                        if not got["items"]:  # 올해 공시 전이거나 없음 → 지난해
+                            got = fetch(client, key, domain, kind, pnu, this_year - 1)
+                    except ApiError as e:
+                        print(f"\n[멈춤] {kind} {pnu}: {e}\n  키·서비스(국가중점데이터)·하루 한도를 확인하세요. 받은 데까지 저장했어요.")
+                        conn.commit()
+                        raise SystemExit(1) from e
+                    if a.probe:
+                        print(f"--- {item_id} {usage.strip()} · {address} · {kind} · pnu {pnu} · {got['year']}년 {got['total']}건")
+                        print(json.dumps(got["items"][:2], ensure_ascii=False, indent=1)[:2500])
+                    if kind == "apt":
+                        got = {**got, "items": pick_unit(got["items"], address)}
+                        if a.probe:
+                            print(f"    이 집으로 고른 줄: {len(got['items'])}건")
+                    conn.execute(
+                        """insert into raw.official_price_raw (item_id, kind, pnu, std_year, payload)
+                           values (%s,%s,%s,%s,%s)
+                           on conflict (item_id, kind) do update set pnu = excluded.pnu,
+                             std_year = excluded.std_year, payload = excluded.payload, fetched_at = now()""",
+                        (item_id, kind, pnu, got["year"], Jsonb(got)),
+                    )
+                job.count += 1
+                if i % 50 == 0:
+                    conn.commit()
+                    print(f"  {i:,}/{len(rows):,}")
+            conn.commit()
+    print(f"끝: 물건 {job.count:,}건")
+
+
+if __name__ == "__main__":
+    main()
