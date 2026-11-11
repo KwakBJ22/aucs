@@ -965,3 +965,17 @@ input.f-input[type="search"]::-webkit-search-cancel-button {
   min-height: 44px;
   font-size: var(--fs-xl);
 }
+
+/* 물건 위치 지도(네이버, 11/11) */
+.item-map {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--r-panel);
+  overflow: hidden;
+  background: var(--panel);
+}
+@media (min-width: 1024px) {
+  .item-map {
+    height: 280px;
+  }
+}

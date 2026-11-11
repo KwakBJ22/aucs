@@ -66,6 +66,7 @@ export const copy = {
     go: "탈퇴하기",
     failed: "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요",
   },
+  map: { label: "물건 위치 지도", openNaver: "네이버 지도에서 보기" },
   photos: {
     label: "법원 현장 사진",
     count: (n: number) => `사진 ${n}장`,
