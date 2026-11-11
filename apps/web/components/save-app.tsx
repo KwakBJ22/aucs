@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  canPrompt,
   isStandalone,
   onInstallChange,
   platform,
@@ -27,6 +26,8 @@ export function SaveApp({ className = "" }: { className?: string }) {
     return onInstallChange(() => redraw((n) => n + 1));
   }, []);
   if (!os) return null;
+  const mobile = os === "ios" || os === "android";
+  if (mobile && installed) return null; // 이미 홈 화면 앱으로 열었으면 둘 것이 없음
 
   const addHome = async () => {
     if (await promptInstall()) return setHow("");
@@ -38,15 +39,17 @@ export function SaveApp({ className = "" }: { className?: string }) {
     <section className={`section ${className}`}>
       <h2>{t.boxTitle}</h2>
       <p className="sub fs-md mt-4">{t.why}</p>
-      <div className="btn-pair mt-12">
-        {!installed && (
-          <button className={`btn ${canPrompt() ? "primary" : "secondary"}`} onClick={addHome}>
-            {os === "ios" || os === "android" ? t.home : t.desktop}
+      {/* 휴대폰은 홈 화면에 두기만, PC는 즐겨찾기만(11/11 대표님) */}
+      <div className="mt-12">
+        {mobile ? (
+          <button className="btn primary w-full" onClick={addHome}>
+            {t.home}
+          </button>
+        ) : (
+          <button className="btn primary w-full" onClick={addMark}>
+            {t.bookmark}
           </button>
         )}
-        <button className="btn secondary" onClick={addMark}>
-          {t.bookmark}
-        </button>
       </div>
       {how && <div className="bg-panel r-14 p-12 mt-12 fs-md lh-16">{how}</div>}
     </section>

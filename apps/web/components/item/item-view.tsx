@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DDay } from "@/components/dday";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -25,7 +25,20 @@ import { won } from "@/lib/format";
 // 내용은 하나, 배치만 다름: PC는 왼쪽 목차 · 가운데 질문을 모두 펼침 · 오른쪽 할 일,
 // 휴대폰은 질문을 눌러 펼치고 할 일은 아래, 주 버튼은 화면 아래에 붙임.
 export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolean }) {
-  const [open, setOpen] = useState<string | null>(null);
+  // 휴대폰은 「무엇을 사나」를 펼친 채 시작(11/11 대표님)
+  const [open, setOpen] = useState<string | null>(
+    d.questions.some((q) => q.key === "buy") ? "buy" : null,
+  );
+  // 질문을 누르면 위 질문이 접히며 내용이 빠져 누른 줄이 위로 휙 올라가던 것(11/11):
+  // 누른 줄을 손가락 아래 그 자리에 붙잡아 둠
+  const pin = useRef<{ el: HTMLElement; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const p = pin.current;
+    pin.current = null;
+    if (!p) return;
+    const moved = p.el.getBoundingClientRect().top - p.top;
+    if (moved) window.scrollBy(0, moved);
+  }, [open]);
   const [copied, setCopied] = useState(false);
   // 바로가기(/item/…#q-cost)로 들어오면 그 질문을 펼쳐 둠 — 접힌 채면 자리로 가도 내용이 안 보임
   useEffect(() => {
@@ -204,7 +217,13 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                   className={pc ? "q-head" : "q-head fold"}
                   disabled={pc}
                   aria-expanded={shown}
-                  onClick={() => setOpen(open === q.key ? null : q.key)}
+                  onClick={(e) => {
+                    pin.current = {
+                      el: e.currentTarget,
+                      top: e.currentTarget.getBoundingClientRect().top,
+                    };
+                    setOpen(open === q.key ? null : q.key);
+                  }}
                 >
                   <span className="toc-dot mt-6" style={{ background: DOT[q.tone] }} />
                   <span className="f-1">
