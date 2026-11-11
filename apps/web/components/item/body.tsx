@@ -10,6 +10,49 @@ import { AppraisalPoints, OriginalLink } from "@/components/item/appraisal";
 import { FailMobile } from "@/components/item/failure";
 import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { t } from "@/components/item/shared";
+import { useState } from "react";
+
+const TENANTS_FIRST = 5;
+
+// 임차인(11/11 대표님 — 32명을 다 늘어놓지 않음): 명수 한 줄 + 처음 5명, 나머지는 「모두 보기」
+function Tenants({ list }: { list: Record<string, string | number | null>[] }) {
+  const [all, setAll] = useState(false);
+  if (!list.length) return null;
+  const rows = all ? list : list.slice(0, TENANTS_FIRST);
+  return (
+    <>
+      {list.length > TENANTS_FIRST && (
+        <div className="fs-md fw-6 mb-4">{t.tenantsCount(list.length)}</div>
+      )}
+      {rows.map((x, i) => (
+        <div key={i} className="py-6 px-0 fs-md">
+          <b>{x.name ?? "임차인"}</b> {x.part ?? ""}
+          <div className="sub m-0">
+            {[
+              x.move_in && `${t.moveIn} ${x.move_in}`,
+              x.fixed && `${t.fixed} ${x.fixed}`,
+              x.claim && `${t.claim} ${x.claim}`,
+              x.deposit_krw && `보증금 ${won(Number(x.deposit_krw))}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </div>
+        </div>
+      ))}
+      {list.length > TENANTS_FIRST && (
+        <button
+          className="cond-row fold bg-bg mt-6"
+          aria-expanded={all}
+          onClick={() => setAll(!all)}
+        >
+          <span className="fs-md">
+            {all ? t.tenantsLess : t.tenantsMore(list.length - TENANTS_FIRST)}
+          </span>
+        </button>
+      )}
+    </>
+  );
+}
 
 export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
@@ -47,21 +90,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
     return (
       <>
         {b.tenants.length === 0 && <p className="sub">{t.tenantsNone}</p>}
-        {b.tenants.map((x: Record<string, string | number | null>, i: number) => (
-          <div key={i} className="py-6 px-0 fs-md">
-            <b>{x.name ?? "임차인"}</b> {x.part ?? ""}
-            <div className="sub m-0">
-              {[
-                x.move_in && `${t.moveIn} ${x.move_in}`,
-                x.fixed && `${t.fixed} ${x.fixed}`,
-                x.claim && `${t.claim} ${x.claim}`,
-                x.deposit_krw && `보증금 ${won(Number(x.deposit_krw))}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </div>
-          </div>
-        ))}
+        <Tenants list={b.tenants} />
         <HoldDocLink />
         {d.failure_table ? (
           <FailMobile rows={d.failure_table} />

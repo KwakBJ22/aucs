@@ -10,6 +10,7 @@ import { Body } from "@/components/item/body";
 import { answerOf } from "@/components/item/checklist";
 import { InterestLine } from "@/components/item/interest-line";
 import { ItemPhotos } from "@/components/item/item-photos";
+import { OriginalLink } from "@/components/item/appraisal";
 import { OddsLine } from "@/components/item/next-round";
 import { OutcomeBand } from "@/components/item/outcome-band";
 import type { MyReg } from "@/components/item/registry";
@@ -168,15 +169,15 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         <InterestLine v={d.interest} />
         <SameHouse list={d.same_house} />
         <ItemPhotos list={d.photos} />
-        {d.tags.length > 0 && (
-          <div className="d-flex gap-6 f-wrap mt-10">
-            {d.tags.map((x) => (
-              <span key={x.label} className={`chip ${x.ok ? "green" : "gray"}`}>
-                {x.label}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="d-flex gap-6 f-wrap ai-center mt-10">
+          {d.tags.map((x) => (
+            <span key={x.label} className={`chip ${x.ok ? "green" : "gray"}`}>
+              {x.label}
+            </span>
+          ))}
+          {/* 감정평가서(11/11 대표님 — 어디서 보는지 안 보였음): 서류 줄 끝에 바로 */}
+          <OriginalLink pdf={d.appraisal?.pdf_url} court={d.court} caseNo={d.case_no} compact />
+        </div>
       </section>
 
       <div className="pc-grid g-14-62-24">

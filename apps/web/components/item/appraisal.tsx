@@ -60,23 +60,26 @@ export function OriginalLink({
   pdf,
   court,
   caseNo,
+  compact = false,
 }: {
   pdf?: string | null;
   court: string;
   caseNo: string;
+  compact?: boolean; // 머리 서류 줄에 놓는 작은 단추(11/11) — 안내 글 없이
 }) {
   const [copied, setCopied] = useState(false);
   const c = t.appraisal;
+  const cls = compact ? "btn soft sm" : "btn soft mt-10";
   if (pdf)
     return (
-      <a className="btn soft mt-10" href={pdf} target="_blank" rel="noreferrer">
-        {c.original}
+      <a className={cls} href={pdf} target="_blank" rel="noreferrer">
+        {compact ? c.short : c.original}
       </a>
     );
   return (
     <>
       <a
-        className="btn soft mt-10"
+        className={cls}
         href={COURT_CASE_PAGE}
         target="_blank"
         rel="noreferrer"
@@ -87,9 +90,13 @@ export function OriginalLink({
           );
         }}
       >
-        {c.court}
+        {compact ? c.short : c.court}
       </a>
-      <p className="sub fs-sm mt-6">{copied ? c.copied(caseNo) : c.courtHint(court, caseNo)}</p>
+      {(!compact || copied) && (
+        <p className={`sub fs-sm ${compact ? "w-full m-0" : "mt-6"}`}>
+          {copied ? c.copied(caseNo) : c.courtHint(court, caseNo)}
+        </p>
+      )}
     </>
   );
 }

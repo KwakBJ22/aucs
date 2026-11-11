@@ -66,7 +66,14 @@ export const copy = {
     go: "탈퇴하기",
     failed: "지금은 탈퇴를 처리하지 못했어요 · 잠시 뒤 다시 해 주세요",
   },
-  photos: { label: "법원 현장 사진", count: (n: number) => `사진 ${n}장` },
+  photos: {
+    label: "법원 현장 사진",
+    count: (n: number) => `사진 ${n}장`,
+    prev: "앞 사진",
+    next: "다음 사진",
+    close: "닫기",
+    pos: (i: number, n: number) => `${i} / ${n}`,
+  },
   states: {
     errorTitle: "자료를 불러오지 못했어요",
     errorSub: "인터넷 연결을 확인하고 다시 시도해 주세요",
@@ -957,6 +964,7 @@ export const copy = {
       extras: "제시외 건물",
       extrasV: (n: number, v: string | null) => (v ? `${n}개 · ${v}` : `${n}개`),
       original: "감정평가서 원본 보기",
+      short: "감정평가서",
       court: "법원에서 감정평가서 보기",
       courtHint: (court: string, no: string) =>
         `누르면 사건번호가 복사돼요 · 법원 화면에서 ${court} ${no} 를 찾아 「감정평가서」를 누르세요`,
@@ -1137,6 +1145,9 @@ export const copy = {
       summaryMine: (line: string) => `${line} · 내 등기부 기준`,
     },
     tenantsNone: "현황조사서에 임차인이 없거나 아직 못 받았어요",
+    tenantsCount: (n: number) => `임차인 ${n}명`,
+    tenantsMore: (n: number) => `${n}명 더 보기`,
+    tenantsLess: "접기",
     doc: {
       closed:
         "끝난 사건은 개인정보 보호를 위해 원문을 보여 드리지 않아요 · 주요 사항은 위 요약에 남아 있어요",
