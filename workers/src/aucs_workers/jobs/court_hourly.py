@@ -71,7 +71,8 @@ def main() -> None:
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
         share = hour_share(_cap())
-        spare = 0 if _details_left() else 35  # 11/12: 물건상세 첫 바퀴가 끝나면 그 몫을 서류 보관(현황조사서)으로
+        # 11/12: 물건상세 첫 바퀴가 끝나면 그 몫을 서류 보관(현황조사서)으로
+        spare = 0 if _details_left() else 35
         for name, mod, pct in STEPS:
             if pct and name == "서류 보관":
                 pct += spare
