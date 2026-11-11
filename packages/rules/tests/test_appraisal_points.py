@@ -1,24 +1,14 @@
-"""감정평가 요항 → 요점 · 사실 (11/4). 이름 가림과 돈·권리에 걸리는 판단만 시험."""
+"""감정평가 요항 → 요점 · 사실 (11/4). 돈·권리에 걸리는 판단만 시험."""
 
 from datetime import date
 
-from aucs_rules.appraisal_points import appraisal_facts, mask_people, parse_points
+from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.risk import signals
 from aucs_rules.small_lease_region import region_class
 
 
 def _e(cd: str, t: str) -> dict[str, str]:
     return {"aeeWevlMnpntItmCd": cd, "aeeWevlMnpntCtt": t, "aeeWevlMnpntDtlSeq": "1"}
-
-
-def test_mask_people() -> None:
-    assert mask_people("임차인 홍길동씨 거주함") == "임차인 홍○○ 거주함"
-    assert "김철수" not in mask_people("소유자: 김철수 , 연락처 010-1234-5678")
-    assert "1234" not in mask_people("연락처 010-1234-5678")
-    assert mask_people("임대관계는 미상임.") == "임대관계는 미상임."
-    # 요항 임대관계 칸에 실제로 나오는 꼴
-    m = mask_people("- 임차권자 : 이용욱  840312-******* 경기도 용인시")
-    assert "이용욱" not in m and "840312" not in m and "이○○" in m
 
 
 def test_parse_points_cleans_and_drops_empty() -> None:

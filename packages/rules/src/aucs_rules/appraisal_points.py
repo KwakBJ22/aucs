@@ -1,7 +1,7 @@
-"""감정평가 요항(물건상세 aeeWevlMnpntLst) → 화면 요점 · 위험 사실 (11/4 대표님 — 개인정보 가리고 사용 허락).
+"""감정평가 요항(물건상세 aeeWevlMnpntLst) → 화면 요점 · 위험 사실 (11/4 평가사 쪽 사용 허락).
 
 법원 물건상세에 실린 「감정평가요항표」 요약 글을 읽어
-1) 화면에 보일 요점(이름 붙인 짧은 글, 사람 이름·전화는 가림)과
+1) 화면에 보일 요점(이름 붙인 짧은 글 — 법원 글 그대로, 11/12 대표님)과
 2) 위험 신호 · 추천 점수가 읽는 사실(맹지 · 좁은 길 · 개발제한구역 · 교육환경보호구역 · 토지거래허가구역 · 과밀억제권역 · 역 가까움 …)
 을 만든다. 순수 함수 — DB·네트워크를 쓰지 않음.
 """
@@ -36,31 +36,6 @@ MAX_CHARS = 600  # 임대관계 칸은 임차인 열 명분이 들어오기도 �
 
 _EMPTY = re.compile(r"^[\s\-.·:()]*((해당\s*사항\s*)?없\s*음|해당\s*없음|무)?[\s\-.·:()]*$")
 _ATTACH_ONLY = re.compile(r"^\s*(별첨|후면|첨부)[^.]*참조\.?\s*$")
-# 사람 이름 가리기: 「소유자 홍길동」「임차인: 김철수씨」 → 「소유자 홍○○」
-_PERSON = re.compile(
-    r"(소유자|임차권자|임차인|전세권자|임대인|채무자|채권자|점유자|세입자|거주자|관리인|감정인|입회인|이해관계인)(\s*[:：]?\s*)([가-힣]{2,4}?)(씨|님)?(?=[\s,.)(]|$)"
-)
-# 「이용욱  840312-*******」처럼 이름 + 주민번호 앞자리(요항 임대관계 칸에 실제로 있음)
-_NAME_ID = re.compile(r"([가-힣])([가-힣]{1,3})(\s*)\d{6}\s*-\s*[\d*]{1,7}")
-_ID = re.compile(r"\b\d{6}\s*-\s*[\d*]{1,7}")
-_PHONE = re.compile(r"\b0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}\b")
-_NOT_NAME = {"없음", "미상", "불명", "본인", "가족", "부부", "일가", "등의", "외", "측의"}
-
-
-def mask_people(text: str) -> str:
-    """사람 이름 · 전화번호를 가림(11/4 — 사용 허락 조건: 개인정보 마킹)."""
-
-    def _name(m: re.Match[str]) -> str:
-        name = m.group(3)
-        if name in _NOT_NAME or name.endswith(("으로", "에게", "이며", "이고", "과", "와")):
-            return m.group(0)
-        return f"{m.group(1)}{m.group(2)}{name[0]}{'○' * (len(name) - 1)}"
-
-    t = _NAME_ID.sub(lambda m: f"{m.group(1)}{'○' * len(m.group(2))}", text)
-    t = _ID.sub("", t)
-    return _PHONE.sub("○○○-○○○○-○○○○", _PERSON.sub(_name, t))
-
-
 def clean(text: str | None) -> str:
     """법원 글의 &amp;quot; 같은 겹친 기호 · <br> · 줄바꿈을 풀어 한 줄로."""
     t = str(text or "")
@@ -75,7 +50,7 @@ def clean(text: str | None) -> str:
 
 
 def parse_points(lst: list[dict[str, Any]] | None) -> list[dict[str, str]]:
-    """요항 목록 → [{label, text}] (빈 칸 · 「없음」 · 「별첨 참조」만인 칸은 뺌, 이름 가림)."""
+    """요항 목록 → [{label, text}] (빈 칸 · 「없음」 · 「별첨 참조」만인 칸은 뺌, 11/12 — 다른 업체처럼 가리지 않음)."""
     by_label: dict[str, list[str]] = {}
     for e in sorted(
         lst or [],
@@ -85,7 +60,6 @@ def parse_points(lst: list[dict[str, Any]] | None) -> list[dict[str, str]]:
         t = clean(e.get("aeeWevlMnpntCtt"))
         if not label or not t or _EMPTY.match(t) or _ATTACH_ONLY.match(t):
             continue
-        t = mask_people(t)
         if t not in by_label.setdefault(label, []):
             by_label[label].append(t)
     out = []
