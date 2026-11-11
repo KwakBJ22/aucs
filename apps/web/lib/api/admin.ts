@@ -21,6 +21,15 @@ export type Today = {
     errors: number;
   };
   open: { reports: number; inquiries: number };
+  // 유료 전환 가늠(11/12): 관심 담은 진행 물건 중 서류가 찬 수
+  fill?: {
+    members: number;
+    uploaders: number;
+    week: number;
+    watched: number;
+    registry: number;
+    appraisal: number;
+  };
   steps: JobRun[];
   db: { used: number; limit: number };
   backup: { at: string; status: string; message: string | null } | null;

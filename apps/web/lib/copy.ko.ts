@@ -1609,6 +1609,14 @@ export const copy = {
       ["errors", "오류"],
     ] as const,
     openLine: (r: number, q: number) => `밀린 제보 ${r} · 답 안 한 문의 ${q}`,
+    fill: {
+      title: "유료 전환 가늠 · 80% 넘으면",
+      registry: "관심 물건 등기부",
+      appraisal: "관심 물건 감정평가서",
+      members: "회원",
+      line: (w: number, u: number, k: number) =>
+        `관심 담긴 진행 물건 ${w.toLocaleString("ko-KR")}건 기준 · 올린 회원 ${u}명 · 최근 일주일 ${k}건`,
+    },
     morning: "오늘 아침 묶음",
     morningNone: "오늘은 아직 안 돌았어요",
     db: "DB 용량",

@@ -64,6 +64,21 @@ def today() -> dict[str, Any]:
             ).fetchone()
             or {}
         )
+        # 유료 전환 가늠(11/12 대표님): 회원이 관심 담은 진행 물건 중 서류가 찬 비율 — 80% 넘으면 전환
+        fill = (
+            c.execute(
+                """with w as (select distinct i.item_id, i.case_id from app.watch_items w
+                              join core.items i using (item_id) where i.sale_date >= current_date)
+                select (select count(*) from auth.users) as members,
+                  (select count(distinct user_id) from app.contrib_uploads where points > 0) as uploaders,
+                  (select count(*) from app.contrib_uploads where points > 0 and created_at > now() - interval '7 days') as week,
+                  count(*) as watched,
+                  count(*) filter (where exists (select 1 from app.uploaded_registries r where r.item_id = w.item_id and r.shared)) as registry,
+                  count(*) filter (where exists (select 1 from core.appraisal_files f where f.case_id = w.case_id)) as appraisal
+                from w"""
+            ).fetchone()
+            or {}
+        )
         burst = c.execute(
             """select message, count(*) as n from ops.errors where at > now() - interval '1 hour'
                group by message having count(*) >= 5 order by 2 desc limit 3"""
@@ -129,6 +144,7 @@ def today() -> dict[str, Any]:
             k: n.get(k) for k in ("new_items", "new_users", "devices", "views", "errors")
         },
         "open": {"reports": n.get("reports_open", 0), "inquiries": n.get("inq_open", 0)},
+        "fill": dict(fill),
         "steps": [s for k in DAILY_JOBS for s in steps if s["job_id"] == k],
         "db": {"used": n.get("db_bytes", 0), "limit": DB_LIMIT},
         "backup": bk

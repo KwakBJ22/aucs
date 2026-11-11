@@ -50,6 +50,26 @@ export function TodayView({ go }: { go: (m: string) => void }) {
         </div>
         <p className="sub mt-8">{t.openLine(d.open.reports, d.open.inquiries)}</p>
       </section>
+      {d.fill && (
+        <section className="section">
+          <h2>{t.fill.title}</h2>
+          <div className="adm-nums">
+            {(["registry", "appraisal"] as const).map((k) => (
+              <div key={k}>
+                <b className="num">
+                  {d.fill?.watched ? Math.round(((d.fill[k] ?? 0) * 100) / d.fill.watched) : 0}%
+                </b>
+                <span className="sub">{t.fill[k]}</span>
+              </div>
+            ))}
+            <div>
+              <b className="num">{d.fill.members.toLocaleString("ko-KR")}</b>
+              <span className="sub">{t.fill.members}</span>
+            </div>
+          </div>
+          <p className="sub mt-8">{t.fill.line(d.fill.watched, d.fill.uploaders, d.fill.week)}</p>
+        </section>
+      )}
       <section className="section">
         <h2>{t.morning}</h2>
         {d.steps.length === 0 ? (
