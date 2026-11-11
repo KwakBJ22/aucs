@@ -128,7 +128,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         right={
           <div className="d-flex ai-center gap-8">
             <WsLink id={d.item_id} />
-            <HeartButton id={d.item_id} />
+            <HeartButton id={d.item_id} inline />
           </div>
         }
       />

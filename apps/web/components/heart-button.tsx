@@ -3,7 +3,8 @@
 import { useWatch } from "./watch-context";
 import { copy } from "@/lib/copy.ko";
 
-export function HeartButton({ id }: { id: string }) {
+// inline: 글자 줄 옆(상세 머리 「작업 공간」 곁)에서는 가운데 맞춤 — 카드 귀퉁이에서는 위·오른쪽(11/11)
+export function HeartButton({ id, inline = false }: { id: string; inline?: boolean }) {
   const { ids, toggle } = useWatch();
   const on = ids.has(id);
   return (
@@ -14,7 +15,7 @@ export function HeartButton({ id }: { id: string }) {
         e.stopPropagation();
         void toggle(id);
       }}
-      className="icon-btn d-flex p-4 ai-start jc-end"
+      className={`icon-btn d-flex p-4 ${inline ? "ai-center jc-center" : "ai-start jc-end"}`}
     >
       <svg
         width="20"
