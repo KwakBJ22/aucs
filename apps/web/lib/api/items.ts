@@ -243,6 +243,7 @@ export type ItemDetail = ItemCard & {
     price_date?: string | null; // 가격시점 2022.03.22
     parts?: AppraisalParts | null; // 감정가 나눔(11/7)
     pdf_url?: string | null; // 감정평가서 원본(11/11) — 없으면 법원으로 안내
+    kapa_url?: string | null; // 원본이 없을 때 협회 열람 화면(11/11)
   } | null; // 감정평가 요점(11/4)
   outcome?: Outcome | null; // 지난 기일 결과(앞으로 잡힌 기일이 없을 때, 11/1) // 법원 현장 사진(휴대폰 크기, 매각 뒤 30일 지나면 없음)
   computed_at: string | null;

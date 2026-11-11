@@ -176,7 +176,12 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             </span>
           ))}
           {/* 감정평가서(11/11 대표님 — 어디서 보는지 안 보였음): 서류 줄 끝에 바로 */}
-          <OriginalLink pdf={d.appraisal?.pdf_url} court={d.court} caseNo={d.case_no} compact />
+          <OriginalLink
+            pdf={d.appraisal?.pdf_url ?? d.appraisal?.kapa_url}
+            court={d.court}
+            caseNo={d.case_no}
+            compact
+          />
         </div>
       </section>
 

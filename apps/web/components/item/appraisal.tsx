@@ -49,12 +49,12 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} />
+      <OriginalLink pdf={a.pdf_url ?? a.kapa_url} court={court} caseNo={caseNo} />
     </div>
   );
 }
 
-// 감정평가서 원본(11/11 대표님): 받아 둔 원본이 있으면 바로 열고, 없으면 사건번호를 복사해 법원 사건검색 화면으로
+// 감정평가서 원본(11/11 대표님): 받아 둔 원본 → 협회 열람 화면 → (둘 다 없으면) 사건번호를 복사해 법원 사건검색 화면으로
 // (법원 사이트에는 물건별 감정평가서 창으로 바로 가는 주소가 없음)
 export function OriginalLink({
   pdf,

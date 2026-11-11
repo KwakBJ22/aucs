@@ -333,6 +333,19 @@ def pdf_url(path: str | None) -> str | None:
     return f"{settings.SUPABASE_URL}/storage/v1/object/public/appraisal-pdfs/{path}"
 
 
+def kapa_url(info: dict[str, Any] | None) -> str | None:
+    """법원 「감정평가서」 단추가 여는 협회 열람 화면 주소(11/11 대표님 — 원본을 올리기 전까지 손님 화면에서 바로 열게).
+    꼴: ca.kapanet.or.kr/view/{법원 6자리}/{사건}/{명령횟차}/{감정서 번호}/{작성일} — 11/7 수집기 기록에서 확인."""
+    from urllib.parse import quote
+
+    i = info or {}
+    court, cs, no, ymd = (str(i.get(k) or "") for k in ("cortOfcCd", "csNo", "aeeWevlNo", "wrtYmd"))
+    if not (court and cs and no and len(ymd) == 8):
+        return None
+    return (f"https://ca.kapanet.or.kr/view/{court.lstrip('B')}/{cs}/{int(i.get('ordTsCnt') or 1)}/"
+            f"{quote(no, safe='')}/{ymd}")  # fmt: skip
+
+
 def appraisal_section(
     payload: dict[str, Any] | None,
     apr: dict[str, dict[str, Any]] | None = None,
@@ -353,7 +366,8 @@ def appraisal_section(
     parts = appraisal_parts(
         dr.get("gdsDspslObjctLst"), dr.get("gdsNotSugtBldLsstAll"), dr.get("rgltLandLstAll")
     ).value
-    if not points and not price_date and not parts and not pdf:
+    kapa = None if pdf else kapa_url((a.get("appraisal") or {}).get("info"))
+    if not points and not price_date and not parts and not pdf and not kapa:
         return None
     return {
         "points": points,
@@ -361,6 +375,7 @@ def appraisal_section(
         "price_date": price_date,
         "parts": parts or None,
         "pdf_url": pdf,  # 원본이 있으면 바로 열고, 없으면 화면이 법원으로 안내(11/11)
+        "kapa_url": kapa,  # 원본이 없으면 협회 열람 화면으로 바로(11/11 대표님)
     }
 
 
