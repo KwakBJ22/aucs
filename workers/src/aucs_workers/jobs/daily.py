@@ -1,4 +1,4 @@
-"""아침 묶음 (10/18 대표님, 11/4 저녁: 사건 서류·사진·다음 회차는 매시 작업 court_hourly 로 옮김 — 하루 종일 나눠 받기): 매각결과 → 물건 수집 → 건축물대장(10/27) → 공매(10/28) → 분석 → 첫 화면 숫자 새로(11/4) → 알림 → 지우기.
+"""아침 묶음 (10/18 대표님, 11/4 저녁: 사건 서류·사진·다음 회차는 매시 작업 court_hourly 로 옮김 — 하루 종일 나눠 받기): 매각결과 → 물건 수집 → 건축물대장(10/27) → 공시가격(11/11) → 공매(10/28) → 분석 → 첫 화면 숫자 새로(11/4) → 알림 → 지우기.
 
 작업 스케줄러가 매일 07:00에 부르고, PC가 꺼져 있었으면 켜지는 순간 시작합니다(StartWhenAvailable).
 순서가 섞이지 않도록 한 작업 안에서 차례로 돌립니다. 한 단계가 실패해도 다음 단계는 계속하고,
@@ -15,6 +15,7 @@ STEPS = [
     ("매각결과", ["aucs_workers.collectors.court_results"]),
     ("물건 수집", ["aucs_workers.collectors.court_items"]),
     ("건축물대장", ["aucs_workers.collectors.buildings"]),
+    ("공시가격", ["aucs_workers.collectors.official_prices", "--cap", "1500"]),  # 11/11 — 재산세·종부세 바탕
     ("공매", ["aucs_workers.collectors.onbid"]),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),

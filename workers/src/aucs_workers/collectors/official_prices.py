@@ -99,16 +99,18 @@ def _digits(v: Any) -> str:
 
 
 def pick_unit(items: list[dict[str, Any]], address: str | None) -> list[dict[str, Any]]:
-    """공동주택은 단지 전체가 옴 → 이 물건의 동·호만 남김(DB 를 아끼려고). 못 고르면 빈 목록."""
+    """공동주택은 단지 전체가 옴 → 이 물건의 동·호(dongNm·hoNm) 한 줄만 남김. 같은 집이 여러 줄이면 최근 고친 것.
+    못 고르면 빈 목록(DB 를 아끼려고 단지 전체는 두지 않음)."""
     ho = _digits(ho_from_address(address))
     dong = _digits(unit_from_address(address)["dong"])
     if not ho:
         return []
-    out = [x for x in items
-           if any("ho" in k.lower() and _digits(v) == ho for k, v in x.items())
-           and (not dong or any("dong" in k.lower() and _digits(v) == dong for k, v in x.items())
-                or not any("dong" in k.lower() and _digits(v) for k, v in x.items()))]  # fmt: skip
-    return out
+    hits = [x for x in items
+            if _digits(x.get("hoNm")) == ho
+            and (not dong or not _digits(x.get("dongNm")) or _digits(x.get("dongNm")) == dong)]  # fmt: skip
+    if not hits:
+        return []
+    return [max(hits, key=lambda x: (str(x.get("stdrYear")), str(x.get("stdrMt")), str(x.get("lastUpdtDt"))))]
 
 
 def main() -> None:
