@@ -18,7 +18,7 @@ from aucs_api.db import connect
 
 FREE_DAYS = 7
 # 매달 요금(이용권 화면과 같게, 결제를 붙일 때 가격표 한 곳으로 옮김) — 1년권 중간 해지 계산에 씀
-MONTHLY_KRW = {"personal": 29_000, "pro": 99_000}
+MONTHLY_KRW = {"personal": 29_000, "pro": 49_000}  # 11/12 전문가 99,000 → 49,000
 
 
 @dataclass(frozen=True)
