@@ -47,3 +47,16 @@ def test_official_price_reads_vworld() -> None:
     assert official_price("apt", apt) == {"krw": 261000000, "year": 2026}
     assert official_price("land", land) == {"krw": 8758000, "year": 2026}
     assert official_price("apt", {"items": []}) is None
+
+
+def test_official_price_drops_other_unit() -> None:
+    """다른 동·상가동 같은 호수(면적 다름), 집 전체 값이 붙은 지분 물건은 쓰지 않음."""
+    p = {"items": [{"pblntfPc": "148000000", "prvuseAr": "84.92", "stdrYear": "2026"}]}
+    assert official_price("apt", p, area_m2=21.42) is None
+    assert official_price("apt", p, area_m2=84.0, appraisal_krw=250000000) == {
+        "krw": 148000000,
+        "year": 2026,
+    }
+    h = {"items": [{"housePc": "300000000", "stdrYear": "2026"}]}
+    assert official_price("house", h, appraisal_krw=140000000) is None  # 2.1배
+    assert official_price("house", h, appraisal_krw=500000000) is not None

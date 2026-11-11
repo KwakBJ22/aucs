@@ -79,12 +79,22 @@ _OFFICIAL_SQL = """select kind, payload from raw.official_price_raw
                    where item_id = %s and kind in ('apt', 'house') order by fetched_at desc limit 1"""
 
 
-def _holding(official: dict[str, Any] | None, homes: int, tables: dict[str, Any]) -> dict[str, Any] | None:
+def _holding(
+    official: dict[str, Any] | None,
+    homes: int,
+    tables: dict[str, Any],
+    area: float | None,
+    appraisal_krw: int | None,
+) -> dict[str, Any] | None:
     """해마다 내는 세금(재산세·종부세) 어림 — 공시가격이 있는 주택만(11/11). 이 집을 산 뒤 집 수로 셈."""
     from aucs_rules.holding_tax import comprehensive_tax_home, official_price, property_tax_home
 
     pt, ct = tables.get("property_tax_home"), tables.get("comprehensive_tax_home")
-    op = official_price(official["kind"], official["payload"]) if official else None
+    op = (
+        official_price(official["kind"], official["payload"], area, appraisal_krw)
+        if official
+        else None
+    )
     if not op or not pt:
         return None
     one = homes == 0  # 지금 집이 없으면 산 뒤 1세대 1주택
@@ -95,8 +105,6 @@ def _holding(official: dict[str, Any] | None, homes: int, tables: dict[str, Any]
         "property_krw": prop["total_krw"] if prop else None,
         "comprehensive_krw": comp["total_krw"] if comp else None,  # 집이 더 있으면 다른 집과 합쳐야 해서 셈 안 함
     }  # fmt: skip
-
-
 
 
 def _rent(
@@ -212,7 +220,7 @@ def build_calc(
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,
         "assume": {"risk": risk, "krw": assume_krw if risk else None},
-        "holding": _holding(official, homes, tables),
+        "holding": _holding(official, homes, tables, area, app),
     }
 
 

@@ -73,8 +73,20 @@ def comprehensive_tax_home(
     )  # fmt: skip
 
 
-def official_price(kind: str, payload: dict[str, Any] | None) -> dict[str, Any] | None:
-    """브이월드 원문(raw.official_price_raw) → {'krw', 'year'} (공동주택·개별주택: 한 집 값, 땅: ㎡당)."""
+# 다른 집 값이 붙은 것 거르기(11/11): 면적이 이만큼 넘게 다르거나, 감정가와 견줘 이 밖이면 이 집 값이 아님
+# (다른 동·상가동의 같은 호수, 집 전체 값이 붙은 지분 물건). 법 숫자가 아니라 자료 맞추기 기준이라 여기 둠.
+AREA_GAP_M2 = 3.0
+RATIO_MIN, RATIO_MAX = 0.2, 1.5
+
+
+def official_price(
+    kind: str,
+    payload: dict[str, Any] | None,
+    area_m2: float | None = None,
+    appraisal_krw: int | None = None,
+) -> dict[str, Any] | None:
+    """브이월드 원문(raw.official_price_raw) → {'krw', 'year'} (공동주택·개별주택: 한 집 값, 땅: ㎡당).
+    면적·감정가를 주면 이 집 값이 맞는지 보고, 아니면 None(틀린 세금을 보이느니 안 보임)."""
     items = (payload or {}).get("items") or []
     if not items:
         return None
@@ -84,4 +96,15 @@ def official_price(kind: str, payload: dict[str, Any] | None) -> dict[str, Any] 
         krw = int(str(v).replace(",", ""))
     except (TypeError, ValueError):
         return None
-    return {"krw": krw, "year": int(it.get("stdrYear") or (payload or {}).get("year") or 0)} if krw > 0 else None
+    if krw <= 0:
+        return None
+    if kind == "apt" and area_m2:
+        try:
+            own = float(str(it.get("prvuseAr") or "").replace(",", ""))
+        except ValueError:
+            own = 0.0
+        if own and abs(own - area_m2) > AREA_GAP_M2:
+            return None
+    if kind != "land" and appraisal_krw and not RATIO_MIN <= krw / appraisal_krw <= RATIO_MAX:
+        return None
+    return {"krw": krw, "year": int(it.get("stdrYear") or (payload or {}).get("year") or 0)}
