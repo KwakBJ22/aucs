@@ -773,7 +773,7 @@ button:disabled,
   gap: 0;
 }
 .tb-tools > :not(:last-child) {
-  margin-right: -22px;
+  margin-right: -14px; /* 원래 틈 8 을 빼고 14 를 더 당겨 모두 22 */
 }
 
 /* 크게 고르는 카드(시작 화면 「무엇을 하려고」) — 고르는 칩과 같은 규칙, 모양만 카드 */
