@@ -52,7 +52,16 @@ def summary(uid: str) -> dict[str, Any]:
     }
 
 
-_BOARD_SQL = """
+_BOARD_WHERE = """
+from core.items i join core.cases c using (case_id)
+where i.display_policy = 'public' and i.sale_date between current_date and current_date + 30
+  and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
+  and (not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
+       or not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id))
+  and (%(item)s::text is null or i.item_id = %(item)s)
+"""
+_BOARD_SQL = (
+    """
 select i.item_id, i.case_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.building_desc, i.sigungu, i.gu,
        i.address,
        (select count(*) from app.watch_items w where w.item_id = i.item_id) as watchers,
@@ -60,42 +69,52 @@ select i.item_id, i.case_id, c.court_code, c.case_no, i.sale_date, i.usage_name,
        not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id) as need_appraisal,
        (select json_object_agg(h.kind, json_build_object('mine', h.user_id = %(uid)s, 'until', h.until_at, 'extended', h.extended))
           from app.contrib_holds h where h.item_id = i.item_id and h.until_at > now()) as holds
-from core.items i join core.cases c using (case_id)
-where i.display_policy = 'public' and i.sale_date between current_date and current_date + 30
-  and i.status_code is distinct from 'gone'
-  and (not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
-       or not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id))
-order by i.sale_date, watchers desc, i.item_id
-limit %(limit)s
 """
+    + _BOARD_WHERE
+    + "order by i.sale_date, watchers desc, i.item_id offset %(offset)s limit %(limit)s"
+)
+PAGE = 30
 
 
-def board(uid: str, limit: int = 60) -> list[dict[str, Any]]:
-    """서류가 빈 물건(매각일 가깝고 관심 많은 순). 남이 맡긴 서류는 빼고, 둘 다 남이 맡겼으면 줄째 뺌."""
-    with connect() as c:
-        rows = c.execute(_BOARD_SQL, {"uid": uid, "limit": limit * 2}).fetchall()
-    out = []
-    for r in rows:
-        holds = r["holds"] or {}
-        need = {}
-        for k in ("registry", "appraisal"):
-            if not r[f"need_{k}"]:
-                continue
-            h = holds.get(k)
-            if h and not h["mine"]:
-                continue  # 다른 분이 맡아 떼는 중
-            need[k] = {"until": h["until"] if h else None, "extended": bool(h and h["extended"])}
-        if not need:
+def _row(r: dict[str, Any]) -> dict[str, Any] | None:
+    """한 줄 → 화면 줄. 남이 맡긴 서류는 빼고, 둘 다 남이 맡겼으면 None."""
+    holds = r["holds"] or {}
+    need = {}
+    for k in ("registry", "appraisal"):
+        if not r[f"need_{k}"]:
             continue
-        out.append({
-            "item_id": r["item_id"], "court": COURT_NAME.get(r["court_code"], r["court_code"]), "case_no": r["case_no"],
-            "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
-            "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
-            "building": r["building_desc"] or r["usage_name"], "address": r["address"], "need": need,
-        })  # fmt: skip
-        if len(out) >= limit:
-            break
-    return out
+        h = holds.get(k)
+        if h and not h["mine"]:
+            continue  # 다른 분이 맡아 떼는 중
+        need[k] = {"until": h["until"] if h else None, "extended": bool(h and h["extended"])}
+    if not need:
+        return None
+    return {
+        "item_id": r["item_id"], "court": COURT_NAME.get(r["court_code"], r["court_code"]), "case_no": r["case_no"],
+        "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
+        "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
+        "building": r["building_desc"] or r["usage_name"], "address": r["address"], "need": need,
+    }  # fmt: skip
+
+
+def board(uid: str, offset: int = 0, item: str | None = None) -> dict[str, Any]:
+    """서류가 빈 물건(매각일 가깝고 관심 많은 순)을 30건씩 · 모두 몇 건인지. item 이 오면 그 물건을 맨 위에(상세에서 넘어옴)."""
+    from aucs_rules.find_filter import VEHICLES
+
+    base = {"uid": uid, "vehicles": VEHICLES}
+    jobs = [
+        (_BOARD_SQL, {**base, "item": None, "offset": offset, "limit": PAGE}),
+        ("select count(*) as n " + _BOARD_WHERE, {**base, "item": None}),
+    ]
+    if item and offset == 0:
+        jobs.append((_BOARD_SQL, {**base, "item": item, "offset": 0, "limit": 1}))
+    with connect() as c:
+        qs = batch(c, jobs)
+        rows = qs[0].fetchall()
+        total = qs[1].fetchone()
+        first = qs[2].fetchall() if len(qs) > 2 else []
+    out = [x for x in (_row(r) for r in first + [r for r in rows if r["item_id"] != item]) if x]
+    return {"rows": out, "total": int(total["n"]) if total else 0, "next": offset + PAGE}
 
 
 def hold(uid: str, item_id: str, kind: str, extend: bool = False) -> dict[str, Any] | None:

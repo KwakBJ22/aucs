@@ -192,6 +192,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
           <OriginalLink pdf={d.appraisal?.pdf_url} court={d.court} caseNo={d.case_no} compact />
         </div>
       </section>
+      {!closed && <PointsBand id={d.item_id} reg={reg} pdf={d.appraisal?.pdf_url} />}
 
       <div className="pc-grid g-14-62-24">
         {pc && (
@@ -275,5 +276,28 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         </div>
       )}
     </main>
+  );
+}
+
+// 서류가 빈 물건이면 상세 맨 위에 「채우고 포인트 받기」 띠(11/12 대표님 — 상세에서도 잘 보이게)
+function PointsBand({ id, reg, pdf }: { id: string; reg: MyReg; pdf?: string | null }) {
+  const p = copy.points;
+  const parts = [
+    ...(reg.u ? [] : [p.heroPerks[0].join(" ")]),
+    ...(pdf ? [] : [p.heroPerks[1].join(" ")]),
+  ];
+  if (!parts.length) return null;
+  return (
+    <Link href={`/points?item=${encodeURIComponent(id)}`} className="pt-band">
+      <svg className="pt-band-coin" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="20" />
+        <path d="M19 15h7a5 5 0 0 1 0 10h-7M19 15v18" />
+      </svg>
+      <span className="f-1">
+        <b className="d-block">{p.bandTitle}</b>
+        <span className="pt-band-sub">{p.bandBody(parts)}</span>
+      </span>
+      <span className="pt-band-go">{p.bandGo} ›</span>
+    </Link>
   );
 }

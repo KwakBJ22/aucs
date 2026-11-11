@@ -395,7 +395,12 @@ export const meApi = {
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),
   bids: (t: string) => call<Bids>(t, "/bids"),
   points: (t: string) => call<PointSummary>(t, "/points", { fresh: true }),
-  pointsBoard: (t: string) => call<PointRow[]>(t, "/points/board", { fresh: true }),
+  pointsBoard: (t: string, offset = 0, item?: string) =>
+    call<{ rows: PointRow[]; total: number; next: number }>(
+      t,
+      `/points/board?offset=${offset}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
+      { fresh: true },
+    ),
   hold: (t: string, id: string, kind: DocKind, extend = false) =>
     call<PointHold>(t, `/points/hold/${encodeURIComponent(id)}/${kind}?extend=${extend}`, {
       method: "POST",

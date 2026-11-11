@@ -38,6 +38,8 @@ export default function PointsPage() {
   const token = session?.access_token ?? "";
   const [sum, setSum] = useState<PointSummary | null>(null);
   const [rows, setRows] = useState<PointRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [next, setNext] = useState(0);
   const [open, setOpen] = useState<{
     id: string;
     kind: DocKind;
@@ -55,11 +57,25 @@ export default function PointsPage() {
       .points(token)
       .then(setSum)
       .catch(() => setSum(null));
+    // 상세의 「올리러 가기」로 오면(?item=) 그 물건을 맨 위에
+    const item = new URLSearchParams(window.location.search).get("item") ?? undefined;
     meApi
-      .pointsBoard(token)
-      .then(setRows)
+      .pointsBoard(token, 0, item)
+      .then((b) => {
+        setRows(b.rows);
+        setTotal(b.total);
+        setNext(b.next);
+      })
       .catch(() => setRows([]));
   }, [token]);
+  const more = () =>
+    meApi.pointsBoard(token, next).then((b) => {
+      setRows((v) => [
+        ...(v ?? []),
+        ...b.rows.filter((x) => !v?.some((y) => y.item_id === x.item_id)),
+      ]);
+      setNext(b.next);
+    });
   useEffect(load, [load]);
 
   // 맡긴 동안만 1초마다 남은 시간을 다시 그림
@@ -155,7 +171,7 @@ export default function PointsPage() {
 
       <section className="section">
         <h2>{t.listTitle}</h2>
-        <p className="sub mt-4">{t.listSub}</p>
+        <p className="sub mt-4">{t.listSub(total)}</p>
         {!rows && (
           <Delayed>
             <SkRows n={6} />
@@ -229,6 +245,11 @@ export default function PointsPage() {
             )}
           </div>
         ))}
+        {rows && next < total && (
+          <button className="btn secondary mt-14 w-full" onClick={() => void more()}>
+            {t.moreRows}
+          </button>
+        )}
       </section>
     </main>
   );

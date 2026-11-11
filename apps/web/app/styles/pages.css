@@ -1536,3 +1536,37 @@ a.col-chip span {
   font-size: var(--fs-sm);
   font-weight: 800;
 }
+
+/* 물건 상세 맨 위 「서류 채우고 포인트 받기」 띠(11/12) */
+.pt-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-panel);
+  background: linear-gradient(135deg, var(--blue-soft) 0%, var(--surface) 90%);
+  color: var(--text);
+  text-decoration: none;
+}
+.pt-band-coin {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pt-band-sub {
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.pt-band-go {
+  flex: none;
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}

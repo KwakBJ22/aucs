@@ -386,7 +386,7 @@ export const copy = {
     // 맨 위 취지(11/12 대표님 — 왜 올리는지 · 무엇이 좋은지 짧게)
     heroTitle: "서류 한 장 올리면\n모두가 더 정확하게 봐요",
     heroBody:
-      "법원이 다 주지 않는 등기부·감정평가서를 회원이 채워요. 올린 서류는 모든 회원이 같이 보고, 올린 분께는 포인트를 드려요.",
+      "법원의 등기부·감정평가서를 회원이 채워요. 올린 서류는 모든 회원이 같이 보고, 올린 분께는 포인트를 드려요.",
     heroPerks: [
       ["등기부", "1,000P"],
       ["감정평가서", "300P"],
@@ -398,7 +398,9 @@ export const copy = {
     today: (reg: number, regMax: number, app: number, appMax: number) =>
       `오늘 등기부 ${reg}/${regMax} · 감정평가서 ${app}/${appMax}`,
     listTitle: "서류가 비어 있는 물건",
-    listSub: "매각일 가까운 순 · 채워지면 목록에서 빠져요",
+    listSub: (n: number) =>
+      `${n.toLocaleString("ko-KR")}건 · 매각일 가까운 순 · 채워지면 목록에서 빠져요`,
+    moreRows: "더 보기",
     empty: "지금은 비어 있는 물건이 없어요",
     kind: { registry: "등기부", appraisal: "감정평가서" } as Record<
       "registry" | "appraisal",
@@ -428,6 +430,10 @@ export const copy = {
     } as Record<string, string | ((p: string) => string)>,
     shared: "다른 회원이 올린 등기부예요",
     earn: "감정평가서를 올리면 300P",
+    // 물건 상세 맨 위 띠(11/12 대표님 — 상세에서도 잘 보이게)
+    bandTitle: "이 물건 서류를 채우고 포인트 받기",
+    bandBody: (parts: string[]) => parts.join(" · "),
+    bandGo: "올리러 가기",
   },
   needLogin: {
     title: "로그인이 필요해요",

@@ -410,8 +410,12 @@ def get_points(uid: Uid) -> dict[str, Any]:
 
 
 @router.get("/points/board")
-def get_points_board(uid: Uid) -> list[dict[str, Any]]:
-    return points.board(uid)
+def get_points_board(
+    uid: Uid,
+    offset: int = Query(default=0, ge=0, le=20000),
+    item: str | None = Query(default=None, max_length=80),
+) -> dict[str, Any]:
+    return points.board(uid, offset, item)
 
 
 @router.post("/points/hold/{item_id}/{kind}")
