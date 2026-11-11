@@ -20,11 +20,16 @@ import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
 
 const t = copy.points;
-// 휴대폰은 처음부터 모바일 인터넷등기소로(PC 주소로 가면 「모바일 화면으로 이동」 창이 한 번 더 뜸, 11/12)
-const iros = () =>
-  /iphone|ipad|ipod|android/i.test(navigator.userAgent)
-    ? "https://m.iros.go.kr/index.jsp"
-    : "https://www.iros.go.kr/index.jsp";
+// 인터넷등기소 가는 길(11/12): 휴대폰 웹은 열람을 앱으로 넘기므로 휴대폰은 처음부터 앱으로.
+// 안드로이드는 앱이 있으면 바로 열고 없으면 플레이스토어(kr.go.iros), 아이폰은 앱스토어(있으면 「열기」).
+const PLAY = "https://play.google.com/store/apps/details?id=kr.go.iros";
+const iros = () => {
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua))
+    return `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=kr.go.iros;S.browser_fallback_url=${encodeURIComponent(PLAY)};end`;
+  if (/iphone|ipad|ipod/i.test(ua)) return "https://apps.apple.com/kr/app/id952161112";
+  return "https://www.iros.go.kr/index.jsp";
+};
 const KINDS: DocKind[] = ["registry", "appraisal"];
 
 const dDay = (iso: string | null) =>
