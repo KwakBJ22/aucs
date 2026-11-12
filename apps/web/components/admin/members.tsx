@@ -13,6 +13,7 @@ import { copy } from "@/lib/copy.ko";
 import { Confirm, errText, useAdmin, when } from "./ctx";
 
 const t = copy.admin;
+const m = copy.admin.money;
 
 // 4 회원: 문의(답 안 한 것) + 회원 목록 → 상세(이용권 주기·이용 제한·메일 보기)
 export function MembersView() {
@@ -188,6 +189,8 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
   const [days, setDays] = useState(30);
   const [reason, setReason] = useState("");
   const [limitWhy, setLimitWhy] = useState("");
+  const [pts, setPts] = useState("");
+  const [ptsWhy, setPtsWhy] = useState("");
   const load = useCallback(() => {
     adminApi
       .user(token, id)
@@ -212,7 +215,9 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
         {t.joined} {when(u.created_at)} · {t.purposeName[u.purpose ?? ""] ?? "-"} ·{" "}
         {(u.interest_regions ?? []).join(", ") || "-"}
       </p>
-      <p className="sub">{t.counts(u)}</p>
+      <p className="sub">
+        {t.counts(u)} · {m.memberPoints(u.points)}
+      </p>
       {can("owner") && (
         <p>
           {email || (
@@ -229,6 +234,41 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
             </button>
           )}
         </p>
+      )}
+      {can("owner") && (
+        <div className="adm-line">
+          <input
+            className="adm-input adm-short"
+            inputMode="numeric"
+            placeholder={m.adjustHint}
+            title={m.adjust}
+            value={pts}
+            onChange={(e) => setPts(e.target.value.replace(/[^\d-]/g, ""))}
+          />
+          <input
+            className="adm-input"
+            placeholder={m.adjustWhy}
+            value={ptsWhy}
+            onChange={(e) => setPtsWhy(e.target.value)}
+          />
+          {Number(pts) !== 0 && ptsWhy.trim().length >= 2 && (
+            <Confirm
+              label={m.adjustGo}
+              ask={m.adjustAsk(Number(pts))}
+              onYes={() =>
+                adminApi
+                  .points(token, id, Number(pts), ptsWhy.trim())
+                  .then((r) => {
+                    say(m.adjusted(r.balance));
+                    setPts("");
+                    setPtsWhy("");
+                    load();
+                  })
+                  .catch((e) => say(errText(e)))
+              }
+            />
+          )}
+        </div>
       )}
       {u.grants.map((g) => (
         <p key={g.created_at} className="sub">

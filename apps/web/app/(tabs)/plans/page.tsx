@@ -1,16 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { fetchPrices, type Prices } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.plans;
+const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
 
 // 이용권 고르기(PAY-01). 금액·개수는 임시값(결정 #4). 결제는 사업자등록·토스페이먼츠 계약 뒤 열림.
 export default function Plans() {
   const [yearly, setYearly] = useState(false);
   const [pick, setPick] = useState<string>("personal");
+  // 가격은 기준표(관리자 「이용권·포인트」)에서 — 받기 전에는 문구의 값(같은 값)으로 그림(11/12)
+  const [pr, setPr] = useState<Prices | null>(null);
+  useEffect(() => {
+    fetchPrices()
+      .then(setPr)
+      .catch(() => setPr(null));
+  }, []);
+  const month = (k: string, fb: string) => {
+    const v = pr?.[k]?.month ?? pr?.[k]?.one;
+    return v ? won(v) : fb;
+  };
+  const year = (k: string, fb: string) => {
+    const v = pr?.[k]?.year;
+    return v ? won(v) : fb;
+  };
+  const p0 = pr?.personal;
+  const pct = p0?.month && p0.year ? Math.round((1 - p0.year / (p0.month * 12)) * 100) : 28;
   return (
     <main className="page">
       <PageHeader title={t.title} back="/more" />
@@ -29,7 +48,7 @@ export default function Plans() {
           className={yearly ? "on" : ""}
           onClick={() => setYearly(true)}
         >
-          {t.yearly}
+          {t.yearly(pct)}
         </button>
       </div>
       <div className="pc-grid g-3 mt-12">
@@ -47,7 +66,7 @@ export default function Plans() {
                 {p.tag && <span className="chip green">{p.tag}</span>}
               </div>
               <div className="fs-3xl fw-7 mt-4">
-                {yearly && p.yearly ? p.yearly : p.price}
+                {yearly && p.yearly ? year(p.key, p.yearly) : month(p.key, p.price)}
                 <span className="sub fs-md fw-4"> {yearly && p.yearly ? t.perYear : p.per}</span>
               </div>
               <div className="sub">{p.what}</div>

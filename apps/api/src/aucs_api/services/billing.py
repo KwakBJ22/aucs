@@ -17,8 +17,29 @@ from typing import Any
 from aucs_api.db import connect
 
 FREE_DAYS = 7
-# 매달 요금(이용권 화면과 같게, 결제를 붙일 때 가격표 한 곳으로 옮김) — 1년권 중간 해지 계산에 씀
-MONTHLY_KRW = {"personal": 29_000, "pro": 49_000}  # 11/12 전문가 99,000 → 49,000
+# 기준표가 아직 없을 때(0044 적용 전) 쓰는 값 — 이용권 화면이 비지 않게
+DEFAULT_PRICES: dict[str, Any] = {
+    "personal": {"month": 29_000, "year": 249_000},
+    "pro": {"month": 49_000, "year": 419_000},
+    "one": {"one": 9_900},
+}
+
+
+def prices(today: date | None = None) -> dict[str, Any]:
+    """오늘 쓰는 이용권 가격(기준표 plans, 적용일이 오늘 이전인 것 중 가장 새것)."""
+    d = today or date.today()
+    with connect() as c:
+        r = c.execute(
+            "select value from ref.rule_tables where rule_key = 'plans' and valid_from <= %s "
+            "order by valid_from desc limit 1",
+            (d,),
+        ).fetchone()
+    return dict(r["value"]) if r else DEFAULT_PRICES
+
+
+def monthly_krw(plan: str, paid_on: date) -> int:
+    """결제한 날의 매달 요금 — 1년권 중간 해지 계산에 씀(가격이 바뀌어도 그때 값으로)."""
+    return int((prices(paid_on).get(plan) or {}).get("month") or 0)
 
 
 @dataclass(frozen=True)
@@ -76,7 +97,7 @@ def my_billing(uid: str) -> dict[str, Any]:
         for p in pays:
             if p["status"] == "paid" and p["valid_to"] >= today and p["refund_status"] != "waiting":
                 r = refund_estimate(p["period"], p["amount_krw"], p["paid_at"].date(), today, p["valid_to"],
-                                    _opened(c, uid, p["paid_at"], p["item_id"]), MONTHLY_KRW.get(p["plan"], 0))  # fmt: skip
+                                    _opened(c, uid, p["paid_at"], p["item_id"]), monthly_krw(p["plan"], p["paid_at"].date()))  # fmt: skip
                 p["refund"] = {"amount_krw": r.amount_krw, "rule": r.rule}
             else:
                 p["refund"] = None
@@ -107,7 +128,7 @@ def request_refund(uid: str, payment_id: int, reason: str | None) -> dict[str, A
         if not p:
             return None
         r = refund_estimate(p["period"], p["amount_krw"], p["paid_at"].date(), today, p["valid_to"],
-                            _opened(c, uid, p["paid_at"], p["item_id"]), MONTHLY_KRW.get(p["plan"], 0))  # fmt: skip
+                            _opened(c, uid, p["paid_at"], p["item_id"]), monthly_krw(p["plan"], p["paid_at"].date()))  # fmt: skip
         if p["period"] == "month" and r.amount_krw == 0:
             c.execute(
                 "update app.payments set auto_renew = false where payment_id = %s", (payment_id,)

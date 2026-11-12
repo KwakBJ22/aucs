@@ -723,7 +723,7 @@
   margin: 0 auto;
   padding: 16px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .adm-menu {
@@ -755,9 +755,23 @@
   font-size: var(--fs-xl);
   margin: 4px 0 8px;
 }
+/* 내용 칸은 넓은 표·긴 오류 글이 있어도 메뉴를 밀지 않음 — 넘치는 것은 그 칸 안에서 옆으로(11/12) */
+.adm-body {
+  min-width: 0;
+}
+.adm-body pre,
+.adm-body table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.adm-body summary,
+.adm-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 @media (min-width: 1024px) {
   .adm {
-    grid-template-columns: 1fr 4fr;
+    grid-template-columns: 200px minmax(0, 1fr);
     padding: 24px;
   }
   .adm-menu {
@@ -902,6 +916,17 @@ textarea.adm-input {
   text-align: left;
   padding: 0;
   font-size: var(--fs-md);
+}
+.adm-prices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.adm-price {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .adm-line {
   display: flex;

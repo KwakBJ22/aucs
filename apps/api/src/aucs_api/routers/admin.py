@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from aucs_api.auth.admin import Admin, admin_login, require_admin, require_role
 from aucs_api.db import connect
-from aucs_api.services import admin, admin_ops, billing, points
+from aucs_api.services import admin, admin_money, admin_ops, billing, points
 
 router = APIRouter(prefix="/admin")
 Any_ = Annotated[Admin, Depends(require_admin)]
@@ -46,6 +46,8 @@ def get_screen(
         for r in out["refunds"]:
             r["email"] = admin_ops.mask(r["email"])
         return out
+    if menu == "plans":
+        return admin_money.screen()
     if menu == "stats":
         return _together(status=(admin.status,), stats=(admin_ops.stats, days))
     if menu == "settings":
@@ -211,6 +213,22 @@ class GrantIn(BaseModel):
 @router.post("/users/{uid}/grants")
 def post_grant(a: Op, uid: str, body: GrantIn) -> dict[str, Any]:
     r = admin_ops.grant(a.user_id, uid, body.plan, body.days, body.reason)
+    if not r:
+        raise HTTPException(404, "없는 회원")
+    return r
+
+
+class PointsIn(BaseModel):
+    delta: int = Field(ge=-1_000_000, le=1_000_000)
+    reason: str = Field(min_length=2, max_length=200)
+
+
+@router.post("/users/{uid}/points")
+def post_points(a: Owner, uid: str, body: PointsIn) -> dict[str, Any]:
+    """포인트 더하기·빼기(돈과 같아 대표만, 11/12)."""
+    if body.delta == 0:
+        raise HTTPException(400, "0 은 바꿀 것이 없어요")
+    r = admin_money.adjust_points(a.user_id, uid, body.delta, body.reason)
     if not r:
         raise HTTPException(404, "없는 회원")
     return r
@@ -421,6 +439,12 @@ def get_audit(_: Owner) -> list[dict[str, Any]]:
 
 # 회원 쪽: 공지 보기(공개)
 public = APIRouter()
+
+
+@public.get("/plans/prices")
+def get_prices() -> dict[str, Any]:
+    """이용권 화면 가격(기준표 plans — 관리자가 바꾸면 적용일부터)."""
+    return billing.prices()
 
 
 @public.get("/notices")

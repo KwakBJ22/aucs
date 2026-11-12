@@ -6,6 +6,7 @@ import { AdminProvider } from "@/components/admin/ctx";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
 import { NoticesView } from "@/components/admin/notices";
+import { PlansView } from "@/components/admin/plans";
 import { PointsReview } from "@/components/admin/points-review";
 import { ReviewView } from "@/components/admin/review";
 import { SettingsView } from "@/components/admin/settings";
@@ -14,7 +15,16 @@ import { TodayView } from "@/components/admin/today";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.admin;
-const MENUS = ["today", "jobs", "review", "members", "notices", "stats", "settings"] as const;
+const MENUS = [
+  "today",
+  "jobs",
+  "review",
+  "members",
+  "notices",
+  "plans",
+  "stats",
+  "settings",
+] as const;
 type Menu = (typeof MENUS)[number];
 
 // 관리자 모드(11/2 1단계): 왼쪽 메뉴 20 · 내용 80 (휴대폰은 위에 메뉴 줄)
@@ -46,6 +56,7 @@ export default function AdminPage() {
               )}
               {m === "members" && <MembersView />}
               {m === "notices" && <NoticesView />}
+              {m === "plans" && <PlansView />}
               {m === "stats" && <StatsView />}
               {m === "settings" && <SettingsView />}
             </div>

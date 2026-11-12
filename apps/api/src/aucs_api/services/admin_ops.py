@@ -384,6 +384,12 @@ def user_detail(uid: str) -> dict[str, Any] | None:
         if not u:
             return None
         u["email"] = mask(u["email"])
+        b = c.execute(
+            """select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
+                      + coalesce(sum(delta) filter (where delta < 0), 0) as b from app.point_ledger where user_id = %s""",
+            (uid,),
+        ).fetchone()  # fmt: skip
+        u["points"] = max(0, int(b["b"])) if b else 0
         u["grants"] = c.execute(
             "select plan, until_date, reason, created_at from app.grants where user_id = %s order by created_at desc",
             (uid,),

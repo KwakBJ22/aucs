@@ -117,6 +117,7 @@ export type UserDetail = UserRow & {
   registry_n: number;
   mock_n: number;
   limit_reason: string | null;
+  points: number;
   grants: { plan: string; until_date: string; reason: string; created_at: string }[];
   inquiries: Inquiry[];
 };
@@ -234,6 +235,7 @@ export type Screens = {
   };
   members: { users: UserRow[]; inquiries: Inquiry[]; refunds: RefundReq[] };
   stats: { status: { metrics?: Metrics }; stats: Stats };
+  plans: PlansScreen;
   settings: {
     rules: RuleRow[];
     flags: Flag[];
@@ -241,6 +243,34 @@ export type Screens = {
     admins: AdminRow[];
     audit: AuditRow[];
   };
+};
+export type PlansScreen = {
+  prices: Record<string, { month?: number; year?: number; one?: number }>;
+  price_rows: { valid_from: string; basis: string; reviewed_at: string | null }[];
+  plans: Record<string, { grant?: number; paid?: number }>;
+  payments: {
+    payment_id: number;
+    plan: string;
+    period: string;
+    amount_krw: number;
+    refunded_krw: number;
+    points_used: number;
+    status: string;
+    paid_at: string;
+    email: string;
+  }[];
+  month: { krw: number; n: number };
+  points: { earned: number; spent: number; left: number; people: number };
+  uploads: { kind: string; status: string; n: number; pts: number }[];
+  top: { user_id: string; email: string; earned: number; n: number }[];
+  ledger: {
+    entry_id: number;
+    delta: number;
+    reason: string;
+    item_id: string | null;
+    created_at: string;
+    email: string;
+  }[];
 };
 export type PointReview = {
   contrib_id: number;
@@ -299,6 +329,8 @@ export const adminApi = {
   revealEmail: (t: string, id: string) => call<{ email: string }>(t, `/users/${id}/email`, "POST"),
   grant: (t: string, id: string, plan: string, days: number, reason: string) =>
     call(t, `/users/${id}/grants`, "POST", { plan, days, reason }),
+  points: (t: string, id: string, delta: number, reason: string) =>
+    call<{ balance: number; delta: number }>(t, `/users/${id}/points`, "POST", { delta, reason }),
   limit: (t: string, id: string, reason: string | null) =>
     call(t, `/users/${id}/limit`, "PUT", { reason }),
   inquiries: (t: string, all = false) => call<Inquiry[]>(t, `/inquiries${all ? "?all=true" : ""}`),
