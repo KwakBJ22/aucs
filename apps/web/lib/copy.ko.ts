@@ -1088,6 +1088,15 @@ export const copy = {
     rangeLabel: "감정가 기준 예상 낙찰가",
     sample: (n: number) => `최근 1년 비슷한 물건 ${n}건 기준`,
     market: (n: number) => `시세 (같은 단지 실거래 ${n}건)`,
+    land: {
+      label: "추정 시세 (땅값 + 건물)",
+      mid: (krw: string) => `가운데 ${krw}`,
+      basis: (n: number, landM2: number, unit: string, bldg: string) =>
+        `같은 동 단독·다가구 실거래 ${n}건으로 땅값을 거꾸로 셈 · 대지 ${landM2}㎡ × ㎡당 ${unit} + 건물 ${bldg}`,
+      court: (unit: string, n: number) =>
+        `같은 동 법원 감정 땅값 ㎡당 ${unit} (${n}건) · 맞춰 보기용`,
+      note: "같은 건물 거래가 없어 어림한 값이에요 · 입찰가 계산에는 넣지 않아요",
+    },
     recentTrades: "최근 거래",
     deposit: "입찰보증금(최저가의 10%)",
     calc: {

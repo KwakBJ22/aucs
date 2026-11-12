@@ -191,6 +191,7 @@ def summarize(
         "elevators": elev or None,
         "parking": park or None,
         "total_area_m2": _float(t.get("totArea")),
+        "land_m2": _float(t.get("platArea")),  # 대지 면적 — 땅값 역산(LAND-01)
         "approved": approved.isoformat() if approved else None,
         "age_years": (as_of.year - approved.year) if approved else None,
         "unit_floor": unit["floor"],

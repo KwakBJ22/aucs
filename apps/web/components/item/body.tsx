@@ -188,6 +188,33 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
                 </div>
               </>
             )}
+            {b.land_value && (
+              <>
+                <Row
+                  label={t.land.label}
+                  value={
+                    <b>
+                      {won(b.land_value.low_krw)} ~ {won(b.land_value.high_krw)}
+                    </b>
+                  }
+                />
+                <div className="sub m-0 fs-xs">
+                  {t.land.mid(won(b.land_value.mid_krw))} ·{" "}
+                  {t.land.basis(
+                    b.land_value.n,
+                    b.land_value.land_m2,
+                    won(b.land_value.land_unit.p50),
+                    won(b.land_value.building_krw),
+                  )}
+                </div>
+                {b.land_value.court_unit && (
+                  <div className="sub m-0 fs-xs">
+                    {t.land.court(won(b.land_value.court_unit), b.land_value.court_n)}
+                  </div>
+                )}
+                <div className="sub m-0 fs-xs">{t.land.note}</div>
+              </>
+            )}
             {b.notes.map((n: string) => (
               <div key={n} className="fs-md c-amber py-2 px-0">
                 ◆ {n}

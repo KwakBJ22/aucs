@@ -21,6 +21,7 @@ from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, cash_at_min
 from aucs_rules.costs import commercial_over_limit
+from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.price import Trade, market_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import signals, top_signal
@@ -168,6 +169,48 @@ def build_facts(
     }
 
 
+HOUSE_USES = ("단독주택다가구", "단독주택", "다가구주택")
+HOUSE_MAIN = re.compile(r"단독|다가구|다중주택")
+
+
+def load_land_value(
+    cur: Any, item: dict[str, Any], bldg: dict[str, Any] | None, today: date,
+    table: dict[str, Any] | None,
+) -> dict[str, Any] | None:  # fmt: skip
+    """단독·다가구: 같은 동 실거래로 땅값을 역산해 추정 시세 하단·가운데·상단(LAND-01). 지분 물건은 뺌."""
+    if not table or not bldg or item.get("is_share") or not item.get("region_code"):
+        return None
+    if item.get("usage_name") not in HOUSE_USES and not HOUSE_MAIN.search(bldg.get("main_use") or ""):
+        return None
+    region = trade_region(item["region_code"])
+    rows = cur.execute(
+        """select deal_date, price_krw, area_m2, land_area_m2, build_year from core.trades
+           where region_code = %s and prop_type = 'house' and deal_kind = 'sale'
+             and deal_date >= %s and price_krw > 0 and land_area_m2 > 0 and area_m2 > 0""",
+        (region, today - timedelta(days=round(int(table.get("months") or 24) * 30.4))),
+    ).fetchall()
+    trades = [HouseTrade(r["deal_date"], int(r["price_krw"]), float(r["area_m2"]),
+                         float(r["land_area_m2"]), r["build_year"]) for r in rows]  # fmt: skip
+    # 맞춰 보기: 같은 동 다른 단독·다가구의 법원 토지 감정가 ÷ 대지(감정가 나눔 · 건축물대장이 있는 것만)
+    court = cur.execute(
+        """select (a.result->'parts'->>'land_krw')::numeric / nullif((a.result->'building'->>'land_m2')::numeric, 0) as u
+           from core.items i
+           join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id
+                         order by version desc limit 1) a on true
+           where i.region_code like %s and i.item_id <> %s and not i.is_share
+             and a.result->'parts'->>'kind' = 'land_and_building'
+             and (a.result->'building'->>'land_m2') is not null""",
+        (region[:8] + "%", item["item_id"]),
+    ).fetchall()
+    approved = bldg.get("approved")
+    res = land_value(
+        land_m2=bldg.get("land_m2"), floor_area_m2=bldg.get("total_area_m2"),
+        build_year=int(approved[:4]) if approved else None, trades=trades,
+        court_units=[float(r["u"]) for r in court if r["u"]], as_of=today, table=table,
+    )  # fmt: skip
+    return res.value
+
+
 def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any] | None:
     """건축물대장(collectors/buildings) → 요약. 지번을 못 읽거나 아직 안 받았으면 None."""
     p = parse_jibun(item.get("lot_no"))
@@ -197,6 +240,7 @@ def analyze_item(
     today: date,
     commercial_table: dict[str, Any] | None = None,
     cash_tables: dict[str, Any] | None = None,
+    land_table: dict[str, Any] | None = None,
 ) -> bool:
     cur = conn.cursor(row_factory=dict_row)
     item = cur.execute("select * from core.items where item_id = %s", (item_id,)).fetchone()
@@ -260,6 +304,7 @@ def analyze_item(
             villa_by_register=bldg["villa"], floor_uses=bldg["unit_floor_uses"], as_of=today,
             use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
         )  # fmt: skip
+    land = load_land_value(cur, item, bldg, today, land_table)
     redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
     if redev:
         facts["in_redev_zone"] = redev
@@ -305,6 +350,8 @@ def analyze_item(
         "local_peers": peers.value,
         "new_item": new_item(eff_failed, app, market["price_krw"] if market else None).value,
         "market": market,
+        # 같은 단지 거래가 없는 단독·다가구: 땅값 역산 추정 시세(하단·가운데·상단, LAND-01) — 보기용, 입찰가 셈에는 안 씀
+        "land_value": land,
         "tenant_count": len(tenants),
         # 최저가에 낙찰받을 때 필요한 현금(집 수별) — 찾기·추천의 「가진 현금」 기준(11/9)
         "cash_need": _cash_need(item, market, cash_tables),
@@ -331,7 +378,8 @@ def analyze_item(
         else None,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
-               "tenants": tenants, "market": market, "building": bldg, "parts": parts, "engine": ENGINE_VERSION})  # fmt: skip
+               "tenants": tenants, "market": market, "building": bldg, "parts": parts, "land": land,
+               "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),
@@ -472,6 +520,12 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
         ).fetchone()
         commercial_table = row[0] if row else None
         cash_tables = load_cash_tables(conn, today)
+        lv = conn.execute(
+            "select value from ref.rule_tables where rule_key = 'land_value' and valid_from <= %s"
+            " order by valid_from desc limit 1",
+            (today,),
+        ).fetchone()
+        land_table = lv[0] if lv else None
         if a.item:
             ids = [a.item]
         elif a.stale:
@@ -485,7 +539,7 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
             ids = [r[0] for r in conn.execute(
                 "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
         for item_id in ids:
-            if analyze_item(conn, item_id, sales, today, commercial_table, cash_tables):
+            if analyze_item(conn, item_id, sales, today, commercial_table, cash_tables, land_table):
                 job.count += 1
             conn.commit()
     print(f"분석 {job.count:,}건 (대상 {len(ids):,})")
