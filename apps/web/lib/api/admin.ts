@@ -244,6 +244,18 @@ export type Screens = {
     audit: AuditRow[];
   };
 };
+export type Target = { kind: "all" | "region" | "paid" | "free"; regions?: string[] };
+export type Broadcast = {
+  bc_id: number;
+  title: string;
+  body: string;
+  link: string | null;
+  target: Target;
+  send_at: string;
+  status: string;
+  sent_n: number | null;
+  sent_at: string | null;
+};
 export type PlansScreen = {
   prices: Record<string, { month?: number; year?: number; one?: number }>;
   price_rows: { valid_from: string; basis: string; reviewed_at: string | null }[];
@@ -339,6 +351,14 @@ export const adminApi = {
   saveNotice: (t: string, n: Partial<Notice> & { title: string }, id?: number) =>
     call<Notice>(t, id ? `/notices/${id}` : "/notices", id ? "PUT" : "POST", n),
   endNotice: (t: string, id: number) => call(t, `/notices/${id}/end`, "POST"),
+  broadcasts: (t: string) => call<Broadcast[]>(t, "/broadcasts"),
+  bcPreview: (t: string, target: Target) =>
+    call<{ users: number; push: number }>(t, "/broadcasts/preview", "POST", target),
+  bcSend: (
+    t: string,
+    b: { title: string; body: string; link: string | null; target: Target; send_at: string | null },
+  ) => call<{ bc_id: number; users: number }>(t, "/broadcasts", "POST", b),
+  bcCancel: (t: string, id: number) => call(t, `/broadcasts/${id}/cancel`, "POST"),
   flags: (t: string) => call<Flag[]>(t, "/flags"),
   setFlag: (t: string, key: string, enabled: boolean) =>
     call<Flag>(t, `/flags/${enc(key)}`, "PUT", { enabled }),

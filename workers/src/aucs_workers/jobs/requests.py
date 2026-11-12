@@ -72,6 +72,12 @@ def main() -> None:
     except Exception as e:  # noqa: BLE001
         print(f"등기부 글자 인식 실패: {e}", flush=True)
     queue_docs()
+    try:  # 빨간 불 휴대폰 알림 · 관리자가 쓴 알림 보내기(11/12) — 실패해도 요청 처리는 계속
+        from aucs_workers import ops_watch
+
+        print(ops_watch.run_once(), flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"운영 알림 실패: {e}", flush=True)
     with connect() as c:
         busy = c.execute(
             "select 1 from ops.job_requests where status = 'running' and started_at > now() - interval '6 hours'"

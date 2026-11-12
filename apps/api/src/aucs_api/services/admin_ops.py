@@ -7,12 +7,11 @@
 from datetime import date, timedelta
 from typing import Any
 
+from aucs_workers.ops_watch import DAILY_JOBS, DB_LIMIT, red_lights
 from psycopg.types.json import Jsonb
 
 from aucs_api.db import connect
 
-DB_LIMIT = 8 * 1024 * 1024 * 1024
-DAILY_JOBS = ("court_results", "court_items", "analyze", "court_docs", "notify")  # 아침 묶음 순서
 REQUESTABLE = {
     "daily": "아침 묶음 전체", "results": "법원 매각결과", "items": "법원 경매 물건", "docs": "사건 서류",
     "analyze": "물건 분석", "notify": "알림", "buildings": "건축물대장", "onbid": "공매(온비드)",
@@ -57,9 +56,7 @@ def today() -> dict[str, Any]:
                 (select count(*) from app.events where kind = 'item_view' and at >= current_date - 1 and at < current_date) as views,
                 (select count(*) from ops.errors where at >= current_date - 1 and at < current_date) as errors,
                 (select count(*) from app.value_reports where status = 'open') as reports_open,
-                (select count(*) from app.value_reports where status = 'open' and created_at < now() - interval '2 days') as reports_late,
                 (select count(*) from app.inquiries where answered_at is null) as inq_open,
-                (select count(*) from app.inquiries where answered_at is null and created_at < now() - interval '2 days') as inq_late,
                 pg_database_size(current_database()) as db_bytes"""
             ).fetchone()
             or {}
@@ -79,10 +76,6 @@ def today() -> dict[str, Any]:
             ).fetchone()
             or {}
         )
-        burst = c.execute(
-            """select message, count(*) as n from ops.errors where at > now() - interval '1 hour'
-               group by message having count(*) >= 5 order by 2 desc limit 3"""
-        ).fetchall()
         steps = c.execute(
             """select r.job_id, j.name_ko, sum(r.item_count)::int as item_count,
                       (array_agg(r.status order by r.started_at desc))[1] as status,
@@ -91,52 +84,9 @@ def today() -> dict[str, Any]:
                where r.job_id = any(%s) and r.started_at >= current_date group by r.job_id, j.name_ko""",
             (list(DAILY_JOBS),),
         ).fetchall()
+        red = red_lights(c)  # 빨간 불 판단은 한 곳(PC 휴대폰 알림과 같음, 11/12)
     by = {j["job_id"]: j for j in last}
-    red: list[dict[str, str]] = []
-    for j in last:
-        if j["status"] in ("failed", "stopped"):
-            red.append(
-                {
-                    "kind": "job",
-                    "text": f"{j['name_ko']} 작업이 {'실패' if j['status'] == 'failed' else '멈춤'}",
-                    "go": "jobs",
-                }
-            )
-        elif j["status"] == "running" and j["started_at"] and _hours(j["started_at"]) > 6:
-            red.append(
-                {"kind": "job", "text": f"{j['name_ko']} 작업이 6시간 넘게 도는 중", "go": "jobs"}
-            )
-    for k in DAILY_JOBS:
-        dj = by.get(k)
-        if dj and dj["started_at"] and _hours(dj["started_at"]) > 26:
-            red.append(
-                {"kind": "job", "text": f"{dj['name_ko']} 작업이 하루 넘게 안 돎", "go": "jobs"}
-            )
-    for b in burst:
-        red.append(
-            {
-                "kind": "error",
-                "text": f"같은 오류가 1시간에 {b['n']}번 · {b['message'][:60]}",
-                "go": "jobs",
-            }
-        )
-    if n.get("reports_late"):
-        red.append(
-            {
-                "kind": "review",
-                "text": f"제보 {n['reports_late']}건이 2일 넘게 밀림",
-                "go": "review",
-            }
-        )
-    if n.get("inq_late"):
-        red.append(
-            {"kind": "member", "text": f"문의 {n['inq_late']}건이 2일 넘게 밀림", "go": "members"}
-        )
-    if n.get("db_bytes", 0) > DB_LIMIT * 0.8:
-        red.append({"kind": "db", "text": "DB 용량이 80%를 넘음", "go": "today"})
     bk = by.get("backup")
-    if not bk or bk["status"] != "ok" or _hours(bk["finished_at"] or bk["started_at"]) > 24 * 8:
-        red.append({"kind": "db", "text": "백업이 8일 넘게 없음", "go": "today"})
     rt = by.get("restore_test")
     return {
         "red": red,
@@ -155,12 +105,6 @@ def today() -> dict[str, Any]:
         },
         "restore": rt and {"at": rt["finished_at"] or rt["started_at"], "status": rt["status"]},
     }
-
-
-def _hours(t: Any) -> float:
-    from datetime import UTC, datetime
-
-    return float((datetime.now(UTC) - t).total_seconds()) / 3600
 
 
 # ── 2 작업·수집 ───────────────────────────────────────

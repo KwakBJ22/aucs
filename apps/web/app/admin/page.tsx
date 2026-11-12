@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AdminGate } from "@/components/admin/gate";
 import { AdminProvider } from "@/components/admin/ctx";
+import { BroadcastView } from "@/components/admin/broadcasts";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
 import { NoticesView } from "@/components/admin/notices";
@@ -55,7 +56,12 @@ export default function AdminPage() {
                 </>
               )}
               {m === "members" && <MembersView />}
-              {m === "notices" && <NoticesView />}
+              {m === "notices" && (
+                <>
+                  <BroadcastView />
+                  <NoticesView />
+                </>
+              )}
               {m === "plans" && <PlansView />}
               {m === "stats" && <StatsView />}
               {m === "settings" && <SettingsView />}

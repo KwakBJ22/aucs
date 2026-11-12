@@ -3,7 +3,7 @@
 들어오기: 로그인 + app.admins + 2단계 인증. 역할: viewer(보기) < operator(운영) < owner(대표).
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from aucs_api.auth.admin import Admin, admin_login, require_admin, require_role
 from aucs_api.db import connect
-from aucs_api.services import admin, admin_money, admin_ops, billing, points
+from aucs_api.services import admin, admin_money, admin_notify, admin_ops, billing, points
 
 router = APIRouter(prefix="/admin")
 Any_ = Annotated[Admin, Depends(require_admin)]
@@ -309,6 +309,49 @@ def put_points_review(_: Op, contrib_id: int, body: PointsDecideIn) -> dict[str,
 
 
 # 6 공지
+class TargetIn(BaseModel):
+    kind: Literal["all", "region", "paid", "free"] = "all"
+    regions: list[str] = Field(default_factory=list, max_length=30)
+
+
+class BroadcastIn(BaseModel):
+    title: str = Field(min_length=2, max_length=60)
+    body: str = Field(default="", max_length=300)
+    link: str | None = Field(default=None, max_length=200)
+    target: TargetIn = Field(default_factory=TargetIn)
+    send_at: datetime | None = None  # 없으면 바로(PC 가 5분 안에)
+
+
+@router.get("/broadcasts")
+def get_broadcasts(_: Any_) -> list[dict[str, Any]]:
+    return admin_notify.broadcasts()
+
+
+@router.post("/broadcasts/preview")
+def post_broadcast_preview(_: Op, body: TargetIn) -> dict[str, int]:
+    try:
+        return admin_notify.preview(body.model_dump())
+    except admin_notify.SendError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@router.post("/broadcasts")
+def post_broadcast(a: Op, body: BroadcastIn) -> dict[str, Any]:
+    """알림 보내기(기능명세서 6 — 운영자 이상). 광고성 알림은 쓰지 않음(수신 동의 전)."""
+    try:
+        return admin_notify.create(a.user_id, body.title, body.body, body.link,
+                                   body.target.model_dump(), body.send_at)  # fmt: skip
+    except admin_notify.SendError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@router.post("/broadcasts/{bc_id}/cancel")
+def post_broadcast_cancel(a: Op, bc_id: int) -> dict[str, bool]:
+    if not admin_notify.cancel(a.user_id, bc_id):
+        raise HTTPException(404, "이미 보냈거나 없는 알림")
+    return {"ok": True}
+
+
 @router.get("/notices")
 def get_notices(_: Any_) -> list[dict[str, Any]]:
     return admin_ops.notices(active_only=False)
