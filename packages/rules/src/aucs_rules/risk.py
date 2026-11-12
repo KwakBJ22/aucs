@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
+from aucs_rules.redev_member import member_transfer
 from aucs_rules.result import Status
 
 LEVEL_ORDER = {"fatal": 0, "high": 1, "mid": 2, "low": 3, "info": 4}
@@ -227,13 +228,29 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         kind = ""
         if isinstance(z, dict):
             kind = "(" + " · ".join(x for x in (z.get("biz_type"), z.get("stage")) if x) + ")"
-        add(
-            "risk.redev_member",
-            "mid",
-            f"정비사업 구역{kind} — 조합원 자격·현금청산 확인",
-            Status.NEEDS_CHECK,
-            **({"zone": z} if isinstance(z, dict) else {}),
+        # 규제지역이면 낙찰자가 조합원이 되는지까지(REDEV-01, 11/13) — 아니거나 모르면 예전 한 줄
+        m = (
+            member_transfer(z.get("biz_type"), z.get("stage"), f.get("regulated_area"))
+            if isinstance(z, dict)
+            else None
         )
+        if m and m.value:
+            add(
+                "risk.redev_member",
+                "high" if m.value["blocked"] else "mid",
+                m.value["title"],
+                m.status,
+                zone=z,
+                member=m.value,
+            )
+        else:
+            add(
+                "risk.redev_member",
+                "mid",
+                f"정비사업 구역{kind} — 조합원 자격·현금청산 확인",
+                Status.NEEDS_CHECK,
+                **({"zone": z} if isinstance(z, dict) else {}),
+            )
     if f.get("special_corp_owner"):
         add("risk.special_corp", "high", "학교·복지·의료법인 소유 — 허가서 없으면 보증금 몰수")
     if f.get("assumed_krw"):

@@ -19,7 +19,7 @@ from aucs_rules import ENGINE_VERSION
 from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import appraisal_facts, parse_points
 from aucs_rules.building import lot_key, parse_jibun, summarize
-from aucs_rules.calc import CASH_TABLE_KEYS, cash_at_min
+from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.price import Trade, market_price, trade_region
@@ -308,6 +308,11 @@ def analyze_item(
     redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
     if redev:
         facts["in_redev_zone"] = redev
+        if cash_tables:  # 규제지역(투기과열지구)이면 낙찰자 조합원 자격까지 가름(REDEV-01)
+            facts["regulated_area"] = (
+                area_class(item.get("sido"), item.get("address"), cash_tables["regulated_areas"])
+                == "regulated"
+            )
     if market:
         facts.update(
             market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today
