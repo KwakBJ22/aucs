@@ -7,6 +7,7 @@ from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
 from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
+from aucs_rules.location import HUBS, ZONE_ADDRESS_SQL, ZONE_NEAR_M, location
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
@@ -278,15 +279,35 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             # 같은 단지 지난 낙찰(같은 동 이름·지번이 주소에 있는 매각 결과, 이 사건은 빼고)
             q_peers = c.execute(PEERS_SQL, (item_id,))
-            # 가까운 역 두 곳(직선 1.5km 안) — 상세 「역까지 걸어서」(11/12)
+            # 가까운 역 세 곳(직선 3km 안 — 준역세권까지) — 상세 「역까지 걸어서」(11/12) · 입지 등급(11/13)
             q_stn = c.execute(
                 """select st.name_ko as name, st.line_name as line,
                           st_y(st.geom::geometry) as lat, st_x(st.geom::geometry) as lon,
                           round(st_distance(st.geom, i.geom::geography))::int as straight_m
                    from core.items i join ref.stations st
                      on st.closed_date is null and i.geom is not null
-                    and st_dwithin(st.geom, i.geom::geography, 1500)
-                   where i.item_id = %s order by st.geom <-> i.geom::geography limit 6""",
+                    and st_dwithin(st.geom, i.geom::geography, 3000)
+                   where i.item_id = %s order by st.geom <-> i.geom::geography limit 10""",
+                (item_id,),
+            )
+            # 입지(LOC-01, 11/13): 주요 업무지구 역까지 직선 · 1km 안 정비사업(대표지번 좌표)
+            q_hubs = c.execute(
+                """select h.name_ko as name, h.line_name as line,
+                          round(st_distance(h.geom, i.geom::geography))::int as straight_m
+                   from core.items i join ref.stations h
+                     on h.closed_date is null and h.name_ko = any(%s) and i.geom is not null
+                   where i.item_id = %s""",
+                (list(HUBS), item_id),
+            )
+            q_zones = c.execute(
+                f"""select p.address as key, z.name, z.biz_type, z.stage,
+                           round(st_distance(p.geom, i.geom::geography))::int as straight_m
+                    from core.items i
+                    join ref.place_points p on p.geom is not null and i.geom is not null
+                     and st_dwithin(p.geom, i.geom::geography, {ZONE_NEAR_M})
+                    join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address
+                    where i.item_id = %s
+                    order by straight_m, z.source = '사업장 목록' desc limit 30""",
                 (item_id,),
             )
             q_sale = c.execute(
@@ -309,6 +330,8 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         peers = q_peers.fetchall()
         sale = q_sale.fetchone()
         stations = q_stn.fetchall()
+        hubs = q_hubs.fetchall()
+        zones = q_zones.fetchall()
     spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     if spec_at:
         doc_times["spec_sheet"] = spec_at
@@ -334,6 +357,12 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
     out["stations"] = walk_stations(stations)
+    by_hub: dict[str, dict[str, Any]] = {}
+    for h in hubs:  # 환승역은 노선마다 한 줄 → 이름으로 하나
+        x = by_hub.setdefault(h["name"], {"name": h["name"], "lines": [], "straight_m": h["straight_m"]})
+        x["lines"].append(h["line"])
+        x["straight_m"] = min(x["straight_m"], h["straight_m"])
+    out["location"] = location(out["stations"], list(by_hub.values()), zones).value
     out["appraisal"] = appraisal_section(
         sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)
     )
@@ -341,7 +370,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
 
 
 def walk_stations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """가까운 역 두 곳 — 같은 역 이름(환승역 노선 여럿)은 하나로 묶어 노선을 합침(WALK-01 어림)."""
+    """가까운 역 세 곳 — 같은 역 이름(환승역 노선 여럿)은 하나로 묶어 노선을 합침(WALK-01 어림)."""
     from aucs_rules.walk import station_name, walk_estimate
 
     by: dict[str, dict[str, Any]] = {}
@@ -359,7 +388,7 @@ def walk_stations(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if r["line"] and r["line"] not in x["lines"]:
             x["lines"].append(r["line"])
     out = []
-    for x in list(by.values())[:2]:
+    for x in list(by.values())[:3]:
         w = walk_estimate(x["straight_m"]).value or {}
         out.append({**x, **w})
     return out

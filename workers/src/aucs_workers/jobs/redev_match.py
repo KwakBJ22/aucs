@@ -9,8 +9,7 @@
 import re
 from typing import Any
 
-DONE_STAGES = ("준공", "청산", "해산", "입주")
-SKIP_TYPES = ("지역주택",)
+from aucs_rules.location import zone_usable
 
 _STRIP = re.compile(
     r"\s|\(.*?\)|아파트.*$|주택재건축.*$|재건축.*$|정비사업.*$|조합.*$|리모델링.*$|추진위.*$"
@@ -37,8 +36,7 @@ def lot_parts(lot_no: str | None) -> tuple[int, int] | None:
 
 
 def usable(z: dict[str, Any]) -> bool:
-    stage, biz = z.get("stage") or "", z.get("biz_type") or ""
-    return not any(s in stage for s in DONE_STAGES) and not any(t in biz for t in SKIP_TYPES)
+    return zone_usable(z.get("stage"), z.get("biz_type"))  # 판단은 규칙 한 곳(LOC-01, 11/13)
 
 
 def pick(item: dict[str, Any], zones: list[dict[str, Any]]) -> dict[str, Any] | None:

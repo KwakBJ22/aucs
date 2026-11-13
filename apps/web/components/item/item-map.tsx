@@ -83,18 +83,27 @@ function walkHref(
   return `https://map.naver.com/p/search/${encodeURIComponent(to.name)}`;
 }
 
-// 가까운 역 두 곳 · 도보 어림(WALK-01) · 네이버 지도로 길찾기
+// 입지(11/13): 한 줄 → 가까운 역 세 곳(등급 · 도보 어림 WALK-01 · 네이버 지도 길찾기) → 주요 업무지구 → 가까운 정비사업
 export function Stations({
   d,
 }: {
-  d: { lat: number | null; lon: number | null; stations?: ItemStation[] };
+  d: {
+    lat: number | null;
+    lon: number | null;
+    stations?: ItemStation[];
+    location?: ItemDetail["location"];
+  };
 }) {
   const w = copy.walk;
   if (!d.stations?.length || d.lat == null || d.lon == null) return null;
   const from = { lat: d.lat, lon: d.lon };
+  const loc = d.location;
   return (
     <div className="mt-10">
-      <div className="sub m-0">{w.title}</div>
+      {loc?.line && <p className="fw-6 m-0 mb-8">{loc.line}</p>}
+      <div className="sub m-0">
+        {w.title} {loc?.grade && <span className="chip blue">{loc.grade}</span>}
+      </div>
       {d.stations.map((s) => (
         <div key={s.name} className="d-flex jc-between ai-center gap-8 mt-6">
           <span className="minw-0">
@@ -116,6 +125,36 @@ export function Stations({
         </div>
       ))}
       <p className="sub fs-xs mt-6 mb-0">{w.note}</p>
+      {!!loc?.hubs.length && (
+        <>
+          <div className="sub mt-14 mb-0">{w.hubs}</div>
+          {loc.hubs.map((h) => (
+            <div key={h.name} className="d-flex jc-between ai-center gap-8 mt-6">
+              <span>
+                <b>{h.name}</b> <span className="fs-sm">{w.straight(h.straight_m)}</span>
+              </span>
+              {h.direct && <span className="chip green">{w.direct(h.direct)}</span>}
+            </div>
+          ))}
+        </>
+      )}
+      {!!loc?.redev.length && (
+        <>
+          <div className="sub mt-14 mb-0">{w.redev}</div>
+          {loc.redev.map((z) => (
+            <div key={z.name} className="d-flex jc-between ai-center gap-8 mt-6">
+              <span className="minw-0">
+                <b>{z.name}</b>
+                <span className="d-block fs-sm c-muted">
+                  {[z.biz_type, z.stage].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+              <span className="fs-sm nowrap">{w.straight(z.straight_m)}</span>
+            </div>
+          ))}
+          <p className="sub fs-xs mt-6 mb-0">{w.redevNote}</p>
+        </>
+      )}
     </div>
   );
 }

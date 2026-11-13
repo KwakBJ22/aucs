@@ -284,7 +284,7 @@ export type ItemDetail = ItemCard & {
   interest?: Interest | null;
   court_bidders?: CourtBidders | null;
   photos?: string[];
-  // 가까운 역 두 곳(어림 — 직선 × 1.3, 분당 67m, 11/12)
+  // 가까운 역 세 곳(어림 — 직선 × 1.3, 분당 67m, 11/12)
   stations?: {
     name: string;
     lines: string[];
@@ -293,6 +293,13 @@ export type ItemDetail = ItemCard & {
     walk_m: number;
     walk_min: number;
   }[];
+  // 입지(LOC-01, 11/13): 역 등급 · 주요 업무지구 · 1km 안 정비사업 · 한 줄
+  location?: {
+    grade: string | null;
+    line: string | null;
+    hubs: { name: string; straight_m: number; direct: string | null }[];
+    redev: { name: string; biz_type: string | null; stage: string | null; straight_m: number }[];
+  };
   appraisal?: {
     points: { label: string; text: string }[];
     firm: string | null;

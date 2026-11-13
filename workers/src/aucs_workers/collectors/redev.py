@@ -96,6 +96,15 @@ def main() -> None:
             )
         job.count = len(zones)
     print(f"끝: {path.name} · 사업장 {len(zones):,}곳")
+    # 새로 생긴 대표지번의 좌표(11/13 「입지 — 가까운 정비사업」) — 키가 없으면 건너뜀
+    import os
+    import sys
+
+    if os.getenv("VWORLD_API_KEY", "").strip():
+        from aucs_workers.collectors import redev_geo
+
+        sys.argv = sys.argv[:1]
+        redev_geo.main()
 
 
 if __name__ == "__main__":

@@ -74,6 +74,13 @@ export const copy = {
     card: (name: string, min: number) => `${name} 도보 약 ${min}분`,
     route: "네이버 지도로 길찾기",
     note: "직선거리로 어림한 값이에요 · 실제 길은 네이버 지도로 확인하세요",
+    // 입지(11/13): 주요 업무지구 · 가까운 정비사업
+    hubs: "주요 업무지구",
+    straight: (m: number) =>
+      m < 1000 ? `직선 ${m.toLocaleString("ko-KR")}m` : `직선 ${(m / 1000).toFixed(1)}km`,
+    direct: (line: string) => `${line} 한 번에`,
+    redev: "가까운 정비사업",
+    redevNote: "구역 대표지번까지 직선거리예요 · 이 물건이 구역 안이라는 뜻은 아니에요",
   },
   // 지도 분석(11/12)
   mapView: {
