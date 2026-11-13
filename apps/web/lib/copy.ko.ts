@@ -695,7 +695,7 @@ export const copy = {
     bandGo: "아카데미",
     start: "첫 수업 시작하기",
     resume: (title: string) => `이어서 듣기 · ${title}`,
-    allDone: "열린 수업을 모두 들었어요 · 다음 단계는 곧 열려요",
+    allDone: "초급을 모두 들었어요 · 중급은 곧 열려요",
     soon: "곧 열려요",
     reward: "끝내면 포인트",
     paid: "포인트 받음",

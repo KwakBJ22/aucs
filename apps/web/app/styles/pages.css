@@ -1739,6 +1739,9 @@ a.col-chip span {
 }
 
 /* ══ 경매 아카데미(11/14) — 단계 길 · 카드 넘기기(옆으로, 한 장씩 멈춤) · 문제 */
+.ac-level {
+  margin-top: 28px;
+}
 .ac-step {
   display: inline-grid;
   place-items: center;
