@@ -13,12 +13,14 @@ from datetime import date, timedelta
 from typing import Any
 
 import psycopg
+from aucs_rules.collect import collect_row
 from aucs_rules.find_filter import (
     ANALYSIS_JOIN,
     COURT_VISIBLE,
     HAS_PHOTO,
     PICK_ANALYSIS_SQL,
     RENT_JOIN,
+    STATION_JOIN,
 )
 from aucs_rules.pick import SCORE_PURPOSES, score_row
 from aucs_rules.wait import FAIL_STATS_SQL, LOOKBACK_DAYS, fold_stats, next_round
@@ -36,6 +38,17 @@ join core.cases c using (case_id)
 {RENT_JOIN}{ANALYSIS_JOIN}
 where {COURT_VISIBLE} and {HAS_PHOTO}
 """
+# 모아 보기(COLLECT-01)는 사진이 없어도 듦 — 손님에게 보이는 물건 전부 + 가까운 역(직선 500m 안)
+COLLECT_SQL = f"""
+select i.item_id, c.court_code, i.usage_name, i.appraisal_krw, i.min_price_krw, i.failed_count,
+       i.is_share, i.is_special_case, i.sale_date, i.status_code,
+       {PICK_ANALYSIS_SQL} as analysis, stn.station_name, stn.station_m
+from core.items i
+join core.cases c using (case_id)
+{STATION_JOIN}{ANALYSIS_JOIN}
+where {COURT_VISIBLE}
+"""
+COLLECT_COLS = ("key", "item_id", "why", "sort")
 COLS = ("purpose", "item_id", "score", "reasons", "likely_fail", "fail_odds", "next_min_krw")
 
 
@@ -67,11 +80,35 @@ def build(
     return out
 
 
+def build_collections(
+    rows: list[dict[str, Any]], stats: Any, reduction: dict[str, Any], today: date
+) -> list[tuple[Any, ...]]:
+    """물건 줄 → 모음 표에 넣을 줄(드는 모음마다 한 줄)."""
+    out: list[tuple[Any, ...]] = []
+    for r in rows:
+        got = collect_row(r, next_round(r, stats, reduction, today), today)
+        out += [(k, r["item_id"], v["reason"], float(v["sort"])) for k, v in got.items()]
+    return out
+
+
+def _has(cur: Any, table: str) -> bool:
+    row = cur.execute("select to_regclass(%s) is not null as ok", (table,)).fetchone()
+    return bool(row and row["ok"])
+
+
+def _fill(cur: Any, table: str, cols: tuple[str, ...], rows: list[tuple[Any, ...]]) -> None:
+    """비우고 채우기를 한 묶음으로 — 화면이 빈 표를 보는 때가 없게(다시 만들 수 있는 표)."""
+    cur.execute(f"delete from {table}")
+    with cur.copy(f"copy {table} ({', '.join(cols)}) from stdin") as cp:
+        for x in rows:
+            cp.write_row(x)
+
+
 def refresh(conn: psycopg.Connection, today: date) -> int:
-    """표를 다시 채우고 넣은 줄 수를 돌려줌. 표가 없으면(이주 0052 전) 0 — 부르는 쪽은 멈추지 않음."""
+    """추천 점수 표 · 모음 표를 다시 채우고 넣은 줄 수를 돌려줌. 표가 없으면(이주 0052 · 0053 전) 그 표는 건너뜀."""
     cur = conn.cursor(row_factory=dict_row)
-    ok = cur.execute("select to_regclass('analysis.pick_scores') is not null as ok").fetchone()
-    if not ok or not ok["ok"]:
+    picks, colls = _has(cur, "analysis.pick_scores"), _has(cur, "analysis.collection_items")
+    if not picks and not colls:
         return 0
     stats = fold_stats(
         cur.execute(FAIL_STATS_SQL, (today - timedelta(days=LOOKBACK_DAYS), today)).fetchall()
@@ -81,21 +118,27 @@ def refresh(conn: psycopg.Connection, today: date) -> int:
         " and valid_from <= %s order by valid_from desc limit 1",
         (today,),
     ).fetchone()
-    rows = cur.execute(SQL, {"today": today}).fetchall()
-    out = build(rows, stats, dict((red or {}).get("value") or {}), today)
-    # 비우고 채우기를 한 묶음으로 — 홈이 빈 표를 보는 때가 없게
-    cur.execute("delete from analysis.pick_scores")
-    with cur.copy(f"copy analysis.pick_scores ({', '.join(COLS)}) from stdin") as cp:
-        for x in out:
-            cp.write_row(x)
-    conn.commit()
-    return len(out)
+    reduction = dict((red or {}).get("value") or {})
+    n = 0
+    if picks:
+        out = build(cur.execute(SQL, {"today": today}).fetchall(), stats, reduction, today)
+        _fill(cur, "analysis.pick_scores", COLS, out)
+        conn.commit()
+        n += len(out)
+    if colls:
+        out = build_collections(
+            cur.execute(COLLECT_SQL, {"today": today}).fetchall(), stats, reduction, today
+        )
+        _fill(cur, "analysis.collection_items", COLLECT_COLS, out)
+        conn.commit()
+        n += len(out)
+    return n
 
 
 def main() -> None:
     with connect() as conn:
         n = refresh(conn, date.today())
-    print(f"추천 점수 {n:,}줄")
+    print(f"추천 점수 · 모음 {n:,}줄")
 
 
 if __name__ == "__main__":

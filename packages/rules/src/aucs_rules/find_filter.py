@@ -36,6 +36,15 @@ RENT_JOIN = """left join lateral (
     and t.monthly_rent_krw > 0 and t.deal_date >= %(today)s::date - 366
     and (i.building_area_m2 is null or abs(t.area_m2 - i.building_area_m2) <= 3)) rl on true
 """
+# 가까운 역 하나(직선 500m 안) — 「역 가까운 곳」 모음. ANALYSIS_JOIN 앞에 둠
+STATION_JOIN = """left join lateral (
+  select st.name_ko as station_name,
+         round(st_distance(st.geom::geography, i.geom::geography))::int as station_m
+  from ref.stations st
+  where st.closed_date is null and i.geom is not null
+    and st_dwithin(st.geom::geography, i.geom::geography, 500)
+  order by st.geom::geography <-> i.geom::geography limit 1) stn on true
+"""
 HAS_PHOTO = "exists (select 1 from core.item_photos ph where ph.case_id = i.case_id)"
 
 # 손님에게 보이는 공매 물건: 공개 · 진행 중 · 매각(임대 빼고) · 마감 전(마감 미정 포함)

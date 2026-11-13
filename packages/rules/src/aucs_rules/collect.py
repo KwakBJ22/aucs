@@ -79,7 +79,10 @@ def collect(x: CollectInput) -> RuleResult:
     if x.station and x.station[1] <= STATION_M and not fatal:
         name, m = x.station
         walk = walk_estimate(m).value or {}  # 11/12: 직선 m 대신 도보 어림(WALK-01)
-        out["station"] = {"reason": f"{station_name(name)} 도보 약 {walk.get('walk_min', '-')}분", "sort": -m}
+        out["station"] = {
+            "reason": f"{station_name(name)} 도보 약 {walk.get('walk_min', '-')}분",
+            "sort": -m,
+        }
 
     hard = [s for s in live if s.get("level") in ("fatal", "high")]
     if hard or x.is_share or x.is_special:
@@ -89,3 +92,33 @@ def collect(x: CollectInput) -> RuleResult:
     return RuleResult(
         out, Status.ESTIMATED, RULE_ID, [{"expect_krw": expect, "market_krw": market}]
     )
+
+
+def collect_row(r: dict[str, Any], nr: dict[str, Any], today: Any) -> dict[str, dict[str, Any]]:
+    """DB 물건 한 줄 → 드는 모음들({키: {reason, sort}}). 모아 보기(그때 셈)와 수집기(미리 나눔)가 같이 부름(11/14).
+
+    r: appraisal_krw · min_price_krw · is_share · is_special_case · analysis · failed_count · sale_date ·
+    station_name · station_m(직선 500m 안 가까운 역). nr: wait.next_round 값(다음 회차 · 유찰 예상)."""
+    from aucs_rules.fmt import won
+
+    st = (r["station_name"], r["station_m"]) if r.get("station_name") else None
+    got: dict[str, dict[str, Any]] = collect(
+        CollectInput(
+            appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
+            is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
+            analysis=r["analysis"] or {}, station=st, failed_count=r["failed_count"],
+        )
+    ).value  # fmt: skip
+    d_day = (r["sale_date"] - today).days if r.get("sale_date") else 0
+    if "special" not in got and nr["preview"]:
+        got["next"] = {
+            "reason": "이미 유찰돼 위 값으로 다음 회차가 잡혔어요 · 법원 공고 전",  # 카드 값과 같은 숫자를 또 적지 않음(11/8)
+            "sort": 10**13 - d_day,  # 값이 정해진 다음 회차가 맨 앞
+        }
+    elif "special" not in got and nr["likely_fail"] and nr.get("next_min_krw"):
+        o = nr["fail_odds"]
+        got["next"] = {
+            "reason": f"비슷한 물건 10건 중 {o['of10']}건 유찰 · 기다리면 {won(nr['next_min_krw'])}부터",
+            "sort": o["pct"] * 1000 - d_day,  # 유찰 비율 높은 순 → 입찰일 가까운 순(11/8)
+        }
+    return got

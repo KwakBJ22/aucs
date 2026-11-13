@@ -1,30 +1,79 @@
 """모아 보기(11/7 대표님 — 차별화 · 손님에게 쓸모 있는 것만).
 
 모음 판단은 규칙 COLLECT-01(packages/rules/collect.py) 하나, 「기다리면 더 싸질 물건」은 홈 추천과 같은
-picks.mark_next_round(실제 유찰 비율, WAIT-01). 내 지역·현금 조건을 받으면 그 안에서만. 분석 결과(매일 아침 갱신)로 그때 셈.
+규칙(실제 유찰 비율, WAIT-01). 내 지역·현금 조건을 받으면 그 안에서만.
+11/14: 수집기(jobs/pick_scores)가 분석 뒤마다 물건을 모음에 미리 나눠 둠(analysis.collection_items) — 여기서는 읽기만.
+예전엔 열 때마다 물건 2만 줄을 받아 그 자리에서 나눴음. 표가 없거나 오래됐으면 예전처럼 그때 셈.
 """
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
 
-from aucs_rules.collect import KEYS, CollectInput, collect
-from aucs_rules.find_filter import court_where
-from aucs_rules.fmt import won
+import psycopg
+from aucs_rules.collect import KEYS, collect_row
+from aucs_rules.find_filter import ANALYSIS_JOIN, COURT_VISIBLE, STATION_JOIN, court_where
 from aucs_rules.pick import diversify
 
-from aucs_api.db import connect
-from aucs_api.services.items import add_cols, add_join, card
+from aucs_api.db import batch, connect
+from aucs_api.services.items import _CARD_SQL, add_cols, add_join, attach_stations, card
 from aucs_api.services.picks import _SQL, mark_next_round, reduction_table
 
-# 가까운 역 하나(직선 500m 안) — 역 이름·거리
-_STATION = """ left join lateral (
-  select st.name_ko as station_name,
-         round(st_distance(st.geom::geography, i.geom::geography))::int as station_m
-  from ref.stations st
-  where st.closed_date is null and i.geom is not null
-    and st_dwithin(st.geom::geography, i.geom::geography, 500)
-  order by st.geom::geography <-> i.geom::geography limit 1) stn on true
-"""
+_JOIN_CI = (
+    "join core.cases c using (case_id)\njoin analysis.collection_items ci on ci.item_id = i.item_id"
+)
+# 미리 나눠 둔 것에서: 모음마다 건수 한 번 + 모음의 물건(순서 값 큰 순)
+_COUNT_SQL = f"""
+select ci.key, count(*) as n
+from core.items i
+{_JOIN_CI}
+{ANALYSIS_JOIN}
+where {COURT_VISIBLE}"""
+_ITEMS_SQL = add_cols(_CARD_SQL, "i.is_special_case, i.status_code, ci.why").replace(
+    "join core.cases c using (case_id)", _JOIN_CI + " and ci.key = %(k)s", 1
+)
+_CANDIDATES = 120  # 「같은 단지 1 · 같은 구 2」로 추릴 후보
+_FRESH_HOURS = 36  # 이보다 오래됐으면 안 씀(수집기가 멈춘 것) → 그때 셈
+
+
+def _from_table(
+    more: str, params: dict[str, Any], key: str | None, limit: int, today: date
+) -> dict[str, Any] | None:
+    """미리 나눠 둔 표로 답함. 표가 없거나 비었거나 오래됐으면 None."""
+    keys = [key] if key else list(KEYS)
+    tail = " order by ci.sort desc, i.item_id limit %(n)s"
+    n = limit if key else _CANDIDATES
+    try:
+        with connect() as c:
+            res = batch(
+                c,
+                [
+                    ("select max(computed_at) as at from analysis.collection_items", None),
+                    (_COUNT_SQL + more + " group by ci.key", params),
+                ]
+                + [(_ITEMS_SQL + more + tail, {**params, "k": k, "n": n}) for k in keys],
+            )
+            at = (res[0].fetchone() or {}).get("at")
+            totals = {r["key"]: r["n"] for r in res[1].fetchall()}
+            lists = {k: x.fetchall() for k, x in zip(keys, res[2:], strict=True)}
+            if not at or datetime.now(at.tzinfo) - at > timedelta(hours=_FRESH_HOURS):
+                return None
+            reduction = reduction_table(today)
+            out: dict[str, Any] = {}
+            for k in KEYS:
+                cards = []
+                for r in lists.get(k, []):
+                    cd = card(r, today)
+                    mark_next_round(cd, r, reduction, today)
+                    cards.append({**cd, "why": r["why"]})
+                out[k] = {
+                    "total": totals.get(k, 0),
+                    "items": cards if key else diversify(cards, limit),
+                }
+            # 카드의 「○○역 도보 약 N분」은 다른 목록과 같은 길로, 나갈 카드에만 한 번에
+            attach_stations(c, [x for v in out.values() for x in v["items"]])
+    except psycopg.Error:  # 표가 아직 없음(이주 0053 전) 등
+        return None
+    return out
 
 
 def collections(
@@ -38,13 +87,18 @@ def collections(
 ) -> dict[str, Any]:
     """모음마다 건수는 늘 주고, 물건은 key 가 없으면 모음마다 앞 몇 건(같은 단지 1·같은 구 2건까지),
     있으면 그 모음만 limit 건 — 화면이 건수와 목록을 한 번에 받게(11/7)."""
-    sql = add_join(add_cols(_SQL, "stn.station_name, stn.station_m"), _STATION)
     params: dict[str, Any] = {"today": today}
     more, fp = court_where(
         {"sigungu": sigungu, "max_cash": max_cash, "homes": homes}, today
     )  # 찾기와 같은 규칙(FIND-03)
-    sql += more
     params.update(fp)
+    got_table = _from_table(more, params, key, limit, today)
+    if got_table is not None:
+        return got_table
+
+    # ── 그때 셈(미리 나눠 둔 것이 없을 때만)
+    sql = add_join(add_cols(_SQL, "stn.station_name, stn.station_m"), STATION_JOIN)
+    sql += more
     sql += " order by i.sale_date limit 20000"  # 전체 지역도 빠짐없이(11/7 — 6000 이면 먼 날 물건이 빠졌음)
     with connect() as c:
         rows = c.execute(sql, params).fetchall()
@@ -52,31 +106,9 @@ def collections(
 
     groups: dict[str, list[dict[str, Any]]] = {k: [] for k in KEYS}
     for r in rows:
-        an = r["analysis"] or {}
-        st = (r["station_name"], r["station_m"]) if r.get("station_name") else None
-        got = collect(
-            CollectInput(
-                appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
-                is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
-                analysis=an, station=st, failed_count=r["failed_count"],
-            )
-        ).value  # fmt: skip
         cd = card(r, today)
         mark_next_round(cd, r, reduction, today)
-        if "special" not in got and cd["preview"]:
-            got["next"] = {
-                "reason": "이미 유찰돼 위 값으로 다음 회차가 잡혔어요 · 법원 공고 전",  # 카드 값과 같은 숫자를 또 적지 않음(11/8)
-                "sort": 10**13 - (cd["d_day"] or 0),  # 값이 정해진 다음 회차가 맨 앞
-            }
-        elif "special" not in got and cd["likely_fail"] and cd.get("next_min_krw"):
-            o = cd["fail_odds"]
-            got["next"] = {
-                "reason": f"비슷한 물건 10건 중 {o['of10']}건 유찰 · 기다리면 {won(cd['next_min_krw'])}부터",
-                "sort": o["pct"] * 1000
-                - (cd["d_day"] or 0),  # 유찰 비율 높은 순 → 입찰일 가까운 순(11/8)
-            }
-        if not got:
-            continue
+        got = collect_row(r, cd, today)  # 다음 회차 · 유찰 예상 표시는 카드에 방금 붙인 것
         for k, v in got.items():
             groups[k].append({**cd, "why": v["reason"], "_sort": v["sort"]})
 
