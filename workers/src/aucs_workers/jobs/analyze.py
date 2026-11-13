@@ -17,7 +17,7 @@ from typing import Any
 import psycopg
 from aucs_rules import ENGINE_VERSION
 from aucs_rules.appraisal_parts import appraisal_parts
-from aucs_rules.appraisal_points import appraisal_facts, parse_points
+from aucs_rules.appraisal_points import appraisal_facts, parse_points, plan_zone_of_parcel
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
 from aucs_rules.costs import commercial_over_limit
@@ -39,6 +39,7 @@ from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from aucs_workers.collectors.official_prices import pnu_of
 from aucs_workers.db import connect
 from aucs_workers.jobs.redev_match import find_zone, near_zone
 from aucs_workers.jobs.runlog import run
@@ -227,6 +228,15 @@ def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any]
     return summarize(titles, floors, item.get("address"), usage, today)
 
 
+def load_parcel_zone(cur: Any, item: dict[str, Any]) -> str | None:
+    """필지 토지이용계획(collectors/land_use) → 'zone' / 'district' / 'planned'. 아직 안 받았으면 None."""
+    pnu = pnu_of(item.get("region_code") or "", item.get("lot_no") or "")
+    if not pnu:
+        return None
+    row = cur.execute("select uses from core.parcel_land_use where pnu = %s", (pnu,)).fetchone()
+    return plan_zone_of_parcel(row["uses"]) if row else None
+
+
 def _hash(obj: Any) -> str:
     return hashlib.sha256(
         json.dumps(obj, sort_keys=True, default=str, ensure_ascii=False).encode()
@@ -306,7 +316,9 @@ def analyze_item(
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)
     redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
-    if not redev and af.get("plan_zone") == "zone":
+    # 정비구역 안인지(11/14): 감정평가 요항 글 → 없으면 필지 토지이용계획(브이월드, land_use 수집기)
+    plan_z = af.get("plan_zone") or load_parcel_zone(cur, item)
+    if not redev and plan_z == "zone":
         # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
         redev = near_zone(cur, item_id) or {
             "name": None, "biz_type": None, "stage": None, "how": "토지 이용 계획"}  # fmt: skip
@@ -365,6 +377,7 @@ def analyze_item(
         # 최저가에 낙찰받을 때 필요한 현금(집 수별) — 찾기·추천의 「가진 현금」 기준(11/9)
         "cash_need": _cash_need(item, market, cash_tables),
         "redev": redev,
+        "plan_zone": plan_z,
         "building": bldg,
         "parts": parts or None,
         # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
@@ -373,7 +386,6 @@ def analyze_item(
             for k in (
                 "near_station",
                 "near_school",
-                "plan_zone",
                 "overcrowded",
                 "land_permit_area",
                 "road_max_m",

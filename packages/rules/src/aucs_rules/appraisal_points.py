@@ -149,6 +149,13 @@ def plan_zone(plan: str | None) -> str | None:
     return None
 
 
+def plan_zone_of_parcel(uses: list[dict[str, Any]] | None) -> str | None:
+    """브이월드 토지이용계획(필지에 걸린 지역 · 지구 목록)으로 같은 판정(11/14 — 감정평가서가 없는 물건).
+    uses: [{'name': '정비구역', 'incl': '포함'}] — 「접함」(옆 필지)은 구역 안이 아님."""
+    names = [str(u.get("name") or "") for u in uses or [] if u.get("incl") != "접함"]
+    return plan_zone(", ".join(names))
+
+
 def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:
     """요점 글 → 위험 신호 · 추천이 읽는 사실 묶음. 글이 없으면 빈 묶음(「모름」 — 없다고 보지 않음)."""
     p = {x["label"]: x["text"] for x in points}

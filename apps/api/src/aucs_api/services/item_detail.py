@@ -34,7 +34,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
        a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'land_value' as land_value, a.result -> 'redev' as redev,
-       a.result -> 'appraisal' ->> 'plan_zone' as plan_zone,
+       a.result ->> 'plan_zone' as plan_zone,
        a.result -> 'building' as building, a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i

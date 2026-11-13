@@ -1,6 +1,6 @@
 """LOC-01: 입지 한 줄(역 등급 · 업무지구 · 가까운 정비사업)."""
 
-from aucs_rules.appraisal_points import plan_zone
+from aucs_rules.appraisal_points import plan_zone, plan_zone_of_parcel
 from aucs_rules.location import inside_zone, location, station_grade, zone_usable
 
 
@@ -54,3 +54,11 @@ def test_plan_zone_reads_land_use_list() -> None:
     assert plan_zone("정비구역(주거환경개선사업)<도시 및 주거환경정비법>") is None
     assert plan_zone("재정비촉진지구기타(천호성내존치관리구역)") is None
     assert plan_zone("건축허가·착공제한지역(정비계획의 결정 및 정비구역의 지정·고시가 있는 경우)") is None
+
+
+def test_plan_zone_of_parcel_skips_adjacent() -> None:
+    uses = [{"name": "도시지역", "incl": "포함"}, {"name": "정비구역", "incl": "포함"}]
+    assert plan_zone_of_parcel(uses) == "zone"
+    assert plan_zone_of_parcel([{"name": "정비구역", "incl": "접함"}]) is None
+    assert plan_zone_of_parcel([{"name": "재정비촉진지구", "incl": "저촉"}]) == "district"
+    assert plan_zone_of_parcel(None) is None

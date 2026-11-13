@@ -16,6 +16,7 @@ STEPS = [
     ("물건 수집", ["aucs_workers.collectors.court_items"]),
     ("건축물대장", ["aucs_workers.collectors.buildings"]),
     ("공시가격", ["aucs_workers.collectors.official_prices", "--cap", "1500"]),  # 11/11 — 재산세·종부세 바탕
+    ("토지이용계획", ["aucs_workers.collectors.land_use", "--cap", "3000"]),  # 11/14 — 정비구역 안인지
     ("공매", ["aucs_workers.collectors.onbid"]),
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),
