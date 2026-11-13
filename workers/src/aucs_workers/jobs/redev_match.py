@@ -9,7 +9,8 @@
 import re
 from typing import Any
 
-from aucs_rules.location import zone_usable
+from aucs_rules.location import ZONE_ADDRESS_SQL, ZONE_GUESS_M, zone_usable
+from aucs_rules.redev_member import zone_kind
 
 _STRIP = re.compile(
     r"\s|\(.*?\)|아파트.*$|주택재건축.*$|재건축.*$|정비사업.*$|조합.*$|리모델링.*$|추진위.*$"
@@ -82,3 +83,24 @@ def find_zone(cur: Any, item: dict[str, Any]) -> dict[str, Any] | None:
     if not z:
         return None
     return {k: z.get(k) for k in ("name", "biz_type", "stage", "how")}
+
+
+def near_zone(cur: Any, item_id: str) -> dict[str, Any] | None:
+    """토지 이용 계획이 「정비구역」인 물건에 어느 구역인지 잇기(11/14): 대표지번이 가장 가까운(500m 안)
+    재개발 · 재건축 구역. 구역 경계가 아니라 「아마 이 구역」 — how 에 그렇게 적음."""
+    rows = cur.execute(
+        f"""select z.name, z.biz_type, z.stage, round(st_distance(p.geom, i.geom))::int as m
+            from core.items i
+            join ref.place_points p on p.geom is not null and i.geom is not null
+             and st_dwithin(p.geom, i.geom, {ZONE_GUESS_M})
+            join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address
+            where i.item_id = %s
+            order by m, z.source = '사업장 목록' desc limit 20""",
+        (item_id,),
+    ).fetchall()
+    for r in rows:
+        z = r if isinstance(r, dict) else dict(zip(("name", "biz_type", "stage", "m"), r, strict=True))
+        if zone_usable(z.get("stage"), z.get("biz_type")) and zone_kind(z.get("biz_type")):
+            return {"name": z["name"], "biz_type": z["biz_type"], "stage": z["stage"],
+                    "how": f"토지 이용 계획 · 가까운 구역(약 {z['m']}m)"}  # fmt: skip
+    return None

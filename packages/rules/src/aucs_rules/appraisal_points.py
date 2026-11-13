@@ -115,6 +115,40 @@ def _max_road_m(t: str) -> float | None:
     return max(ws) if ws else None
 
 
+_ZONE = re.compile(
+    r"(?<![가-힣])(?:주택재개발|주택재건축|도시환경|재개발|재건축)?정비구역(?:\(([^()]*)\))?(?=[<,.·;]|$|\(|임|[및과와])"
+)
+
+
+def plan_zone(plan: str | None) -> str | None:
+    """토지 이용 계획 글(필지의 지역 · 지구 목록)에서 정비사업 지정을 읽음(11/14 — 「구역 안」 판정).
+
+    'zone'     정비구역 · 재정비촉진구역 — 도시정비법 구역 안(조합원 자격을 따질 곳)
+    'planned'  정비예정구역 · 정비구역(입안) — 아직 구역 지정 전
+    'district' 재정비촉진지구만 — 지구 안이지만 촉진구역인지는 모름(존치구역일 수 있음)
+    주거환경개선사업 정비구역(조합이 없음) · 해제된 구역 · 「정비구역의 지정이 있는 경우」 같은 설명 글은 뺌.
+    """
+    t = re.sub(r"\s", "", plan or "")
+    if not t:
+        return None
+    out = None
+    for m in _ZONE.finditer(t):
+        note = m.group(1) or ""
+        if "주거환경개선" in note or "해제" in note:
+            continue
+        if "입안" in note or "예정" in note:
+            out = out or "planned"
+            continue
+        return "zone"
+    if re.search(r"재정비촉진구역(?![가-힣]*해제)", t):
+        return "zone"
+    if out or "정비예정구역" in t:
+        return "planned"
+    if re.search(r"재정비촉진지구(?!기타)", t):
+        return "district"
+    return None
+
+
 def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:
     """요점 글 → 위험 신호 · 추천이 읽는 사실 묶음. 글이 없으면 빈 묶음(「모름」 — 없다고 보지 않음)."""
     p = {x["label"]: x["text"] for x in points}
@@ -137,6 +171,9 @@ def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:
         f["edu_protect"] = True
     if "과밀억제권역" in plan:
         f["overcrowded"] = True
+    if pz := plan_zone(plan):
+        f["plan_zone"] = pz
+        ev.append({"plan_zone": "토지 이용 계획"})
     blind = f"{road} {other}"
     if "맹지" in blind:
         # 「지적도상 맹지이나 현황 도로와 접함」은 확인 필요, 그냥 「맹지임」은 길 없음

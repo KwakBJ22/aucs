@@ -40,7 +40,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from aucs_workers.db import connect
-from aucs_workers.jobs.redev_match import find_zone
+from aucs_workers.jobs.redev_match import find_zone, near_zone
 from aucs_workers.jobs.runlog import run
 
 COMMERCIAL_WORDS = ("상가", "근린", "점포", "사무실", "공장")
@@ -306,6 +306,10 @@ def analyze_item(
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)
     redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
+    if not redev and af.get("plan_zone") == "zone":
+        # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
+        redev = near_zone(cur, item_id) or {
+            "name": None, "biz_type": None, "stage": None, "how": "토지 이용 계획"}  # fmt: skip
     if redev:
         facts["in_redev_zone"] = redev
         if cash_tables:  # 규제지역(투기과열지구)이면 낙찰자 조합원 자격까지 가름(REDEV-01)
@@ -369,6 +373,7 @@ def analyze_item(
             for k in (
                 "near_station",
                 "near_school",
+                "plan_zone",
                 "overcrowded",
                 "land_permit_area",
                 "road_max_m",

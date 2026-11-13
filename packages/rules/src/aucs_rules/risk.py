@@ -226,7 +226,7 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         )  # fmt: skip
     if z := f.get("in_redev_zone"):
         kind = ""
-        if isinstance(z, dict):
+        if isinstance(z, dict) and (z.get("biz_type") or z.get("stage")):
             kind = "(" + " · ".join(x for x in (z.get("biz_type"), z.get("stage")) if x) + ")"
         # 규제지역이면 낙찰자가 조합원이 되는지까지(REDEV-01, 11/13) — 아니거나 모르면 예전 한 줄
         m = (
@@ -247,7 +247,10 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             add(
                 "risk.redev_member",
                 "mid",
-                f"정비사업 구역{kind} — 조합원 자격·현금청산 확인",
+                # 토지 이용 계획에 정비구역으로만 나오고 어느 구역 · 단계인지 못 이은 물건(11/14)
+                "정비구역 안 — 단계에 따라 낙찰받아도 조합원이 못 될 수 있어요(현금청산) · 조합에 확인"
+                if isinstance(z, dict) and not kind
+                else f"정비사업 구역{kind} — 조합원 자격·현금청산 확인",
                 Status.NEEDS_CHECK,
                 **({"zone": z} if isinstance(z, dict) else {}),
             )

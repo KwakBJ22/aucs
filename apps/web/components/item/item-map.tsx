@@ -101,6 +101,15 @@ export function Stations({
   return (
     <div className="mt-10">
       {loc?.line && <p className="fw-6 m-0 mb-8">{loc.line}</p>}
+      {loc?.inside && (
+        <p className="m-0 mb-8">
+          <span className="chip orange">{loc.inside.label}</span>{" "}
+          <span className="fs-sm">
+            {[loc.inside.name, loc.inside.stage].filter(Boolean).join(" · ")}
+          </span>
+          <span className="sub fs-xs d-block mt-4">{w.insideNote[loc.inside.kind]}</span>
+        </p>
+      )}
       <div className="sub m-0">
         {w.title} {loc?.grade && <span className="chip blue">{loc.grade}</span>}
       </div>

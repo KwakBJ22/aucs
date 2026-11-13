@@ -7,7 +7,7 @@ from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
 from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
-from aucs_rules.location import HUBS, ZONE_ADDRESS_SQL, ZONE_NEAR_M, location
+from aucs_rules.location import HUBS, ZONE_ADDRESS_SQL, ZONE_NEAR_M, inside_zone, location
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
@@ -34,6 +34,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
        a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'land_value' as land_value, a.result -> 'redev' as redev,
+       a.result -> 'appraisal' ->> 'plan_zone' as plan_zone,
        a.result -> 'building' as building, a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
@@ -362,7 +363,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         x = by_hub.setdefault(h["name"], {"name": h["name"], "lines": [], "straight_m": h["straight_m"]})
         x["lines"].append(h["line"])
         x["straight_m"] = min(x["straight_m"], h["straight_m"])
-    out["location"] = location(out["stations"], list(by_hub.values()), zones).value
+    out["location"] = location(
+        out["stations"], list(by_hub.values()), zones, inside_zone(r.get("redev"), r.get("plan_zone"))
+    ).value
     out["appraisal"] = appraisal_section(
         sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)
     )

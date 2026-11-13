@@ -298,6 +298,8 @@ export type ItemDetail = ItemCard & {
     grade: string | null;
     line: string | null;
     hubs: { name: string; straight_m: number; direct: string | null }[];
+    // 구역 안(11/14): 정비구역 · 재정비촉진지구 · 정비예정구역 — 토지 이용 계획 · 대표지번 · 단지 이름으로 가름
+    inside?: { kind: string; label: string; name: string | null; stage: string | null } | null;
     redev: { name: string; biz_type: string | null; stage: string | null; straight_m: number }[];
   };
   appraisal?: {

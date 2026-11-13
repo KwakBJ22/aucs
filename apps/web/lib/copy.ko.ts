@@ -79,8 +79,13 @@ export const copy = {
     straight: (m: number) =>
       m < 1000 ? `직선 ${m.toLocaleString("ko-KR")}m` : `직선 ${(m / 1000).toFixed(1)}km`,
     direct: (line: string) => `${line} 한 번에`,
-    redev: "가까운 정비사업",
+    redev: "가까운 정비사업(구역 밖 참고)",
     redevNote: "구역 대표지번까지 직선거리예요 · 이 물건이 구역 안이라는 뜻은 아니에요",
+    insideNote: {
+      zone: "낙찰받아도 조합원이 못 되는 경우가 있어요 · 위험 신호를 함께 보세요",
+      district: "지구 안이에요 · 재개발하는 구역(촉진구역)인지는 구청에 확인하세요",
+      planned: "아직 구역으로 지정되기 전이에요",
+    } as Record<string, string>,
   },
   // 지도 분석(11/12)
   mapView: {
