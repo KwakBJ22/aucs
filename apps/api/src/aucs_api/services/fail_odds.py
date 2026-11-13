@@ -4,7 +4,14 @@ from datetime import date, timedelta
 from typing import Any
 
 from aucs_rules.pick import usage_kind
-from aucs_rules.wait import ALL, LOOKBACK_DAYS, Stats, fail_odds, round_bucket
+from aucs_rules.wait import (
+    FAIL_STATS_SQL,
+    LOOKBACK_DAYS,
+    Stats,
+    fail_odds,
+    fold_stats,
+    round_bucket,
+)
 
 from aucs_api.cache import memo
 from aucs_api.db import connect
@@ -12,23 +19,10 @@ from aucs_api.db import connect
 
 @memo(ttl=3600, size=4)
 def fail_stats(today: date) -> Stats:
-    """{(법원 코드, 종류, 회차): (유찰 수, 전체 수)} — 입찰이 열려 유찰·매각으로 끝난 회차만."""
+    """{(법원 코드, 종류, 회차): (유찰 수, 전체 수)} — 조회 · 접기는 규칙 wait.py 한 곳(수집기도 같이 씀, 11/14)."""
     with connect() as c:
-        rows = c.execute(
-            """select c.court_code, i.usage_name, least(coalesce(r.failed_count, 0), 3) as fc,
-                      count(*) filter (where r.result = 'failed') as f, count(*) as n
-               from core.rounds r join core.items i using (item_id) join core.cases c using (case_id)
-               where r.sale_date >= %s and r.sale_date < %s and r.result in ('failed', 'sold')
-               group by 1, 2, 3""",
-            (today - timedelta(days=LOOKBACK_DAYS), today),
-        ).fetchall()
-    out: Stats = {}
-    for x in rows:
-        kind, fc = usage_kind(x["usage_name"]), int(x["fc"])
-        for k in ((x["court_code"], kind, fc), (ALL, kind, fc)):  # 법원별 + 모든 법원 합
-            f, n = out.get(k, (0, 0))
-            out[k] = (f + int(x["f"]), n + int(x["n"]))
-    return out
+        rows = c.execute(FAIL_STATS_SQL, (today - timedelta(days=LOOKBACK_DAYS), today)).fetchall()
+    return fold_stats(rows)
 
 
 def odds_for(r: dict[str, Any], today: date) -> dict[str, Any] | None:

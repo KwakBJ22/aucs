@@ -21,6 +21,23 @@ COURT_VISIBLE = (
     f" and coalesce(i.usage_name, '') !~ '{VEHICLES}'"
     " and i.status_code is distinct from 'gone' and a.result is not null"
 )
+# 추천 점수(PICK-01)가 읽는 분석 칸 — 홈(그때 셈) · 모아 보기 · 수집기(미리 매김)가 같이 씀(11/14)
+PICK_ANALYSIS_SQL = (
+    "jsonb_build_object('market', a.result -> 'market', 'sale_rate', a.result -> 'sale_rate',"
+    " 'court_cell', a.result -> 'court_cell', 'redev', a.result -> 'redev', 'new_item', a.result -> 'new_item',"
+    " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals', 'appraisal', a.result -> 'appraisal')"
+)
+# 임대 목적: 같은 단지(전용 ±3㎡) 1년 월세 가운데값 — 물건 상세 「세놓으면」과 같은 자료. ANALYSIS_JOIN 앞에 둠
+RENT_JOIN = """left join lateral (
+  select percentile_cont(0.5) within group (order by t.monthly_rent_krw)::bigint as monthly_krw,
+         percentile_cont(0.5) within group (order by t.deposit_krw)::bigint as deposit_krw
+  from core.trades t
+  where t.region_code = left(i.region_code, 8) || '00' and t.lot_no = i.lot_no and t.deal_kind = 'lease'
+    and t.monthly_rent_krw > 0 and t.deal_date >= %(today)s::date - 366
+    and (i.building_area_m2 is null or abs(t.area_m2 - i.building_area_m2) <= 3)) rl on true
+"""
+HAS_PHOTO = "exists (select 1 from core.item_photos ph where ph.case_id = i.case_id)"
+
 # 손님에게 보이는 공매 물건: 공개 · 진행 중 · 매각(임대 빼고) · 마감 전(마감 미정 포함)
 ONBID_VISIBLE = (
     "o.display_policy = 'public' and o.status_code = 'active'"

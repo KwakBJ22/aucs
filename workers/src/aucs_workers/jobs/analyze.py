@@ -744,6 +744,14 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
                 if pre is None or n % COMMIT_EVERY == COMMIT_EVERY - 1:
                     conn.commit()
             conn.commit()
+        if not a.item:  # 추천 점수를 미리 매겨 둠 — 홈은 읽기만(11/14). 여기서 탈이 나도 분석은 끝난 것
+            try:
+                from aucs_workers.jobs.pick_scores import refresh
+
+                print(f"추천 점수 {refresh(conn, today):,}줄")
+            except Exception as e:  # noqa: BLE001
+                conn.rollback()
+                print(f"추천 점수 매기기 실패(홈은 그때 셈으로): {type(e).__name__} {str(e)[:160]}")
     print(f"분석 {job.count:,}건 (대상 {len(ids):,})")
 
 

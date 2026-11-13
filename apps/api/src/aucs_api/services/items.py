@@ -41,6 +41,25 @@ join core.cases c using (case_id)
 where {COURT_VISIBLE}
 """  # 보이는 물건 조건(공개·부동산·목록에 있음·분석 끝)은 규칙 FIND-03 한 곳(11/8)
 
+_COLS_END = "\nfrom core.items i\n"  # 고르는 칸이 끝나는 자리(안쪽 조회는 모두 다른 표)
+
+
+def add_cols(sql: str, cols: str) -> str:
+    """카드 SQL 의 고르는 칸 끝에 칸을 더함. 붙일 자리를 못 찾으면 바로 오류.
+
+    11/14: 예전엔 글자 바꿔 끼우기(replace)가 자리를 못 찾아도 조용히 넘어가, 11/9 부터 「역 가까운 곳」 모음이
+    비고 임대 목적 추천의 월세 수익률이 빠져 있었음."""
+    if sql.count(_COLS_END) != 1:
+        raise ValueError("카드 SQL 에 칸을 붙일 자리가 없음")
+    return sql.replace(_COLS_END, f", {cols}{_COLS_END}")
+
+
+def add_join(sql: str, join: str) -> str:
+    """카드 SQL 의 분석 조인 앞에 조인을 더함(못 찾으면 바로 오류)."""
+    if sql.count(ANALYSIS_JOIN) != 1:
+        raise ValueError("카드 SQL 에 조인을 붙일 자리가 없음")
+    return sql.replace(ANALYSIS_JOIN, join + ANALYSIS_JOIN)
+
 
 def photo_url(path: str | None) -> str | None:
     """사진 저장소 경로 → 공개 주소(홈 추천·모아 보기·물건 상세가 같이 씀, 11/8)."""

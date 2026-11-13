@@ -13,7 +13,7 @@ from aucs_rules.fmt import won
 from aucs_rules.pick import diversify
 
 from aucs_api.db import connect
-from aucs_api.services.items import card
+from aucs_api.services.items import add_cols, add_join, card
 from aucs_api.services.picks import _SQL, mark_next_round, reduction_table
 
 # 가까운 역 하나(직선 500m 안) — 역 이름·거리
@@ -38,9 +38,7 @@ def collections(
 ) -> dict[str, Any]:
     """모음마다 건수는 늘 주고, 물건은 key 가 없으면 모음마다 앞 몇 건(같은 단지 1·같은 구 2건까지),
     있으면 그 모음만 limit 건 — 화면이 건수와 목록을 한 번에 받게(11/7)."""
-    sql = _SQL.replace(" as photo,", " as photo, stn.station_name, stn.station_m,").replace(
-        "left join lateral (select result", _STATION + "left join lateral (select result", 1
-    )
+    sql = add_join(add_cols(_SQL, "stn.station_name, stn.station_m"), _STATION)
     params: dict[str, Any] = {"today": today}
     more, fp = court_where(
         {"sigungu": sigungu, "max_cash": max_cash, "homes": homes}, today

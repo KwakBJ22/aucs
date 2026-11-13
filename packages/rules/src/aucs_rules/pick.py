@@ -11,6 +11,7 @@
 """
 
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any
 
 from aucs_rules.result import RuleResult, Status
@@ -281,3 +282,27 @@ def diversify(
         if len(out) >= n:
             break
     return out
+
+
+# 미리 매겨 두는 목적들(11/14) — None 은 로그인 전(목적 없이 점수 순). 표에는 "" 로 적음
+SCORE_PURPOSES: tuple[str | None, ...] = (None, "live", "rent", "invest")
+
+
+def score_row(r: dict[str, Any], purpose: str | None, today: date) -> dict[str, Any]:
+    """DB 물건 한 줄 → pick_score 값. 홈(그때 셈)과 수집기(미리 매김)가 같은 재료로 부르게 한 곳.
+
+    r: usage_name · appraisal_krw · min_price_krw · failed_count · building_area_m2 · is_share ·
+    is_special_case · analysis · sale_date · (임대 목적만) rent_monthly · rent_deposit."""
+    value: dict[str, Any] = pick_score(
+        PickInput(
+            usage=r["usage_name"], appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
+            failed_count=r["failed_count"],
+            area_m2=float(r["building_area_m2"]) if r["building_area_m2"] else None,
+            is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
+            analysis=r["analysis"] or {},
+            d_day=(r["sale_date"] - today).days if r["sale_date"] else None,
+            rent={"monthly_krw": r.get("rent_monthly"), "deposit_krw": r.get("rent_deposit")},
+        ),
+        purpose,
+    ).value  # fmt: skip
+    return value
