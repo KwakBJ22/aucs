@@ -88,6 +88,22 @@ export const copy = {
     empty: "이 범위에는 조건에 맞는 물건이 없어요",
     noMap: "지도를 불러오지 못했어요 · 잠시 뒤 다시 열어 주세요",
     toFind: "조건 바꾸러 찾기로",
+    // 역세권 보기 · 점 색 · 낙찰 사례(11/13)
+    walkLabel: "역까지 걸어서",
+    walkAll: "전체",
+    walkMin: (n: number) => `${n}분 안`,
+    colorLabel: "점 색",
+    color: { risk: "위험", market: "시세 대비" },
+    legend: {
+      risk: "빨강 위험 · 주황 유찰 · 파랑 신건",
+      market: "초록 시세보다 20% 넘게 쌈 · 파랑 조금 쌈 · 회색 시세 없음",
+    },
+    sold: "낙찰 사례",
+    soldPin: (rate: number | null) => (rate == null ? "낙찰" : `낙찰 ${Math.round(rate)}%`),
+    soldLine: (date: string, rate: number | null) =>
+      rate == null ? `${date} 낙찰` : `${date} 낙찰 · 감정가의 ${Math.round(rate)}%`,
+    stationPick: (name: string, n: number) => `${name} 가까운 물건 ${n}건`,
+    stationClear: "전체 보기",
   },
   photos: {
     label: "법원 현장 사진",

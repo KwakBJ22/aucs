@@ -1649,6 +1649,68 @@ a.col-chip span {
 .mv-pin.red {
   background: var(--red);
 }
+.mv-pin.green {
+  background: var(--green);
+}
+.mv-pin.gray {
+  background: var(--muted);
+}
+/* 11/13 역세권 보기 · 점 색 · 낙찰 사례 — 고르는 줄은 지도 위, 역은 이름 + 물건 수, 낙찰 사례는 흰 바탕 작은 표 */
+.mv-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mv-tools .pills {
+  align-items: center;
+}
+.mv-label {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.mv-station {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+.mv-station b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--on-strong);
+  text-align: center;
+}
+.mv-station.on {
+  border-color: var(--blue);
+}
+.mv-station.on b {
+  background: var(--blue);
+}
+.mv-sold {
+  padding: 2px 6px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mv-pick-sold {
+  padding: 12px;
+  background: var(--gray-chip);
+}
 .mv-group {
   display: grid;
   place-items: center;

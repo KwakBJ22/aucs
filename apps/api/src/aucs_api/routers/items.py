@@ -61,10 +61,12 @@ def get_items_map(
     area_max: Annotated[float | None, Query(ge=0)] = None,
     price_max: Annotated[int | None, Query(ge=0)] = None,
     homes: Annotated[int, Query(ge=0, le=2)] = 0,
+    walk: Annotated[int | None, Query(ge=1, le=15)] = None,  # 역세권 보기: 역까지 걸어서 N분 안(11/13)
+    sold: Annotated[bool, Query()] = False,  # 최근 낙찰 사례 겹쳐 보기(11/13)
 ) -> dict[str, Any]:
     """지도 분석(11/12): 보이는 범위 안의 진행 물건 — 찾기와 같은 조건."""
     return items.map_items(
-        bbox=(w, s, e, n), sigungu=sigungu or [], max_cash=max_cash, today=date.today(),
+        bbox=(w, s, e, n), sigungu=sigungu or [], max_cash=max_cash, today=date.today(), walk=walk, sold=sold,
         extra={"usage": usage, "exclude": exclude, "failed_min": failed_min, "rate_max": rate_max,
                "days_max": days_max, "area_min": area_min, "area_max": area_max, "price_max": price_max,
                "homes": homes},

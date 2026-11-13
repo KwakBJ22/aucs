@@ -64,6 +64,7 @@ export type ItemCard = {
   data_status: Record<string, string>;
   // 가까운 역(걸어서 15분 안, 어림 WALK-01, 11/12)
   station?: { name: string; line: string | null; walk_m: number; walk_min: number } | null;
+  vs_market_pct?: number | null; // 최저가가 추정 시세보다 몇 % 낮은지(지도 「시세 대비」 색, 11/13)
 };
 export type ResultCard = {
   result_id: number;
@@ -137,10 +138,30 @@ export function fetchItems(opts: ItemsOpts): Promise<ItemList> {
 }
 
 // 지도 분석(11/12): 찾기 조건(주소 뒤 글 그대로) + 보이는 범위(서·남·동·북)
-export type MapItems = { total: number; items: ItemCard[]; max: number };
+// 역세권 보기(11/13): 역마다 걸어서 N분 안 물건 수 · 낙찰 사례 겹쳐 보기
+export type MapStation = { name: string; lines: string[]; lat: number; lon: number; count: number };
+export type MapSold = {
+  result_id: number;
+  lat: number;
+  lon: number;
+  sale_date: string;
+  usage: string | null;
+  building: string | null;
+  appraisal_krw: number | null;
+  winning_bid_krw: number;
+  sale_rate: number | null;
+};
+export type MapItems = {
+  total: number;
+  items: ItemCard[];
+  max: number;
+  stations?: MapStation[];
+  walk_m?: number;
+  sold?: MapSold[];
+};
 export function fetchMapItems(query: string, b: [number, number, number, number]) {
   const q = new URLSearchParams(query);
-  ["q", "status", "sort", "limit", "source"].forEach((k) => q.delete(k));
+  ["q", "status", "sort", "limit", "source", "color"].forEach((k) => q.delete(k));
   const [w, s, e, n] = b.map((x) => x.toFixed(5));
   q.set("w", w!);
   q.set("s", s!);

@@ -1,7 +1,7 @@
 """물건 카드·지역 목록 (공개 화면용). display_policy = public 만, 이름은 가린 값만 내보냅니다."""
 
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from aucs_rules.courts import COURTS
@@ -32,6 +32,7 @@ select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.
        i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals,
+       (a.result -> 'market' ->> 'price_krw')::numeric as market_krw,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{{}}') as data_status,
        (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo
 from core.items i
@@ -90,6 +91,8 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         else None,  # 입찰보증금(보통 최저가 10%) — 재매각·특별조건은 상세에서
         "failed_count": r["failed_count"],
         "below_appraisal_krw": app - mn if app and mn and app > mn else 0,
+        # 최저가가 추정 시세보다 몇 % 낮은지(지도 「시세 대비」 색, 11/13) — 시세가 없으면 None
+        "vs_market_pct": round((mk - mn) * 100 / mk) if (mk := r.get("market_krw")) and mn else None,
         "lat": r["lat"],
         "lon": r["lon"],
         "top_signal": flagged[0] if flagged else None,
@@ -298,6 +301,19 @@ def _court_query(
 MAP_MAX = 800  # 한 번에 지도에 올릴 점 — 넘으면 「확대해 보세요」(화면이 점을 묶어 보여 줌)
 
 
+def _near_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """두 점(위도·경도) 사이 직선거리 m — 지도 한 화면 안이라 평면 어림으로 충분."""
+    import math
+
+    dy = (a[0] - b[0]) * 111_320
+    dx = (a[1] - b[1]) * 111_320 * math.cos(math.radians(a[0]))
+    return math.hypot(dx, dy)
+
+
+SOLD_DAYS = 180  # 지도에 겹쳐 보는 낙찰 사례 기간
+SOLD_MAX = 300
+
+
 def map_items(
     *,
     bbox: tuple[float, float, float, float],
@@ -305,8 +321,16 @@ def map_items(
     max_cash: int | None,
     extra: dict[str, Any] | None,
     today: date,
+    walk: int | None = None,
+    sold: bool = False,
 ) -> dict[str, Any]:
-    """지도 분석(11/12): 보이는 범위(서·남·동·북) 안의 진행 경매 물건 — 찾기와 같은 조건(FIND-03)."""
+    """지도 분석(11/12): 보이는 범위(서·남·동·북) 안의 진행 경매 물건 — 찾기와 같은 조건(FIND-03).
+
+    walk(11/13 역세권 보기): 역까지 걸어서 walk 분 안(어림 WALK-01) 물건만 + 역마다 물건 수.
+    sold(11/13): 같은 범위의 최근 낙찰 사례(법원에서 받은 매각결과만).
+    """
+    from aucs_rules.walk import DETOUR, M_PER_MIN, station_name
+
     more, params = court_where({**(extra or {}), "sigungu": sigungu, "max_cash": max_cash}, today)
     w, s, e, n = bbox
     params.update({"w": w, "s": s, "e": e, "n": n, "limit": MAP_MAX})
@@ -316,6 +340,14 @@ def map_items(
         + " and i.geom is not null"
         + " and i.geom::geometry && st_makeenvelope(%(w)s, %(s)s, %(e)s, %(n)s, 4326)"
     )
+    walk_m = round(walk * M_PER_MIN / DETOUR) if walk else None
+    if walk_m:
+        params["walk_m"] = walk_m
+        sql += (
+            " and exists (select 1 from ref.stations st where st.closed_date is null"
+            " and st_dwithin(st.geom, i.geom::geography, %(walk_m)s))"
+        )
+    out: dict[str, Any] = {"max": MAP_MAX}
     with connect() as c:
         q_rows, q_n = batch(c, [
             (sql + " order by i.sale_date, i.item_id limit %(limit)s", params),
@@ -324,7 +356,49 @@ def map_items(
         rows, total = q_rows.fetchall(), (q_n.fetchone() or {"n": 0})["n"]
         cards = [card(r, today) for r in rows]
         attach_stations(c, cards[:60])  # 목록에 보이는 앞쪽만(점 800개 모두에 붙이면 1초 넘음)
-    return {"total": total, "items": cards, "max": MAP_MAX}
+        out.update(total=total, items=cards)
+        if walk_m:
+            st_rows = c.execute(
+                """select st.name_ko, st.line_name, st_y(st.geom::geometry) as lat, st_x(st.geom::geometry) as lon
+                   from ref.stations st
+                   where st.closed_date is null
+                     and st.geom::geometry && st_expand(st_makeenvelope(%(w)s, %(s)s, %(e)s, %(n)s, 4326), 0.01)""",
+                params,
+            ).fetchall()
+            pts = [(x["lat"], x["lon"]) for x in cards if x["lat"] is not None]
+            merged: dict[str, dict[str, Any]] = {}
+            for r in st_rows:  # 환승역은 노선마다 한 줄 — 이름으로 하나로
+                cnt = sum(1 for p in pts if _near_m(p, (r["lat"], r["lon"])) <= walk_m)
+                name = station_name(r["name_ko"])
+                m = merged.setdefault(name, {"name": name, "lines": [], "lat": r["lat"], "lon": r["lon"], "count": 0})  # fmt: skip
+                if r["line_name"] and r["line_name"] not in m["lines"]:
+                    m["lines"].append(r["line_name"])
+                m["count"] = max(m["count"], cnt)
+            out["stations"] = [m for m in merged.values() if m["count"]]
+            out["walk_m"] = walk_m
+        if sold:
+            out["sold"] = [
+                {
+                    "result_id": r["result_id"], "lat": r["lat"], "lon": r["lon"],
+                    "sale_date": r["sale_date"].isoformat(), "usage": r["usage_name"],
+                    "building": r["building_desc"], "appraisal_krw": r["appraisal_krw"],
+                    "winning_bid_krw": r["winning_bid_krw"],
+                    "sale_rate": float(r["sale_rate"]) if r["sale_rate"] is not None else None,
+                }
+                for r in c.execute(
+                    f"""select distinct on (s.item_id) s.result_id, s.sale_date, s.usage_name, s.appraisal_krw,
+                               s.winning_bid_krw, s.sale_rate, i.building_desc,
+                               st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon
+                        from core.sale_results s join core.items i on i.item_id = s.item_id
+                        where s.result = 'sold' and s.origin = 'court_collect' and s.display_policy = 'public'
+                          and s.sale_date >= %(sold_from)s and s.winning_bid_krw is not null
+                          and coalesce(s.usage_name, '') !~ '{VEHICLES}' and i.geom is not null
+                          and i.geom::geometry && st_makeenvelope(%(w)s, %(s)s, %(e)s, %(n)s, 4326)
+                        order by s.item_id, s.sale_date desc limit {SOLD_MAX}""",
+                    {**params, "sold_from": today - timedelta(days=SOLD_DAYS)},
+                ).fetchall()
+            ]  # fmt: skip
+    return out
 
 
 def regions() -> list[dict[str, Any]]:
