@@ -63,7 +63,16 @@ export function AppraisalPoints({
 
 // 물건 상세에서 바로 올리기(11/14 대표님): 법원에서 받은 파일을 이 자리에서 올리고, 어떻게 됐는지 이 자리에 남김
 // (전에는 포인트 화면으로 가야 했고, 올린 뒤 결과가 한 번 뜨고 사라져 올렸는지 알 수 없었음)
-function AppraisalUpload({ itemId }: { itemId: string }) {
+// compact: 머리 서류 줄의 작은 단추 · statusOnly: 원본이 이미 있을 때 「내가 올림」만(11/14 — 올린 뒤 표시가 사라져 안 올라간 줄 앎)
+function AppraisalUpload({
+  itemId,
+  compact = false,
+  statusOnly = false,
+}: {
+  itemId: string;
+  compact?: boolean;
+  statusOnly?: boolean;
+}) {
   const p = copy.points;
   const { session } = useSession();
   const token = session?.access_token;
@@ -77,15 +86,22 @@ function AppraisalUpload({ itemId }: { itemId: string }) {
     let stop = false;
     meApi
       .myAppraisal(token, itemId)
-      .then((x) => !stop && setMine(x))
+      .then((x) => !stop && setMine(x ?? {}))
       .catch(() => undefined);
     return () => {
       stop = true;
     };
   }, [token, itemId]);
 
+  const gap = compact ? "" : " mt-10";
+  if (statusOnly)
+    return mine.status === "ok" ? (
+      <span className={`chip green${gap}`}>
+        {mine.points ? p.hereMine(p.pt(mine.points)) : p.hereMineNoPoint}
+      </span>
+    ) : null;
   if (!token)
-    return (
+    return compact ? null : (
       <Link href="/points" className="link fs-sm mt-6 d-inline-block">
         {p.earn}
       </Link>
@@ -107,17 +123,24 @@ function AppraisalUpload({ itemId }: { itemId: string }) {
       .catch((e: Error) => setErr(e.message))
       .finally(() => setBusy(false));
   };
-  if (mine.status === "review") return <p className="chip orange mt-10">{p.herePending}</p>;
+  if (mine.status === "review")
+    return (
+      <span className={`chip orange${gap}`}>{compact ? p.herePendingShort : p.herePending}</span>
+    );
   if (mine.status === "ok")
     return (
-      <p className="chip green mt-10">
+      <span className={`chip green${gap}`}>
         {mine.points ? p.hereDone(p.pt(mine.points)) : p.hereDoneNoPoint}
-      </p>
+      </span>
     );
   return (
     <>
-      <button className="btn primary mt-10" disabled={busy} onClick={() => file.current?.click()}>
-        {busy ? p.sending : p.hereUpload}
+      <button
+        className={compact ? "btn primary sm" : "btn primary mt-10"}
+        disabled={busy}
+        onClick={() => file.current?.click()}
+      >
+        {busy ? p.sending : compact ? p.hereUploadShort : p.hereUpload}
       </button>
       <input
         ref={file}
@@ -160,9 +183,12 @@ export function OriginalLink({
   const cls = compact ? "btn soft sm" : "btn soft mt-10";
   if (pdf)
     return (
-      <a className={cls} href={pdf} target="_blank" rel="noreferrer">
-        {compact ? c.short : c.original}
-      </a>
+      <>
+        <a className={cls} href={pdf} target="_blank" rel="noreferrer">
+          {compact ? c.short : c.original}
+        </a>
+        {itemId && !compact && <AppraisalUpload itemId={itemId} statusOnly />}
+      </>
     );
   return (
     <>
@@ -185,14 +211,15 @@ export function OriginalLink({
           {copied ? c.copied(court, year, num) : c.courtHint(court, year, num)}
         </p>
       )}
-      {earn &&
-        (itemId ? (
-          <AppraisalUpload itemId={itemId} />
-        ) : (
+      {itemId ? (
+        <AppraisalUpload itemId={itemId} compact={compact} />
+      ) : (
+        earn && (
           <Link href="/points" className="link fs-sm mt-6 d-inline-block">
             {copy.points.earn}
           </Link>
-        ))}
+        )
+      )}
     </>
   );
 }

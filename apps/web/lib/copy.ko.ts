@@ -493,6 +493,10 @@ export const copy = {
     herePending: "올렸어요 · 사건번호를 확인하는 중이에요(보통 몇 분, 밤에 올리면 아침에)",
     hereDone: (p: string) => `올린 감정평가서가 들어갔어요 · ${p} 받았어요`,
     hereDoneNoPoint: "올린 감정평가서가 들어갔어요",
+    hereUploadShort: "받은 파일 올리기 · 300P",
+    herePendingShort: "올렸어요 · 확인 중",
+    hereMine: (p: string) => `내가 올린 서류예요 · ${p} 받았어요`,
+    hereMineNoPoint: "내가 올린 서류예요",
     // 물건 상세 맨 위 띠(11/12 대표님 — 상세에서도 잘 보이게)
     bandTitle: "이 물건 서류를 채우고 포인트 받기",
     bandBody: (parts: string[]) => parts.join(" · "),
