@@ -7,7 +7,7 @@
 import hashlib
 from typing import Any
 
-from aucs_rules.academy import ledger_key
+from aucs_rules.academy import ledger_key, table_key
 from aucs_rules.address_match import compare
 from aucs_rules.points import points_for
 from psycopg.types.json import Jsonb
@@ -269,7 +269,7 @@ def academy_grant(uid: str, stage: str) -> dict[str, Any]:
         return {"points": 0, "why": "closed"}
     with connect() as c:
         t = _table(c)
-        pts = int(t.get("academy_stage") or 0)
+        pts = int(t.get(table_key(stage)) or t.get("academy_stage") or 0)
         if not pts:
             return {"points": 0, "why": "closed"}
         r = c.execute(

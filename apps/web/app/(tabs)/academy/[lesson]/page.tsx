@@ -41,7 +41,7 @@ export default function LessonPage() {
     const done = markLesson(lesson.key);
     const stageDone = stage.lessons.every((l) => done.includes(l.key));
     setEnd({ stageDone, points: null });
-    if (stageDone && token)
+    if (stageDone && token && !stage.review)
       meApi
         .academyDone(token, stage.key)
         .then((x) => setEnd({ stageDone, points: x.points }))
@@ -55,6 +55,7 @@ export default function LessonPage() {
         <section className="section ta-center">
           <h2>{end.stageDone ? t.stageDone(stage.title) : t.lessonDone}</h2>
           {end.stageDone &&
+            !stage.review &&
             (token ? (
               end.points != null && (
                 <p className="chip green">{end.points ? t.got(end.points) : t.gotBefore}</p>
@@ -67,6 +68,15 @@ export default function LessonPage() {
           {lesson.see && (
             <Link href={lesson.see.href} className="btn soft mt-10">
               {lesson.see.label}
+            </Link>
+          )}
+          {lesson.task && (
+            <Link
+              href={lesson.task.href}
+              className="btn soft mt-10"
+              onClick={() => markLesson(`task:${lesson.key}`)}
+            >
+              {lesson.task.label}
             </Link>
           )}
           <div className="btn-pair mt-10">

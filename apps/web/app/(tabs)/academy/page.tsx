@@ -54,7 +54,10 @@ export default function Academy() {
               <span className={`chip ${open ? "blue" : "gray"}`}>{lv.name}</span>
               <b className="fs-lg">{lv.title}</b>
             </div>
-            <p className="sub fs-sm mt-4 mb-0">{lv.goal}</p>
+            <p className="sub fs-sm mt-4 mb-0">
+              {lv.goal}
+              {stages.some((s) => s.review) && ` · ${t.reviewNote}`}
+            </p>
             {!open && (
               <section className="section">
                 <p className="m-0">{stages.map((s) => s.title).join(" · ")}</p>
@@ -68,9 +71,13 @@ export default function Academy() {
                     <h2 className="m-0">
                       <span className="ac-step">{i + 1}</span> {s.title}
                     </h2>
-                    <span className={`chip ${paid.includes(s.key) ? "green" : "blue"}`}>
-                      {paid.includes(s.key) ? t.paid : t.reward}
-                    </span>
+                    {s.review ? (
+                      <span className="chip gray">{t.review}</span>
+                    ) : (
+                      <span className={`chip ${paid.includes(s.key) ? "green" : "blue"}`}>
+                        {paid.includes(s.key) ? t.paid : t.reward}
+                      </span>
+                    )}
                   </div>
                   <p className="sub fs-sm mt-4">{s.goal}</p>
                   {s.lessons.map((l) => (
@@ -82,10 +89,20 @@ export default function Academy() {
                         />
                         {l.title}
                       </span>
-                      <span className="sub">{done.includes(l.key) ? t.again : t.min} ›</span>
+                      <span className="sub">
+                        {!done.includes(l.key)
+                          ? t.min
+                          : !l.task
+                            ? t.again
+                            : done.includes(`task:${l.key}`)
+                              ? t.taskDone
+                              : t.taskLeft}{" "}
+                        ›
+                      </span>
                     </Link>
                   ))}
                   {!token &&
+                    !s.review &&
                     s.lessons.every((l) => done.includes(l.key)) &&
                     !paid.includes(s.key) && (
                       <Link href="/login?next=/academy" className="link fs-sm mt-6 d-inline-block">
