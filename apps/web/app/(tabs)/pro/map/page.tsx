@@ -17,19 +17,36 @@ import { loadNaverMaps, type NMap, type NMarker, type NaverMaps } from "@/lib/na
 
 const t = copy.mapView;
 const SEOUL: [number, number] = [37.5665, 126.978];
-const WALKS = [0, 5, 10, 15] as const;
-type Color = "risk" | "market";
+const WALKS = [5, 10, 15] as const;
+const NAME_ZOOM = 14; // 이보다 멀리서 보면 역 이름이 서로 겹쳐 어느 역인지 못 가림 — 역 표시를 안 냄(11/14 대표님)
+type Color = "one" | "risk" | "market";
+const COLORS: Color[] = ["one", "risk", "market"];
+// 지도에서 더 좁히기(11/14) — 받은 물건을 화면에서 거름
+const NARROW = ["failed", "cheap", "safe"] as const;
+type Narrow = (typeof NARROW)[number];
+const big = (c: Card) => c.top_signal?.level === "fatal" || c.top_signal?.level === "high";
+const KEEP: Record<Narrow, (c: Card) => boolean> = {
+  failed: (c) => !!c.failed_count,
+  cheap: (c) => (c.vs_market_pct ?? 0) > 0,
+  safe: (c) => !big(c),
+};
+// 색 뜻(작은 색 점 + 한마디) — 점 색과 같은 이름
+const LEGEND: Record<Color, string[]> = {
+  one: [],
+  risk: ["red", "orange", "blue"],
+  market: ["green", "blue", "gray"],
+};
 
-// 점 색(11/12): 걸린 위험이 크면 빨강 · 유찰된 것 주황 · 신건 파랑
-// 「시세 대비」(11/13): 최저가가 추정 시세보다 20% 넘게 낮으면 초록 · 조금 낮으면 파랑 · 시세 없거나 비싸면 회색
+// 점 색(11/14 대표님 「헷갈린다」): 기본은 한 색(파랑). 고르면 한 가지 뜻으로만 나눔.
+// 「위험」: 큰 위험 빨강 · 유찰 주황 · 그 밖 파랑 / 「시세 대비」: 20% 넘게 쌈 초록 · 조금 쌈 파랑 · 시세 없거나 비쌈 회색
 function tone(c: Card, color: Color): string {
+  if (color === "one") return "blue";
   if (color === "market") {
     const p = c.vs_market_pct;
     if (p == null || p <= 0) return "gray";
     return p >= 20 ? "green" : "blue";
   }
-  const lv = c.top_signal?.level;
-  if (lv === "fatal" || lv === "high") return "red";
+  if (big(c)) return "red";
   if (c.failed_count) return "orange";
   return "blue";
 }
@@ -89,23 +106,26 @@ export default function MapPage() {
   const [soldPick, setSoldPick] = useState<MapSold | null>(null);
   const [station, setStation] = useState<MapStation | null>(null);
   const [walk, setWalk] = useState(0);
-  const [color, setColor] = useState<Color>("risk");
+  const [color, setColor] = useState<Color>("one");
   const [sold, setSold] = useState(false);
+  const [narrow, setNarrow] = useState<Narrow[]>([]);
+  const [zoom, setZoom] = useState(12);
   const [failed, setFailed] = useState(false);
 
-  // 고른 역이 있으면 그 역에서 걸어서 N분 안 물건만
+  // 좁히기 조건 → 고른 역이 있으면 그 역에서 걸어서 N분 안 물건만
   const shown = useMemo(() => {
-    const items = data?.items ?? [];
+    const items = (data?.items ?? []).filter((c) => narrow.every((k) => KEEP[k](c)));
     const m = data?.walk_m;
     if (!station || !m) return items;
     return items.filter(
       (c) => c.lat != null && c.lon != null && nearM(c.lat, c.lon, station.lat, station.lon) <= m,
     );
-  }, [data, station]);
+  }, [data, station, narrow]);
 
   const load = useCallback(() => {
     const nm = map.current;
     if (!nm) return;
+    setZoom(nm.getZoom());
     const b = nm.getBounds();
     const sw = b.getSW();
     const ne = b.getNE();
@@ -154,7 +174,8 @@ export default function MapPage() {
       });
       out.push(mk);
     }
-    for (const s of data.stations ?? []) {
+    // 역 이름은 가까이 봤을 때만(멀리서는 겹쳐서 못 읽음)
+    for (const s of nm.getZoom() >= NAME_ZOOM ? (data.stations ?? []) : []) {
       const on = station?.name === s.name ? " on" : "";
       const mk = new m.Marker({
         position: new m.LatLng(s.lat, s.lon),
@@ -181,8 +202,11 @@ export default function MapPage() {
     const q = new URLSearchParams(window.location.search);
     const w = Number(q.get("walk"));
     if (WALKS.includes(w as (typeof WALKS)[number])) setWalk(w);
-    if (q.get("color") === "market") setColor("market");
+    const col = q.get("color") as Color;
+    if (COLORS.includes(col)) setColor(col);
     if (q.get("sold")) setSold(true);
+    const nr = (q.get("mf") ?? "").split(",").filter((k): k is Narrow => k in KEEP);
+    if (nr.length) setNarrow(nr);
     void loadNaverMaps().then((m) => {
       if (!alive.current) return;
       if (!m || !box.current) return setFailed(true);
@@ -216,7 +240,13 @@ export default function MapPage() {
   };
   const pickColor = (c: Color) => {
     setColor(c);
-    setParam("color", c === "market" ? c : null);
+    setParam("color", c === "one" ? null : c);
+  };
+  const toggleNarrow = (k: Narrow) => {
+    const next = narrow.includes(k) ? narrow.filter((x) => x !== k) : [...narrow, k];
+    setNarrow(next);
+    setPick(null);
+    setParam("mf", next.length ? next.join(",") : null);
   };
   const toggleSold = () => {
     setSold(!sold);
@@ -233,26 +263,62 @@ export default function MapPage() {
       ) : (
         <>
           <div className="mv-tools">
-            <div className="pills" role="group" aria-label={t.walkLabel}>
-              <span className="mv-label">{t.walkLabel}</span>
-              {WALKS.map((n) => (
-                <button key={n} className={walk === n ? "on" : ""} onClick={() => pickWalk(n)}>
-                  {n ? t.walkMin(n) : t.walkAll}
-                </button>
-              ))}
+            <div className="mv-row">
+              <span className="mv-label">{t.narrowLabel}</span>
+              <div className="pills" role="group" aria-label={t.narrowLabel}>
+                {NARROW.map((k) => (
+                  <button
+                    key={k}
+                    className={narrow.includes(k) ? "on" : ""}
+                    aria-pressed={narrow.includes(k)}
+                    onClick={() => toggleNarrow(k)}
+                  >
+                    {t.narrow[k]}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="pills" role="group" aria-label={t.colorLabel}>
-              <span className="mv-label">{t.colorLabel}</span>
-              {(["risk", "market"] as const).map((c) => (
-                <button key={c} className={color === c ? "on" : ""} onClick={() => pickColor(c)}>
-                  {t.color[c]}
-                </button>
-              ))}
-              <button className={sold ? "on" : ""} aria-pressed={sold} onClick={toggleSold}>
+            <div className="mv-row">
+              <span className="mv-label">{t.layerLabel}</span>
+              <label className="mv-check">
+                <input
+                  type="checkbox"
+                  checked={walk > 0}
+                  onChange={() => pickWalk(walk ? 0 : 10)}
+                />
+                {t.walkLabel}
+              </label>
+              {walk > 0 && (
+                <div className="pills" role="group" aria-label={t.walkLabel}>
+                  {WALKS.map((n) => (
+                    <button key={n} className={walk === n ? "on" : ""} onClick={() => pickWalk(n)}>
+                      {t.walkMin(n)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label className="mv-check">
+                <input type="checkbox" checked={sold} onChange={toggleSold} />
                 {t.sold}
-              </button>
+              </label>
             </div>
-            <p className="sub fs-sm m-0">{t.legend[color]}</p>
+            <div className="mv-row">
+              <span className="mv-label">{t.colorLabel}</span>
+              <div className="pills" role="group" aria-label={t.colorLabel}>
+                {COLORS.map((c) => (
+                  <button key={c} className={color === c ? "on" : ""} onClick={() => pickColor(c)}>
+                    {t.color[c]}
+                  </button>
+                ))}
+              </div>
+              {LEGEND[color].map((k, i) => (
+                <span key={k} className="mv-key">
+                  <i className={`mv-dot ${k}`} aria-hidden="true" />
+                  {t.legend[color][i]}
+                </span>
+              ))}
+            </div>
+            {walk > 0 && zoom < NAME_ZOOM && <p className="sub fs-sm m-0">{t.walkZoom}</p>}
           </div>
           <div className="mv-wrap">
             <div className="mv-mapbox">
@@ -268,7 +334,11 @@ export default function MapPage() {
                 </div>
               ) : (
                 <div className="sub m-0">
-                  {data ? t.count(data.items.length, data.total) : t.loading}
+                  {data
+                    ? narrow.length
+                      ? t.countNarrow(shown.length)
+                      : t.count(data.items.length, data.total)
+                    : t.loading}
                 </div>
               )}
               {data && data.total > data.items.length && (

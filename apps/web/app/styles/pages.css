@@ -1659,28 +1659,68 @@ a.col-chip span {
 .mv-pin.gray {
   background: var(--muted);
 }
-/* 11/13 역세권 보기 · 점 색 · 낙찰 사례 — 고르는 줄은 지도 위, 역은 이름 + 물건 수, 낙찰 사례는 흰 바탕 작은 표 */
+/* 지도 위 고르는 상자(11/14): 좁히기 · 겹쳐 보기 · 점 색 — 줄마다 이름표 하나. 역은 이름 + 물건 수, 낙찰 사례는 흰 바탕 작은 표 */
 .mv-tools {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
 }
-.mv-tools .pills {
+.mv-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 6px 12px;
+  min-height: 44px;
 }
 .mv-label {
+  flex: 0 0 64px;
   color: var(--muted);
   font-size: var(--fs-sm);
 }
-@media (min-width: 1024px) {
-  /* PC 는 고르는 줄을 한 줄로 — 지도가 위로 올라옴(11/13) */
-  .mv-tools {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 24px;
-  }
+.mv-tools .pills {
+  --chip-bg: var(--panel);
+}
+.mv-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 600;
+}
+.mv-check input {
+  width: 20px;
+  height: 20px;
+}
+.mv-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.mv-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.mv-dot.blue {
+  background: var(--blue);
+}
+.mv-dot.orange {
+  background: var(--orange);
+}
+.mv-dot.red {
+  background: var(--red);
+}
+.mv-dot.green {
+  background: var(--green);
+}
+.mv-dot.gray {
+  background: var(--muted);
 }
 .mv-station {
   display: flex;
