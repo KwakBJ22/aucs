@@ -20,7 +20,7 @@ const SEOUL: [number, number] = [37.5665, 126.978];
 const WALKS = [5, 10, 15] as const;
 const NAME_ZOOM = 14; // 이보다 멀리서 보면 역 이름이 서로 겹쳐 어느 역인지 못 가림 — 역 표시를 안 냄(11/14 대표님)
 type Color = "one" | "risk" | "market";
-const COLORS: Color[] = ["one", "risk", "market"];
+const COLORS: Color[] = ["risk", "market"]; // 안 고르면 한 색("one")
 // 지도에서 더 좁히기(11/14) — 받은 물건을 화면에서 거름
 const NARROW = ["failed", "cheap", "safe"] as const;
 type Narrow = (typeof NARROW)[number];
@@ -34,17 +34,18 @@ const KEEP: Record<Narrow, (c: Card) => boolean> = {
 const LEGEND: Record<Color, string[]> = {
   one: [],
   risk: ["red", "orange", "blue"],
-  market: ["green", "blue", "gray"],
+  market: ["red", "orange", "blue", "gray"],
 };
 
-// 점 색(11/14 대표님 「헷갈린다」): 기본은 한 색(파랑). 고르면 한 가지 뜻으로만 나눔.
-// 「위험」: 큰 위험 빨강 · 유찰 주황 · 그 밖 파랑 / 「시세 대비」: 20% 넘게 쌈 초록 · 조금 쌈 파랑 · 시세 없거나 비쌈 회색
+// 신호색상(11/14 대표님): 안 고르면 한 색(파랑). 고르면 한 가지 뜻으로만 나누고, 두 가지 모두 빨강 = 조심 · 주황 = 보통 · 파랑 = 좋음.
+// 「위험」: 큰 위험 빨강 · 유찰 주황 · 그 밖 파랑 / 「시세 대비」: 시세보다 비쌈 빨강 · 조금 쌈 주황 · 20% 넘게 쌈 파랑 · 시세 없음 회색
 function tone(c: Card, color: Color): string {
   if (color === "one") return "blue";
   if (color === "market") {
     const p = c.vs_market_pct;
-    if (p == null || p <= 0) return "gray";
-    return p >= 20 ? "green" : "blue";
+    if (p == null) return "gray";
+    if (p <= 0) return "red";
+    return p >= 20 ? "blue" : "orange";
   }
   if (big(c)) return "red";
   if (c.failed_count) return "orange";
@@ -239,8 +240,9 @@ export default function MapPage() {
     load();
   };
   const pickColor = (c: Color) => {
-    setColor(c);
-    setParam("color", c === "one" ? null : c);
+    const next = color === c ? "one" : c; // 다시 누르면 꺼짐(한 색)
+    setColor(next);
+    setParam("color", next === "one" ? null : next);
   };
   const toggleNarrow = (k: Narrow) => {
     const next = narrow.includes(k) ? narrow.filter((x) => x !== k) : [...narrow, k];
@@ -306,7 +308,12 @@ export default function MapPage() {
               <span className="mv-label">{t.colorLabel}</span>
               <div className="pills" role="group" aria-label={t.colorLabel}>
                 {COLORS.map((c) => (
-                  <button key={c} className={color === c ? "on" : ""} onClick={() => pickColor(c)}>
+                  <button
+                    key={c}
+                    className={color === c ? "on" : ""}
+                    aria-pressed={color === c}
+                    onClick={() => pickColor(c)}
+                  >
                     {t.color[c]}
                   </button>
                 ))}
