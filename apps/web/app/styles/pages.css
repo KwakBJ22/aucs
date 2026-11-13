@@ -1625,9 +1625,13 @@ a.col-chip span {
     grid-template-columns: 64fr 36fr;
     gap: 20px;
   }
-  .mv-map {
+  /* 붙어 다니는 것은 겉 상자 — 네이버 지도가 지도 칸에 position: relative 를 직접 넣어, 칸에 top 을 주면 120px 아래로 밀렸음(11/13) */
+  .mv-mapbox {
     position: sticky;
     top: 120px;
+    align-self: start;
+  }
+  .mv-map {
     height: calc(100dvh - 160px);
   }
 }
@@ -1668,6 +1672,15 @@ a.col-chip span {
 .mv-label {
   color: var(--muted);
   font-size: var(--fs-sm);
+}
+@media (min-width: 1024px) {
+  /* PC 는 고르는 줄을 한 줄로 — 지도가 위로 올라옴(11/13) */
+  .mv-tools {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+  }
 }
 .mv-station {
   display: flex;

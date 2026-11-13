@@ -199,6 +199,8 @@ export default function MapPage() {
         if (timer) clearTimeout(timer);
         timer = setTimeout(load, 250); // 손가락을 뗀 뒤 한 번만(끌 때마다 요청하지 않게)
       });
+      // 처음 한 번은 바로 받음 — 네이버 지도가 처음 열릴 때 idle 을 안 알려 줘, 지도를 움직이기 전엔 비어 있었음(11/13)
+      timer = setTimeout(load, 250);
     });
     return () => {
       alive.current = false;
@@ -253,7 +255,9 @@ export default function MapPage() {
             <p className="sub fs-sm m-0">{t.legend[color]}</p>
           </div>
           <div className="mv-wrap">
-            <div ref={box} className="mv-map" role="application" aria-label={t.title} />
+            <div className="mv-mapbox">
+              <div ref={box} className="mv-map" role="application" aria-label={t.title} />
+            </div>
             <aside className="mv-side">
               {station ? (
                 <div className="d-flex gap-8 f-wrap ai-center">
