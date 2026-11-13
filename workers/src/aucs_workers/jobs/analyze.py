@@ -228,8 +228,16 @@ def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any]
     return summarize(titles, floors, item.get("address"), usage, today)
 
 
+_LAND_USE_TABLE: list[bool] = []  # 표가 있는지 한 번만 봄(이주 0048 을 넣기 전에도 분석이 멈추지 않게)
+
+
 def load_parcel_zone(cur: Any, item: dict[str, Any]) -> str | None:
     """필지 토지이용계획(collectors/land_use) → 'zone' / 'district' / 'planned'. 아직 안 받았으면 None."""
+    if not _LAND_USE_TABLE:
+        row = cur.execute("select to_regclass('core.parcel_land_use') is not null as ok").fetchone()
+        _LAND_USE_TABLE.append(bool(row and row["ok"]))
+    if not _LAND_USE_TABLE[0]:
+        return None
     pnu = pnu_of(item.get("region_code") or "", item.get("lot_no") or "")
     if not pnu:
         return None
