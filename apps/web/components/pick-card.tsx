@@ -19,7 +19,11 @@ export function PickCard({ c, mode = "pick" }: { c: Pick; mode?: "pick" | "next"
           : null
       : c.reasons[0];
   return (
-    <Link href={`/item/${encodeURIComponent(c.item_id)}`} className="pick-card c-inherit">
+    <Link
+      prefetch={false}
+      href={`/item/${encodeURIComponent(c.item_id)}`}
+      className="pick-card c-inherit"
+    >
       <div className="pick-photo">
         {c.photo ? (
           // eslint-disable-next-line @next/next/no-img-element

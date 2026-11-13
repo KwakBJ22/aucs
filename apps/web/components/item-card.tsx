@@ -89,6 +89,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
   const onbid = c.source === "onbid";
   return (
     <Link
+      prefetch={false} // 물건 화면의 틀은 모두 같음 — 카드마다 미리 받으면 목록 하나에 요청이 수십 번(11/14)
       href={`/item/${encodeURIComponent(c.item_id)}`}
       className="card-go d-flex gap-12 py-12 px-0 c-inherit"
     >
