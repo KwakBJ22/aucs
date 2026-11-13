@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AppraisalParts, ItemDetail } from "@/lib/api/items";
+import { meApi, uploadAppraisal, type MyAppraisal } from "@/lib/api/me";
+import { useSession } from "@/lib/auth";
 import { Row } from "@/components/calc-box";
 import { won } from "@/lib/format";
 import { t } from "@/components/item/shared";
@@ -18,10 +20,12 @@ export function AppraisalPoints({
   a,
   court,
   caseNo,
+  itemId,
 }: {
   a: NonNullable<ItemDetail["appraisal"]>;
   court: string;
   caseNo: string;
+  itemId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const c = t.appraisal;
@@ -52,8 +56,83 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} earn />
+      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} itemId={itemId} earn />
     </div>
+  );
+}
+
+// 물건 상세에서 바로 올리기(11/14 대표님): 법원에서 받은 파일을 이 자리에서 올리고, 어떻게 됐는지 이 자리에 남김
+// (전에는 포인트 화면으로 가야 했고, 올린 뒤 결과가 한 번 뜨고 사라져 올렸는지 알 수 없었음)
+function AppraisalUpload({ itemId }: { itemId: string }) {
+  const p = copy.points;
+  const { session } = useSession();
+  const token = session?.access_token;
+  const file = useRef<HTMLInputElement>(null);
+  const [mine, setMine] = useState<MyAppraisal>({});
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let stop = false;
+    meApi
+      .myAppraisal(token, itemId)
+      .then((x) => !stop && setMine(x))
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+    };
+  }, [token, itemId]);
+
+  if (!token)
+    return (
+      <Link href="/points" className="link fs-sm mt-6 d-inline-block">
+        {p.earn}
+      </Link>
+    );
+  const why = (w: string, pts: number) => {
+    const r = p.result[w];
+    return typeof r === "function" ? r(p.pt(pts)) : (r ?? w);
+  };
+  const send = (f: File | undefined) => {
+    if (!f) return;
+    setBusy(true);
+    setErr(null);
+    uploadAppraisal(token, itemId, f)
+      .then((x) => {
+        if (x.why === "review") setMine({ status: "review" });
+        else if (x.points || x.why === "first") setMine({ status: "ok", points: x.points });
+        else setErr(why(x.why, x.points));
+      })
+      .catch((e: Error) => setErr(e.message))
+      .finally(() => setBusy(false));
+  };
+  if (mine.status === "review") return <p className="chip orange mt-10">{p.herePending}</p>;
+  if (mine.status === "ok")
+    return (
+      <p className="chip green mt-10">
+        {mine.points ? p.hereDone(p.pt(mine.points)) : p.hereDoneNoPoint}
+      </p>
+    );
+  return (
+    <>
+      <button className="btn primary mt-10" disabled={busy} onClick={() => file.current?.click()}>
+        {busy ? p.sending : p.hereUpload}
+      </button>
+      <input
+        ref={file}
+        type="file"
+        accept="application/pdf"
+        hidden
+        onChange={(e) => {
+          send(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      {(err || mine.status === "rejected") && (
+        <p className="sub fs-sm mt-6 c-red">{err ?? why(mine.why ?? "mismatch", 0)}</p>
+      )}
+    </>
   );
 }
 
@@ -65,10 +144,12 @@ export function OriginalLink({
   caseNo,
   compact = false,
   earn = false,
+  itemId,
 }: {
   pdf?: string | null;
   court: string;
   caseNo: string;
+  itemId?: string; // 있으면 이 자리에서 바로 올림(물건 상세, 11/14)
   compact?: boolean; // 머리 서류 줄에 놓는 작은 단추(11/11) — 안내 글 없이
   earn?: boolean; // 원본이 없을 때 「올리면 500P」(포인트 벌기로, 11/12)
 }) {
@@ -104,11 +185,14 @@ export function OriginalLink({
           {copied ? c.copied(court, year, num) : c.courtHint(court, year, num)}
         </p>
       )}
-      {earn && (
-        <Link href="/points" className="link fs-sm mt-6 d-inline-block">
-          {copy.points.earn}
-        </Link>
-      )}
+      {earn &&
+        (itemId ? (
+          <AppraisalUpload itemId={itemId} />
+        ) : (
+          <Link href="/points" className="link fs-sm mt-6 d-inline-block">
+            {copy.points.earn}
+          </Link>
+        ))}
     </>
   );
 }

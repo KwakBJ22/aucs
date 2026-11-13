@@ -441,6 +441,12 @@ def post_appraisal_from_storage(item_id: str, uid: Uid, body: AppraisalIn) -> di
     return points.save_appraisal(uid, item_id, body.path)
 
 
+@router.get("/appraisals/{item_id}")
+def get_my_appraisal(item_id: str, uid: Uid) -> dict[str, Any]:
+    """이 물건에 내가 올린 감정평가서가 어떻게 됐는지(없으면 빈 것, 11/14)."""
+    return points.my_appraisal(uid, item_id) or {}
+
+
 @router.delete("/account")
 def delete_account(uid: Uid) -> dict[str, bool]:
     """회원 탈퇴 — 되돌릴 수 없음(화면에서 「탈퇴」를 직접 쳐서 확인)."""

@@ -171,6 +171,16 @@ def case_numbers(text: str) -> list[str]:
     return list(dict.fromkeys(f"{y}타경{int(n)}" for y, n in CASE_NO.findall(text or "")))
 
 
+def same_case(text: str, case_no: str) -> bool:
+    """글자 인식한 글에 이 사건번호가 있는지(11/14). 「타경」이 깨져 읽혀도 연도 바로 뒤(글자 여섯 안)에
+    같은 번호가 오면 맞다고 봄 — 번호가 다르면 안 맞음(틀리게 읽힌 숫자는 관리자 확인으로 남음)."""
+    if case_no in case_numbers(text):
+        return True
+    year, _, num = case_no.partition("타경")
+    flat = re.sub(r"[ \t]", "", text or "")
+    return bool(year and num and re.search(rf"(?<!\d){year}\D{{1,6}}0*{num}(?!\d)", flat))
+
+
 def read_pdf(data: bytes) -> dict[str, Any]:
     """PDF 바이트 → {firm, pages, bytes, scanned, head, points}. 글이 거의 없으면 그림으로 만든 PDF(scanned)."""
     from pypdf import PdfReader

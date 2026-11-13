@@ -237,6 +237,21 @@ def my_registry_points(uid: str, item_id: str) -> dict[str, Any] | None:
     return {"points": r["points"], "why": r["note"]} if r else None
 
 
+def my_appraisal(uid: str, item_id: str) -> dict[str, Any] | None:
+    """이 물건에 내가 마지막으로 올린 감정평가서(상세 화면 한 줄, 11/14): 확인 대기 · 받은 포인트 · 반려."""
+    with connect() as c:
+        r = c.execute(
+            """select status, points, note, created_at from app.contrib_uploads
+               where user_id = %s and item_id = %s and kind = 'appraisal'
+               order by contrib_id desc limit 1""",
+            (uid, item_id),
+        ).fetchone()
+    if not r:
+        return None
+    return {"status": r["status"], "points": r["points"], "created_at": r["created_at"].isoformat(),
+            "why": "review" if r["status"] == "review" else r["note"]}  # fmt: skip
+
+
 APPRAISAL_IN = "appraisal-uploads"
 
 
@@ -309,7 +324,7 @@ def review_list() -> list[dict[str, Any]]:
     """관리자: 글 없는 그림 감정평가서(사건번호를 못 읽음) — 사람이 보고 맞으면 넣음."""
     with connect() as c:
         rows = c.execute(
-            """select contrib_id, item_id, case_id, sha256, created_at from app.contrib_uploads
+            """select contrib_id, item_id, case_id, sha256, created_at, note from app.contrib_uploads
                where kind = 'appraisal' and status = 'review' order by contrib_id"""
         ).fetchall()
     from aucs_api import settings
@@ -317,6 +332,31 @@ def review_list() -> list[dict[str, Any]]:
     return [{**dict(r), "created_at": r["created_at"].isoformat(),
              "pdf": f"{settings.SUPABASE_URL}/storage/v1/object/authenticated/{APPRAISAL_IN}/review/{r['sha256']}.pdf"}
             for r in rows]  # fmt: skip
+
+
+def ocr_waiting(limit: int = 5) -> list[dict[str, Any]]:
+    """PC 글자 인식이 아직 안 본 그림 감정평가서(11/14) — note 가 'review' 그대로인 것."""
+    with connect() as c:
+        return [dict(r) for r in c.execute(
+            """select u.contrib_id, c.case_no from app.contrib_uploads u
+               join core.cases c on c.case_id = u.case_id
+               where u.kind = 'appraisal' and u.status = 'review' and u.note = 'review'
+               order by u.contrib_id limit %s""",
+            (limit,),
+        ).fetchall()]  # fmt: skip
+
+
+def ocr_settle(contrib_id: int, matched: bool, why: str) -> bool:
+    """글자 인식 결과: 사건번호가 맞으면 관리자가 맞다고 누른 것과 같이 넣고 포인트,
+    아니면 까닭(ocr_none 못 읽음 · ocr_other 다른 사건번호)만 적고 관리자 확인에 둠."""
+    if matched:
+        return review_decide(contrib_id, True)
+    with connect() as c:
+        c.execute(
+            "update app.contrib_uploads set note = %s where contrib_id = %s and status = 'review'",
+            (why, contrib_id),
+        )
+    return False
 
 
 def review_pdf(contrib_id: int) -> bytes | None:

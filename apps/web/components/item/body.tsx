@@ -83,9 +83,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           </p>
         )}
         {d.appraisal ? (
-          <AppraisalPoints a={d.appraisal} court={d.court} caseNo={d.case_no} />
+          <AppraisalPoints a={d.appraisal} court={d.court} caseNo={d.case_no} itemId={d.item_id} />
         ) : (
-          <OriginalLink court={d.court} caseNo={d.case_no} earn />
+          <OriginalLink court={d.court} caseNo={d.case_no} itemId={d.item_id} earn />
         )}
       </>
     );

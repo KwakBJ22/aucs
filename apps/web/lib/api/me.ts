@@ -194,6 +194,8 @@ export type PointRow = {
   need: Partial<Record<DocKind, PointHold>>;
 };
 export type PointResult = { ok?: boolean; points: number; why: string };
+// 이 물건에 내가 올린 감정평가서(11/14): 확인 대기(review) · 받음(ok) · 반려(rejected). 올린 적 없으면 빈 것
+export type MyAppraisal = { status?: "review" | "ok" | "rejected"; points?: number; why?: string };
 
 // 감정평가서 PDF 올리기: 등기부와 같이 보관함(appraisal-uploads/<회원>/…)에 바로 → API 가 받아 사건번호를 맞춰 봄
 export async function uploadAppraisal(
@@ -402,6 +404,8 @@ export const meApi = {
       `/points/board?offset=${offset}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
       { fresh: true },
     ),
+  myAppraisal: (t: string, id: string) =>
+    call<MyAppraisal>(t, `/appraisals/${encodeURIComponent(id)}`, { fresh: true }),
   hold: (t: string, id: string, kind: DocKind, extend = false) =>
     call<PointHold>(t, `/points/hold/${encodeURIComponent(id)}/${kind}?extend=${extend}`, {
       method: "POST",

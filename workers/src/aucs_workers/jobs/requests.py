@@ -71,6 +71,12 @@ def main() -> None:
         registry_ocr.main()
     except Exception as e:  # noqa: BLE001
         print(f"등기부 글자 인식 실패: {e}", flush=True)
+    try:  # 손님이 올린 그림 감정평가서(11/14) — 사건번호가 맞으면 바로 넣음
+        from aucs_workers.jobs import appraisal_ocr
+
+        appraisal_ocr.main()
+    except Exception as e:  # noqa: BLE001
+        print(f"감정평가서 글자 인식 실패: {e}", flush=True)
     queue_docs()
     try:  # 빨간 불 휴대폰 알림 · 관리자가 쓴 알림 보내기(11/12) — 실패해도 요청 처리는 계속
         from aucs_workers import ops_watch
