@@ -90,3 +90,17 @@ def test_diversify_one_per_case() -> None:
     got = diversify(rows, 5)
     assert [r["item_id"] for r in got] == ["B1-2025타경1839-1", "B1-2025타경1-1"]
     assert diversify(rows, 5, skip_cases={"수원|2025타경1839"})[0]["item_id"] == "B1-2025타경1-1"
+
+
+def test_absurd_rent_yield_is_ignored() -> None:
+    """많이 유찰돼 최저가가 아주 낮은 물건의 「수익률 수백 %」는 이유 · 점수에 넣지 않음(11/14)."""
+    ok = pick_score(_x(rent={"monthly_krw": 2_000_000, "deposit_krw": 20_000_000}), "rent").value
+    assert ok["reasons"][0].startswith("월세 수익률 약 6.3%")  # 2400만 ÷ (4억 − 2천만)
+    cheap = _x(appraisal_krw=93_000_000, min_price_krw=5_361_000, failed_count=8,
+               analysis={"signals": [], "market": {"price_krw": 90_000_000}},
+               rent={"monthly_krw": 500_000, "deposit_krw": 0})  # fmt: skip
+    v = pick_score(cheap, "rent").value
+    assert not any("수익률" in r for r in v["reasons"])
+    assert (
+        v["parts"]["yield"] == pick_score(_x(), "rent").value["parts"]["yield"]
+    )  # 모를 때와 같은 점수

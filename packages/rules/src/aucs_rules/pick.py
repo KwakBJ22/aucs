@@ -44,6 +44,7 @@ class PickInput:
 
 
 OVERVALUED_FAILS = 5  # 시세 없이 이만큼 유찰되면 추천하지 않음
+YIELD_MAX = 0.15  # 월세 수익률이 이보다 높게 나오면 믿지 않음(셈에서 뺌)
 OVERVALUED_RATE = 30  # 시세 없이 최저가가 감정가의 이 %보다 낮으면 추천하지 않음
 
 
@@ -211,9 +212,12 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     rent_m, rent_d = (x.rent or {}).get("monthly_krw"), (x.rent or {}).get("deposit_krw") or 0
     if rent_m and expect and expect > rent_d:
         y = rent_m * 12 / (expect - rent_d)
-        r_yield = _clamp((y - 0.03) / 0.04)
-        if purpose == "rent":
-            reasons.insert(0, f"월세 수익률 약 {y * 100:.1f}%")
+        # 15% 넘는 수익률은 값이 아니라 셈의 재료가 틀린 것(11/14 — 6~15번 유찰돼 최저가가 감정가의 5~10%인
+        # 물건이 「수익률 71%·516%」로 임대 추천 맨 위에 올랐음. 그런 물건은 떠안는 돈이 따로 있음) → 모름으로
+        if y <= YIELD_MAX:
+            r_yield = _clamp((y - 0.03) / 0.04)
+            if purpose == "rent":
+                reasons.insert(0, f"월세 수익률 약 {y * 100:.1f}%")
 
     # ── 경쟁이 덜함: 같은 법원 비슷한 물건 낙찰가율 가운데값이 낮을수록
     cc = a.get("court_cell") or {}
