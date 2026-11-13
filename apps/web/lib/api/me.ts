@@ -193,7 +193,7 @@ export type PointRow = {
   address: string | null; // 인터넷등기소 첫 화면 검색칸에 붙여 넣을 주소
   need: Partial<Record<DocKind, PointHold>>;
 };
-export type PointResult = { ok?: boolean; points: number; why: string };
+export type PointResult = { ok?: boolean; points: number; why: string; found?: string[] };
 // 이 물건에 내가 올린 감정평가서(11/14): 확인 대기(review) · 받음(ok) · 반려(rejected). 올린 적 없으면 빈 것
 export type MyAppraisal = { status?: "review" | "ok" | "rejected"; points?: number; why?: string };
 

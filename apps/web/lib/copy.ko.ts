@@ -479,6 +479,8 @@ export const copy = {
     upload: "PDF 올리기",
     sending: "올리는 중…",
     registrySent: "읽고 있어요 · 주소가 맞으면 포인트가 들어와요",
+    mismatchFound: (no: string) =>
+      `이 파일에는 ${no} 사건이 적혀 있어요 · 이 물건 서류가 맞는지 확인해 주세요`,
     result: {
       first: (p: string) => `${p} 받았어요`,
       fresh: (p: string) => `새 등기부라 ${p} 받았어요`,

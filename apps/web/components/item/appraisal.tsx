@@ -118,6 +118,7 @@ function AppraisalUpload({
       .then((x) => {
         if (x.why === "review") setMine({ status: "review" });
         else if (x.points || x.why === "first") setMine({ status: "ok", points: x.points });
+        else if (x.why === "mismatch" && x.found?.length) setErr(p.mismatchFound(x.found[0]));
         else setErr(why(x.why, x.points));
       })
       .catch((e: Error) => setErr(e.message))

@@ -163,7 +163,12 @@ def _grant(c: Any, uid: str, item_id: str, case_id: str, kind: str, sha: str, ma
     r = c.execute(
         """insert into app.contrib_uploads (user_id, item_id, case_id, kind, registry_upload_id, sha256, status, points, note, decided_at)
            values (%s,%s,%s,%s,%s,%s,%s,%s,%s, case when %s then null else now() end)
-           on conflict (kind, sha256) do nothing returning contrib_id""",
+           on conflict (kind, sha256) do update set user_id = excluded.user_id, item_id = excluded.item_id,
+               case_id = excluded.case_id, registry_upload_id = excluded.registry_upload_id,
+               status = excluded.status, points = excluded.points, note = excluded.note,
+               created_at = now(), decided_at = excluded.decided_at
+             where app.contrib_uploads.status = 'rejected'  -- 안 맞다고 했던 파일은 다시 올려 볼 수 있게(11/14)
+           returning contrib_id""",
         (
             uid,
             item_id,
@@ -317,8 +322,12 @@ def _keep_appraisal(case_id: str, data: dict[str, Any], raw: bytes) -> None:
 
 
 def save_appraisal(uid: str, item_id: str, path: str) -> dict[str, Any]:
-    """화면이 올린 감정평가서: 사건번호가 맞으면 원본 보관함 + 요점 + 포인트. 글 없는 그림 PDF 는 관리자 확인."""
-    from aucs_workers.extract.appraisal_pdf import case_numbers, read_pdf
+    """화면이 올린 감정평가서: 사건번호(또는 감정평가서 번호)가 맞으면 원본 보관함 + 요점 + 포인트.
+
+    사건번호를 하나도 못 읽은 PDF(그림 PDF · 글은 있어도 표지가 그림인 PDF)는 PC 글자 인식 → 그래도 못 가르면 관리자.
+    「아니다」고 바로 하는 것은 다른 사건번호가 또렷이 적혀 있을 때만(11/14 — 수원 2025타경59003: 사건번호가
+    「타경(2025 59003)」으로 뽑혀 못 읽었는데 글이 있다고 바로 「안 맞음」, 같은 파일이라 다시 올릴 수도 없었음)."""
+    from aucs_workers.extract.appraisal_pdf import case_numbers, has_report_no, read_pdf, same_case
 
     from aucs_api.services.registry import take_from_storage
 
@@ -327,7 +336,11 @@ def save_appraisal(uid: str, item_id: str, path: str) -> dict[str, Any]:
         return {"ok": False, "why": "no_file"}
     with connect() as c:
         it = c.execute(
-            "select i.case_id, c.case_no from core.items i join core.cases c using (case_id) where i.item_id = %s",
+            """select i.case_id, c.case_no,
+                      (select d.payload -> 'info' ->> 'aeeWevlNo' from raw.court_doc_raw d
+                       where d.case_id = i.case_id and d.doc_kind = 'appraisal'
+                       order by d.fetched_at desc limit 1) as report_no
+               from core.items i join core.cases c using (case_id) where i.item_id = %s""",
             (item_id,),
         ).fetchone()
     if not it:
@@ -337,16 +350,21 @@ def save_appraisal(uid: str, item_id: str, path: str) -> dict[str, Any]:
     except Exception:  # noqa: BLE001 — 깨진 PDF
         return {"ok": False, "why": "unreadable"}
     sha = hashlib.sha256(raw).hexdigest()
-    found = case_numbers(str(data.get("head") or ""))
-    scanned = not found and bool(data.get("scanned"))
-    matched = it["case_no"] in found
+    head = str(data.get("head") or "")
+    found = case_numbers(head)
+    # 사건번호가 맞거나(사이에 글자가 껴도), 법원 감정평가 정보의 감정평가서 번호가 적혀 있으면 맞는 서류
+    matched = same_case(head, it["case_no"]) or has_report_no(head, it["report_no"])
+    scanned = not matched and not found  # 사건번호를 못 읽음 → 글자 인식으로
     if matched:
         _keep_appraisal(it["case_id"], data, raw)
     with connect() as c:
         got = _grant(c, uid, item_id, it["case_id"], "appraisal", sha, matched, review=scanned)
     if scanned and got.get("why") == "review":
         _storage("PUT", f"review/{sha}.pdf", raw)  # 관리자가 볼 때까지
-    return {"ok": matched or scanned, **got}
+    out = {"ok": matched or scanned, **got}
+    if not matched and found and got.get("why") == "mismatch":
+        out["found"] = found[:2]  # 파일에 적힌 사건번호를 알려 줌(왜 아니라는지)
+    return out
 
 
 def review_list() -> list[dict[str, Any]]:

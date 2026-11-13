@@ -73,6 +73,9 @@ _CUT = re.compile(
 )
 _PAGE_NO = re.compile(r"^\s*(?:(?:Page|페이지|쪽)\s*[:：]?\s*\d+|-\s*\d+\s*-)\s*$", re.I)
 CASE_NO = re.compile(r"(20\d\d)\s*타\s*경\s*(\d{1,7})")
+# 「(2025타경59003)」이 글로 뽑힐 때 「타경(2025 59003)」으로 순서가 뒤바뀌는 PDF 가 있음(11/14 수원 2025타경59003 —
+# 맞는 서류인데 사건번호를 못 읽어 바로 「안 맞음」이 됐음)
+CASE_NO_SWAPPED = re.compile(r"타\s*경\s*\(?\s*(20\d\d)[\s-]+(\d{1,7})(?!\d)")
 
 
 def _lines(page: str) -> list[str]:
@@ -136,7 +139,9 @@ def points_from_pages(pages: list[str]) -> list[dict[str, Any]]:
         return []
     # 쪽마다 되풀이되는 머리·바닥 줄(감정서 번호 · 회사 이름)은 요항 글이 아님
     seen = Counter(ln for sh in sheets for ln in set(sh) if ln)
-    need = max(2, (len(sheets) + 1) // 2)  # 번호 줄이 몇 쪽에서만 빠지는 회사가 있어, 숫자가 든 짧은 줄은 절반 넘으면 되풀이로 봄
+    need = max(
+        2, (len(sheets) + 1) // 2
+    )  # 번호 줄이 몇 쪽에서만 빠지는 회사가 있어, 숫자가 든 짧은 줄은 절반 넘으면 되풀이로 봄
     repeat = {
         ln
         for ln, n in seen.items()
@@ -152,7 +157,11 @@ def points_from_pages(pages: list[str]) -> list[dict[str, Any]]:
         text = " ".join(buf).strip()
         if cur and text:
             out.append(
-                {"aeeWevlMnpntItmCd": cur, "aeeWevlMnpntDtlSeq": len(out) + 1, "aeeWevlMnpntCtt": text}
+                {
+                    "aeeWevlMnpntItmCd": cur,
+                    "aeeWevlMnpntDtlSeq": len(out) + 1,
+                    "aeeWevlMnpntCtt": text,
+                }
             )
 
     for sh in sheets:
@@ -168,7 +177,19 @@ def points_from_pages(pages: list[str]) -> list[dict[str, Any]]:
 
 def case_numbers(text: str) -> list[str]:
     """글 속 사건번호 「2025타경56683」들(띄어 쓴 것도)."""
-    return list(dict.fromkeys(f"{y}타경{int(n)}" for y, n in CASE_NO.findall(text or "")))
+    t = text or ""
+    return list(
+        dict.fromkeys(
+            f"{y}타경{int(n)}" for y, n in CASE_NO.findall(t) + CASE_NO_SWAPPED.findall(t)
+        )
+    )
+
+
+def has_report_no(text: str, report_no: str | None) -> bool:
+    """글에 이 감정평가서 번호(법원 감정평가 정보의 aeeWevlNo, 「SR2511-01-012」)가 적혀 있는지.
+    쪽마다 찍히는 번호라 사건번호가 깨져 뽑혀도 가를 수 있음. 너무 짧은 번호(여섯 글자 아래)는 안 씀."""
+    no = re.sub(r"\s", "", report_no or "")
+    return len(no) >= 6 and no in re.sub(r"\s", "", text or "")
 
 
 def same_case(text: str, case_no: str) -> bool:
