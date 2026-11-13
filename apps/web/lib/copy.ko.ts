@@ -432,7 +432,7 @@ export const copy = {
   },
   // 포인트 벌기(11/12, docs/design/11-points.md)
   points: {
-    title: "포인트 벌기",
+    title: "포인트 UP!",
     // 맨 위 취지(11/12 대표님 — 왜 올리는지 · 무엇이 좋은지 짧게)
     heroTitle: "서류 한 장 올리면\n모두가 더 정확하게 봐요",
     heroBody:
