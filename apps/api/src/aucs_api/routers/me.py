@@ -441,6 +441,18 @@ def post_appraisal_from_storage(item_id: str, uid: Uid, body: AppraisalIn) -> di
     return points.save_appraisal(uid, item_id, body.path)
 
 
+@router.get("/academy")
+def get_academy(uid: Uid) -> dict[str, Any]:
+    """경매 아카데미: 포인트를 받은 단계들."""
+    return {"stages": points.academy_done(uid)}
+
+
+@router.post("/academy/{stage}")
+def post_academy(stage: str, uid: Uid) -> dict[str, Any]:
+    """한 단계를 다 들었어요 — 포인트는 단계마다 한 번."""
+    return points.academy_grant(uid, stage[:20])
+
+
 @router.get("/appraisals/{item_id}")
 def get_my_appraisal(item_id: str, uid: Uid) -> dict[str, Any]:
     """이 물건에 내가 올린 감정평가서가 어떻게 됐는지(없으면 빈 것, 11/14)."""

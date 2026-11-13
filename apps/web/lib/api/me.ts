@@ -404,6 +404,10 @@ export const meApi = {
       `/points/board?offset=${offset}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
       { fresh: true },
     ),
+  // 경매 아카데미(11/14): 포인트를 받은 단계 · 한 단계를 다 들었을 때
+  academy: (t: string) => call<{ stages: string[] }>(t, "/academy", { fresh: true }),
+  academyDone: (t: string, stage: string) =>
+    call<PointResult>(t, `/academy/${encodeURIComponent(stage)}`, { method: "POST" }),
   myAppraisal: (t: string, id: string) =>
     call<MyAppraisal>(t, `/appraisals/${encodeURIComponent(id)}`, { fresh: true }),
   hold: (t: string, id: string, kind: DocKind, extend = false) =>

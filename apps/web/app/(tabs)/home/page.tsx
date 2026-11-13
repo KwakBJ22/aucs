@@ -355,6 +355,17 @@ export default function Home() {
     </section>
   );
 
+  // 경매 아카데미로 들어가는 띠(11/14 대표님 — 처음 온 분이 겁먹지 않게 맨 위에)
+  const academyBand = (
+    <Link href="/academy" className="pt-band">
+      <span className="f-1">
+        <b className="d-block">{copy.academy.band}</b>
+        <span className="pt-band-sub">{copy.academy.bandSub}</span>
+      </span>
+      <span className="pt-band-go">{copy.academy.bandGo} ›</span>
+    </Link>
+  );
+
   if (pc) {
     // 이번 주·다음 주 입찰 일정: 관심 물건 + 마감 임박
     const days = new Map<string, { id: string; label: string; mine: boolean }[]>();
@@ -375,6 +386,7 @@ export default function Home() {
       <main className="page">
         <PageHeader title={t.pcTitle} sub={summary} />
         <NoticeLine notices={notices} />
+        {academyBand}
         {recordLine}
         {loginBanner}
         <div className="pc-grid g-64-36">
@@ -461,6 +473,7 @@ export default function Home() {
     <main className="page">
       <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
+      {academyBand}
       {recordLine}
       {loginBanner}
       {todayBlock}

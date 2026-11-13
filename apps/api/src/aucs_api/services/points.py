@@ -7,6 +7,7 @@
 import hashlib
 from typing import Any
 
+from aucs_rules.academy import ledger_key
 from aucs_rules.address_match import compare
 from aucs_rules.points import points_for
 from psycopg.types.json import Jsonb
@@ -250,6 +251,34 @@ def my_appraisal(uid: str, item_id: str) -> dict[str, Any] | None:
         return None
     return {"status": r["status"], "points": r["points"], "created_at": r["created_at"].isoformat(),
             "why": "review" if r["status"] == "review" else r["note"]}  # fmt: skip
+
+
+def academy_done(uid: str) -> list[str]:
+    """아카데미에서 포인트를 받은 단계들(「s0」)."""
+    with connect() as c:
+        rows = c.execute(
+            "select item_id from app.point_ledger where user_id = %s and reason = 'academy'", (uid,)
+        ).fetchall()
+    return [str(r["item_id"]).split(":", 1)[-1] for r in rows]
+
+
+def academy_grant(uid: str, stage: str) -> dict[str, Any]:
+    """한 단계를 다 들었을 때 포인트(11/14) — 단계마다 한 번만(같은 줄이 있으면 그대로)."""
+    key = ledger_key(stage)
+    if not key:
+        return {"points": 0, "why": "closed"}
+    with connect() as c:
+        t = _table(c)
+        pts = int(t.get("academy_stage") or 0)
+        if not pts:
+            return {"points": 0, "why": "closed"}
+        r = c.execute(
+            """insert into app.point_ledger (user_id, delta, reason, item_id, expires_at)
+               values (%s, %s, 'academy', %s, case when %s then null else now() + make_interval(days => %s) end)
+               on conflict (user_id, item_id) where reason = 'academy' do nothing returning entry_id""",
+            (uid, pts, key, bool(t.get("free_period")), int(t.get("expire_days") or 365)),
+        ).fetchone()
+    return {"points": pts if r else 0, "why": "first" if r else "already"}
 
 
 APPRAISAL_IN = "appraisal-uploads"

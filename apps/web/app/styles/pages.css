@@ -1737,3 +1737,113 @@ a.col-chip span {
   font-weight: 800;
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
 }
+
+/* ══ 경매 아카데미(11/14) — 단계 길 · 카드 넘기기(옆으로, 한 장씩 멈춤) · 문제 */
+.ac-step {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--on-strong);
+  font-size: var(--fs-sm);
+  vertical-align: 2px;
+}
+.ac-check {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  vertical-align: -3px;
+}
+.ac-check.on {
+  border-color: var(--green);
+  background: var(--green);
+}
+.ac-dots {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 12px;
+}
+.ac-dots i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--gray-chip);
+}
+.ac-dots i.on {
+  background: var(--blue);
+}
+.ac-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.ac-rail::-webkit-scrollbar {
+  display: none;
+}
+.ac-card {
+  flex: none;
+  width: 100%;
+  min-height: 46vh;
+  padding: 28px 22px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.ac-h {
+  margin: 0 0 16px;
+  font-size: var(--fs-2xl);
+  line-height: 1.35;
+  white-space: pre-line;
+}
+.ac-q {
+  margin: 8px 0 16px;
+  font-size: var(--fs-xl);
+  line-height: 1.4;
+}
+.ac-b {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: 1.6;
+}
+.ac-eg {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  font-weight: 700;
+}
+.ac-opt {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--gray-chip);
+  color: var(--text);
+  font-size: var(--fs-base);
+  text-align: left;
+}
+.ac-opt.right {
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 700;
+}
+.ac-opt.wrong {
+  background: var(--red-soft);
+  color: var(--red);
+}
+@media (min-width: 1024px) {
+  .ac-rail,
+  .ac-dots {
+    max-width: 560px;
+  }
+}
