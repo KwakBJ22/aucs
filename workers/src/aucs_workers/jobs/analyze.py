@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import re
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
@@ -41,10 +42,140 @@ from psycopg.types.json import Jsonb
 
 from aucs_workers.collectors.official_prices import pnu_of
 from aucs_workers.db import connect
-from aucs_workers.jobs.redev_match import find_zone, near_zone
+from aucs_workers.jobs.redev_match import find_zone, load_zones, near_zone
 from aucs_workers.jobs.runlog import run
 
 COMMERCIAL_WORDS = ("상가", "근린", "점포", "사무실", "공장")
+
+
+_LAND_USE_TABLE: list[bool] = []  # 표가 있는지 한 번만 봄
+CHUNK = 100  # 재료를 한 번에 받아 둘 물건 수
+COMMIT_EVERY = 20
+
+
+@dataclass
+class Pre:
+    """물건 여러 개의 재료를 한꺼번에 받아 둔 것(11/14).
+
+    예전에는 물건마다 조회를 10번쯤 따로 보내, 전체를 다시 분석하면 70분이 걸렸음(물건 하나에 0.2초 — 거의 다 오가는 시간).
+    받는 칸 · 줄 모양은 물건마다 받던 것과 같게 둠(같은 재료면 같은 결과 — input_hash 가 안 바뀜).
+    """
+
+    items: dict[str, dict[str, Any]] = field(default_factory=dict)
+    events: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    tenants: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    status_reports: set[str] = field(default_factory=set)
+    docs: dict[tuple[str, str], Any] = field(default_factory=dict)  # (사건, 서류 종류) → 가장 최근 원문
+    trades: dict[tuple[str, str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
+    buildings: dict[tuple[str, str], list[dict[str, Any]]] = field(default_factory=dict)
+    parcels: dict[str, Any] | None = None  # 필지 번호 → 걸린 지역 · 지구(표가 없으면 None)
+    overrides: set[str] = field(default_factory=set)  # 관리자가 판단한 신호가 있는 물건
+    zones: dict[tuple[str, str], list[dict[str, Any]]] | None = None  # 서울 정비구역(구 · 동)
+
+
+def _market_key(item: dict[str, Any]) -> tuple[str, str, str] | None:
+    kind = trade_type(item.get("usage_name"), item.get("building_desc"))
+    if not kind or not item.get("building_area_m2") or not item.get("region_code") or not item.get("lot_no"):  # fmt: skip
+        return None
+    return trade_region(item["region_code"]), kind, item["lot_no"]
+
+
+def _building_key(item: dict[str, Any]) -> tuple[str, str] | None:
+    p = parse_jibun(item.get("lot_no"))
+    if not p or not item.get("region_code"):
+        return None
+    return item["region_code"], lot_key(*p)
+
+
+def _land_use_ready(cur: Any) -> bool:
+    """필지 토지이용계획 표가 있는지 한 번만 봄(이주 0048 을 넣기 전에도 분석이 멈추지 않게)."""
+    if not _LAND_USE_TABLE:
+        row = cur.execute("select to_regclass('core.parcel_land_use') is not null as ok").fetchone()
+        _LAND_USE_TABLE.append(bool(row and row["ok"]))
+    return _LAND_USE_TABLE[0]
+
+
+def preload(
+    conn: psycopg.Connection,
+    ids: list[str],
+    today: date,
+    zones: dict[tuple[str, str], list[dict[str, Any]]] | None = None,
+) -> Pre:
+    """물건 묶음의 재료를 조회 9번으로 받음(물건마다 10번 → 묶음마다 9번)."""
+    cur = conn.cursor(row_factory=dict_row)
+    pre = Pre(zones=zones)
+    for r in cur.execute("select * from core.items where item_id = any(%s)", (ids,)).fetchall():
+        pre.items[r["item_id"]] = r
+    cases = sorted({r["case_id"] for r in pre.items.values()})
+    for r in cur.execute(
+        "select case_id, event_date, category, after_deadline from core.case_events where case_id = any(%s)",
+        (cases,),
+    ).fetchall():
+        pre.events.setdefault(r.pop("case_id"), []).append(r)
+    for r in cur.execute(
+        "select case_id, move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration"
+        " from core.tenants where case_id = any(%s)",
+        (cases,),
+    ).fetchall():
+        pre.tenants.setdefault(r.pop("case_id"), []).append(r)
+    pre.status_reports = {
+        r["case_id"]
+        for r in cur.execute(
+            "select distinct case_id from raw.court_doc_raw where case_id = any(%s) and doc_kind = 'status_report'",
+            (cases,),
+        ).fetchall()
+    }
+    for r in cur.execute(
+        """select distinct on (case_id, doc_kind) case_id, doc_kind, payload from raw.court_doc_raw
+           where case_id = any(%s) and (left(doc_kind, 12) = 'item_detail_' or doc_kind in ('appraisal', 'appraisal_pdf'))
+           order by case_id, doc_kind, fetched_at desc""",
+        (cases,),
+    ).fetchall():
+        pre.docs[(r["case_id"], r["doc_kind"])] = r["payload"]
+    mk = sorted({k for i in pre.items.values() if (k := _market_key(i))})
+    if mk:
+        for r in cur.execute(
+            """select region_code, prop_type, lot_no, deal_date, price_krw, area_m2, floor, build_year
+               from core.trades
+               where (region_code, lot_no) in (select * from unnest(%s::text[], %s::text[]))
+                 and deal_kind = 'sale' and deal_date >= %s and price_krw > 0""",
+            ([k[0] for k in mk], [k[2] for k in mk], today - timedelta(days=730)),
+        ).fetchall():
+            pre.trades.setdefault((r["region_code"], r["prop_type"], r["lot_no"]), []).append(
+                (r["deal_date"], r["price_krw"], r["area_m2"], r["floor"], r["build_year"])
+            )
+    bk = sorted({k for i in pre.items.values() if (k := _building_key(i))})
+    if bk:
+        for r in cur.execute(
+            """select region_code, lot_no, kind, data from core.building_register
+               where (region_code, lot_no) in (select * from unnest(%s::text[], %s::text[]))
+               order by region_code, lot_no, kind, seq""",
+            ([k[0] for k in bk], [k[1] for k in bk]),
+        ).fetchall():
+            pre.buildings.setdefault((r["region_code"], r["lot_no"]), []).append(
+                {"kind": r["kind"], "data": r["data"]}
+            )
+    if _land_use_ready(cur):
+        pnus = sorted(
+            {
+                p
+                for i in pre.items.values()
+                if (p := pnu_of(i.get("region_code") or "", i.get("lot_no") or ""))
+            }
+        )
+        pre.parcels = {
+            r["pnu"]: r["uses"]
+            for r in cur.execute(
+                "select pnu, uses from core.parcel_land_use where pnu = any(%s)", (pnus,)
+            ).fetchall()
+        }
+    pre.overrides = {
+        r["item_id"]
+        for r in cur.execute(
+            "select distinct item_id from analysis.signal_overrides where item_id = any(%s)", (ids,)
+        ).fetchall()
+    }
+    return pre
 
 
 def trade_type(usage: str | None, building_desc: str | None) -> str | None:
@@ -60,19 +191,22 @@ def trade_type(usage: str | None, building_desc: str | None) -> str | None:
 
 
 def load_market(
-    conn: psycopg.Connection, item: dict[str, Any], today: date
+    conn: psycopg.Connection, item: dict[str, Any], today: date, pre: Pre | None = None
 ) -> dict[str, Any] | None:
     """같은 법정동·같은 지번(같은 단지·건물)의 최근 24개월 매매로 시세. 전용 ±3㎡."""
     kind = trade_type(item.get("usage_name"), item.get("building_desc"))
     area = item.get("building_area_m2")
     if not kind or not area or not item.get("region_code") or not item.get("lot_no"):
         return None
-    rows = conn.execute(
-        """select deal_date, price_krw, area_m2, floor, build_year from core.trades
-           where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
-             and deal_date >= %s and price_krw > 0""",
-        (trade_region(item["region_code"]), kind, item["lot_no"], today - timedelta(days=730)),
-    ).fetchall()
+    if pre is not None:
+        rows = pre.trades.get((trade_region(item["region_code"]), kind, item["lot_no"]), [])
+    else:
+        rows = conn.execute(
+            """select deal_date, price_krw, area_m2, floor, build_year from core.trades
+               where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
+                 and deal_date >= %s and price_krw > 0""",
+            (trade_region(item["region_code"]), kind, item["lot_no"], today - timedelta(days=730)),
+        ).fetchall()
     lot = item["lot_no"]
     trades = [Trade(r[0], int(r[1]), float(r[2]), r[3], lot, r[4]) for r in rows]
     res = market_price(trades, as_of=today, complex_name=lot, area_m2=float(area))
@@ -104,23 +238,33 @@ def commercial_over(
     return False
 
 
-def load_detail(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
+def load_detail(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> dict[str, Any]:
     """물건상세(item_detail_N) 원문의 dma_result — 명세서 칸 · 감정평가 요항을 함께 읽으려고 한 번만 부름."""
+    kind = f"item_detail_{item.get('item_no') or 1}"
+    if pre is not None:
+        return dict((pre.docs.get((item["case_id"], kind)) or {}).get("dma_result") or {})
     row = cur.execute(
         "select payload from raw.court_doc_raw where case_id = %s and doc_kind = %s order by fetched_at desc limit 1",
-        (item["case_id"], f"item_detail_{item.get('item_no') or 1}"),
+        (item["case_id"], kind),
     ).fetchone()
     return dict(((row or {}).get("payload") or {}).get("dma_result") or {})
 
 
-def load_appraisal(cur: Any, item: dict[str, Any]) -> dict[str, Any]:
+def load_appraisal(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> dict[str, Any]:
     """감정평가서 정보(raw 'appraisal' — 가격시점·작성일)와 원본에서 읽은 회사 이름(raw 'appraisal_pdf'), 11/4."""
-    rows = cur.execute(
-        """select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw
-           where case_id = %s and doc_kind in ('appraisal', 'appraisal_pdf') order by doc_kind, fetched_at desc""",
-        (item["case_id"],),
-    ).fetchall()
-    by = {r["doc_kind"]: r["payload"] or {} for r in rows}
+    if pre is not None:
+        by = {
+            k: pre.docs.get((item["case_id"], k)) or {}
+            for k in ("appraisal", "appraisal_pdf")
+            if (item["case_id"], k) in pre.docs
+        }
+    else:
+        rows = cur.execute(
+            """select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw
+               where case_id = %s and doc_kind in ('appraisal', 'appraisal_pdf') order by doc_kind, fetched_at desc""",
+            (item["case_id"],),
+        ).fetchall()
+        by = {r["doc_kind"]: r["payload"] or {} for r in rows}
     info = (by.get("appraisal") or {}).get("info") or {}
     ymd = str(info.get("dspslPrcCrtrYmd") or "")
     return {
@@ -212,34 +356,33 @@ def load_land_value(
     return res.value
 
 
-def load_building(cur: Any, item: dict[str, Any], today: date) -> dict[str, Any] | None:
+def load_building(
+    cur: Any, item: dict[str, Any], today: date, pre: Pre | None = None
+) -> dict[str, Any] | None:
     """건축물대장(collectors/buildings) → 요약. 지번을 못 읽거나 아직 안 받았으면 None."""
-    p = parse_jibun(item.get("lot_no"))
-    if not p or not item.get("region_code"):
+    key = _building_key(item)
+    if not key:
         return None
-    lk = lot_key(*p)
-    rows = cur.execute(
-        "select kind, data from core.building_register where region_code = %s and lot_no = %s order by kind, seq",
-        (item["region_code"], lk),
-    ).fetchall()
+    if pre is not None:
+        rows = pre.buildings.get(key, [])
+    else:
+        rows = cur.execute(
+            "select kind, data from core.building_register where region_code = %s and lot_no = %s order by kind, seq",
+            key,
+        ).fetchall()
     titles = [r["data"] for r in rows if r["kind"] == "title"]
     floors = [r["data"] for r in rows if r["kind"] == "floor"]
     usage = f"{item.get('usage_name') or ''} {item.get('building_desc') or ''}"
     return summarize(titles, floors, item.get("address"), usage, today)
 
 
-_LAND_USE_TABLE: list[bool] = []  # 표가 있는지 한 번만 봄(이주 0048 을 넣기 전에도 분석이 멈추지 않게)
-
-
-def load_parcel_zone(cur: Any, item: dict[str, Any]) -> str | None:
+def load_parcel_zone(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> str | None:
     """필지 토지이용계획(collectors/land_use) → 'zone' / 'district' / 'planned'. 아직 안 받았으면 None."""
-    if not _LAND_USE_TABLE:
-        row = cur.execute("select to_regclass('core.parcel_land_use') is not null as ok").fetchone()
-        _LAND_USE_TABLE.append(bool(row and row["ok"]))
-    if not _LAND_USE_TABLE[0]:
-        return None
     pnu = pnu_of(item.get("region_code") or "", item.get("lot_no") or "")
-    if not pnu:
+    if pre is not None:
+        got = pre.parcels or {}
+        return plan_zone_of_parcel(got[pnu]) if pnu and pnu in got else None
+    if not _land_use_ready(cur) or not pnu:
         return None
     row = cur.execute("select uses from core.parcel_land_use where pnu = %s", (pnu,)).fetchone()
     return plan_zone_of_parcel(row["uses"]) if row else None
@@ -259,29 +402,39 @@ def analyze_item(
     commercial_table: dict[str, Any] | None = None,
     cash_tables: dict[str, Any] | None = None,
     land_table: dict[str, Any] | None = None,
+    pre: Pre | None = None,
 ) -> bool:
+    """pre 가 있으면 재료를 거기서 꺼내 씀(묶음으로 미리 받은 것), 없으면 예전처럼 물건마다 조회."""
     cur = conn.cursor(row_factory=dict_row)
-    item = cur.execute("select * from core.items where item_id = %s", (item_id,)).fetchone()
+    if pre is not None:
+        item = pre.items.get(item_id)
+    else:
+        item = cur.execute("select * from core.items where item_id = %s", (item_id,)).fetchone()
     if not item:
         return False
-    events = cur.execute(
-        "select event_date, category, after_deadline from core.case_events where case_id = %s",
-        (item["case_id"],),
-    ).fetchall()
-    tenants = cur.execute(
-        "select move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
-        (item["case_id"],),
-    ).fetchall()
-    has_sr = bool(
-        cur.execute(
-            "select 1 from raw.court_doc_raw where case_id = %s and doc_kind = 'status_report' limit 1",
+    if pre is not None:
+        events = pre.events.get(item["case_id"], [])
+        tenants = pre.tenants.get(item["case_id"], [])
+        has_sr = item["case_id"] in pre.status_reports
+    else:
+        events = cur.execute(
+            "select event_date, category, after_deadline from core.case_events where case_id = %s",
             (item["case_id"],),
-        ).fetchone()
-    )
-    detail = load_detail(cur, item)
+        ).fetchall()
+        tenants = cur.execute(
+            "select move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
+            (item["case_id"],),
+        ).fetchall()
+        has_sr = bool(
+            cur.execute(
+                "select 1 from raw.court_doc_raw where case_id = %s and doc_kind = 'status_report' limit 1",
+                (item["case_id"],),
+            ).fetchone()
+        )
+    detail = load_detail(cur, item, pre)
     # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
     # 법원 요항을 아직 못 받았으면 받아 둔 감정평가서 원본의 요항표로(11/11)
-    apr = load_appraisal(cur, item)
+    apr = load_appraisal(cur, item, pre)
     points = parse_points(detail.get("aeeWevlMnpntLst") or apr["points"])
     af = appraisal_facts(points).value
     hint = bool(af.get("overcrowded")) if points else None
@@ -292,7 +445,7 @@ def analyze_item(
         detail.get("rgltLandLstAll"),
     ).value
     over = commercial_over(item, tenants, commercial_table, today, hint)
-    market = load_market(conn, item, today)
+    market = load_market(conn, item, today, pre)
     facts = build_facts(item, events, tenants, has_sr, over)
     for k, v in af.items():
         facts.setdefault(k, v)
@@ -316,16 +469,16 @@ def analyze_item(
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
     for k, v in sf.items():
         facts[k] = facts.get(k) or v
-    bldg = load_building(cur, item, today)  # 건축물대장: 사용승인·그 층 용도(근생빌라 확정)
+    bldg = load_building(cur, item, today, pre)  # 건축물대장: 사용승인·그 층 용도(근생빌라 확정)
     if bldg:
         facts.update(
             villa_by_register=bldg["villa"], floor_uses=bldg["unit_floor_uses"], as_of=today,
             use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)
-    redev = find_zone(cur, item)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
+    redev = find_zone(cur, item, pre.zones if pre is not None else None)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
     # 정비구역 안인지(11/14): 감정평가 요항 글 → 없으면 필지 토지이용계획(브이월드, land_use 수집기)
-    plan_z = af.get("plan_zone") or load_parcel_zone(cur, item)
+    plan_z = af.get("plan_zone") or load_parcel_zone(cur, item, pre)
     if not redev and plan_z == "zone":
         # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
         redev = near_zone(cur, item_id) or {
@@ -435,23 +588,26 @@ def analyze_item(
         ],
     )
     # 관리자가 판단한 신호(11/2): 「없음」은 빼고 「확정」은 확정으로 — 다시 분석해도 유지
-    cur.execute(
-        """delete from analysis.risk_signals s using analysis.signal_overrides o
-           where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '없음'""",
-        (item_id,),
-    )
-    cur.execute(
-        """update analysis.risk_signals s set status = '확정' from analysis.signal_overrides o
-           where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '확정'""",
-        (item_id,),
-    )
-    for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events)),
-                     ("building", bool(bldg))]:  # fmt: skip
+    if pre is None or item_id in pre.overrides:  # 판단한 신호가 없는 물건은 건너뜀
         cur.execute(
-            "insert into analysis.item_data_status (item_id, data_kind, status, computed_at) values (%s,%s,%s, now())"
-            " on conflict (item_id, data_kind) do update set status = excluded.status, computed_at = now()",
-            (item_id, kind, "extracted" if ok else "missing"),
+            """delete from analysis.risk_signals s using analysis.signal_overrides o
+               where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '없음'""",
+            (item_id,),
         )
+        cur.execute(
+            """update analysis.risk_signals s set status = '확정' from analysis.signal_overrides o
+               where s.item_id = %s and o.item_id = s.item_id and o.rule_id = s.rule_id and o.status = '확정'""",
+            (item_id,),
+        )
+    cur.executemany(  # 네 줄을 한 번에 보냄
+        "insert into analysis.item_data_status (item_id, data_kind, status, computed_at) values (%s,%s,%s, now())"
+        " on conflict (item_id, data_kind) do update set status = excluded.status, computed_at = now()",
+        [
+            (item_id, kind, "extracted" if ok else "missing")
+            for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events)),
+                             ("building", bool(bldg))]  # fmt: skip
+        ],
+    )
     return True
 
 
@@ -568,9 +724,25 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
         else:
             ids = [r[0] for r in conn.execute(
                 "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
-        for item_id in ids:
-            if analyze_item(conn, item_id, sales, today, commercial_table, cash_tables, land_table):
-                job.count += 1
+        conn.commit()
+        zones = None
+        for k in range(0, len(ids), CHUNK):
+            part = ids[k : k + CHUNK]
+            pre = None
+            if len(part) > 1:  # 한 건(--item)은 예전 길 그대로
+                try:
+                    zones = zones if zones is not None else load_zones(conn)
+                    pre = preload(conn, part, today, zones)
+                except psycopg.Error as e:  # 묶어 받기가 안 되면 물건마다 받는 예전 길로 — 분석은 멈추지 않음
+                    conn.rollback()
+                    print(f"묶어 받기 실패 → 물건마다 받음: {type(e).__name__} {str(e)[:120]}")
+            for n, item_id in enumerate(part):
+                if analyze_item(
+                    conn, item_id, sales, today, commercial_table, cash_tables, land_table, pre
+                ):
+                    job.count += 1
+                if pre is None or n % COMMIT_EVERY == COMMIT_EVERY - 1:
+                    conn.commit()
             conn.commit()
     print(f"분석 {job.count:,}건 (대상 {len(ids):,})")
 

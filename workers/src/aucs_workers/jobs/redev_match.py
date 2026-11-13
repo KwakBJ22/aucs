@@ -60,17 +60,43 @@ def pick(item: dict[str, Any], zones: list[dict[str, Any]]) -> dict[str, Any] | 
     return None
 
 
-def find_zone(cur: Any, item: dict[str, Any]) -> dict[str, Any] | None:
+def load_zones(conn: Any) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    """서울 정비구역 전부를 (구, 동)으로 묶어 한 번에(11/14) — 분석이 물건마다 묻지 않게. 줄 순서는 find_zone 과 같음."""
+    out: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for r in conn.execute(
+        """select gu, dong_name, name, biz_type, stage, main_no, sub_no from ref.redev_zones
+           order by source = '사업장 목록' desc, zone_id"""
+    ).fetchall():
+        gu, dong, name, biz, stage, main_no, sub_no = (
+            (r[k] for k in ("gu", "dong_name", "name", "biz_type", "stage", "main_no", "sub_no"))
+            if isinstance(r, dict)
+            else r
+        )
+        out.setdefault((gu, dong), []).append(
+            {"name": name, "biz_type": biz, "stage": stage, "main_no": main_no, "sub_no": sub_no,
+             "dong_name": dong}  # fmt: skip
+        )
+    return out
+
+
+def find_zone(
+    cur: Any,
+    item: dict[str, Any],
+    zones_by: dict[tuple[str, str], list[dict[str, Any]]] | None = None,
+) -> dict[str, Any] | None:
     if item.get("sido") != "서울특별시":
         return None
     dong = dong_of(item.get("address"))
     if not dong:
         return None
-    rows = cur.execute(
-        """select name, biz_type, stage, main_no, sub_no, dong_name from ref.redev_zones
-           where gu = %s and dong_name = %s order by source = '사업장 목록' desc, zone_id""",
-        (item.get("sigungu"), dong),
-    ).fetchall()
+    if zones_by is not None:
+        rows: list[Any] = zones_by.get((item.get("sigungu") or "", dong), [])
+    else:
+        rows = cur.execute(
+            """select name, biz_type, stage, main_no, sub_no, dong_name from ref.redev_zones
+               where gu = %s and dong_name = %s order by source = '사업장 목록' desc, zone_id""",
+            (item.get("sigungu"), dong),
+        ).fetchall()
     zones = [
         r
         if isinstance(r, dict)
