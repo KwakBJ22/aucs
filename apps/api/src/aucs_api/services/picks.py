@@ -97,6 +97,9 @@ left join lateral (select result""",
         {"sigungu": sigungu, "max_cash": max_cash, "homes": homes}, today
     )  # 찾기와 같은 규칙(FIND-03)
     sql += more
+    # 사진 없는 물건은 어차피 안 띄움 — DB 에서 먼저 걸러 받는 줄을 줄임(11/14: 4,000줄 가운데 1,600줄이 사진 없음,
+    # 지역을 안 고른 손님은 4,000줄이 닷새치밖에 안 돼 추천 범위(14일)를 다 못 봤음)
+    sql += " and exists (select 1 from core.item_photos ph where ph.case_id = i.case_id)"
     params.update(fp)
     sql += " order by i.sale_date limit 4000"
     with connect() as c:

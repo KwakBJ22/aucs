@@ -18,7 +18,7 @@ def status() -> dict[str, Any]:
                       (select count(*) from core.items i where sale_date >= current_date
                          and not exists (select 1 from analysis.item_analysis x where x.item_id = i.item_id)) as items_pending,
                       (select count(*) from core.sale_results) as sale_results,
-                      (select count(*) from core.trades) as trades,
+                      (select reltuples::bigint from pg_class where oid = 'core.trades'::regclass) as trades,  -- 어림(200만 줄을 세는 데 1~5초)
                       (select count(distinct case_id) from raw.court_doc_raw) as cases_with_docs,
                       pg_database_size(current_database()) as db_bytes"""
         ).fetchone()
