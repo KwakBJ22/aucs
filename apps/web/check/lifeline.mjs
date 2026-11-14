@@ -99,11 +99,18 @@ const BILLING = {
   ],
   grants: [],
 };
+// 관리자 「오늘」(11/14 다시 짬): 하실 일 · 수집·분석 · 서비스 현황 — API admin_ops.today 와 같은 모양
 const TODAY = {
-  red: [],
-  yesterday: { new_items: 1, new_users: 1, devices: 1, views: 1, errors: 0 },
-  open: { reports: 0, inquiries: 0 },
-  steps: [],
+  todo: [],
+  collect: { morning: [], morning_total: 8, hourly: null, picks: { at: null, stale: false } },
+  service: {
+    items: 1,
+    new_users: 1,
+    devices: 1,
+    views: 1,
+    errors: 0,
+    academy: { users: 0, lessons: 0 },
+  },
   db: { used: 1, limit: 8 * 1024 ** 3 },
   backup: null,
   restore: null,
@@ -240,7 +247,7 @@ const PATHS = [
     login: true,
     run: async (page) => {
       await page.goto(`${BASE}/admin`);
-      await seen(page, "모두 정상이에요");
+      await seen(page, "오늘 하실 일 없음");
     },
   },
 ];
