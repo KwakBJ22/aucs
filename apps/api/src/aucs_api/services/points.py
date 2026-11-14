@@ -5,8 +5,10 @@
 """
 
 import hashlib
+import re
 from typing import Any
 
+import psycopg
 from aucs_rules.academy import ledger_key, table_key
 from aucs_rules.address_match import compare
 from aucs_rules.points import points_for
@@ -15,6 +17,7 @@ from psycopg.types.json import Jsonb
 from aucs_api.db import batch, connect
 from aucs_api.services.items import COURT_NAME
 
+_ACADEMY_KEY = re.compile(r"(task:)?[a-z0-9][a-z0-9-]{0,39}")  # 수업 열쇠 · 「task:수업」
 _TABLE_SQL = (
     "select value from ref.rule_tables where rule_key = 'points' and valid_from <= current_date "
     "order by valid_from desc limit 1"
@@ -256,6 +259,37 @@ def my_appraisal(uid: str, item_id: str) -> dict[str, Any] | None:
         return None
     return {"status": r["status"], "points": r["points"], "created_at": r["created_at"].isoformat(),
             "why": "review" if r["status"] == "review" else r["note"]}  # fmt: skip
+
+
+def academy_progress(uid: str) -> list[str]:
+    """계정에 적어 둔 아카데미 진도(들은 수업 · 해 본 과제 열쇠). 표가 아직 없으면(이주 0054 전) 빈 목록."""
+    try:
+        with connect() as c:
+            rows = c.execute(
+                "select key from app.academy_progress where user_id = %s order by done_at", (uid,)
+            ).fetchall()
+    except psycopg.Error:
+        return []
+    return [r["key"] for r in rows]
+
+
+def academy_mark(uid: str, keys: list[str]) -> int:
+    """들은 수업 · 해 본 과제를 계정에 적음(이미 있으면 그대로). 넣은 줄 수."""
+    keys = [k for k in dict.fromkeys(keys) if _ACADEMY_KEY.fullmatch(k)][:200]
+    if not keys:
+        return 0
+    try:
+        with connect() as c:
+            return (
+                c.execute(
+                    """insert into app.academy_progress (user_id, key)
+                       select %s, k from unnest(%s::text[]) as k on conflict do nothing""",
+                    (uid, keys),
+                ).rowcount
+                or 0
+            )
+    except psycopg.Error:
+        return 0
 
 
 def academy_done(uid: str) -> list[str]:

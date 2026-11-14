@@ -4,8 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LEVELS, STAGES } from "@/lib/academy.ko";
-import { count, doneLessons, levelLessons, nextLesson, stageEntry, taskCount } from "@/lib/academy";
-import { meApi } from "@/lib/api/me";
+import {
+  count,
+  doneLessons,
+  levelLessons,
+  nextLesson,
+  stageEntry,
+  syncProgress,
+  taskCount,
+} from "@/lib/academy";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
@@ -37,9 +44,12 @@ export default function Academy() {
   useEffect(() => {
     if (!token) return;
     let stop = false;
-    meApi
-      .academy(token)
-      .then((x) => !stop && setPaid(x.stages))
+    syncProgress(token) // 계정 진도와 합침 — 다른 기기에서 들은 것도 이어짐
+      .then((x) => {
+        if (stop) return;
+        setPaid(x.stages);
+        setDone(x.done);
+      })
       .catch(() => undefined);
     return () => {
       stop = true;

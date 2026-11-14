@@ -443,8 +443,18 @@ def post_appraisal_from_storage(item_id: str, uid: Uid, body: AppraisalIn) -> di
 
 @router.get("/academy")
 def get_academy(uid: Uid) -> dict[str, Any]:
-    """경매 아카데미: 포인트를 받은 단계들."""
-    return {"stages": points.academy_done(uid)}
+    """옥스아카데미: 포인트를 받은 단계들 · 계정에 적어 둔 진도(들은 수업 · 해 본 과제)."""
+    return {"stages": points.academy_done(uid), "done": points.academy_progress(uid)}
+
+
+class AcademyIn(BaseModel):
+    keys: list[str] = Field(max_length=200)
+
+
+@router.put("/academy")
+def put_academy(uid: Uid, body: AcademyIn) -> dict[str, int]:
+    """들은 수업 · 해 본 과제를 계정에 적음(11/14 — 다른 기기에서도 이어지게)."""
+    return {"added": points.academy_mark(uid, body.keys)}
 
 
 @router.post("/academy/{stage}")

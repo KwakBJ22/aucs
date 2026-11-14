@@ -11,8 +11,9 @@ import {
   isOpen,
   lessonAfter,
   levelLessons,
-  markLesson,
+  mark,
   nextLesson,
+  syncProgress,
 } from "@/lib/academy";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
@@ -32,7 +33,17 @@ export default function LessonPage() {
   const [pick, setPick] = useState<number | null>(null);
   const [end, setEnd] = useState<{ stageDone: boolean; points: number | null } | null>(null);
   const [done, setDone] = useState<string[] | null>(null); // 기기에 적어 둔 진도(읽기 전엔 null)
-  useEffect(() => setDone(doneLessons()), []);
+  useEffect(() => {
+    setDone(doneLessons());
+    if (!token) return;
+    let stop = false;
+    syncProgress(token) // 다른 기기에서 들은 것까지 합쳐서 열렸는지 봄
+      .then((x) => !stop && setDone(x.done))
+      .catch(() => undefined);
+    return () => {
+      stop = true;
+    };
+  }, [token]);
 
   if (!found)
     return (
@@ -70,7 +81,7 @@ export default function LessonPage() {
     if (el) el.scrollTo({ left: el.clientWidth * i, behavior: "smooth" });
   };
   const finish = () => {
-    const list = markLesson(lesson.key);
+    const list = mark(lesson.key, token);
     setDone(list);
     const stageDone = stage.lessons.every((l) => list.includes(l.key));
     setEnd({ stageDone, points: null });
@@ -120,7 +131,7 @@ export default function LessonPage() {
             <Link
               href={lesson.task.href}
               className="btn soft mt-10"
-              onClick={() => markLesson(`task:${lesson.key}`)}
+              onClick={() => mark(`task:${lesson.key}`, token)}
             >
               {lesson.task.label}
             </Link>

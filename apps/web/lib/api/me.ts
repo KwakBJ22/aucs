@@ -405,7 +405,10 @@ export const meApi = {
       { fresh: true },
     ),
   // 경매 아카데미(11/14): 포인트를 받은 단계 · 한 단계를 다 들었을 때
-  academy: (t: string) => call<{ stages: string[] }>(t, "/academy", { fresh: true }),
+  academy: (t: string) =>
+    call<{ stages: string[]; done?: string[] }>(t, "/academy", { fresh: true }),
+  academyMark: (t: string, keys: string[]) =>
+    call<{ added: number }>(t, "/academy", { method: "PUT", body: JSON.stringify({ keys }) }),
   academyDone: (t: string, stage: string) =>
     call<PointResult>(t, `/academy/${encodeURIComponent(stage)}`, { method: "POST" }),
   myAppraisal: (t: string, id: string) =>
