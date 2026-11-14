@@ -66,7 +66,7 @@ function ResultRow({ r }: { r: ResultCard }) {
     </div>
   );
   return r.item_id ? (
-    <Link href={`/item/${r.item_id}`} className="d-flex ai-center go c-inherit">
+    <Link prefetch={false} href={`/item/${r.item_id}`} className="d-flex ai-center go c-inherit">
       {body}
     </Link>
   ) : (

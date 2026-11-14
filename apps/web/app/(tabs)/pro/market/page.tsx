@@ -156,7 +156,7 @@ function ProMarket() {
                   <div key={`${r.court}${r.case_no}${r.sale_date}`} className="line-row fs-md">
                     <span>
                       {r.item_id ? (
-                        <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
+                        <Link prefetch={false} href={`/item/${encodeURIComponent(r.item_id)}`}>
                           {r.court} {r.case_no}
                         </Link>
                       ) : (
@@ -217,7 +217,7 @@ function ProMarket() {
                     <td>{r.sale_date.slice(5)}</td>
                     <td>
                       {r.item_id ? (
-                        <Link href={`/item/${encodeURIComponent(r.item_id)}`}>
+                        <Link prefetch={false} href={`/item/${encodeURIComponent(r.item_id)}`}>
                           {r.court} {r.case_no}
                         </Link>
                       ) : (

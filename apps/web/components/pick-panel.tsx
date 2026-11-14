@@ -107,7 +107,7 @@ export function PickPanel({ id }: { id: string | null }) {
         </Link>
       ))}
       <div className="d-flex gap-8 mt-12">
-        <Link href={`/item/${eid}`} className="btn primary md" style={{ flex: 2 }}>
+        <Link prefetch={false} href={`/item/${eid}`} className="btn primary md" style={{ flex: 2 }}>
           {t.toDetail}
         </Link>
         {session && (

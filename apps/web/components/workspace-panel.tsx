@@ -51,7 +51,7 @@ export function WorkspacePanel({
     return (
       <section className="section">
         <p className="sub">{t.notWatched}</p>
-        <Link href={`/item/${encodeURIComponent(id)}`} className="link">
+        <Link prefetch={false} href={`/item/${encodeURIComponent(id)}`} className="link">
           {t.toDetail}
         </Link>
       </section>
@@ -102,7 +102,7 @@ export function WorkspacePanel({
   return (
     <>
       {d && (
-        <Link href={`/item/${eid}`} className="section d-block c-inherit">
+        <Link prefetch={false} href={`/item/${eid}`} className="section d-block c-inherit">
           <div className="sub">
             <DDay d={d.d_day} /> · {d.court} {d.case_no}
           </div>

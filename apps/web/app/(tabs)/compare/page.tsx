@@ -235,6 +235,7 @@ export default function ComparePage() {
                 {cols.map((c) => (
                   <th key={c.id}>
                     <Link
+                      prefetch={false}
                       href={`/item/${encodeURIComponent(c.id)}`}
                       className="d-flex ai-center go c-inherit"
                     >

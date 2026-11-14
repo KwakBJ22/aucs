@@ -42,6 +42,7 @@ function cell(r: ProRow, k: ColKey): React.ReactNode {
     case "case":
       return (
         <Link
+          prefetch={false}
           href={`/item/${encodeURIComponent(r.item_id)}`}
           style={r.source === "onbid" ? { color: "var(--blue-text)" } : undefined}
         >

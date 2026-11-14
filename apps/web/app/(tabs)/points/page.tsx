@@ -186,7 +186,11 @@ export default function PointsPage() {
         {rows?.length === 0 && <p className="sub mt-12">{t.empty}</p>}
         {rows?.map((r) => (
           <div key={r.item_id} className="mt-14">
-            <Link href={`/item/${encodeURIComponent(r.item_id)}`} className="link fw-6">
+            <Link
+              prefetch={false}
+              href={`/item/${encodeURIComponent(r.item_id)}`}
+              className="link fw-6"
+            >
               {r.place} {r.building ?? ""}
             </Link>
             <div className="sub mt-2">

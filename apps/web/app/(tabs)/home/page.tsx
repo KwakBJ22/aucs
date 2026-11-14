@@ -219,6 +219,7 @@ export default function Home() {
   const smallCard = (c: ItemList["items"][number]) => (
     <Link
       key={c.item_id}
+      prefetch={false}
       href={`/item/${encodeURIComponent(c.item_id)}`}
       className="b-0 bg-panel r-14 p-12 c-inherit"
     >
@@ -409,6 +410,7 @@ export default function Home() {
                     {list.map((x) => (
                       <Link
                         key={x.id}
+                        prefetch={false}
                         href={`/item/${encodeURIComponent(x.id)}`}
                         className="cal-item"
                       >

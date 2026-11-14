@@ -195,6 +195,7 @@ export default function Watch() {
       {recent.map((r) => (
         <Link
           key={r.id}
+          prefetch={false}
           href={`/item/${encodeURIComponent(r.id)}`}
           className="line-row go fs-md c-inherit"
         >

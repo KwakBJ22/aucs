@@ -54,6 +54,7 @@ function Detail({ d }: { d: CaseDetail }) {
       {d.items.map((i) => (
         <Link
           key={i.item_id}
+          prefetch={false}
           href={`/item/${encodeURIComponent(i.item_id)}`}
           className="d-block fs-md py-6 px-0"
         >

@@ -129,7 +129,7 @@ function WonCard({ b }: { b: Bid }) {
   const rng = (a: [string, string]) => `${md(a[0])} ~ ${md(a[1])}`;
   return (
     <div className="py-12 px-0">
-      <Link href={`/item/${b.item_id}`} className="link in fw-6">
+      <Link prefetch={false} href={`/item/${b.item_id}`} className="link in fw-6">
         {b.place}
       </Link>
       <div className="sub m-0">
@@ -321,7 +321,11 @@ export default function Me() {
       {mocks.map((x) => (
         <div key={x.mock_id} className="py-10 px-0">
           <div className="d-flex jc-between gap-8">
-            <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="link in fw-6 fs-md">
+            <Link
+              prefetch={false}
+              href={`/item/${encodeURIComponent(x.item_id)}`}
+              className="link in fw-6 fs-md"
+            >
               {x.place} <span className="sub">{md(x.sale_date)}</span>
             </Link>
             <button className="btn secondary sm" onClick={() => dropMock(x.mock_id)}>
@@ -344,6 +348,7 @@ export default function Me() {
               {x.similar?.map((s) => (
                 <Link
                   key={s.item_id}
+                  prefetch={false}
                   href={`/item/${encodeURIComponent(s.item_id)}`}
                   className="line-row go c-inherit fs-md"
                 >
