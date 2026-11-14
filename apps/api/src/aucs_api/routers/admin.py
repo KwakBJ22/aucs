@@ -294,6 +294,12 @@ def put_refund(a: Owner, request_id: int, body: RefundDecideIn) -> dict[str, boo
     return {"ok": True}
 
 
+# 3-2 감정평가서 받기(11/14): 원본 없는 사건(홈 노출 · 역 가까운 곳 먼저) — 받아 PC 폴더에 두면 알아서 올라감
+@router.get("/appraisal/targets")
+def get_appraisal_targets(_: Any_, offset: int = Query(default=0, ge=0)) -> dict[str, Any]:
+    return admin_ops.appraisal_targets(offset)
+
+
 # 5-2 포인트 벌기: 글 없는 그림 감정평가서 확인(11/12)
 @router.get("/points/review")
 def get_points_review(_: Any_) -> list[dict[str, Any]]:

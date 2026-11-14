@@ -11,6 +11,30 @@ export type JobRun = {
   finished_at: string | null;
   message?: string | null;
 };
+// 감정평가서 받기(11/14): 원본 없는 사건 — 받아서 PC 폴더에 두면 5분 안에 올라감
+export type AppraisalTarget = {
+  case_id: string;
+  item_id: string;
+  case_no: string;
+  court: string;
+  place: string;
+  sale_date: string | null;
+  home: boolean;
+  station: boolean;
+};
+export type AppraisalTargets = {
+  rows: AppraisalTarget[];
+  total: number;
+  home: number;
+  station: number;
+  next: number;
+  last: {
+    started_at: string;
+    status: string;
+    item_count: number | null;
+    message: string | null;
+  } | null;
+};
 // 「오늘」(11/14): 하실 일 → 수집·분석 → 서비스 현황 → DB
 export type Todo = { key: string; text: string; go: string; red?: boolean; ack_job?: string };
 export type Today = {
@@ -321,6 +345,8 @@ export const adminApi = {
   today: (t: string) => call<Today>(t, "/today"),
   jobs: (t: string) => call<Jobs>(t, "/jobs"),
   markStale: (t: string) => call<{ n: number }>(t, "/jobs/mark-stale", "POST"),
+  appraisalTargets: (t: string, offset = 0) =>
+    call<AppraisalTargets>(t, `/appraisal/targets?offset=${offset}`),
   ackJob: (t: string, job_id: string) => call(t, `/jobs/${enc(job_id)}/ack`, "POST"),
   requestJob: (t: string, job_key: string) =>
     call<{ req_id: number; dup: boolean }>(t, "/job-requests", "POST", { job_key }),

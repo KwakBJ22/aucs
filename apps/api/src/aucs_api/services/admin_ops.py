@@ -178,6 +178,69 @@ def ack_job(actor: str | None, job_id: str) -> bool | None:
     return bool(row)
 
 
+# 감정평가서 받기(11/14 대표님): 원본이 없는 사건을 홈에 뜨는 물건 → 역 가까운 물건 → 입찰일 순으로.
+# 관리자는 법원에서 받아 PC 의 받은 폴더에 두기만 하면 5분 작업(appraisal_folder.inbox)이 올림.
+_APPRAISAL_SQL = """
+select i.case_id, c.court_code, c.case_no, min(i.sale_date) as sale_date,
+       (array_agg(i.item_id order by i.sale_date, i.item_id))[1] as item_id,
+       (array_agg(concat_ws(' ', i.sigungu, i.gu, coalesce(i.building_desc, i.usage_name))
+                  order by i.sale_date, i.item_id))[1] as place,
+       min(p.rank) is not null as home, bool_or(s.item_id is not null) as station,
+       count(*) over () as total, count(min(p.rank)) over () as home_n,
+       sum(bool_or(s.item_id is not null)::int) over () as station_n
+from core.items i join core.cases c using (case_id)
+left join (select item_id, min(rn) as rank
+           from (select item_id, row_number() over (partition by purpose order by score desc) as rn
+                 from analysis.pick_scores) x
+           where rn <= 300 group by item_id) p on p.item_id = i.item_id
+left join analysis.collection_items s on s.item_id = i.item_id and s.key = 'station'
+where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/Seoul')::date
+  and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
+  and not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id)
+group by i.case_id, c.court_code, c.case_no
+order by case when min(p.rank) is null then 2
+              when min(i.sale_date) <= (now() at time zone 'Asia/Seoul')::date + 14 then 0 else 1 end,  -- 홈 추천은 입찰 14일 안
+         min(p.rank), not bool_or(s.item_id is not null), min(i.sale_date), i.case_id
+offset %(offset)s limit %(limit)s"""
+APPRAISAL_PAGE = 30
+
+
+def appraisal_targets(offset: int = 0) -> dict[str, Any]:
+    """감정평가서 원본이 없는 사건 30건씩(홈 노출 · 역 가까운 곳 먼저) + 받은 폴더의 마지막 결과."""
+    from aucs_rules.courts import COURTS
+    from aucs_rules.find_filter import VEHICLES
+
+    with connect() as c:
+        rows = c.execute(
+            _APPRAISAL_SQL, {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE}
+        ).fetchall()
+        last = c.execute(
+            """select started_at, status, item_count, left(message, 500) as message from ops.job_runs
+               where job_id = 'appraisal_inbox' order by started_at desc limit 1"""
+        ).fetchone()
+    f = rows[0] if rows else {}
+    return {
+        "rows": [
+            {
+                "case_id": r["case_id"],
+                "item_id": r["item_id"],
+                "case_no": r["case_no"],
+                "place": r["place"],
+                "court": COURTS.get(r["court_code"], r["court_code"]),
+                "home": r["home"],
+                "station": r["station"],
+                "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
+            }
+            for r in rows
+        ],  # fmt: skip
+        "total": int(f.get("total") or 0),
+        "home": int(f.get("home_n") or 0),
+        "station": int(f.get("station_n") or 0),
+        "next": offset + APPRAISAL_PAGE,
+        "last": last,
+    }
+
+
 # ── 2 작업·수집 ───────────────────────────────────────
 
 

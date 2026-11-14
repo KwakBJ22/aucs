@@ -1826,6 +1826,16 @@ export const copy = {
     add: "더하기",
     remove: "빼기",
     removeAsk: "관리자에서 뺄까요?",
+    getAppraisal: {
+      title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
+      how: "받은 파일을 PC의 「D:\\Auction\\감정평가서」 폴더에 두면 5분 안에 알아서 올라가요 · 올라간 사건은 여기서 빠져요",
+      order: (h: number, s: number) =>
+        `홈에 뜨는 물건 ${h.toLocaleString("ko-KR")}건 → 역 가까운 물건 ${s.toLocaleString("ko-KR")}건 → 입찰일 순`,
+      last: "마지막으로 넣은 때",
+      home: "홈",
+      station: "역 가까운 곳",
+      more: "더 보기",
+    },
     today: {
       todo: (n: number) => `하실 일 ${n}`,
       todoNone: "오늘 하실 일 없음",

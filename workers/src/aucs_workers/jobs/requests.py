@@ -77,6 +77,13 @@ def main() -> None:
         appraisal_ocr.main()
     except Exception as e:  # noqa: BLE001
         print(f"감정평가서 글자 인식 실패: {e}", flush=True)
+    try:  # 대표님이 받아 둔 감정평가서 폴더(11/14) — 새 PDF 가 있으면 넣고 「넣음」·「못 넣음」으로 옮김
+        from aucs_workers.collectors import appraisal_folder
+
+        if got := appraisal_folder.inbox():
+            print(f"── 감정평가서 받은 폴더: {got}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"감정평가서 받은 폴더 실패: {e}", flush=True)
     queue_docs()
     try:  # 빨간 불 휴대폰 알림 · 관리자가 쓴 알림 보내기(11/12) — 실패해도 요청 처리는 계속
         from aucs_workers import ops_watch
