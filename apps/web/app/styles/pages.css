@@ -864,18 +864,33 @@ textarea.adm-input {
   color: var(--green);
   font-weight: 700;
 }
-.adm-red {
-  display: block;
-  width: 100%;
-  text-align: left;
+/* 관리자 「오늘」 하실 일(11/14): 줄을 누르면 그 메뉴로, 빨간 불은 붉은 면 */
+.adm-todo {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   margin: 6px 0;
-  padding: 14px 16px;
-  border: 0;
+  padding: 2px 10px 2px 16px;
   border-radius: var(--r-panel);
+  background: var(--panel);
+}
+.adm-todo.red {
   background: var(--red-soft);
-  color: var(--red);
+}
+.adm-todo-go {
+  flex: 1 1 auto;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
   font-size: var(--fs-base);
   font-weight: 700;
+  text-align: left;
+}
+.adm-todo.red .adm-todo-go {
+  color: var(--red);
 }
 .adm-red-text {
   color: var(--red);

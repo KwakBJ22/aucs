@@ -94,6 +94,17 @@ def post_mark_stale(a: Op) -> dict[str, int]:
     return {"n": admin_ops.mark_stale(a.user_id)}
 
 
+@router.post("/jobs/{job_id}/ack")
+def post_job_ack(a: Op, job_id: str) -> dict[str, bool]:
+    """실패한 작업을 「확인함」 — 「오늘」 하실 일에서 빠짐."""
+    r = admin_ops.ack_job(a.user_id, job_id)
+    if r is None:
+        raise HTTPException(409, "DB 이주 0055 를 먼저 적용해 주세요")
+    if not r:
+        raise HTTPException(404, "실패한 실행이 없어요")
+    return {"ok": True}
+
+
 class JobReqIn(BaseModel):
     job_key: str = Field(min_length=2, max_length=120)
 

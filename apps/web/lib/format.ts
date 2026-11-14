@@ -33,7 +33,7 @@ export function parseTime(s: string): Date {
   const iso = s
     .trim()
     .replace(" ", "T")
-    .replace(/([+-]\d\d)$/, "$1:00");
+    .replace(/(T\d\d:\d\d\S*[+-]\d\d)$/, "$1:00"); // 날짜만 있으면(2026-11-01) 그대로 — 끝의 -01 은 시간대가 아님
   return new Date(iso);
 }
 

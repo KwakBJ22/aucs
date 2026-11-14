@@ -11,16 +11,24 @@ export type JobRun = {
   finished_at: string | null;
   message?: string | null;
 };
+// 「오늘」(11/14): 하실 일 → 수집·분석 → 서비스 현황 → DB
+export type Todo = { key: string; text: string; go: string; red?: boolean; ack_job?: string };
 export type Today = {
-  red: { kind: string; text: string; go: string }[];
-  yesterday: {
-    new_items: number;
+  todo: Todo[];
+  collect: {
+    morning: JobRun[];
+    morning_total: number;
+    hourly: JobRun | null;
+    picks: { at: string | null; stale: boolean };
+  };
+  service: {
+    items: number;
     new_users: number;
     devices: number;
     views: number;
     errors: number;
+    academy: { users: number; lessons: number };
   };
-  open: { reports: number; inquiries: number };
   // 유료 전환 가늠(11/12): 관심 담은 진행 물건 중 서류가 찬 수
   fill?: {
     members: number;
@@ -30,7 +38,6 @@ export type Today = {
     registry: number;
     appraisal: number;
   };
-  steps: JobRun[];
   db: { used: number; limit: number };
   backup: { at: string; status: string; message: string | null } | null;
   restore: { at: string; status: string } | null;
@@ -314,6 +321,7 @@ export const adminApi = {
   today: (t: string) => call<Today>(t, "/today"),
   jobs: (t: string) => call<Jobs>(t, "/jobs"),
   markStale: (t: string) => call<{ n: number }>(t, "/jobs/mark-stale", "POST"),
+  ackJob: (t: string, job_id: string) => call(t, `/jobs/${enc(job_id)}/ack`, "POST"),
   requestJob: (t: string, job_key: string) =>
     call<{ req_id: number; dup: boolean }>(t, "/job-requests", "POST", { job_key }),
   errors: (t: string) => call<ErrorRow[]>(t, "/errors"),

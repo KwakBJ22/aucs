@@ -7,7 +7,8 @@
 from datetime import date, timedelta
 from typing import Any
 
-from aucs_workers.ops_watch import DAILY_JOBS, DB_LIMIT, red_lights
+from aucs_workers.ops_watch import DB_LIMIT, red_lights
+from psycopg import errors as pg_errors
 from psycopg.types.json import Jsonb
 
 from aucs_api.db import connect
@@ -40,6 +41,38 @@ def mask(email: str | None) -> str:
 # ── 1 오늘 ────────────────────────────────────────────
 
 
+# 아침 묶음 순서(화면용). 빨간 불의 「하루 넘게 안 돎」 판단(DAILY_JOBS)과는 따로 — 그쪽은 알림이 걸려 있음
+MORNING = ("court_results", "court_items", "buildings", "official_prices", "land_use", "onbid",
+           "analyze", "notify")  # fmt: skip
+# 오늘 0시(한국). DB 는 UTC 라 current_date 로 자르면 아침 6시 묶음이 「어제」로 빠짐(11/14)
+KST_DAY = "(date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul')"
+
+
+def _todo(red: list[dict[str, str]], n: dict[str, Any], tmp: list[str]) -> list[dict[str, Any]]:
+    """하실 일: 대표님이 눌러야 끝나는 것만. 빨간 불(판단은 ops_watch 한 곳) + 기다리는 확인·답."""
+    out: list[dict[str, Any]] = []
+    for r in red:
+        if r["key"] in ("reports_late", "inq_late"):  # 아래 건수 줄과 겹침
+            continue
+        t: dict[str, Any] = {"key": r["key"], "text": r["text"], "go": r["go"], "red": True}
+        p = r["key"].split(":")
+        if r["kind"] == "job" and len(p) == 3 and p[2] in ("failed", "stopped"):
+            t["ack_job"] = p[1]  # 다시 돌릴 일이 아니면 「확인함」으로 넘김
+        out.append(t)
+    for key, text, go in (
+        ("review_wait", "감정평가서 확인 {}건 · 기계가 못 가른 것", "review"),
+        ("reports_open", "제보 {}건", "review"),
+        ("inq_open", "답 안 한 문의 {}건", "members"),
+        ("refunds_wait", "환불 요청 {}건", "members"),
+    ):
+        if n.get(key):
+            out.append({"key": key, "text": text.format(n[key]), "go": go})
+    if tmp:
+        out.append({"key": "rule_tmp", "go": "settings",
+                    "text": f"기준표 임시값 {len(tmp)}개 · {', '.join(tmp)}"})  # fmt: skip
+    return out
+
+
 def today() -> dict[str, Any]:
     with connect() as c:
         last = c.execute(
@@ -49,18 +82,30 @@ def today() -> dict[str, Any]:
         ).fetchall()
         n = (
             c.execute(
-                """select
-                (select count(*) from core.items where sale_date >= current_date) as new_items,
-                (select count(*) from auth.users where created_at >= current_date - 1 and created_at < current_date) as new_users,
-                (select count(distinct anon_id) from app.events where at >= current_date - 1 and at < current_date) as devices,
-                (select count(*) from app.events where kind = 'item_view' and at >= current_date - 1 and at < current_date) as views,
-                (select count(*) from ops.errors where at >= current_date - 1 and at < current_date) as errors,
+                f"""select
+                (select count(*) from core.items where sale_date >= (now() at time zone 'Asia/Seoul')::date
+                   and status_code is distinct from 'gone') as items,
+                (select count(*) from auth.users where created_at >= {KST_DAY} - interval '1 day' and created_at < {KST_DAY}) as new_users,
+                (select count(distinct anon_id) from app.events where at >= {KST_DAY} - interval '1 day' and at < {KST_DAY}) as devices,
+                (select count(*) from app.events where kind = 'item_view' and at >= {KST_DAY} - interval '1 day' and at < {KST_DAY}) as views,
+                (select count(*) from ops.errors where at >= {KST_DAY} - interval '1 day' and at < {KST_DAY}) as errors,
                 (select count(*) from app.value_reports where status = 'open') as reports_open,
                 (select count(*) from app.inquiries where answered_at is null) as inq_open,
+                (select count(*) from app.refund_requests where status = 'waiting') as refunds_wait,
+                (select count(*) from app.contrib_uploads where kind = 'appraisal' and status = 'review'
+                   and note in ('ocr_none', 'ocr_other')) as review_wait,
+                (select count(distinct user_id) from app.academy_progress) as academy_users,
+                (select count(*) from app.academy_progress where key not like 'task:%') as academy_lessons,
+                (select max(computed_at) from analysis.pick_scores) as picks_at,
+                (select max(computed_at) < now() - interval '36 hours' from analysis.pick_scores) as picks_stale,
                 pg_database_size(current_database()) as db_bytes"""
             ).fetchone()
             or {}
         )
+        tmp = [r["rule_key"] for r in c.execute(
+            """select rule_key from ref.rule_tables
+               where reviewed_at is null and valid_to is null and basis like '%임시값%' order by 1"""
+        ).fetchall()]  # fmt: skip
         # 유료 전환 가늠(11/12 대표님): 회원이 관심 담은 진행 물건 중 서류가 찬 비율 — 80% 넘으면 전환
         fill = (
             c.execute(
@@ -77,25 +122,34 @@ def today() -> dict[str, Any]:
             or {}
         )
         steps = c.execute(
-            """select r.job_id, j.name_ko, sum(r.item_count)::int as item_count,
+            f"""select r.job_id, j.name_ko, sum(r.item_count)::int as item_count,
                       (array_agg(r.status order by r.started_at desc))[1] as status,
                       min(r.started_at) as started_at, max(r.finished_at) as finished_at
                from ops.job_runs r join ops.jobs j using (job_id)
-               where r.job_id = any(%s) and r.started_at >= current_date group by r.job_id, j.name_ko""",
-            (list(DAILY_JOBS),),
+               where r.job_id = any(%s) and r.started_at >= {KST_DAY} group by r.job_id, j.name_ko""",
+            (list(MORNING),),
         ).fetchall()
         red = red_lights(c)  # 빨간 불 판단은 한 곳(PC 휴대폰 알림과 같음, 11/12)
     by = {j["job_id"]: j for j in last}
     bk = by.get("backup")
     rt = by.get("restore_test")
+    hourly = by.get("court_docs")
     return {
-        "red": red,
-        "yesterday": {
-            k: n.get(k) for k in ("new_items", "new_users", "devices", "views", "errors")
+        "todo": _todo(red, n, tmp),
+        "collect": {
+            "morning": [s for k in MORNING for s in steps if s["job_id"] == k],
+            "morning_total": len(MORNING),
+            "hourly": hourly
+            and {
+                k: hourly[k] for k in ("job_id", "name_ko", "status", "started_at", "finished_at")
+            },
+            "picks": {"at": n.get("picks_at"), "stale": bool(n.get("picks_stale"))},
         },
-        "open": {"reports": n.get("reports_open", 0), "inquiries": n.get("inq_open", 0)},
+        "service": {
+            **{k: n.get(k, 0) for k in ("items", "new_users", "devices", "views", "errors")},
+            "academy": {"users": n.get("academy_users", 0), "lessons": n.get("academy_lessons", 0)},
+        },
         "fill": dict(fill),
-        "steps": [s for k in DAILY_JOBS for s in steps if s["job_id"] == k],
         "db": {"used": n.get("db_bytes", 0), "limit": DB_LIMIT},
         "backup": bk
         and {
@@ -105,6 +159,23 @@ def today() -> dict[str, Any]:
         },
         "restore": rt and {"at": rt["finished_at"] or rt["started_at"], "status": rt["status"]},
     }
+
+
+def ack_job(actor: str | None, job_id: str) -> bool | None:
+    """실패·멈춤으로 끝난 마지막 실행을 「확인함」 — 빨간 불에서 빠짐(기록은 그대로). 칸이 없으면(이주 0055 전) None."""
+    try:
+        with connect() as c:
+            row = c.execute(
+                """update ops.job_runs set acked_at = now()
+                   where run_id = (select run_id from ops.job_runs where job_id = %s order by started_at desc limit 1)
+                     and status in ('failed', 'stopped') returning run_id""",
+                (job_id,),
+            ).fetchone()
+            if row:
+                audit(c, actor, "job_ack", job_id, None, {"run_id": row["run_id"]})
+    except pg_errors.UndefinedColumn:
+        return None
+    return bool(row)
 
 
 # ── 2 작업·수집 ───────────────────────────────────────

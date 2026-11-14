@@ -210,14 +210,15 @@ def read_pdf(data: bytes) -> dict[str, Any]:
     texts = []
     for pg in r.pages[:HEAD_PAGES]:
         try:
-            texts.append(pg.extract_text() or "")
+            # NUL 글자는 DB 가 못 받음(11/11 폴더 작업 실패)
+            texts.append((pg.extract_text() or "").replace("\x00", ""))
         except Exception:  # noqa: BLE001 — 깨진 쪽은 건너뜀
             texts.append("")
     head = re.sub(r"[ \t]+", " ", "\n".join(texts)).strip()
     rest = []
     for pg in r.pages[HEAD_PAGES:]:
         try:
-            rest.append(pg.extract_text() or "")
+            rest.append((pg.extract_text() or "").replace("\x00", ""))
         except Exception:  # noqa: BLE001
             rest.append("")
     return {

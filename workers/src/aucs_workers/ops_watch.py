@@ -37,7 +37,8 @@ def red_lights(conn: psycopg.Connection[Any]) -> list[dict[str, str]]:
     key 는 같은 빨간 불을 하루 한 번만 알리는 데 씀(건수가 바뀌어도 같은 key)."""
     cur = conn.cursor(row_factory=dict_row)
     last = cur.execute(
-        """select distinct on (r.job_id) r.job_id, j.name_ko, r.started_at, r.finished_at, r.status
+        """select distinct on (r.job_id) r.job_id, j.name_ko, r.started_at, r.finished_at, r.status,
+                  to_jsonb(r) ->> 'acked_at' as acked_at
            from ops.job_runs r join ops.jobs j using (job_id) order by r.job_id, r.started_at desc"""
     ).fetchall()
     n = (
@@ -56,7 +57,8 @@ def red_lights(conn: psycopg.Connection[Any]) -> list[dict[str, str]]:
     by = {j["job_id"]: j for j in last}
     red: list[dict[str, str]] = []
     for j in last:
-        if j["status"] in ("failed", "stopped"):
+        # 관리자가 「확인함」 한 실패는 뺌(11/14)
+        if j["status"] in ("failed", "stopped") and not j["acked_at"]:
             word = "실패" if j["status"] == "failed" else "멈춤"
             red.append({"kind": "job", "key": f"job:{j['job_id']}:{j['status']}",
                         "text": f"{j['name_ko']} 작업이 {word}", "go": "jobs"})  # fmt: skip

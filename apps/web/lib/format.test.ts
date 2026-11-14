@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dday, won, wonShort } from "./format";
+import { dday, parseTime, won, wonShort } from "./format";
 
 describe("won", () => {
   it("억·만", () => {
@@ -17,4 +17,16 @@ describe("won", () => {
   });
   it("D-day", () => expect(dday(0)).toBe("D-day"));
   it("지난 날", () => expect(dday(-8)).toBe("8일 지남"));
+});
+
+// 11/14: 날짜만 있는 값의 끝 「-01」을 시간대로 읽어 관리자 「작업·수집」 화면이 깨졌음
+describe("parseTime", () => {
+  it("날짜만 있어도 읽는다", () => {
+    expect(parseTime("2026-11-01").toISOString()).toBe("2026-11-01T00:00:00.000Z");
+  });
+  it("DB 시각(+00)도 읽는다", () => {
+    expect(parseTime("2026-11-14 02:28:19.543802+00").toISOString()).toBe(
+      "2026-11-14T02:28:19.543Z",
+    );
+  });
 });
