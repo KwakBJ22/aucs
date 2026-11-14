@@ -13,7 +13,14 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 import psycopg
-from aucs_rules.find_filter import HAS_PHOTO, PICK_ANALYSIS_SQL, RENT_JOIN, court_where
+from aucs_rules.find_filter import (
+    ANALYSIS_JOIN,
+    COURT_VISIBLE,
+    HAS_PHOTO,
+    PICK_ANALYSIS_SQL,
+    RENT_JOIN,
+    court_where,
+)
 from aucs_rules.pick import case_key, diversify, score_row
 from aucs_rules.wait import PREVIEW, next_round
 
@@ -37,14 +44,16 @@ _TABLE_SQL = add_cols(
     "join analysis.pick_scores ps on ps.item_id = i.item_id and ps.purpose = %(pp)s",
     1,
 )
-# 칸마다 후보(점수 순 300건이면 「같은 단지 1 · 같은 구 2」로 추려도 넉넉)
-_WINDOWS = (
-    # 추천: 공고된 물건 입찰 1~14일 남음, 유찰 뒤 다음 회차는 30일 안
-    " and ((i.status_code = 'preview' and i.sale_date between %(today)s + 1 and %(today)s + 30)"
-    " or (i.status_code is distinct from 'preview' and i.sale_date between %(today)s + 1 and %(today)s + 14))",
-    " and i.sale_date <= %(today)s + 7 and ps.score >= 70",  # 마감 임박
-    " and (i.status_code = 'preview' or ps.likely_fail)",  # 기다리면 더 싸질 물건
-)
+# 먼저 가벼운 줄(번호 · 점수 · 날짜 · 추리는 데 쓰는 칸)만 받아 세 칸을 고르고, 고른 물건(스무 건 안쪽)만 카드 칸을 받음.
+# 11/14 배포 뒤 잼: 칸마다 카드 칸까지 300줄씩 받으면 분석 글을 물건마다 풀어 한 번에 1초씩(세 번 3초) → 가벼운 줄은 0.1초
+_LIGHT_SQL = f"""
+select i.item_id, i.sale_date, i.status_code, c.court_code, c.case_no, i.sigungu, i.gu,
+       i.building_desc, ps.score, ps.likely_fail
+from core.items i
+join core.cases c using (case_id)
+join analysis.pick_scores ps on ps.item_id = i.item_id and ps.purpose = %(pp)s
+{ANALYSIS_JOIN}
+where {COURT_VISIBLE} and {HAS_PHOTO}"""
 _FRESH_HOURS = 36  # 이보다 오래된 점수면 안 씀(수집기가 멈춘 것) → 그때 셈으로
 
 
@@ -83,41 +92,67 @@ def _split(scored: list[list[dict[str, Any]]]) -> dict[str, Any]:
     return {"picks": picks, "soon": soon, "next": nxt}
 
 
+def light_card(r: dict[str, Any], today: date) -> dict[str, Any]:
+    """가벼운 줄 → 추릴 때(diversify · case_key) 쓰는 칸만 든 것. 칸 이름은 카드와 같게."""
+    return {
+        "item_id": r["item_id"],
+        "court": r["court_code"],
+        "case_no": r["case_no"],
+        "place": " ".join(x for x in [r["sigungu"], r["gu"]] if x),
+        "building": r["building_desc"],
+        "d_day": (r["sale_date"] - today).days if r["sale_date"] else None,
+    }
+
+
 def _from_table(more: str, params: dict[str, Any], purpose: str | None, today: date) -> dict[str, Any] | None:  # fmt: skip
     """미리 매겨 둔 점수로 세 칸. 표가 없거나 비었거나 오래됐으면 None(→ 그때 셈)."""
     p = {**params, "pp": purpose or ""}
-    base = _TABLE_SQL + f" and {HAS_PHOTO}" + more
-    tail = " order by ps.score desc, i.item_id limit 300"
     try:
         with connect() as c:
-            res = batch(
+            q_at, q_rows = batch(
                 c,
                 [
                     (
                         "select max(computed_at) as at from analysis.pick_scores where purpose = %(pp)s",
                         p,
-                    )
-                ]
-                + [(base + w + tail, p) for w in _WINDOWS],
+                    ),
+                    (_LIGHT_SQL + more + " order by ps.score desc, i.item_id", p),
+                ],
             )
-            at = (res[0].fetchone() or {}).get("at")
-            lists = [x.fetchall() for x in res[1:]]
+            at = (q_at.fetchone() or {}).get("at")
+            if not at or datetime.now(at.tzinfo) - at > timedelta(hours=_FRESH_HOURS):
+                return None
+            light = []
+            for r in q_rows.fetchall():
+                x = light_card(r, today)
+                x.update(score=r["score"], preview=r["status_code"] == PREVIEW, likely_fail=r["likely_fail"])  # fmt: skip
+                light.append(x)
+            got = _split(
+                [
+                    [x for x in light if _pick_window(x)],
+                    [x for x in light if 0 <= (x["d_day"] or 0) <= 7 and x["score"] >= 70],
+                    [x for x in light if x["preview"] or x["likely_fail"]],
+                ]
+            )
+            ids = [x["item_id"] for v in got.values() for x in v]
+            rows = (
+                c.execute(
+                    _TABLE_SQL + " and i.item_id = any(%(ids)s)", {**p, "ids": ids}
+                ).fetchall()
+                if ids
+                else []
+            )
     except psycopg.Error:  # 표가 아직 없음(이주 0052 전) 등
         return None
-    if not at or datetime.now(at.tzinfo) - at > timedelta(hours=_FRESH_HOURS):
-        return None
-    scored: list[list[dict[str, Any]]] = []
-    for rows in lists:
-        cards = []
-        for r in rows:
-            cd = card(r, today)
-            cd.update(score=r["score"], reasons=r["reasons"], preview=r["status_code"] == PREVIEW,
-                      fail_odds=r["fail_odds"], likely_fail=r["likely_fail"])  # fmt: skip
-            if r["next_min_krw"]:
-                cd["next_min_krw"] = r["next_min_krw"]
-            cards.append(cd)
-        scored.append(cards)
-    return _split(scored)
+    cards: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        cd = card(r, today)
+        cd.update(score=r["score"], reasons=r["reasons"], preview=r["status_code"] == PREVIEW,
+                  fail_odds=r["fail_odds"], likely_fail=r["likely_fail"])  # fmt: skip
+        if r["next_min_krw"]:
+            cd["next_min_krw"] = r["next_min_krw"]
+        cards[r["item_id"]] = cd
+    return {k: [cards[x["item_id"]] for x in v if x["item_id"] in cards] for k, v in got.items()}
 
 
 def home_picks(

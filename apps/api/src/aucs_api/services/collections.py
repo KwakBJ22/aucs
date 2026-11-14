@@ -16,22 +16,22 @@ from aucs_rules.pick import diversify
 
 from aucs_api.db import batch, connect
 from aucs_api.services.items import _CARD_SQL, add_cols, add_join, attach_stations, card
-from aucs_api.services.picks import _SQL, mark_next_round, reduction_table
+from aucs_api.services.picks import _SQL, light_card, mark_next_round, reduction_table
 
 _JOIN_CI = (
     "join core.cases c using (case_id)\njoin analysis.collection_items ci on ci.item_id = i.item_id"
 )
-# 미리 나눠 둔 것에서: 모음마다 건수 한 번 + 모음의 물건(순서 값 큰 순)
-_COUNT_SQL = f"""
-select ci.key, count(*) as n
+# 미리 나눠 둔 것에서: 먼저 가벼운 줄(모음 · 순서 값 · 추리는 데 쓰는 칸)만 모두 받아 건수를 세고 나갈 물건을 고른 뒤,
+# 고른 물건만 카드 칸을 받음(11/14 — 모음마다 카드 칸까지 받으면 분석 글을 물건마다 풀어 몇 초가 걸림)
+_LIGHT_SQL = f"""
+select ci.key, ci.sort, i.item_id, i.sale_date, c.court_code, c.case_no, i.sigungu, i.gu, i.building_desc
 from core.items i
 {_JOIN_CI}
 {ANALYSIS_JOIN}
 where {COURT_VISIBLE}"""
-_ITEMS_SQL = add_cols(_CARD_SQL, "i.is_special_case, i.status_code, ci.why").replace(
-    "join core.cases c using (case_id)", _JOIN_CI + " and ci.key = %(k)s", 1
+_ITEMS_SQL = add_cols(_CARD_SQL, "i.is_special_case, i.status_code, ci.key, ci.why").replace(
+    "join core.cases c using (case_id)", _JOIN_CI, 1
 )
-_CANDIDATES = 120  # 「같은 단지 1 · 같은 구 2」로 추릴 후보
 _FRESH_HOURS = 36  # 이보다 오래됐으면 안 씀(수집기가 멈춘 것) → 그때 셈
 
 
@@ -39,36 +39,46 @@ def _from_table(
     more: str, params: dict[str, Any], key: str | None, limit: int, today: date
 ) -> dict[str, Any] | None:
     """미리 나눠 둔 표로 답함. 표가 없거나 비었거나 오래됐으면 None."""
-    keys = [key] if key else list(KEYS)
-    tail = " order by ci.sort desc, i.item_id limit %(n)s"
-    n = limit if key else _CANDIDATES
     try:
         with connect() as c:
-            res = batch(
+            q_at, q_rows = batch(
                 c,
                 [
                     ("select max(computed_at) as at from analysis.collection_items", None),
-                    (_COUNT_SQL + more + " group by ci.key", params),
-                ]
-                + [(_ITEMS_SQL + more + tail, {**params, "k": k, "n": n}) for k in keys],
+                    (_LIGHT_SQL + more + " order by ci.sort desc, i.item_id", params),
+                ],
             )
-            at = (res[0].fetchone() or {}).get("at")
-            totals = {r["key"]: r["n"] for r in res[1].fetchall()}
-            lists = {k: x.fetchall() for k, x in zip(keys, res[2:], strict=True)}
+            at = (q_at.fetchone() or {}).get("at")
             if not at or datetime.now(at.tzinfo) - at > timedelta(hours=_FRESH_HOURS):
                 return None
+            groups: dict[str, list[dict[str, Any]]] = {k: [] for k in KEYS}
+            for r in q_rows.fetchall():
+                if r["key"] in groups:
+                    groups[r["key"]].append(light_card(r, today))
+            chosen: dict[str, list[dict[str, Any]]] = {}
+            for k in KEYS:
+                if key and k != key:
+                    chosen[k] = []
+                else:
+                    chosen[k] = groups[k][:limit] if key else diversify(groups[k], limit)
+            ids = sorted({x["item_id"] for v in chosen.values() for x in v})
+            rows = (
+                c.execute(
+                    _ITEMS_SQL + " and i.item_id = any(%(ids)s)", {**params, "ids": ids}
+                ).fetchall()
+                if ids
+                else []
+            )
             reduction = reduction_table(today)
+            cards: dict[tuple[str, str], dict[str, Any]] = {}
+            for r in rows:
+                cd = card(r, today)
+                mark_next_round(cd, r, reduction, today)
+                cards[(r["key"], r["item_id"])] = {**cd, "why": r["why"]}
             out: dict[str, Any] = {}
             for k in KEYS:
-                cards = []
-                for r in lists.get(k, []):
-                    cd = card(r, today)
-                    mark_next_round(cd, r, reduction, today)
-                    cards.append({**cd, "why": r["why"]})
-                out[k] = {
-                    "total": totals.get(k, 0),
-                    "items": cards if key else diversify(cards, limit),
-                }
+                items = [cards[(k, x["item_id"])] for x in chosen[k] if (k, x["item_id"]) in cards]
+                out[k] = {"total": len(groups[k]), "items": items}
             # 카드의 「○○역 도보 약 N분」은 다른 목록과 같은 길로, 나갈 카드에만 한 번에
             attach_stations(c, [x for v in out.values() for x in v["items"]])
     except psycopg.Error:  # 표가 아직 없음(이주 0053 전) 등
