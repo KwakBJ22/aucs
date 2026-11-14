@@ -1,4 +1,4 @@
-// 경매 아카데미 교안(11/14 대표님): 처음 온 사람이 겁먹지 않게 — 한 수업 3분, 카드 한 장에 한 가지만.
+// 옥스아카데미 교안(11/14 대표님): 처음 온 사람이 겁먹지 않게 — 한 수업 3분, 카드 한 장에 한 가지만.
 // 등급은 초급 · 중급 · 고급(LEVELS). 단계 열쇠(s0…)는 서버 규칙(packages/rules/…/academy.py OPEN_STAGES)과 같아야 포인트가 나감.
 // 글은 우리 말로 새로 씀(강사 자료 문구 안 씀). 숫자 · 제도는 법이 바뀌면 여기서 고침.
 
@@ -1672,7 +1672,7 @@ export const LEVELS: { key: Level; name: string; title: string; goal: string }[]
 export function findLesson(key: string) {
   for (const s of STAGES) {
     const i = s.lessons.findIndex((l) => l.key === key);
-    if (i >= 0) return { stage: s, lesson: s.lessons[i]!, next: s.lessons[i + 1] ?? null };
+    if (i >= 0) return { stage: s, lesson: s.lessons[i]! };
   }
   return null;
 }

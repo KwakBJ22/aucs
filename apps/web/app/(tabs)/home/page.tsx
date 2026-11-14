@@ -26,12 +26,25 @@ import { useSession } from "@/lib/auth";
 import { subscribePush } from "@/lib/push";
 import { track } from "@/lib/track";
 import { CollectionIcon } from "@/components/collection-icon";
+import { STAGES } from "@/lib/academy.ko";
+import { count, doneLessons } from "@/lib/academy";
 
 const t = copy.home;
 
 export default function Home() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [academy, setAcademy] = useState({ n: 0, total: 0 }); // 아카데미 진도(기기에 적어 둔 것)
+  useEffect(
+    () =>
+      setAcademy(
+        count(
+          STAGES.flatMap((s) => s.lessons),
+          doneLessons(),
+        ),
+      ),
+    [],
+  );
   const [mine, setMine] = useState<ItemList | null>(null);
   const newData = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [onbidSoon, setOnbidSoon] = useState<ItemList | null>(null); // 이번 주 마감 공매(10/28)
@@ -356,14 +369,14 @@ export default function Home() {
     </section>
   );
 
-  // 경매 아카데미로 들어가는 띠(11/14 대표님 — 처음 온 분이 겁먹지 않게 맨 위에)
+  // 옥스아카데미로 들어가는 배너(11/14 대표님 — 맨 위가 아니라 추천 아래에 따로 · 들은 만큼 「이어서」)
   const academyBand = (
     <Link href="/academy" className="pt-band">
       <span className="f-1">
         <b className="d-block">{copy.academy.band}</b>
         <span className="pt-band-sub">{copy.academy.bandSub}</span>
       </span>
-      <span className="pt-band-go">{copy.academy.bandGo} ›</span>
+      <span className="pt-band-go">{copy.academy.bandGo(academy.n, academy.total)} ›</span>
     </Link>
   );
 
@@ -387,12 +400,12 @@ export default function Home() {
       <main className="page">
         <PageHeader title={t.pcTitle} sub={summary} />
         <NoticeLine notices={notices} />
-        {academyBand}
         {recordLine}
         {loginBanner}
         <div className="pc-grid g-64-36">
           <div>
             {todayBlock}
+            {academyBand}
             {picksBlock}
             {collectBlock}
             {soonBlock}
@@ -475,11 +488,11 @@ export default function Home() {
     <main className="page">
       <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
-      {academyBand}
       {recordLine}
       {loginBanner}
       {todayBlock}
       {picksBlock}
+      {academyBand}
       {collectBlock}
       {soonBlock}
       {nextBlock}

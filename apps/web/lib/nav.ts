@@ -26,7 +26,7 @@ export const NAV: NavItem[] = [
       { label: "오늘의 추천", href: "/home" },
       { label: "모아 보기", href: "/collections" },
       { label: "알림함", href: "/notifications" },
-      { label: "경매 아카데미", href: "/academy" },
+      { label: "옥스아카데미", href: "/academy" },
       { label: "경매 처음이세요?", href: "/guide" },
     ],
   },

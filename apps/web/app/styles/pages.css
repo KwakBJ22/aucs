@@ -1780,7 +1780,7 @@ a.col-chip span {
 
 /* ══ 경매 아카데미(11/14) — 단계 길 · 카드 넘기기(옆으로, 한 장씩 멈춤) · 문제 */
 .ac-level {
-  margin-top: 28px;
+  margin-top: 16px;
 }
 .ac-step {
   display: inline-grid;
@@ -1793,6 +1793,41 @@ a.col-chip span {
   color: var(--on-strong);
   font-size: var(--fs-sm);
   vertical-align: 2px;
+}
+.ac-step.on {
+  background: var(--green);
+}
+.ac-locked {
+  opacity: 0.45;
+}
+.ac-meter {
+  margin-top: 10px;
+}
+.ac-bar {
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background: var(--gray-chip);
+  overflow: hidden;
+}
+.ac-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--blue);
+  transition: width 0.4s;
+}
+.ac-badge {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
 }
 .ac-check {
   display: inline-block;

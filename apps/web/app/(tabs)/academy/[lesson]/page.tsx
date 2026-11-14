@@ -2,10 +2,18 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { findLesson } from "@/lib/academy.ko";
-import { markLesson } from "@/lib/academy";
+import { LEVELS, findLesson } from "@/lib/academy.ko";
+import {
+  count,
+  doneLessons,
+  isOpen,
+  lessonAfter,
+  levelLessons,
+  markLesson,
+  nextLesson,
+} from "@/lib/academy";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
@@ -13,6 +21,7 @@ import { copy } from "@/lib/copy.ko";
 const t = copy.academy;
 
 // 수업 한 편: 카드를 옆으로 넘김(손가락 · 버튼) → 마지막 장에 문제 하나 → 다 들으면 진도 저장 · 단계가 끝나면 포인트
+// 11/14 대표님: 차례대로만 열림(잠긴 수업은 들을 차례인 수업으로 보냄) · 위에 어디쯤인지 · 끝 화면에 등급 진도(조금씩 채워 가는 느낌)
 export default function LessonPage() {
   const { lesson: key } = useParams<{ lesson: string }>();
   const found = findLesson(decodeURIComponent(key ?? ""));
@@ -22,6 +31,8 @@ export default function LessonPage() {
   const [at, setAt] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
   const [end, setEnd] = useState<{ stageDone: boolean; points: number | null } | null>(null);
+  const [done, setDone] = useState<string[] | null>(null); // 기기에 적어 둔 진도(읽기 전엔 null)
+  useEffect(() => setDone(doneLessons()), []);
 
   if (!found)
     return (
@@ -30,16 +41,38 @@ export default function LessonPage() {
         <p className="sub">{t.noLesson}</p>
       </main>
     );
-  const { stage, lesson, next } = found;
+  const { stage, lesson } = found;
+  const next = lessonAfter(lesson.key);
+  const level = LEVELS.find((x) => x.key === stage.level);
   const total = lesson.cards.length + 1; // 카드 + 문제
+  const no = stage.lessons.findIndex((l) => l.key === lesson.key) + 1;
+
+  if (done && !isOpen(lesson.key, done)) {
+    const turn = nextLesson(done);
+    return (
+      <main className="page">
+        <PageHeader title={t.title} back="/academy" />
+        <section className="section ta-center">
+          <h2>{t.lockedTitle}</h2>
+          <p className="sub">{stage.level === "adv" ? t.noteAdv : t.lockedSub}</p>
+          {turn && (
+            <Link href={`/academy/${turn.key}`} className="btn primary mt-10">
+              {t.resume(turn.title)}
+            </Link>
+          )}
+        </section>
+      </main>
+    );
+  }
 
   const go = (i: number) => {
     const el = rail.current;
     if (el) el.scrollTo({ left: el.clientWidth * i, behavior: "smooth" });
   };
   const finish = () => {
-    const done = markLesson(lesson.key);
-    const stageDone = stage.lessons.every((l) => done.includes(l.key));
+    const list = markLesson(lesson.key);
+    setDone(list);
+    const stageDone = stage.lessons.every((l) => list.includes(l.key));
     setEnd({ stageDone, points: null });
     if (stageDone && token && !stage.review)
       meApi
@@ -48,12 +81,25 @@ export default function LessonPage() {
         .catch(() => undefined);
   };
 
-  if (end)
+  if (end) {
+    const lc = count(levelLessons(stage.level), done ?? []);
     return (
       <main className="page">
         <PageHeader title={lesson.title} back="/academy" />
         <section className="section ta-center">
+          <div className="ac-badge" aria-hidden="true">
+            ✓
+          </div>
           <h2>{end.stageDone ? t.stageDone(stage.title) : t.lessonDone}</h2>
+          <div className="ac-meter ta-left">
+            <div className="d-flex jc-between fs-sm">
+              <span>{level?.name}</span>
+              <b>{t.of(lc.n, lc.total)}</b>
+            </div>
+            <div className="ac-bar">
+              <i style={{ width: `${Math.round((lc.n * 100) / Math.max(1, lc.total))}%` }} />
+            </div>
+          </div>
           {end.stageDone &&
             !stage.review &&
             (token ? (
@@ -92,10 +138,14 @@ export default function LessonPage() {
         </section>
       </main>
     );
+  }
 
   return (
     <main className="page">
       <PageHeader title={lesson.title} back="/academy" />
+      <p className="sub fs-sm mt-0 mb-0">
+        {level?.name} · {stage.title} · {t.lessonNo(no, stage.lessons.length)}
+      </p>
       <div className="ac-dots" aria-label={t.progress(at + 1, total)}>
         {Array.from({ length: total }, (_, i) => (
           <i key={i} className={i <= at ? "on" : ""} />
