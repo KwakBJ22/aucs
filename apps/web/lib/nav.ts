@@ -36,7 +36,7 @@ export const NAV: NavItem[] = [
     href: "/find",
     group: "basic",
     ready: true,
-    match: ["/find", "/item"],
+    match: ["/find"], // 물건 화면(/item)은 여러 메뉴에서 들어오므로 아무 메뉴도 켜지 않음(11/15)
     sub: [],
   },
   {
@@ -125,7 +125,7 @@ export const TABS = [
     href: "/home",
     match: ["/home", "/notifications", "/guide", "/collections", "/academy"],
   },
-  { key: "find", label: "찾기", href: "/find", match: ["/find", "/item", "/pro/map"] },
+  { key: "find", label: "찾기", href: "/find", match: ["/find", "/pro/map"] },
   { key: "watch", label: "관심", href: "/watch", match: ["/watch", "/compare"] },
   { key: "me", label: "내 경매", href: "/me", match: ["/me"] },
   { key: "points", label: "포인트", href: "/points", match: ["/points"] },
