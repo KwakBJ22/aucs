@@ -26,6 +26,26 @@ def zone_key(name: str) -> str | None:
     return k
 
 
+_COLS = ("name", "biz_type", "stage", "main_no", "sub_no", "dong_name", "detail", "source_date")
+_ZONE_SQL = (
+    "z.name, z.biz_type, z.stage, z.main_no, z.sub_no, z.dong_name,"
+    " to_jsonb(z) -> 'detail' as detail, z.source_date"  # detail 칸은 이주 0059 — 없어도 안 죽게
+)
+
+
+def with_detail(
+    out: dict[str, Any], z: dict[str, Any], same: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """구역에 단계 날짜 · 세대수를 붙임(순수 함수) — 그 줄에 없으면 같은 대표지번의 다른 줄(서울시 통계) 것. 없으면 그대로."""
+    for x in (z, *same):
+        d = x.get("detail")
+        if isinstance(d, dict) and (d.get("dates") or d.get("homes")):
+            more = {"dates": d.get("dates"), "homes": d.get("homes"),
+                    "dates_as_of": str(x["source_date"]) if x.get("source_date") else None}  # fmt: skip
+            return {**out, **{k: v for k, v in more.items() if v}}
+    return out
+
+
 def dong_of(address: str | None) -> str | None:
     m = re.search(r"\s([가-힣0-9]+동[0-9]*가?)\s", address or "")
     return m.group(1) if m else None
@@ -64,24 +84,11 @@ def load_zones(conn: Any) -> dict[tuple[str, str], list[dict[str, Any]]]:
     """서울 정비구역 전부를 (구, 동)으로 묶어 한 번에(11/14) — 분석이 물건마다 묻지 않게. 줄 순서는 find_zone 과 같음."""
     out: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for r in conn.execute(
-        f"""select z.gu, z.dong_name, z.name, z.biz_type, z.stage, z.main_no, z.sub_no
-            from ref.redev_zones z where {ZONE_OURS_SQL} order by z.zone_id"""
+        f"""select z.gu, {_ZONE_SQL} from ref.redev_zones z
+            where {ZONE_OURS_SQL} order by z.source = '사업장 목록' desc, z.zone_id"""
     ).fetchall():
-        gu, dong, name, biz, stage, main_no, sub_no = (
-            (r[k] for k in ("gu", "dong_name", "name", "biz_type", "stage", "main_no", "sub_no"))
-            if isinstance(r, dict)
-            else r
-        )
-        out.setdefault((gu, dong), []).append(
-            {
-                "name": name,
-                "biz_type": biz,
-                "stage": stage,
-                "main_no": main_no,
-                "sub_no": sub_no,
-                "dong_name": dong,
-            }  # fmt: skip
-        )
+        d = r if isinstance(r, dict) else dict(zip(("gu", *_COLS), r, strict=True))
+        out.setdefault((d["gu"], d["dong_name"]), []).append({k: d[k] for k in _COLS})
     return out
 
 
@@ -99,45 +106,39 @@ def find_zone(
         rows: list[Any] = zones_by.get((item.get("sigungu") or "", dong), [])
     else:
         rows = cur.execute(
-            f"""select z.name, z.biz_type, z.stage, z.main_no, z.sub_no, z.dong_name
-                from ref.redev_zones z
-                where z.gu = %s and z.dong_name = %s and {ZONE_OURS_SQL} order by z.zone_id""",
+            f"""select {_ZONE_SQL} from ref.redev_zones z
+                where z.gu = %s and z.dong_name = %s and {ZONE_OURS_SQL}
+                order by z.source = '사업장 목록' desc, z.zone_id""",
             (item.get("sigungu"), dong),
         ).fetchall()
-    zones = [
-        r
-        if isinstance(r, dict)
-        else dict(
-            zip(("name", "biz_type", "stage", "main_no", "sub_no", "dong_name"), r, strict=True)
-        )
-        for r in rows
-    ]
+    zones = [r if isinstance(r, dict) else dict(zip(_COLS, r, strict=True)) for r in rows]
     z = pick(item, zones)
     if not z:
         return None
-    return {k: z.get(k) for k in ("name", "biz_type", "stage", "how")}
+    lot = (z.get("main_no"), z.get("sub_no") or 0)
+    same = [x for x in zones if lot[0] and (x.get("main_no"), x.get("sub_no") or 0) == lot]
+    return with_detail({k: z.get(k) for k in ("name", "biz_type", "stage", "how")}, z, same)
 
 
 def near_zone(cur: Any, item_id: str) -> dict[str, Any] | None:
     """토지 이용 계획이 「정비구역」인 물건에 어느 구역인지 잇기(11/14): 대표지번이 가장 가까운(500m 안)
     재개발 · 재건축 구역. 구역 경계가 아니라 「아마 이 구역」 — how 에 그렇게 적음."""
     rows = cur.execute(
-        f"""select z.name, z.biz_type, z.stage, round(st_distance(p.geom, i.geom))::int as m
+        f"""select z.name, z.biz_type, z.stage, round(st_distance(p.geom, i.geom))::int as m,
+                   p.address as addr, to_jsonb(z) -> 'detail' as detail, z.source_date
             from core.items i
             join ref.place_points p on p.geom is not null and i.geom is not null
              and st_dwithin(p.geom, i.geom, {ZONE_GUESS_M})
             join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address and {ZONE_OURS_SQL}
             where i.item_id = %s
-            order by m, z.zone_id limit 20""",
+            order by m, z.source = '사업장 목록' desc, z.zone_id limit 20""",
         (item_id,),
     ).fetchall()
-    for r in rows:
-        z = (
-            r
-            if isinstance(r, dict)
-            else dict(zip(("name", "biz_type", "stage", "m"), r, strict=False))
-        )
+    keys = ("name", "biz_type", "stage", "m", "addr", "detail", "source_date")
+    zones = [r if isinstance(r, dict) else dict(zip(keys, r, strict=True)) for r in rows]
+    for z in zones:
         if zone_usable(z.get("stage"), z.get("biz_type")) and zone_kind(z.get("biz_type")):
-            return {"name": z["name"], "biz_type": z["biz_type"], "stage": z["stage"],
-                    "how": f"토지 이용 계획 · 가까운 구역(약 {z['m']}m)"}  # fmt: skip
+            out = {"name": z["name"], "biz_type": z["biz_type"], "stage": z["stage"],
+                   "how": f"토지 이용 계획 · 가까운 구역(약 {z['m']}m)"}  # fmt: skip
+            return with_detail(out, z, [x for x in zones if x["addr"] == z["addr"]])
     return None

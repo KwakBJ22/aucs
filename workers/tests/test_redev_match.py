@@ -54,3 +54,15 @@ def test_pick():
         }
     ]
     assert pick({"lot_no": "681-26", "building_desc": "역삼동하나빌 6층"}, gu) is None
+
+
+def test_with_detail_borrows_from_same_lot() -> None:
+    from aucs_workers.jobs.redev_match import with_detail
+
+    plain = {"name": "가구역 재개발정비사업", "detail": None, "source_date": None}
+    stat = {"name": "가구역", "detail": {"dates": {"plan": "2017-05-01"}, "homes": {"new": 300}},
+            "source_date": "2026-11-15"}  # fmt: skip
+    out = with_detail({"name": plain["name"]}, plain, [plain, stat])
+    assert out["dates"] == {"plan": "2017-05-01"} and out["homes"] == {"new": 300}
+    assert out["dates_as_of"] == "2026-11-15" and out["name"] == "가구역 재개발정비사업"
+    assert with_detail({"name": "나"}, plain, [plain]) == {"name": "나"}

@@ -30,6 +30,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.station_official"]
     if key == "probe_public":  # 새로 신청한 공공 자료 표본 한 번(11/15) — DB 에 안 넣음, logs/probe_public.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public"]
+    if key == "redev_seoul":  # 서울 도시정비사업 통계(단계 날짜 · 세대수) 받기(11/15) — 분기마다 redev 가 같이 돌림
+        return [sys.executable, "-m", "aucs_workers.collectors.redev_seoul"]
     if key == "probe_redev":  # 정비사업 공식 자료(서울 · 경기) 표본 한 번(11/15) — logs/probe_redev.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--redev"]
     if key in KEYS:

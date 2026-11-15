@@ -96,10 +96,18 @@ def main() -> None:
             )
         job.count = len(zones)
     print(f"끝: {path.name} · 사업장 {len(zones):,}곳")
-    # 새로 생긴 대표지번의 좌표(11/13 「입지 — 가까운 정비사업」) — 키가 없으면 건너뜀
     import os
     import sys
 
+    # 단계 날짜 · 세대수가 있는 서울시 통계도 같이(11/15) — 키 · 이주가 없으면 건너뜀(목록은 이미 넣었음)
+    if os.getenv("SEOUL_OPENAPI_KEY", "").strip():
+        from aucs_workers.collectors import redev_seoul
+
+        try:
+            redev_seoul.main(geo=False)
+        except SystemExit as e:
+            print(f"서울 도시정비사업 통계 건너뜀: {e}")
+    # 새로 생긴 대표지번의 좌표(11/13 「입지 — 가까운 정비사업」) — 키가 없으면 건너뜀
     if os.getenv("VWORLD_API_KEY", "").strip():
         from aucs_workers.collectors import redev_geo
 
