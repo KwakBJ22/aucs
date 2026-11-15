@@ -99,3 +99,16 @@ def test_old_appraisal_info() -> None:
     assert "risk.old_appraisal" not in {
         x.rule_id for x in signals({"appraisal_date": date(2026, 6, 1), "as_of": date(2026, 11, 4)})
     }
+
+
+def test_parcel_facts() -> None:
+    from aucs_rules.appraisal_points import parcel_facts
+
+    uses = [
+        {"code": "UQA122", "name": "제2종일반주거지역", "incl": "포함"},
+        {"code": "UBA100", "name": "과밀억제권역", "incl": "포함"},
+        {"code": "UQQ600", "name": "토지거래계약에관한허가구역", "incl": "포함"},
+        {"code": "UDV100", "name": "개발제한구역", "incl": "접함"},
+    ]
+    assert parcel_facts(uses) == {"overcrowded": True, "land_permit_area": True}
+    assert parcel_facts(None) == {}

@@ -21,6 +21,7 @@ from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import (
     appraisal_facts,
     land_plan_of_parcel,
+    parcel_facts,
     parse_points,
     plan_zone_of_parcel,
 )
@@ -452,7 +453,10 @@ def analyze_item(
     apr = load_appraisal(cur, item, pre)
     points = parse_points(detail.get("aeeWevlMnpntLst") or apr["points"])
     af = appraisal_facts(points).value
-    hint = bool(af.get("overcrowded")) if points else None
+    # 필지 토지이용계획(브이월드)으로도 채움(11/15): 개발제한구역 · 토지거래허가구역 · 과밀억제권역 — 요항 글이 먼저
+    uses = load_parcel_uses(cur, item, pre)
+    pf = parcel_facts(uses)
+    hint = True if pf.get("overcrowded") else (bool(af.get("overcrowded")) if points else None)
     # 감정가 나눔(11/7): 토지·건물 금액 · 제시외 건물 · 대지권 — 원본 없이 물건상세로
     parts = appraisal_parts(
         detail.get("gdsDspslObjctLst"),
@@ -462,7 +466,7 @@ def analyze_item(
     over = commercial_over(item, tenants, commercial_table, today, hint)
     market = load_market(conn, item, today, pre)
     facts = build_facts(item, events, tenants, has_sr, over)
-    for k, v in af.items():
+    for k, v in (*af.items(), *pf.items()):
         facts.setdefault(k, v)
     if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음
         facts.update(appraisal_date=apr["price_date"], as_of=today)
@@ -497,7 +501,7 @@ def analyze_item(
     # 정비구역 안인지(11/14): 감정평가 요항 글 → 없으면 필지 토지이용계획(브이월드, land_use 수집기)
     plan_z = af.get("plan_zone") or load_parcel_zone(cur, item, pre)
     # 용도지역 · 도시계획시설(11/15): 같은 토지이용계획에서 — 시설은 땅 · 단독에만 뜻이 있어 그때만 남김
-    land_plan = land_plan_of_parcel(load_parcel_uses(cur, item, pre))
+    land_plan = land_plan_of_parcel(uses)
     if land_plan and not is_land_or_house(facts.get("usage_text")):
         land_plan = {**land_plan, "facilities": []} if land_plan["zones"] else None
     if land_plan and land_plan["facilities"]:

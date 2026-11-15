@@ -188,6 +188,21 @@ def land_plan_of_parcel(uses: list[dict[str, Any]] | None) -> dict[str, Any] | N
     return {"zones": zones, "facilities": [{"name": k, "incl": v} for k, v in fac.items()]}
 
 
+# 토지이용계획 코드 → 위험 신호가 읽는 사실(11/15) — 감정평가 요항 글에 없어도 필지 자료로 채움
+_PARCEL_FACTS = {"UDV100": "greenbelt", "UQQ600": "land_permit_area", "UBA100": "overcrowded"}
+
+
+def parcel_facts(uses: list[dict[str, Any]] | None) -> dict[str, bool]:
+    """브이월드 토지이용계획에서 개발제한구역 · 토지거래허가구역 · 과밀억제권역(이 필지에 걸린 것만 — 「접함」은 뺌).
+    → {'greenbelt': True, …} 있는 것만. 자료가 없으면 빈 묶음(「모름」)."""
+    out: dict[str, bool] = {}
+    for u in uses or []:
+        k = _PARCEL_FACTS.get(str(u.get("code") or ""))
+        if k and u.get("incl") != "접함":
+            out[k] = True
+    return out
+
+
 def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:
     """요점 글 → 위험 신호 · 추천이 읽는 사실 묶음. 글이 없으면 빈 묶음(「모름」 — 없다고 보지 않음)."""
     p = {x["label"]: x["text"] for x in points}
