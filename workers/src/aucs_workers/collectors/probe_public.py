@@ -113,6 +113,115 @@ def redev() -> None:
     print(f"끝: {log}")
 
 
+def more() -> None:
+    """R-ONE 통계표 자료 꼴 · 건축물대장 전유부 표본(11/15) — 이미 되는 키로. logs/probe_more.log"""
+    from urllib.parse import unquote
+
+    from aucs_rules.building import parse_jibun
+
+    from aucs_workers.db import connect
+
+    key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
+    key = unquote(key) if "%" in key else key
+    rone = os.getenv("RONE_API_KEY", "").strip().strip("\"'")
+    sec = [key, rone]
+    out = [f"=== {datetime.now():%Y-%m-%d %H:%M} R-ONE 자료 꼴 · 건축물대장 전유부 표본"]
+    base = "https://www.reb.or.kr/r-one/openapi"
+    with httpx.Client(timeout=40, follow_redirects=True) as c:
+        out.append("\n# R-ONE 「임대동향」 표 이름(연도 빼고 모음)")
+        try:
+            time.sleep(GAP)
+            rows, _ = first_rows(
+                c.get(
+                    f"{base}/SttsApiTbl.do",
+                    params={"KEY": rone, "Type": "json", "pIndex": 1, "pSize": 1000},
+                ).json()
+            )
+            names: dict[str, str] = {}
+            for x in rows:
+                nm = str(x.get("STATBL_NM", ""))
+                if "임대동향" in nm or "공실" in nm or "상가" in nm:
+                    names[nm] = (
+                        f"{x.get('STATBL_ID')} | {x.get('DTACYCLE_CD')} | {x.get('DATA_START_YY')}~{x.get('DATA_END_YY')}"
+                    )
+            for nm in sorted(names):
+                if "(20" not in nm or "2026" in nm or "2024년" in nm:
+                    out.append(f"   {names[nm]} | {nm}")
+        except Exception as e:  # noqa: BLE001
+            out.append(f"표 목록 실패: {type(e).__name__}")
+        for tid, cyc, label in (
+            ("T263433143798468", "QY", "소규모 상가 수익률"),
+            ("T245503133561624", "MM", "오피스텔 수익률"),
+            ("A_2024_00156", "MM", "전월세 전환율 아파트"),
+        ):
+            out.append(f"\n# R-ONE {label} ({tid})")
+            call(
+                c,
+                out,
+                "항목",
+                f"{base}/SttsApiTblItm.do",
+                {"KEY": rone, "Type": "json", "pIndex": 1, "pSize": 300, "STATBL_ID": tid},
+                sec,
+            )
+            rows = call(c, out, "자료", f"{base}/SttsApiTblData.do",
+                        {"KEY": rone, "Type": "json", "pIndex": 1, "pSize": 300, "STATBL_ID": tid, "DTACYCLE_CD": cyc}, sec)  # fmt: skip
+            if rows:
+                keys = [
+                    k
+                    for k in rows[0]
+                    if k.endswith("_NM") or k in ("WRTTIME_IDTFR_ID", "DTA_VAL", "UI_NM")
+                ]
+                times = sorted({str(r.get("WRTTIME_IDTFR_ID")) for r in rows})
+                out.append(f"   시점: {times[:3]} … {times[-3:]} ({len(times)}개)")
+                for r in rows[:25]:
+                    out.append("   " + " | ".join(str(r.get(k)) for k in keys))
+
+        out.append("\n# 건축물대장 전유부 · 전유공용면적 · 기본개요")
+        with connect() as conn:
+            its = conn.execute(
+                """select usage_name, region_code, lot_no, building_desc from core.items
+                   where status_code = '01' and length(region_code) = 10 and lot_no ~ '^[0-9]+(-[0-9]+)?$'
+                     and usage_name in ('아파트', '다세대') and sale_date >= current_date
+                   order by usage_name, item_id limit 400"""
+            ).fetchall()
+        seen: set[str] = set()
+        for usage, code, lot, desc in its:
+            if usage in seen:
+                continue
+            seen.add(usage)
+            plat, bun, ji = parse_jibun(lot) or ("0", "", "")
+            out.append(f"\n## {usage} · {code} {lot} · {str(desc)[:60]}")
+            p0 = {"serviceKey": key, "sigunguCd": code[:5], "bjdongCd": code[5:], "platGbCd": plat, "bun": bun, "ji": ji,
+                  "numOfRows": 5, "pageNo": 1, "_type": "json"}  # fmt: skip
+            hub = "https://apis.data.go.kr/1613000/BldRgstHubService"
+            call(c, out, "기본개요", f"{hub}/getBrBasisOulnInfo", p0, sec)
+            ex = call(c, out, "전유부", f"{hub}/getBrExposInfo", p0, sec)
+            call(c, out, "전유공용면적", f"{hub}/getBrExposPubuseAreaInfo", p0, sec)
+            if ex:
+                dong, ho = ex[0].get("dongNm"), ex[0].get("hoNm")
+                out.append(f"   → 동 · 호로 좁혀 보기: dongNm={dong} hoNm={ho}")
+                call(
+                    c,
+                    out,
+                    "전유부(동·호)",
+                    f"{hub}/getBrExposInfo",
+                    {**p0, "dongNm": dong, "hoNm": ho},
+                    sec,
+                )
+                call(
+                    c,
+                    out,
+                    "전유공용면적(동·호)",
+                    f"{hub}/getBrExposPubuseAreaInfo",
+                    {**p0, "dongNm": dong, "hoNm": ho},
+                    sec,
+                )
+    log = LOG.with_name("probe_more.log")
+    log.parent.mkdir(exist_ok=True)
+    log.write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"끝: {log}")
+
+
 def main() -> None:
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
     rone = os.getenv("RONE_API_KEY", "").strip().strip("\"'")
@@ -217,4 +326,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    redev() if "--redev" in sys.argv else main()
+    {"--redev": redev, "--more": more}.get(sys.argv[-1], main)()
