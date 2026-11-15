@@ -162,14 +162,14 @@ def main() -> None:
                       st_x(geom::geometry), st_y(geom::geometry) from ref.stations order by station_id"""
         ).fetchall()
         by_base: dict[str, list[tuple[int, Pt]]] = {}
-        by_line: dict[str, list[tuple[int, str, Pt]]] = {}
+        by_line: dict[str, dict[int, tuple[str, Pt]]] = {}  # 노선 → 역 → (이름, 지금 좌표)
         now_at: dict[tuple[str, str, str], Pt] = {}  # 지금 좌표(이번에 고친 것 반영)
         # 11/15 두 번째 실행이 거친 좌표로 옮겨 버린 역 — 원래(틀린) 좌표로 보고 다시 가림
         redo = {("동수", "인천1호선", "인천교통공사"): (126.7052062, 37.4562557)}
         rows = [(*r[:4], *redo.get((r[1], r[2], r[3]), (r[4], r[5]))) for r in rows]
         for sid, name, line, op, x, y in rows:
             by_base.setdefault(base_name(name), []).append((sid, (x, y)))
-            by_line.setdefault(line, []).append((sid, base_name(name), (x, y)))
+            by_line.setdefault(line, {})[sid] = (base_name(name), (x, y))
             now_at[(name, line, op)] = (x, y)
         print(
             f"[시작] 역 {len(rows):,}곳 · 주소 {len(seed):,}줄"
@@ -227,23 +227,30 @@ def main() -> None:
             road, lot = cand_of(asked[sid][0]), cand_of(asked[sid][1])
             twins = [p for t, p in by_base.get(base_name(name), []) if t != sid]
             sides = [now_at[k] for k in sides_of.get((name, line, op), []) if k in now_at]
+            # 고친 좌표로 견줌 — 한 칸씩 밀려 적힌 노선(6호선 연신내 ~ 봉화산)이 차례로 풀림
             copied = any(
                 t != sid and b != base_name(name) and dist_m(old, p) <= SAME_M
-                for t, b, p in by_line.get(line, [])
+                for t, (b, p) in by_line.get(line, {}).items()
             )
             what, new = decide(old, road, lot, twins, sides, copied)
             n[what] = n.get(what, 0) + 1
-            if what in ("fix", "check") and new:
+            if (what in ("fix", "check") and new) or copied:
+                to = new or old
+                word = (
+                    "고침"
+                    if what == "fix"
+                    else ("옆 역과 같은데 못 고침" if copied else "확인 필요")
+                )
                 lines.append(
-                    f"{'고침' if what == 'fix' else '확인 필요'} · {name}({line} · {op}) "
-                    f"{y:.5f},{x:.5f} → {new[1]:.5f},{new[0]:.5f} · {dist_m(old, new) / 1000:.1f}km"
+                    f"{word} · {name}({line} · {op}) "
+                    f"{y:.5f},{x:.5f} → {to[1]:.5f},{to[0]:.5f} · {dist_m(old, to) / 1000:.1f}km"
                     f" · {(s or {}).get('road_address') or (s or {}).get('lot_address') or ''}"
                     + "".join(
                         f" · {w} {c[0][1]:.5f},{c[0][0]:.5f}{'' if c[1] else '(거침)'}"
                         for w, c in (("도로명", road), ("지번", lot))
                         if c
                     )
-                    + (" · 옆 역과 같은 좌표였음" if copied else "")
+                    + (" · 옆 역과 같은 좌표였음" if copied and what == "fix" else "")
                 )
                 print("  " + lines[-1], flush=True)
             if what == "fix" and new and not a.dry:
@@ -255,6 +262,7 @@ def main() -> None:
                 )
                 job.count += 1
                 now_at[(name, line, op)] = new
+                by_line[line][sid] = (base_name(name), new)
         msg = (
             f"역 {len(rows):,}곳 · 맞음 {n.get('ok', 0):,} · 고침 {n.get('fix', 0)} · 확인 필요 {n.get('check', 0)}"
             f" · 조금 다름 {n.get('near', 0)} · 주소로 못 찾음 {n.get('none', 0)}"
