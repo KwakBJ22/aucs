@@ -8,6 +8,7 @@
 """
 
 import os
+import sys
 import time
 from datetime import date
 from typing import Any
@@ -83,10 +84,40 @@ def fetch(
         page += 1
 
 
+def dry(key: str) -> None:
+    """DB 에 안 넣고 받아만 봄 — 통계마다 시점 · 지역 수 · 수도권 지역 이름을 logs/rone_dry.log 에."""
+    from aucs_workers.db import ROOT
+
+    out = []
+    with httpx.Client(timeout=60, follow_redirects=True) as client:
+        for name, (table, cycle, word, col) in TABLES.items():
+            got: list[dict[str, Any]] = []
+            raw: list[dict[str, Any]] = []
+            for p in periods(cycle, date.today()):
+                raw = fetch(client, key, table, cycle, p)
+                got = pick(raw, word, col)
+                if got or raw:
+                    break
+            items = sorted({str(r.get("ITM_NM")) for r in raw})
+            out.append(
+                f"[{name}] 받은 줄 {len(raw)} · 고른 줄 {len(got)} · 시점 {got[0]['period'] if got else '-'} · 항목 {items[:8]}"
+            )
+            near = [
+                f"{g['region']}={g['value']:.2f}"
+                for g in got
+                if g["region"].split(">")[0] in ("서울", "경기", "인천", "수도권")
+            ]
+            out.append("   수도권: " + " | ".join(near[:70]))
+    (ROOT / "logs" / "rone_dry.log").write_text("\n".join(out) + "\n", encoding="utf-8")
+    print("끝: logs/rone_dry.log")
+
+
 def main() -> None:
     key = os.getenv("RONE_API_KEY", "").strip().strip("\"'")
     if not key:
         raise SystemExit("RONE_API_KEY 가 비어 있습니다 (.env)")
+    if "--dry" in sys.argv:
+        return dry(key)
     today = date.today()
     with connect() as conn, run(conn, "rone", "R-ONE 지역 평균") as job:
         if not conn.execute("select to_regclass('ref.region_stats')").fetchone()[0]:

@@ -32,6 +32,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public"]
     if key == "rone":  # 지역 평균 통계(R-ONE) 받기(11/15) — 달마다 trades 가 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.rone"]
+    if key == "rone_dry":  # 받아만 보기(DB 에 안 넣음) — logs/rone_dry.log
+        return [sys.executable, "-m", "aucs_workers.collectors.rone", "--dry"]
     if key == "redev_seoul":  # 서울 도시정비사업 통계(단계 날짜 · 세대수) 받기(11/15) — 분기마다 redev 가 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.redev_seoul"]
     if key == "probe_more":  # R-ONE 자료 꼴 · 건축물대장 전유부 표본(11/15) — logs/probe_more.log
