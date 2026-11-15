@@ -63,7 +63,8 @@ def main() -> None:
         )
         print(f"법정동 {n:,}")
 
-        # 2) 철도역
+        # 2) 철도역 — 이 자료(공공데이터 도시철도역사정보)는 좌표가 틀린 역이 있음(11/15 판교 · 동천 · 발곡 …).
+        #    다시 옮기면 바로잡은 좌표가 지워지므로 뒤에 꼭: uv run python -m aucs_workers.collectors.station_fix
         rows = duck.execute(
             "select 역명, 노선명, 운영기관, 'SRID=4326;POINT(' || 경도 || ' ' || 위도 || ')', try_cast(nullif(폐지일자,'') as date)"
             " from 철도역 where 위도 is not null and 경도 is not null"

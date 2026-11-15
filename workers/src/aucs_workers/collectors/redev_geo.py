@@ -32,10 +32,12 @@ class ApiError(Exception):
     pass
 
 
-def geocode(client: httpx.Client, key: str, domain: str, address: str) -> tuple[float, float] | None:
-    """지번 주소 → (경도, 위도). 못 찾으면 None, 인증 · 한도 등 오류면 ApiError."""
+def geocode(
+    client: httpx.Client, key: str, domain: str, address: str, kind: str = "parcel"
+) -> tuple[float, float] | None:
+    """주소 → (경도, 위도). kind: parcel(지번) · road(도로명). 못 찾으면 None, 인증 · 한도 등 오류면 ApiError."""
     r = client.get(URL, params={"service": "address", "request": "getcoord", "version": "2.0", "crs": "epsg:4326",
-                                "type": "parcel", "refine": "true", "simple": "false", "format": "json",
+                                "type": kind, "refine": "true", "simple": "false", "format": "json",
                                 "address": address, "key": key, "domain": domain})  # fmt: skip
     try:
         res = r.json()["response"]
@@ -70,7 +72,9 @@ def main() -> None:
                     pt = geocode(client, key, domain, address)
                 except (ApiError, httpx.HTTPError) as e:
                     conn.commit()
-                    print(f"\n[멈춤] {address}: {e}\n  키 · 하루 한도를 확인하세요. 받은 데까지 저장했어요.")
+                    print(
+                        f"\n[멈춤] {address}: {e}\n  키 · 하루 한도를 확인하세요. 받은 데까지 저장했어요."
+                    )
                     raise SystemExit(1) from e
                 if a.probe:
                     print(f"--- {address} → {pt}")
