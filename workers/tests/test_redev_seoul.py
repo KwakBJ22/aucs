@@ -1,4 +1,6 @@
-from aucs_workers.collectors.redev_seoul import to_zone
+from datetime import date
+
+from aucs_workers.collectors.redev_seoul import as_of, to_zone
 
 
 def test_to_zone() -> None:
@@ -22,3 +24,10 @@ def test_to_zone() -> None:
     assert '"committee": "2026-04-03"' in z["detail"] and '"union"' not in z["detail"]
     assert '"old": 1625' in z["detail"] and '"rent"' not in z["detail"]
     assert to_zone({"DISTRICT": "", "ZONE_NM": "가"}) is None
+
+
+def test_as_of_is_quarter_end() -> None:
+    z = [{"detail": '{"dates": {"designated": "2026-05-28"}}'}, {"detail": '{"dates": {"plan": "2026-06-25"}}'},
+         {"detail": None}]  # fmt: skip
+    assert as_of(z, date(2026, 11, 16)) == date(2026, 6, 30)
+    assert as_of([{"detail": None}], date(2026, 11, 16)) == date(2026, 11, 16)

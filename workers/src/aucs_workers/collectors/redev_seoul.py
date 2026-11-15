@@ -7,9 +7,11 @@
 - 정비사업 목록(redev)을 받을 때 같이 돎. 따로 돌리면 끝에 새 대표지번 좌표(redev_geo)도 받음.
 """
 
+import calendar
 import json
 import os
 import re
+from datetime import date
 from typing import Any
 
 import httpx
@@ -59,6 +61,23 @@ def to_zone(r: dict[str, Any]) -> dict[str, Any] | None:
             "detail": json.dumps(detail, ensure_ascii=False) if detail else None}  # fmt: skip
 
 
+def as_of(zones: list[dict[str, Any]], today: date) -> date:
+    """자료 기준일(순수 함수): 서울시가 「○○년 ○월 기준」으로 분기마다 내는 자료라, 들어 있는 날짜 가운데
+    가장 늦은 날이 속한 분기의 끝날로 봄(26년 6월 기준 자료 → 2026-06-30). 못 가리면 받은 날."""
+    days = [
+        v
+        for z in zones
+        if z["detail"]
+        for v in (json.loads(z["detail"]).get("dates") or {}).values()
+    ]
+    last = max((d for d in days if d <= today.isoformat()), default=None)
+    if not last:
+        return today
+    y, m = int(last[:4]), int(last[5:7])
+    q = (m - 1) // 3 * 3 + 3
+    return date(y, q, calendar.monthrange(y, q)[1])
+
+
 def fetch(key: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with httpx.Client(timeout=60) as c:
@@ -92,18 +111,21 @@ def main(geo: bool = True) -> None:
             raise SystemExit(
                 "ref.redev_zones 에 detail 칸이 없습니다 — 이주 0059 를 먼저 적용하세요."
             )
+        base = as_of(zones, date.today())
         conn.execute("delete from ref.redev_zones where source = %s", (SOURCE,))
         with conn.cursor() as cur:
             cur.executemany(
                 "insert into ref.redev_zones (source, gu, name, biz_type, stage, address, dong_name, main_no, sub_no,"
                 " source_date, detail) values ('도시정비사업 통계', %(gu)s, %(name)s, %(biz_type)s, %(stage)s,"
-                " %(address)s, %(dong_name)s, %(main_no)s, %(sub_no)s, current_date, %(detail)s::jsonb)",
-                zones,
+                " %(address)s, %(dong_name)s, %(main_no)s, %(sub_no)s, %(base)s, %(detail)s::jsonb)",
+                [{**z, "base": base} for z in zones],
             )
         job.count = len(zones)
     n = sum(1 for z in zones if z["detail"])
     lot = sum(1 for z in zones if z["main_no"])
-    print(f"끝: 구역 {len(zones):,}곳 · 날짜나 세대수 있음 {n:,} · 대표지번 읽음 {lot:,}")
+    print(
+        f"끝: 자료 기준일 {base} · 구역 {len(zones):,}곳 · 날짜나 세대수 있음 {n:,} · 대표지번 읽음 {lot:,}"
+    )
     if geo and os.getenv("VWORLD_API_KEY", "").strip():
         import sys
 
