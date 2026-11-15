@@ -90,8 +90,10 @@ def main() -> None:
 
         out.append("\n# 2. 공동주택 단지 목록")
         apts: list[dict[str, Any]] = []
-        for svc, op in (("AptListService3", "getSigunguAptList3"), ("AptListService2", "getSigunguAptList"),
-                        ("AptListService1", "getSigunguAptList")):  # fmt: skip
+        for svc, op in (
+            ("AptListService4", "getSigunguAptList4"),
+            ("AptListService3", "getSigunguAptList3"),
+        ):
             apts = call(c, out, f"단지 목록 {svc}", f"{GOV}/1613000/{svc}/{op}",
                         {"serviceKey": key, "sigunguCode": SGG, "numOfRows": 5, "pageNo": 1}, sec)  # fmt: skip
             if apts:
@@ -100,8 +102,10 @@ def main() -> None:
 
         out.append("\n# 3. 공동주택 기본 정보 · 상세 정보")
         if code:
-            for svc, op in (("AptBasisInfoServiceV4", "getAphusBassInfoV4"), ("AptBasisInfoServiceV3", "getAphusBassInfoV3"),
-                            ("AptBasisInfoService1", "getAphusBassInfo")):  # fmt: skip
+            for svc, op in (
+                ("AptBasisInfoServiceV5", "getAphusBassInfoV5"),
+                ("AptBasisInfoServiceV4", "getAphusBassInfoV4"),
+            ):
                 if call(
                     c,
                     out,
@@ -125,11 +129,19 @@ def main() -> None:
             paths = list((oas.get("paths") or {}).keys())
             out.append(f"명세의 주소: {paths} · 서버 {oas.get('host')}{oas.get('basePath')}")
         except Exception as e:  # noqa: BLE001
-            paths = ["/getAptInfo", "/getDongInfo"]
+            paths = []
             out.append(f"명세 못 받음({type(e).__name__}) — 후보로 불러 봄")
-        for p in paths[:6]:
-            call(c, out, f"식별정보 {p}", f"https://api.odcloud.kr/api/AptIdInfoSvc/v1{p}",
-                 {"serviceKey": key, "page": 1, "perPage": 3}, sec)  # fmt: skip
+        for op in sorted(
+            {p.rsplit("/", 1)[-1] for p in paths} | {"getAptInfo", "getDongInfo", "getHistInfo"}
+        ):
+            call(
+                c,
+                out,
+                f"식별정보 {op}",
+                f"https://api.odcloud.kr/api/AptIdInfoSvc/v1/{op}",
+                {"serviceKey": key, "page": 1, "perPage": 3},
+                sec,
+            )
 
         out.append("\n# 5. 상가(상권)정보")
         call(c, out, "상권 · 시군구", f"{GOV}/B553077/api/open/sdsc2/storeListInDong",
