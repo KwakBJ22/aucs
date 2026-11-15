@@ -38,6 +38,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.redev_seoul"]
     if key == "probe_more":  # R-ONE 자료 꼴 · 건축물대장 전유부 표본(11/15) — logs/probe_more.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--more"]
+    if key == "probe_units":  # 건축물대장 전유공용면적을 호로 좁혀 받기 표본(11/15) — logs/probe_units.log
+        return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--units"]
     if key == "probe_redev":  # 정비사업 공식 자료(서울 · 경기) 표본 한 번(11/15) — logs/probe_redev.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--redev"]
     if key in KEYS:

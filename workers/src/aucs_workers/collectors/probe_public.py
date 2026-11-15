@@ -222,6 +222,61 @@ def more() -> None:
     print(f"끝: {log}")
 
 
+def units() -> None:
+    """건축물대장 전유공용면적을 「호」로 좁혀 받으면 물건의 호실과 맞는지(11/15) — 물건 40건. logs/probe_units.log"""
+    import re
+    from urllib.parse import unquote
+
+    from aucs_rules.building import parse_jibun
+
+    from aucs_workers.db import connect
+
+    key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
+    key = unquote(key) if "%" in key else key
+    hub = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo"
+    with connect() as conn:
+        its = conn.execute(
+            """select usage_name, region_code, lot_no, building_desc, building_area_m2 from core.items
+               where status_code = '01' and length(region_code) = 10 and lot_no ~ '^[0-9]+(-[0-9]+)?$'
+                 and building_desc ~ '[0-9]+호' and sale_date >= current_date
+                 and usage_name in ('아파트', '다세대', '오피스텔', '근린시설', '연립주택,다세대,빌라', '상가,오피스텔,근린시설')
+               order by md5(item_id) limit 40"""
+        ).fetchall()
+    out = [f"=== {datetime.now():%Y-%m-%d %H:%M} 전유공용면적 — 호로 좁혀 받기 {len(its)}건"]
+    ok = 0
+    with httpx.Client(timeout=40) as c:
+        for usage, code, lot, desc, area in its:
+            plat, bun, ji = parse_jibun(lot) or ("0", "", "")
+            ho = re.search(r"([A-Za-z]?\d+)\s*호", desc or "")
+            dong = re.search(r"(\d+|[가-힣A-Za-z])동\s", desc or "")
+            under = bool(re.search(r"지층|지하|비\d", desc or ""))
+            rows: list[dict[str, Any]] = []
+            for name in [ho.group(1), ("B" + ho.group(1)) if under else None] if ho else []:
+                if not name or rows:
+                    continue
+                time.sleep(0.3)
+                try:
+                    d = c.get(hub, params={"serviceKey": key, "sigunguCd": code[:5], "bjdongCd": code[5:], "platGbCd": plat,
+                                           "bun": bun, "ji": ji, "hoNm": name, "numOfRows": 100, "pageNo": 1, "_type": "json"}).json()  # fmt: skip
+                    rows, _ = first_rows(d)
+                except Exception as e:  # noqa: BLE001
+                    out.append(f"   오류 {type(e).__name__}")
+            rows = [r for r in rows if "hoNm" in r]
+            dongs = sorted({str(r.get("dongNm") or "").strip() for r in rows})
+            own = [r for r in rows if r.get("exposPubuseGbCdNm") == "전유"]
+            if dong and len(dongs) > 1:
+                own = [r for r in own if dong.group(1) in str(r.get("dongNm") or "")]
+            own_area = sum(float(r.get("area") or 0) for r in own)
+            hit = bool(own) and area and abs(own_area - float(area)) <= 1.0
+            ok += bool(hit)
+            out.append(f"{'○' if hit else '×'} {usage} | {str(desc)[:40]} | 우리 면적 {area} | 호 {ho.group(1) if ho else None} 동 {dong.group(1) if dong else None}"
+                       f" | 받은 줄 {len(rows)} 동 {dongs[:4]} | 전유 {[(r.get('mainPurpsCdNm'), r.get('etcPurps'), r.get('area'), r.get('hoNm')) for r in own[:3]]}")  # fmt: skip
+    out.insert(1, f"전유면적이 우리 면적과 맞음(±1㎡): {ok}/{len(its)}")
+    log = LOG.with_name("probe_units.log")
+    log.write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"끝: {log}")
+
+
 def main() -> None:
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
     rone = os.getenv("RONE_API_KEY", "").strip().strip("\"'")
@@ -326,4 +381,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    {"--redev": redev, "--more": more}.get(sys.argv[-1], main)()
+    {"--redev": redev, "--more": more, "--units": units}.get(sys.argv[-1], main)()
