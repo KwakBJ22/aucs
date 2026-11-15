@@ -18,14 +18,19 @@ from typing import Any
 import psycopg
 from aucs_rules import ENGINE_VERSION
 from aucs_rules.appraisal_parts import appraisal_parts
-from aucs_rules.appraisal_points import appraisal_facts, parse_points, plan_zone_of_parcel
+from aucs_rules.appraisal_points import (
+    appraisal_facts,
+    land_plan_of_parcel,
+    parse_points,
+    plan_zone_of_parcel,
+)
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.price import Trade, market_price, trade_region
 from aucs_rules.progress import judge_progress
-from aucs_rules.risk import signals, top_signal
+from aucs_rules.risk import is_land_or_house, signals, top_signal
 from aucs_rules.sale_rate import (
     Sale,
     court_cell,
@@ -65,7 +70,9 @@ class Pre:
     events: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     tenants: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     status_reports: set[str] = field(default_factory=set)
-    docs: dict[tuple[str, str], Any] = field(default_factory=dict)  # (사건, 서류 종류) → 가장 최근 원문
+    docs: dict[tuple[str, str], Any] = field(
+        default_factory=dict
+    )  # (사건, 서류 종류) → 가장 최근 원문
     trades: dict[tuple[str, str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
     buildings: dict[tuple[str, str], list[dict[str, Any]]] = field(default_factory=dict)
     parcels: dict[str, Any] | None = None  # 필지 번호 → 걸린 지역 · 지구(표가 없으면 None)
@@ -306,6 +313,7 @@ def build_facts(
         "note": item.get("note_masked"),
         "lien_reported": "유치권 신고" in cats,
         "rehab_or_bankrupt": "회생·파산" in cats,
+        "duplicate_auction": "중복경매" in cats,
         "stop_attempts": progress.value == "기일이 바뀔 수 있음",
         "creditor_changed": "채권자 바뀜" in cats,
         "claim_after_deadline": any(e["after_deadline"] for e in events),
@@ -325,7 +333,9 @@ def load_land_value(
     """단독·다가구: 같은 동 실거래로 땅값을 역산해 추정 시세 하단·가운데·상단(LAND-01). 지분 물건은 뺌."""
     if not table or not bldg or item.get("is_share") or not item.get("region_code"):
         return None
-    if item.get("usage_name") not in HOUSE_USES and not HOUSE_MAIN.search(bldg.get("main_use") or ""):
+    if item.get("usage_name") not in HOUSE_USES and not HOUSE_MAIN.search(
+        bldg.get("main_use") or ""
+    ):
         return None
     region = trade_region(item["region_code"])
     rows = cur.execute(
@@ -376,16 +386,21 @@ def load_building(
     return summarize(titles, floors, item.get("address"), usage, today)
 
 
-def load_parcel_zone(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> str | None:
-    """필지 토지이용계획(collectors/land_use) → 'zone' / 'district' / 'planned'. 아직 안 받았으면 None."""
+def load_parcel_uses(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> Any:
+    """필지 토지이용계획(collectors/land_use)에 걸린 지역 · 지구 목록. 아직 안 받았으면 None."""
     pnu = pnu_of(item.get("region_code") or "", item.get("lot_no") or "")
     if pre is not None:
-        got = pre.parcels or {}
-        return plan_zone_of_parcel(got[pnu]) if pnu and pnu in got else None
+        return (pre.parcels or {}).get(pnu) if pnu else None
     if not _land_use_ready(cur) or not pnu:
         return None
     row = cur.execute("select uses from core.parcel_land_use where pnu = %s", (pnu,)).fetchone()
-    return plan_zone_of_parcel(row["uses"]) if row else None
+    return row["uses"] if row else None
+
+
+def load_parcel_zone(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> str | None:
+    """필지 토지이용계획 → 'zone' / 'district' / 'planned'. 아직 안 받았으면 None."""
+    uses = load_parcel_uses(cur, item, pre)
+    return plan_zone_of_parcel(uses) if uses is not None else None
 
 
 def _hash(obj: Any) -> str:
@@ -476,9 +491,17 @@ def analyze_item(
             use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)
-    redev = find_zone(cur, item, pre.zones if pre is not None else None)  # 서울 정비사업(지번·단지 이름이 맞을 때만)
+    redev = find_zone(
+        cur, item, pre.zones if pre is not None else None
+    )  # 서울 정비사업(지번·단지 이름이 맞을 때만)
     # 정비구역 안인지(11/14): 감정평가 요항 글 → 없으면 필지 토지이용계획(브이월드, land_use 수집기)
     plan_z = af.get("plan_zone") or load_parcel_zone(cur, item, pre)
+    # 용도지역 · 도시계획시설(11/15): 같은 토지이용계획에서 — 시설은 땅 · 단독에만 뜻이 있어 그때만 남김
+    land_plan = land_plan_of_parcel(load_parcel_uses(cur, item, pre))
+    if land_plan and not is_land_or_house(facts.get("usage_text")):
+        land_plan = {**land_plan, "facilities": []} if land_plan["zones"] else None
+    if land_plan and land_plan["facilities"]:
+        facts["plan_facilities"] = [x["name"] for x in land_plan["facilities"]]
     if not redev and plan_z == "zone":
         # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
         redev = near_zone(cur, item_id) or {
@@ -539,6 +562,7 @@ def analyze_item(
         "cash_need": _cash_need(item, market, cash_tables),
         "redev": redev,
         "plan_zone": plan_z,
+        "land_plan": land_plan,
         "building": bldg,
         "parts": parts or None,
         # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
@@ -604,8 +628,12 @@ def analyze_item(
         " on conflict (item_id, data_kind) do update set status = excluded.status, computed_at = now()",
         [
             (item_id, kind, "extracted" if ok else "missing")
-            for kind, ok in [("item", True), ("status_report", has_sr), ("deliveries", bool(events)),
-                             ("building", bool(bldg))]  # fmt: skip
+            for kind, ok in [
+                ("item", True),
+                ("status_report", has_sr),
+                ("deliveries", bool(events)),
+                ("building", bool(bldg)),
+            ]  # fmt: skip
         ],
     )
     return True
@@ -733,7 +761,9 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
                 try:
                     zones = zones if zones is not None else load_zones(conn)
                     pre = preload(conn, part, today, zones)
-                except psycopg.Error as e:  # 묶어 받기가 안 되면 물건마다 받는 예전 길로 — 분석은 멈추지 않음
+                except (
+                    psycopg.Error
+                ) as e:  # 묶어 받기가 안 되면 물건마다 받는 예전 길로 — 분석은 멈추지 않음
                     conn.rollback()
                     print(f"묶어 받기 실패 → 물건마다 받음: {type(e).__name__} {str(e)[:120]}")
             for n, item_id in enumerate(part):
@@ -744,7 +774,9 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
                 if pre is None or n % COMMIT_EVERY == COMMIT_EVERY - 1:
                     conn.commit()
             conn.commit()
-        if not a.item:  # 추천 점수를 미리 매겨 둠 — 홈은 읽기만(11/14). 여기서 탈이 나도 분석은 끝난 것
+        if (
+            not a.item
+        ):  # 추천 점수를 미리 매겨 둠 — 홈은 읽기만(11/14). 여기서 탈이 나도 분석은 끝난 것
             try:
                 from aucs_workers.jobs.pick_scores import refresh
 

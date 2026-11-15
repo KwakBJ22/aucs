@@ -20,6 +20,12 @@ _SEED = ROOT / "db" / "seed" / "redev_stage_dates.json"
 # 구역에 붙이는 단계 날짜(11/15) — 바뀐 날(…_changed) · 세대수는 안 붙임
 _DATE_KEYS = ("designated", "committee", "union", "review", "plan", "disposal", "move_start",
               "move_end", "construction")  # fmt: skip
+_HOME_KEYS = (
+    "homes_old",
+    "homes_new",
+    "homes_sale",
+    "homes_rent",
+)  # 기존 · 건립 · 분양 · 임대 세대수
 
 _STRIP = re.compile(
     r"\s|\(.*?\)|아파트.*$|주택재건축.*$|재건축.*$|정비사업.*$|조합.*$|리모델링.*$|추진위.*$"
@@ -46,13 +52,17 @@ def stage_dates() -> tuple[str | None, dict[str, dict[str, Any]]]:
 
 
 def with_dates(z: dict[str, Any], gu: str | None, names: list[str | None]) -> dict[str, Any]:
-    """구역에 단계 날짜를 붙임 — 이름이 같은 구역, 없으면 같은 대표지번의 다른 이름. 없으면 그대로."""
+    """구역에 단계 날짜 · 세대수를 붙임 — 이름이 같은 구역, 없으면 같은 대표지번의 다른 이름. 없으면 그대로."""
     as_of, by = stage_dates()
     for name in names:
         d = by.get(f"{gu}|{name}".replace(" ", "")) if gu and name else None
-        dates = {k: d[k] for k in _DATE_KEYS if d.get(k)} if d else None
-        if dates:
-            return {**z, "dates": dates, "dates_as_of": as_of}
+        if not d:
+            continue
+        dates = {k: d[k] for k in _DATE_KEYS if d.get(k)}
+        homes = {k[6:]: d[k] for k in _HOME_KEYS if d.get(k)}  # old · new · sale · rent
+        if dates or homes:
+            more = {"dates": dates, "homes": homes, "dates_as_of": as_of}
+            return {**z, **{k: v for k, v in more.items() if v}}
     return z
 
 

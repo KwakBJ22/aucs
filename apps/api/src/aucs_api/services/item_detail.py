@@ -34,7 +34,7 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        a.result -> 'top' as top, a.result -> 'signals' as signals, a.result -> 'sale_rate' as sale_rate,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
        a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'land_value' as land_value, a.result -> 'redev' as redev,
-       a.result ->> 'plan_zone' as plan_zone,
+       a.result ->> 'plan_zone' as plan_zone, a.result -> 'land_plan' as land_plan,
        a.result -> 'building' as building, a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
@@ -109,6 +109,7 @@ def build_detail(
         q("buy", "무엇을 사나", f"{area}{r['usage_name'] or ''}".strip(" ·"), "gray",
           {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"],
            "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev"),
+           "land_plan": r.get("land_plan"),
            "building": building_lines(r.get("building"))}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals}),
@@ -360,11 +361,16 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
     out["stations"] = walk_stations(stations)
     by_hub: dict[str, dict[str, Any]] = {}
     for h in hubs:  # 환승역은 노선마다 한 줄 → 이름으로 하나
-        x = by_hub.setdefault(h["name"], {"name": h["name"], "lines": [], "straight_m": h["straight_m"]})
+        x = by_hub.setdefault(
+            h["name"], {"name": h["name"], "lines": [], "straight_m": h["straight_m"]}
+        )
         x["lines"].append(h["line"])
         x["straight_m"] = min(x["straight_m"], h["straight_m"])
     out["location"] = location(
-        out["stations"], list(by_hub.values()), zones, inside_zone(r.get("redev"), r.get("plan_zone"))
+        out["stations"],
+        list(by_hub.values()),
+        zones,
+        inside_zone(r.get("redev"), r.get("plan_zone")),
     ).value
     out["appraisal"] = appraisal_section(
         sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)

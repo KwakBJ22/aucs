@@ -36,6 +36,8 @@ MAX_CHARS = 600  # 임대관계 칸은 임차인 열 명분이 들어오기도 �
 
 _EMPTY = re.compile(r"^[\s\-.·:()]*((해당\s*사항\s*)?없\s*음|해당\s*없음|무)?[\s\-.·:()]*$")
 _ATTACH_ONLY = re.compile(r"^\s*(별첨|후면|첨부)[^.]*참조\.?\s*$")
+
+
 def clean(text: str | None) -> str:
     """법원 글의 &amp;quot; 같은 겹친 기호 · <br> · 줄바꿈을 풀어 한 줄로."""
     t = str(text or "")
@@ -154,6 +156,36 @@ def plan_zone_of_parcel(uses: list[dict[str, Any]] | None) -> str | None:
     uses: [{'name': '정비구역', 'incl': '포함'}] — 「접함」(옆 필지)은 구역 안이 아님."""
     names = [str(u.get("name") or "") for u in uses or [] if u.get("incl") != "접함"]
     return plan_zone(", ".join(names))
+
+
+_VAGUE_ZONE = {
+    "도시지역",
+    "도시지역기타",
+    "도시지역미지정",
+    "도시관리계획 입안중",
+    "관리지역미분류",
+}
+
+
+def land_plan_of_parcel(uses: list[dict[str, Any]] | None) -> dict[str, Any] | None:
+    """브이월드 토지이용계획에서 용도지역과 도시계획시설(11/15 — 이미 받아 둔 자료에서 꺼냄).
+    uses: [{'code': 'UQA122', 'name': '제2종일반주거지역', 'incl': '포함'}] — 「접함」(옆 필지)은 뺌.
+    → {'zones': ['제2종일반주거지역'], 'facilities': [{'name': '소로2류(폭 8m~10m)', 'incl': '저촉'}]} 또는 None.
+    용도지역 = UQA(도시지역) · UQB(관리지역), 도시계획시설 = UQS(도로 · 철도 · 주차장) · UQT(공원 · 녹지 · 광장)."""
+    zones: list[str] = []
+    fac: dict[str, str] = {}
+    for u in uses or []:
+        code, name, incl = str(u.get("code") or ""), str(u.get("name") or ""), u.get("incl")
+        if incl == "접함" or not name:
+            continue
+        if code[:3] in ("UQA", "UQB"):
+            if name not in _VAGUE_ZONE and name not in zones:
+                zones.append(name)
+        elif code[:3] in ("UQS", "UQT") and fac.get(name) != "저촉":
+            fac[name] = "저촉" if incl == "저촉" else "포함"
+    if not zones and not fac:
+        return None
+    return {"zones": zones, "facilities": [{"name": k, "incl": v} for k, v in fac.items()]}
 
 
 def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:

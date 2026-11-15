@@ -11,6 +11,12 @@ from typing import Any
 from aucs_rules.redev_member import member_transfer
 from aucs_rules.result import Status
 
+
+def is_land_or_house(usage_text: str | None) -> bool:
+    """땅 · 단독 · 다가구 · 공장처럼 땅을 통째로 사는 물건인지(길 · 도시계획시설 신호가 뜻이 있는 물건)."""
+    return bool(_LAND_OR_HOUSE.search(usage_text or ""))
+
+
 LEVEL_ORDER = {"fatal": 0, "high": 1, "mid": 2, "low": 3, "info": 4}
 
 
@@ -43,6 +49,7 @@ RULE_TYPE = {
     "risk.tenants_unknown": "T1", "risk.family": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
+    "risk.duplicate": "T5", "risk.plan_facility": "T11",  # 11/15 중복경매 · 도시계획시설
     "risk.redev_member": "T7", "risk.partial": "T8", "risk.land_right": "T8",
     "risk.superficies": "T8", "risk.share": "T8", "risk.farmland": "T9", "risk.special_corp": "T9",
     "risk.illegal": "T10", "risk.neighborhood_villa": "T10", "risk.old": "T10", "risk.lien": "T10",
@@ -125,6 +132,15 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.no_road", "high", "맹지 — 길에 닿지 않아 집을 짓기 어려워요")
     elif f.get("no_road") == "check":
         add("risk.no_road", "mid", "지적도에는 맹지 — 실제로 드나드는 길 확인", Status.NEEDS_CHECK)
+    if (pf := f.get("plan_facilities")) and is_land_or_house(f.get("usage_text")):
+        # 토지이용계획의 도시계획시설(도로 · 공원 등)이 이 필지에 걸림(11/15) — 땅 · 단독만
+        add(
+            "risk.plan_facility",
+            "mid",
+            f"도시계획시설({' · '.join(pf[:2])})에 걸린 땅 — 그 부분은 건물을 못 지을 수 있어요",
+            Status.NEEDS_CHECK,
+            facilities=pf,
+        )
     if f.get("narrow_road") and _LAND_OR_HOUSE.search(f.get("usage_text") or ""):
         # 건축법 제2조 제1항 제11호(도로 너비 4m) · 제44조(대지는 도로에 2m 이상 접해야)
         add("risk.narrow_road", "mid", "앞길이 4m보다 좁아요 — 새로 짓기 어려울 수 있어요",
@@ -151,6 +167,12 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.rehab", "mid", "회생·파산 — 정지 가능")
     if f.get("stop_attempts"):
         add("risk.stop", "mid", "정지·연기 신청 — 기일이 바뀔 수 있음")
+    if f.get("duplicate_auction"):  # 문건에 「중복경매통지서」(11/15) — 민사집행법 §87
+        add(
+            "risk.duplicate",
+            "info",
+            "중복경매 — 다른 채권자도 경매를 신청했어요(앞 사건이 취하돼도 절차는 이어져요)",
+        )
     if f.get("resale"):
         add("risk.resale", "mid", "재매각 — 보증금 비율 확인")
     if f.get("creditor_changed"):

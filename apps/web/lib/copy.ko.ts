@@ -1247,6 +1247,17 @@ export const copy = {
     },
     deadlines: "놓치면 안 되는 날",
     redev: "정비사업 구역",
+    // 용도지역 · 도시계획시설(11/15 — 토지이용계획에서). 시설은 땅 · 단독 물건에만 옴
+    zoning: "용도지역",
+    planFacilities: (f?: { name: string }[] | null) =>
+      f?.length ? `도시계획시설에 걸림: ${f.map((x) => x.name).join(" · ")}` : null,
+    // 정비구역 세대수(11/15): 기존 → 새로 짓는 세대(분양 · 임대)
+    redevHomes: (h: { old?: number; new?: number; sale?: number; rent?: number }) => {
+      const n = (v: number) => v.toLocaleString("ko-KR");
+      const parts = [h.sale && `분양 ${n(h.sale)}`, h.rent && `임대 ${n(h.rent)}`].filter(Boolean);
+      const after = h.new ? `${n(h.new)}세대${parts.length ? `(${parts.join(" · ")})` : ""}` : "";
+      return [h.old && `기존 ${n(h.old)}세대`, after].filter(Boolean).join(" → ") || null;
+    },
     // 단계 날짜(11/15 — 서울시 정비사업 추진현황): 있는 것만 차례로 · 끝에 자료 기준일
     redevDates: (d: Record<string, string>, asOf?: string | null) => {
       const day = (s: string) => s.replace(/^(\d+)-0?(\d+)-0?(\d+)$/, "$1. $2. $3.");
