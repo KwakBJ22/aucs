@@ -98,7 +98,7 @@ def redev() -> None:
             for r in rows[1:3]:
                 out.append(f"   다음 줄: {json.dumps(r, ensure_ascii=False)[:700]}")
         out.append("\n# 경기도 일반 정비 사업 추진 현황(경기데이터드림)")
-        for svc in ("GenrlImprvBizpropls", "GenrlImprvBizProplsStus", "GnrlImprvBizpropls"):
+        for svc in ("TBKINTEXHOTELLISTM", "GenrlImprvBizpropls"):
             params: dict[str, Any] = {"Type": "json", "pIndex": 1, "pSize": 5}
             if gg:
                 params["KEY"] = gg
