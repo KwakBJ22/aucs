@@ -1247,6 +1247,24 @@ export const copy = {
     },
     deadlines: "놓치면 안 되는 날",
     redev: "정비사업 구역",
+    // 단계 날짜(11/15 — 서울시 정비사업 추진현황): 있는 것만 차례로 · 끝에 자료 기준일
+    redevDates: (d: Record<string, string>, asOf?: string | null) => {
+      const day = (s: string) => s.replace(/^(\d+)-0?(\d+)-0?(\d+)$/, "$1. $2. $3.");
+      const steps = [
+        ["designated", "구역 지정"],
+        ["committee", "추진위 승인"],
+        ["union", "조합설립인가"],
+        ["plan", "사업시행인가"],
+        ["disposal", "관리처분인가"],
+        ["move_start", "이주 시작"],
+        ["construction", "착공"],
+      ] as const;
+      const line = steps
+        .filter(([k]) => d[k])
+        .map(([k, label]) => `${label} ${day(d[k]!)}`)
+        .join(" · ");
+      return line ? line + (asOf ? ` (${day(asOf)} 기준)` : "") : null;
+    },
     pc: {
       sale: "매각기일",
       appraisal: "감정가",

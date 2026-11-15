@@ -6,11 +6,14 @@
   상호저축은행 · 보험회사 등)에 진 빚 때문에 경매 · 공매되는 경우는 예외 → 낙찰자가 조합원이 된다.
   개인 · 일반 회사가 넣은 경매는 예외가 아니다(대법원 2022다228230 — 관리처분 뒤 강제경매 낙찰자에게 매도청구).
 - 법률 제14943호 부칙 제2조: 재개발은 2018. 1. 25. 전에 사업시행계획인가를 신청한 구역이면 이 제한을 받지 않는다
-  (법제처 해석). 신청일 자료가 없어 재개발은 늘 「확인 필요」.
+  (법제처 해석). 신청일 자료는 없지만 사업시행인가(최초)일이 그 전이면 신청도 그 전 → 제한 없음으로 가름(11/15).
+  인가일이 그 뒤거나 없으면 신청일을 모르니 「확인 필요」 그대로.
+- 단계 날짜(dates): 서울시 정비사업 추진현황(redev_match 가 붙임) — 제목에 인가일을 보여 줌.
 - 채권자가 누구인지는 법원 자료에 가려져 있어 여기서 가르지 않는다 — 등기부로 확인.
 - 가로주택 · 소규모재건축 · 리모델링은 다른 법이라 여기서 다루지 않는다(None).
 """
 
+from datetime import date
 from typing import Any
 
 from aucs_rules.result import RuleResult, Status
@@ -18,6 +21,20 @@ from aucs_rules.result import RuleResult, Status
 RULE_ID = "REDEV-01"
 _REBUILD_AFTER = ("조합설립", "건축심의", "사업시행", "관리처분", "이주", "철거", "착공", "분양")
 _REDEV_AFTER = ("관리처분", "이주", "철거", "착공", "분양")
+OLD_REDEV = date(
+    2018, 1, 25
+)  # 법률 제14943호 부칙 제2조 — 이 날 전에 사업시행인가를 신청한 재개발은 제한 없음
+
+
+def _day(s: str | None) -> date | None:
+    try:
+        return date.fromisoformat(s) if s else None
+    except ValueError:
+        return None
+
+
+def _ko(d: date | None) -> str:
+    return f"({d.year}. {d.month}. {d.day}. 인가)" if d else ""
 
 
 def zone_kind(biz_type: str | None) -> str | None:
@@ -32,23 +49,40 @@ def zone_kind(biz_type: str | None) -> str | None:
     return None
 
 
-def member_transfer(biz_type: str | None, stage: str | None, regulated: bool | None) -> RuleResult:
-    """낙찰자가 조합원이 되는지: {'kind', 'blocked', 'title'}. 규제지역이 아니거나 모르면 None."""
+def member_transfer(
+    biz_type: str | None,
+    stage: str | None,
+    regulated: bool | None,
+    dates: dict[str, Any] | None = None,
+) -> RuleResult:
+    """낙찰자가 조합원이 되는지: {'kind', 'blocked', 'title'}. 규제지역이 아니거나 모르면 None.
+    dates: 단계 날짜({'union', 'plan', 'disposal', …} ISO 글) — 있으면 인가일을 보여 주고 옛 재개발 예외를 가름."""
     kind = zone_kind(biz_type)
     if not kind or not regulated or not stage:
         return RuleResult(None, Status.UNKNOWN, RULE_ID, [])
     after = _REBUILD_AFTER if kind == "rebuild" else _REDEV_AFTER
     blocked = any(s in stage for s in after)
     ev: list[dict[str, Any]] = [{"biz_type": biz_type, "stage": stage, "regulated": regulated}]
+    ds = dates or {}
+    union, plan, disposal = (_day(ds.get(k)) for k in ("union", "plan", "disposal"))
+    if ds:
+        ev[0]["dates"] = {k: ds[k] for k in ("union", "plan", "disposal") if ds.get(k)}
+    if kind == "redev" and blocked and plan and plan < OLD_REDEV:
+        title = (
+            f"재개발 관리처분 뒤지만 사업시행인가가 {plan.year}. {plan.month}. {plan.day}.인 오래된 구역"
+            " — 낙찰자도 조합원이 될 수 있어요(조합에 확인)"
+        )
+        value = {"kind": kind, "blocked": False, "title": title, "old_zone": True}
+        return RuleResult(value, Status.ESTIMATED, RULE_ID, ev)
     if kind == "rebuild":
         title = (
-            "재건축 조합설립 뒤 — 은행·세금 빚으로 나온 경매가 아니면 낙찰받아도 조합원이 못 돼요(현금청산)"
+            f"재건축 조합설립 뒤{_ko(union)} — 은행·세금 빚으로 나온 경매가 아니면 낙찰받아도 조합원이 못 돼요(현금청산)"
             if blocked
             else f"재건축 구역({stage}) — 조합설립 전이라 낙찰자도 조합원이 될 수 있어요"
         )
     else:
         title = (
-            "재개발 관리처분 뒤 — 은행·세금 빚으로 나온 경매가 아니면 현금청산일 수 있어요(오래된 구역은 예외)"
+            f"재개발 관리처분 뒤{_ko(disposal)} — 은행·세금 빚으로 나온 경매가 아니면 현금청산일 수 있어요(오래된 구역은 예외)"
             if blocked
             else f"재개발 구역({stage}) — 관리처분 전이라 낙찰자도 조합원이 될 수 있어요"
         )

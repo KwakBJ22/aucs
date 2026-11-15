@@ -57,8 +57,8 @@ ALIAS = {"경부": "1호선", "경인": "1호선", "경원": "1호선", "장항"
          "과천": "4호선", "안산": "4호선", "일산": "3호선", "용인": "에버"}  # fmt: skip
 
 
-def read_xlsx(data: bytes) -> list[dict[str, str]]:
-    """xlsx 첫 시트 → 줄마다 {머리글: 값}(글자 그대로). 따로 깔 것 없이 zip · xml 만 읽음."""
+def xlsx_rows(data: bytes) -> list[dict[str, str]]:
+    """xlsx 첫 시트 → 줄마다 {칸 글자(A · B …): 값}(글자 그대로 — 날짜는 엑셀 일련번호). zip · xml 만 읽음."""
     z = zipfile.ZipFile(io.BytesIO(data))
     names = z.namelist()
     strs: list[str] = []
@@ -79,6 +79,12 @@ def read_xlsx(data: bytes) -> list[dict[str, str]]:
             if v:
                 row[col] = strs[int(v.group(1))] if 't="s"' in attr else v.group(1)
         rows.append(row)
+    return rows
+
+
+def read_xlsx(data: bytes) -> list[dict[str, str]]:
+    """xlsx 첫 시트 → 줄마다 {머리글: 값}. 첫 줄이 머리글인 표에 씀."""
+    rows = xlsx_rows(data)
     if not rows:
         return []
     head = {col: h.strip() for col, h in rows[0].items()}

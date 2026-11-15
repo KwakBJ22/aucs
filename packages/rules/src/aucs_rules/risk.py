@@ -211,7 +211,9 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             "high",
             "상가 임차인 보증금이 보호 한도를 넘어요 — 떠안을 수 있어요",
         )
-    if tb := f.get("tax_before_tenant"):  # "high"/"mid" — 법정기일 확인 전까지 세금이 먼저라고 봄(11/11)
+    if tb := f.get(
+        "tax_before_tenant"
+    ):  # "high"/"mid" — 법정기일 확인 전까지 세금이 먼저라고 봄(11/11)
         add(
             "risk.tax_first",
             tb if tb in ("high", "mid") else "high",
@@ -230,7 +232,9 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             kind = "(" + " · ".join(x for x in (z.get("biz_type"), z.get("stage")) if x) + ")"
         # 규제지역이면 낙찰자가 조합원이 되는지까지(REDEV-01, 11/13) — 아니거나 모르면 예전 한 줄
         m = (
-            member_transfer(z.get("biz_type"), z.get("stage"), f.get("regulated_area"))
+            member_transfer(
+                z.get("biz_type"), z.get("stage"), f.get("regulated_area"), z.get("dates")
+            )
             if isinstance(z, dict)
             else None
         )

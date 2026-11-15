@@ -75,6 +75,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           <Row
             label={t.redev}
             value={[b.redev.name, b.redev.biz_type, b.redev.stage].filter(Boolean).join(" · ")}
+            note={b.redev.dates && t.redevDates(b.redev.dates, b.redev.dates_as_of)}
           />
         )}
         {b.note && (
