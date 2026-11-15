@@ -9,10 +9,14 @@
     uv run python -m aucs_workers.collectors.station_fix --dry    # 고치지 않고 보여 주기만
 
 - 주소는 db/seed/station_address.csv(경매레이더 「철도역」 표에서 뽑은 것 — 역 이름 · 노선 · 운영기관으로 맞춤).
-- 고치는 때: 지금 좌표가 주소 좌표에서 1.5km 넘게 떨어져 있고, ① 지번 · 도로명 주소 좌표가 서로 맞거나(700m 안)
-  ② 주소 좌표 700m 안에 이름이 같은 다른 노선 역이 있거나 ③ 3km 안에 있으면 그 역 좌표로(같은 역)
-  ④ 적힌 그대로 찾은 주소 좌표가 같은 노선 앞뒤 역 사이에 놓이고 지금 좌표는 안 놓일 때. 그 밖은 「확인 필요」로 적기만 함.
-- 브이월드는 주소를 못 찾으면 길 가운데 같은 거친 좌표로도 답함(「○○대로 지하 1280」들이 한 점) — 그런 좌표로는 ④ 를 안 씀.
+- 고치는 때(지금 좌표가 주소 좌표에서 700m 넘게 떨어진 역 가운데):
+  ① 지번 · 도로명 주소 좌표가 서로 맞음(700m 안) ② 주소 좌표 700m 안에 이름이 같은 다른 노선 역이 있음
+  ③ 3km 안에 있으면 그 역 좌표로(같은 역) ④ 믿을 만한 주소 좌표가 같은 노선 앞뒤 역 사이에 놓이고 지금 좌표는 안 놓임
+  ⑤ 지금 좌표가 같은 노선 다른 역과 똑같음(옆 역 좌표를 베껴 적은 것 — 발산 = 마곡 · 산본 = 수리산 · 송도 = 연수).
+  ① ~ ④ 는 1.5km 넘게 어긋날 때만(700m ~ 1.5km 는 역무실 주소일 수 있어 ⑤ 만). 그 밖은 「확인 필요」로 적기만 함.
+- 믿을 만한 주소 좌표: 브이월드는 건물번호를 못 찾으면 길 가운데 같은 거친 좌표로 답함(「○○대로 지하 1280」들이 한 점).
+  그래서 주소를 먼저 다 물어 두고, 서로 다른 주소가 같은 점으로 나온 것은 거친 좌표로 보고 ④ ⑤ 에 안 씀.
+  도로명은 「지하」를 뺀 번호부터 물음(건물번호는 길 시작점부터의 거리라 그 번호 건물이 역 자리).
 - 결과는 화면과 logs/station_fix.log 에. 다시 돌려도 됨(이미 고친 역은 그대로). 키: .env 의 VWORLD_API_KEY.
 """
 
@@ -39,7 +43,8 @@ NEAR_M = 700  # 주소 좌표와 이만큼 안이면 같은 자리로 봄(역무
 FAR_M = 1500  # 이보다 멀면 좌표가 틀린 것
 
 Pt = tuple[float, float]  # (경도, 위도)
-Cand = tuple[Pt, bool]  # (좌표, 적힌 그대로 찾았나)
+Cand = tuple[Pt, bool]  # (좌표, 믿을 만한가 — 다른 주소와 같은 점이면 거친 좌표)
+SAME_M = 150  # 같은 노선 다른 역과 이만큼 안이면 좌표를 베껴 적은 것
 _PAREN = re.compile(r"\([^)]*\)?")
 # 맨 뒤의 「○○로(길)」 + 건물번호 — 「건원대로 34번길 32-29」는 「건원대로 34번길」 · 「32-29」
 _ROAD = re.compile(r"^(.*(?:로|길))\s*(지하)?\s*(\d+(?:-\d+)?)")
@@ -63,13 +68,12 @@ def base_name(name: str) -> str:
 
 
 def road_forms(addr: str) -> list[str]:
-    """도로명주소 → 물어볼 꼴들(「지하」를 넣은 것 · 뺀 것). 건물번호까지만."""
+    """도로명주소 → 물어볼 꼴들(「지하」를 뺀 것 먼저 · 넣은 것). 건물번호까지만."""
     m = _ROAD.match(_PAREN.sub(" ", addr.replace("_x000D_", " ")).strip())
     if not m:
         return []
     head, under, no = m.groups()
-    out = [f"{head} 지하 {no}"] if under else []
-    return [*out, f"{head} {no}"]
+    return [f"{head} {no}", *([f"{head} 지하 {no}"] if under else [])]
 
 
 def lot_form(addr: str) -> str | None:
@@ -85,7 +89,7 @@ def between(p: Pt, sides: list[Pt]) -> float | None:
     """같은 노선 앞뒤 역 사이에 놓이나 → 돌아가는 거리(m, 작을수록 자연스러움). 안 놓이면 None."""
     if len(sides) == 2:
         extra = dist_m(p, sides[0]) + dist_m(p, sides[1]) - dist_m(sides[0], sides[1])
-        return extra if extra <= 0.5 * dist_m(sides[0], sides[1]) + 500 else None
+        return extra if extra <= 0.3 * dist_m(sides[0], sides[1]) + 300 else None
     if len(sides) == 1:  # 끝 역
         d = dist_m(p, sides[0])
         return d if d <= 5000 else None
@@ -93,31 +97,42 @@ def between(p: Pt, sides: list[Pt]) -> float | None:
 
 
 def decide(
-    old: Pt, road: Cand | None, lot: Cand | None, twins: list[Pt], sides: list[Pt]
+    old: Pt,
+    road: Cand | None,
+    lot: Cand | None,
+    twins: list[Pt],
+    sides: list[Pt],
+    copied: bool = False,
 ) -> tuple[str, Pt | None]:
-    """→ (ok · none · near · fix · check, 새 좌표). twins: 이름이 같은 다른 노선 역 · sides: 같은 노선 앞뒤 역."""
+    """→ (ok · none · near · fix · check, 새 좌표). twins: 이름이 같은 다른 노선 역 · sides: 같은 노선 앞뒤 역 ·
+    copied: 지금 좌표가 같은 노선 다른 역과 똑같음."""
     cand = [c for c in (road, lot) if c]
     if not cand:
         return "none", None
+    good = [p for p, ok in cand if ok]
+    fit = sorted((x, p) for p in good if (x := between(p, sides)) is not None)
+    if copied:  # 옆 역 좌표를 베낀 역은 700m 만 어긋나도 — 앞뒤 역 사이에 놓이는 것 먼저
+        near = sorted((dist_m(old, p), p) for p in good if dist_m(old, p) <= TWIN_M)
+        pick = fit[0][1] if fit else (near[0][1] if near else None)
+        if pick and dist_m(old, pick) > NEAR_M:
+            return "fix", pick
     d = min(dist_m(old, p) for p, _ in cand)
     if d <= NEAR_M:
         return "ok", None
-    if d <= FAR_M:
-        return "near", None
-    best = sorted(cand, key=lambda c: not c[1])[0][0]  # 적힌 그대로 찾은 것 먼저
-    if road and lot and dist_m(road[0], lot[0]) <= NEAR_M:
-        return "fix", best
-    for p, _ in cand:
-        if any(dist_m(p, t) <= NEAR_M for t in twins):
-            return "fix", p
-    for t in twins:
-        if dist_m(old, t) > FAR_M and any(dist_m(p, t) <= TWIN_M for p, _ in cand):
-            return "fix", t
-    if between(old, sides) is None:
-        fit = sorted((x, p) for p, exact in cand if exact and (x := between(p, sides)) is not None)
-        if fit:
+    far = d > FAR_M
+    best = good[0] if good else cand[0][0]
+    if far:
+        if road and lot and dist_m(road[0], lot[0]) <= NEAR_M:
+            return "fix", best
+        for p, _ in cand:
+            if any(dist_m(p, t) <= NEAR_M for t in twins):
+                return "fix", p
+        for t in twins:
+            if dist_m(old, t) > FAR_M and any(dist_m(p, t) <= TWIN_M for p, _ in cand):
+                return "fix", t
+        if fit and between(old, sides) is None:
             return "fix", fit[0][1]
-    return "check", best
+    return ("check" if far else "near"), best
 
 
 def main() -> None:
@@ -132,7 +147,7 @@ def main() -> None:
         seed = {(r["name_ko"], r["line_name"], r["operator"]): r for r in csv.DictReader(f)}
     lines: list[str] = []
     n: dict[str, int] = {}
-    cache: dict[tuple[str, str], Cand | None] = {}
+    cache: dict[tuple[str, str], Pt | None] = {}
     # 같은 노선 앞뒤 역(주소 자료가 운영기관 · 노선 · 역번호 순)
     order = list(seed)
     sides_of: dict[tuple[str, str, str], list[tuple[str, str, str]]] = {}
@@ -147,79 +162,99 @@ def main() -> None:
                       st_x(geom::geometry), st_y(geom::geometry) from ref.stations order by station_id"""
         ).fetchall()
         by_base: dict[str, list[tuple[int, Pt]]] = {}
+        by_line: dict[str, list[tuple[int, str, Pt]]] = {}
         now_at: dict[tuple[str, str, str], Pt] = {}  # 지금 좌표(이번에 고친 것 반영)
+        # 11/15 두 번째 실행이 거친 좌표로 옮겨 버린 역 — 원래(틀린) 좌표로 보고 다시 가림
+        redo = {("동수", "인천1호선", "인천교통공사"): (126.7052062, 37.4562557)}
+        rows = [(*r[:4], *redo.get((r[1], r[2], r[3]), (r[4], r[5]))) for r in rows]
         for sid, name, line, op, x, y in rows:
             by_base.setdefault(base_name(name), []).append((sid, (x, y)))
+            by_line.setdefault(line, []).append((sid, base_name(name), (x, y)))
             now_at[(name, line, op)] = (x, y)
         print(
             f"[시작] 역 {len(rows):,}곳 · 주소 {len(seed):,}줄"
             + (" · 보여 주기만" if a.dry else "")
         )
+        # 1) 주소를 먼저 다 물어 둠(같은 점으로 나온 주소를 가려내려고)
+        asked: dict[int, tuple[tuple[str, str] | None, tuple[str, str] | None]] = {}
         with httpx.Client(timeout=30) as client:
 
-            def ask(addr: str, kind: str) -> Cand | None:
-                """적힌 그대로 먼저, 없으면 비슷한 주소로(거친 좌표)."""
+            def ask(addr: str, kind: str) -> Pt | None:
                 if (addr, kind) not in cache:
                     time.sleep(GAP)
-                    pt = geocode(client, key, domain, addr, kind, refine=False)
-                    if pt is None:
-                        time.sleep(GAP)
-                        rough = geocode(client, key, domain, addr, kind)
-                        cache[(addr, kind)] = (rough, False) if rough else None
-                    else:
-                        cache[(addr, kind)] = (pt, True)
+                    cache[(addr, kind)] = geocode(client, key, domain, addr, kind)
                 return cache[(addr, kind)]
 
             for i, (sid, name, line, op, x, y) in enumerate(rows, 1):
                 s = seed.get((name, line, op))
-                old: Pt = (x, y)
-                road = lot = None
+                rk = lk = None
                 try:
                     if s:
                         for form in road_forms(s["road_address"] or ""):
-                            road = ask(form, "road")
-                            if road:
+                            if ask(form, "road"):
+                                rk = (form, "road")
                                 break
-                        if not road or dist_m(old, road[0]) > NEAR_M:  # 맞으면 지번은 안 물음
+                        pt = cache[rk] if rk else None
+                        if not pt or dist_m((x, y), pt) > NEAR_M:  # 맞으면 지번은 안 물음
                             # 지번 칸이 비고 도로명 칸에 지번이 적힌 역도 있음
                             form2 = lot_form(s["lot_address"] or "") or lot_form(
                                 s["road_address"] or ""
                             )
-                            lot = ask(form2, "parcel") if form2 else None
+                            if form2 and ask(form2, "parcel"):
+                                lk = (form2, "parcel")
                 except (ApiError, httpx.HTTPError) as e:
-                    conn.commit()
                     print(
-                        f"\n[멈춤] {name}({line}): {e}\n  키 · 하루 한도를 확인하세요. 고친 데까지 저장했어요."
+                        f"\n[멈춤] {name}({line}): {e}\n  키 · 하루 한도를 확인하세요. 아무것도 고치지 않았어요."
                     )
                     raise SystemExit(1) from e
-                twins = [p for t, p in by_base.get(base_name(name), []) if t != sid]
-                sides = [now_at[k] for k in sides_of.get((name, line, op), []) if k in now_at]
-                what, new = decide(old, road, lot, twins, sides)
-                n[what] = n.get(what, 0) + 1
-                if what in ("fix", "check") and new:
-                    lines.append(
-                        f"{'고침' if what == 'fix' else '확인 필요'} · {name}({line} · {op}) "
-                        f"{y:.5f},{x:.5f} → {new[1]:.5f},{new[0]:.5f} · {dist_m(old, new) / 1000:.1f}km"
-                        f" · {(s or {}).get('road_address') or (s or {}).get('lot_address') or ''}"
-                        + "".join(
-                            f" · {w} {c[0][1]:.5f},{c[0][0]:.5f}{'' if c[1] else '(거침)'}"
-                            for w, c in (("도로명", road), ("지번", lot))
-                            if c
-                        )
-                    )
-                    print("  " + lines[-1], flush=True)
-                if what == "fix" and new and not a.dry:
-                    conn.execute(
-                        """update ref.stations
-                           set geom = st_setsrid(st_makepoint(%s::float8, %s::float8), 4326)::geography
-                           where station_id = %s""",
-                        (new[0], new[1], sid),
-                    )
-                    job.count += 1
-                    now_at[(name, line, op)] = new
+                asked[sid] = (rk, lk)
                 if i % 200 == 0:
-                    conn.commit()
-                    print(f"  {i:,}/{len(rows):,}", flush=True)
+                    print(f"  주소 {i:,}/{len(rows):,}", flush=True)
+        shared: dict[tuple[float, float], int] = {}
+        for pt in cache.values():
+            if pt:
+                k5 = (round(pt[0], 5), round(pt[1], 5))
+                shared[k5] = shared.get(k5, 0) + 1
+
+        def cand_of(k: tuple[str, str] | None) -> Cand | None:
+            pt = cache.get(k) if k else None
+            return (pt, shared[(round(pt[0], 5), round(pt[1], 5))] == 1) if pt else None
+
+        # 2) 견주고 고침
+        for sid, name, line, op, x, y in rows:
+            s = seed.get((name, line, op))
+            old: Pt = (x, y)
+            road, lot = cand_of(asked[sid][0]), cand_of(asked[sid][1])
+            twins = [p for t, p in by_base.get(base_name(name), []) if t != sid]
+            sides = [now_at[k] for k in sides_of.get((name, line, op), []) if k in now_at]
+            copied = any(
+                t != sid and b != base_name(name) and dist_m(old, p) <= SAME_M
+                for t, b, p in by_line.get(line, [])
+            )
+            what, new = decide(old, road, lot, twins, sides, copied)
+            n[what] = n.get(what, 0) + 1
+            if what in ("fix", "check") and new:
+                lines.append(
+                    f"{'고침' if what == 'fix' else '확인 필요'} · {name}({line} · {op}) "
+                    f"{y:.5f},{x:.5f} → {new[1]:.5f},{new[0]:.5f} · {dist_m(old, new) / 1000:.1f}km"
+                    f" · {(s or {}).get('road_address') or (s or {}).get('lot_address') or ''}"
+                    + "".join(
+                        f" · {w} {c[0][1]:.5f},{c[0][0]:.5f}{'' if c[1] else '(거침)'}"
+                        for w, c in (("도로명", road), ("지번", lot))
+                        if c
+                    )
+                    + (" · 옆 역과 같은 좌표였음" if copied else "")
+                )
+                print("  " + lines[-1], flush=True)
+            if what == "fix" and new and not a.dry:
+                conn.execute(
+                    """update ref.stations
+                       set geom = st_setsrid(st_makepoint(%s::float8, %s::float8), 4326)::geography
+                       where station_id = %s""",
+                    (new[0], new[1], sid),
+                )
+                job.count += 1
+                now_at[(name, line, op)] = new
         msg = (
             f"역 {len(rows):,}곳 · 맞음 {n.get('ok', 0):,} · 고침 {n.get('fix', 0)} · 확인 필요 {n.get('check', 0)}"
             f" · 조금 다름 {n.get('near', 0)} · 주소로 못 찾음 {n.get('none', 0)}"
