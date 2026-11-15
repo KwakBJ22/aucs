@@ -9,6 +9,7 @@
 
 import json
 import os
+import sys
 import time
 from datetime import date, datetime
 from typing import Any
@@ -75,6 +76,41 @@ def call(client: httpx.Client, out: list[str], label: str, url: str, params: dic
     out.append(f"   칸({len(rows[0])}): {', '.join(rows[0].keys())}")
     out.append(f"   첫 줄: {json.dumps(rows[0], ensure_ascii=False)[:700]}")
     return rows
+
+
+def redev() -> None:
+    """정비사업 공식 자료 표본(11/15): 서울 열린데이터광장 두 자료 · 경기데이터드림. 키가 없으면 견본 키(5줄)."""
+    seoul = os.getenv("SEOUL_OPENAPI_KEY", "").strip().strip("\"'") or "sample"
+    gg = os.getenv("GG_OPENAPI_KEY", "").strip().strip("\"'")
+    sec = [seoul if seoul != "sample" else "", gg]
+    out = [f"=== {datetime.now():%Y-%m-%d %H:%M} 정비사업 공식 자료 표본 (서울 키 {'있음' if seoul != 'sample' else '견본'} · 경기 키 {'있음' if gg else '견본'})"]  # fmt: skip
+    with httpx.Client(timeout=30, follow_redirects=True) as c:
+        out.append("\n# 서울 도시정비사업 통계(OA-22856) · 서울플랜+ 정비사업 현황(OA-23112)")
+        for svc in ("TbSeoulRedevStatus", "vnBsnsNmtn"):
+            rows = call(
+                c,
+                out,
+                f"서울 {svc}",
+                f"http://openapi.seoul.go.kr:8088/{seoul}/json/{svc}/1/5/",
+                {},
+                sec,
+            )
+            for r in rows[1:3]:
+                out.append(f"   다음 줄: {json.dumps(r, ensure_ascii=False)[:700]}")
+        out.append("\n# 경기도 일반 정비 사업 추진 현황(경기데이터드림)")
+        for svc in ("GenrlImprvBizpropls", "GenrlImprvBizProplsStus", "GnrlImprvBizpropls"):
+            params: dict[str, Any] = {"Type": "json", "pIndex": 1, "pSize": 5}
+            if gg:
+                params["KEY"] = gg
+            rows = call(c, out, f"경기 {svc}", f"https://openapi.gg.go.kr/{svc}", params, sec)
+            for r in rows[1:3]:
+                out.append(f"   다음 줄: {json.dumps(r, ensure_ascii=False)[:900]}")
+            if rows:
+                break
+    log = LOG.with_name("probe_redev.log")
+    log.parent.mkdir(exist_ok=True)
+    log.write_text("\n".join(out) + "\n", encoding="utf-8")
+    print(f"끝: {log}")
 
 
 def main() -> None:
@@ -181,4 +217,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    redev() if "--redev" in sys.argv else main()
