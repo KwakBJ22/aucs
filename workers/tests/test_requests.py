@@ -6,4 +6,5 @@ def test_request_command() -> None:
 
     assert command("daily")[-1] == "daily"
     assert command("analyze_item:B1-2024타경1-1")[-1] == "B1-2024타경1-1"
+    assert command("station_fix")[-1] == "aucs_workers.collectors.station_fix"
     assert command("rm -rf") is None

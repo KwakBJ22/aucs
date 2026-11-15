@@ -17,6 +17,7 @@ REQUESTABLE = {
     "daily": "아침 묶음 전체", "results": "법원 매각결과", "items": "법원 경매 물건", "docs": "사건 서류",
     "analyze": "물건 분석", "notify": "알림", "buildings": "건축물대장", "onbid": "공매(온비드)",
     "trades": "실거래가", "redev": "정비사업", "watched": "관심 바로 준비", "regions": "법정동 표",
+    "station_fix": "역 좌표 바로잡기",
 }  # fmt: skip
 PLANS = ("basic", "pro")
 

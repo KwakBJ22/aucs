@@ -24,6 +24,8 @@ def command(key: str) -> list[str] | None:
     """요청 이름 → 실행할 명령. 모르는 이름은 None."""
     if key.startswith("analyze_item:"):
         return [sys.executable, "-m", "aucs_workers.jobs.analyze", "--item", key.split(":", 1)[1]]
+    if key == "station_fix":  # 역 좌표를 주소와 견줘 바로잡기(11/15) — 5분쯤
+        return [sys.executable, "-m", "aucs_workers.collectors.station_fix"]
     if key in KEYS:
         return [
             "powershell.exe",
