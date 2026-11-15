@@ -27,7 +27,7 @@ def test_to_zone() -> None:
 
 
 def test_as_of_is_quarter_end() -> None:
-    z = [{"detail": '{"dates": {"designated": "2026-05-28"}}'}, {"detail": '{"dates": {"plan": "2026-06-25"}}'},
+    z = [{"detail": '{"dates": {"designated": "2026-05-28"}}'}, {"detail": '{"dates": {"plan": "2026-06-25", "move_end": "2026-10-31"}}'},
          {"detail": None}]  # fmt: skip
     assert as_of(z, date(2026, 11, 16)) == date(2026, 6, 30)
     assert as_of([{"detail": None}], date(2026, 11, 16)) == date(2026, 11, 16)

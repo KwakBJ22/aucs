@@ -68,7 +68,8 @@ def as_of(zones: list[dict[str, Any]], today: date) -> date:
         v
         for z in zones
         if z["detail"]
-        for v in (json.loads(z["detail"]).get("dates") or {}).values()
+        for k, v in (json.loads(z["detail"]).get("dates") or {}).items()
+        if not k.startswith("move_")  # 이주 시작 · 종료는 앞날의 예정일이 섞여 있어 뺌
     ]
     last = max((d for d in days if d <= today.isoformat()), default=None)
     if not last:
