@@ -21,6 +21,8 @@ INSIDE = {"zone": "정비구역 안", "district": "재정비촉진지구 안", "
 DONE_STAGES = ("준공", "청산", "해산", "입주")
 SKIP_TYPES = ("지역주택",)
 
+# 정비구역은 우리가 받는 자료만 씀(서울 정보몽땅 「사업장 목록」) — 강사 파일에서 온 줄은 안 봄(11/15 대표님)
+ZONE_OURS_SQL = "z.source = '사업장 목록'"
 # 정비사업 한 줄 → ref.place_points 주소(수집기와 API 가 같은 식을 씀)
 ZONE_ADDRESS_SQL = (
     "'서울특별시 ' || z.gu || ' ' || z.dong_name || ' ' || z.main_no"

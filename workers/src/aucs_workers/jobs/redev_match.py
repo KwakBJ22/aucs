@@ -6,26 +6,11 @@
 구역 안 다른 지번은 못 잡습니다 — 토지이용계획(vworld)을 붙이면 보완.
 """
 
-import json
 import re
-from functools import lru_cache
 from typing import Any
 
-from aucs_rules.location import ZONE_ADDRESS_SQL, ZONE_GUESS_M, zone_usable
+from aucs_rules.location import ZONE_ADDRESS_SQL, ZONE_GUESS_M, ZONE_OURS_SQL, zone_usable
 from aucs_rules.redev_member import zone_kind
-
-from aucs_workers.db import ROOT
-
-_SEED = ROOT / "db" / "seed" / "redev_stage_dates.json"
-# 구역에 붙이는 단계 날짜(11/15) — 바뀐 날(…_changed) · 세대수는 안 붙임
-_DATE_KEYS = ("designated", "committee", "union", "review", "plan", "disposal", "move_start",
-              "move_end", "construction")  # fmt: skip
-_HOME_KEYS = (
-    "homes_old",
-    "homes_new",
-    "homes_sale",
-    "homes_rent",
-)  # 기존 · 건립 · 분양 · 임대 세대수
 
 _STRIP = re.compile(
     r"\s|\(.*?\)|아파트.*$|주택재건축.*$|재건축.*$|정비사업.*$|조합.*$|리모델링.*$|추진위.*$"
@@ -39,31 +24,6 @@ def zone_key(name: str) -> str | None:
     if len(k) < 3 or re.search(r"(구|역)$", k) or re.search(r"[0-9]", k):
         return None
     return k
-
-
-@lru_cache(maxsize=1)
-def stage_dates() -> tuple[str | None, dict[str, dict[str, Any]]]:
-    """서울시 정비사업 추진현황의 단계 날짜(collectors/redev_dates 가 뽑아 둔 것) → (기준일, {「구|구역명」: 날짜})."""
-    try:
-        d = json.loads(_SEED.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None, {}
-    return d.get("as_of"), {k.replace(" ", ""): v for k, v in (d.get("zones") or {}).items()}
-
-
-def with_dates(z: dict[str, Any], gu: str | None, names: list[str | None]) -> dict[str, Any]:
-    """구역에 단계 날짜 · 세대수를 붙임 — 이름이 같은 구역, 없으면 같은 대표지번의 다른 이름. 없으면 그대로."""
-    as_of, by = stage_dates()
-    for name in names:
-        d = by.get(f"{gu}|{name}".replace(" ", "")) if gu and name else None
-        if not d:
-            continue
-        dates = {k: d[k] for k in _DATE_KEYS if d.get(k)}
-        homes = {k[6:]: d[k] for k in _HOME_KEYS if d.get(k)}  # old · new · sale · rent
-        if dates or homes:
-            more = {"dates": dates, "homes": homes, "dates_as_of": as_of}
-            return {**z, **{k: v for k, v in more.items() if v}}
-    return z
 
 
 def dong_of(address: str | None) -> str | None:
@@ -104,8 +64,8 @@ def load_zones(conn: Any) -> dict[tuple[str, str], list[dict[str, Any]]]:
     """서울 정비구역 전부를 (구, 동)으로 묶어 한 번에(11/14) — 분석이 물건마다 묻지 않게. 줄 순서는 find_zone 과 같음."""
     out: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for r in conn.execute(
-        """select gu, dong_name, name, biz_type, stage, main_no, sub_no from ref.redev_zones
-           order by source = '사업장 목록' desc, zone_id"""
+        f"""select z.gu, z.dong_name, z.name, z.biz_type, z.stage, z.main_no, z.sub_no
+            from ref.redev_zones z where {ZONE_OURS_SQL} order by z.zone_id"""
     ).fetchall():
         gu, dong, name, biz, stage, main_no, sub_no = (
             (r[k] for k in ("gu", "dong_name", "name", "biz_type", "stage", "main_no", "sub_no"))
@@ -139,8 +99,9 @@ def find_zone(
         rows: list[Any] = zones_by.get((item.get("sigungu") or "", dong), [])
     else:
         rows = cur.execute(
-            """select name, biz_type, stage, main_no, sub_no, dong_name from ref.redev_zones
-               where gu = %s and dong_name = %s order by source = '사업장 목록' desc, zone_id""",
+            f"""select z.name, z.biz_type, z.stage, z.main_no, z.sub_no, z.dong_name
+                from ref.redev_zones z
+                where z.gu = %s and z.dong_name = %s and {ZONE_OURS_SQL} order by z.zone_id""",
             (item.get("sigungu"), dong),
         ).fetchall()
     zones = [
@@ -154,33 +115,29 @@ def find_zone(
     z = pick(item, zones)
     if not z:
         return None
-    out = {k: z.get(k) for k in ("name", "biz_type", "stage", "how")}
-    lot = (z.get("main_no"), z.get("sub_no") or 0)
-    same = [x["name"] for x in zones if lot[0] and (x.get("main_no"), x.get("sub_no") or 0) == lot]
-    return with_dates(out, item.get("sigungu"), [z.get("name"), *same])
+    return {k: z.get(k) for k in ("name", "biz_type", "stage", "how")}
 
 
 def near_zone(cur: Any, item_id: str) -> dict[str, Any] | None:
     """토지 이용 계획이 「정비구역」인 물건에 어느 구역인지 잇기(11/14): 대표지번이 가장 가까운(500m 안)
     재개발 · 재건축 구역. 구역 경계가 아니라 「아마 이 구역」 — how 에 그렇게 적음."""
     rows = cur.execute(
-        f"""select z.name, z.biz_type, z.stage, round(st_distance(p.geom, i.geom))::int as m, z.gu
+        f"""select z.name, z.biz_type, z.stage, round(st_distance(p.geom, i.geom))::int as m
             from core.items i
             join ref.place_points p on p.geom is not null and i.geom is not null
              and st_dwithin(p.geom, i.geom, {ZONE_GUESS_M})
-            join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address
+            join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address and {ZONE_OURS_SQL}
             where i.item_id = %s
-            order by m, z.source = '사업장 목록' desc limit 20""",
+            order by m, z.zone_id limit 20""",
         (item_id,),
     ).fetchall()
     for r in rows:
         z = (
             r
             if isinstance(r, dict)
-            else dict(zip(("name", "biz_type", "stage", "m", "gu"), r, strict=False))
+            else dict(zip(("name", "biz_type", "stage", "m"), r, strict=False))
         )
         if zone_usable(z.get("stage"), z.get("biz_type")) and zone_kind(z.get("biz_type")):
-            out = {"name": z["name"], "biz_type": z["biz_type"], "stage": z["stage"],
-                   "how": f"토지 이용 계획 · 가까운 구역(약 {z['m']}m)"}  # fmt: skip
-            return with_dates(out, z.get("gu"), [z["name"]])
+            return {"name": z["name"], "biz_type": z["biz_type"], "stage": z["stage"],
+                    "how": f"토지 이용 계획 · 가까운 구역(약 {z['m']}m)"}  # fmt: skip
     return None

@@ -12,7 +12,7 @@ import os
 import time
 
 import httpx
-from aucs_rules.location import ZONE_ADDRESS_SQL
+from aucs_rules.location import ZONE_ADDRESS_SQL, ZONE_OURS_SQL
 
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
@@ -22,7 +22,7 @@ GAP = 0.2
 TARGETS_SQL = f"""
 select distinct {ZONE_ADDRESS_SQL} as address
 from ref.redev_zones z
-where z.dong_name is not null and z.main_no is not null
+where {ZONE_OURS_SQL} and z.dong_name is not null and z.main_no is not null
   and not exists (select 1 from ref.place_points p where p.address = {ZONE_ADDRESS_SQL})
 order by 1
 """

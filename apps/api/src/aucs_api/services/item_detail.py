@@ -7,7 +7,14 @@ from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
 from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
-from aucs_rules.location import HUBS, ZONE_ADDRESS_SQL, ZONE_NEAR_M, inside_zone, location
+from aucs_rules.location import (
+    HUBS,
+    ZONE_ADDRESS_SQL,
+    ZONE_NEAR_M,
+    ZONE_OURS_SQL,
+    inside_zone,
+    location,
+)
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
@@ -307,9 +314,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                     from core.items i
                     join ref.place_points p on p.geom is not null and i.geom is not null
                      and st_dwithin(p.geom, i.geom::geography, {ZONE_NEAR_M})
-                    join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address
+                    join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address and {ZONE_OURS_SQL}
                     where i.item_id = %s
-                    order by straight_m, z.source = '사업장 목록' desc limit 30""",
+                    order by straight_m, z.zone_id limit 30""",
                 (item_id,),
             )
             q_sale = c.execute(
