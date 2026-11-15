@@ -99,13 +99,34 @@ def redev() -> None:
                 out.append(f"   다음 줄: {json.dumps(r, ensure_ascii=False)[:700]}")
         out.append("\n# 경기도 일반 정비 사업 추진 현황(경기데이터드림)")
         for svc in ("GenrlimprvBizpropls",):
-            params: dict[str, Any] = {"Type": "json", "pIndex": 1, "pSize": 5}
+            params: dict[str, Any] = {"Type": "json", "pIndex": 1, "pSize": 1000 if gg else 5}
             if gg:
                 params["KEY"] = gg
             rows = call(c, out, f"경기 {svc}", f"https://openapi.gg.go.kr/{svc}", params, sec)
             for r in rows[1:3]:
                 out.append(f"   다음 줄: {json.dumps(r, ensure_ascii=False)[:900]}")
             if rows:
+                from collections import Counter
+
+                for col in ("BIZ_STEP_NM", "BIZ_TYPE_NM", "SIGUN_NM"):
+                    out.append(
+                        f"   {col}: {Counter(str(r.get(col)) for r in rows).most_common(40)}"
+                    )
+                addr = [str(r.get("LOCPLC_ADDR") or "") for r in rows]
+                out.append(
+                    f"   주소: 「경기도」로 시작 {sum(a.startswith('경기도') for a in addr)} · 번지 있음 {sum('번지' in a for a in addr)} · 빈 것 {sum(not a for a in addr)}"
+                )
+                out.append(f"   주소 예: {addr[5:45:4]}")
+                for col in (
+                    "ASSOCTN_FOUND_CONFMTN_DE",
+                    "BIZ_IMPLMTN_CONFMTN_DE",
+                    "MANAGE_DISPOSIT_CONFMTN_DE",
+                    "STRCONTR_DE",
+                    "IMPRV_ZONE_APPONT_FIRST_DE",
+                    "PROPLSN_COMMISN_APRV_DE",
+                ):
+                    vals = [str(r.get(col)) for r in rows if r.get(col)]
+                    out.append(f"   {col}: 있음 {len(vals)} · 예 {vals[:4]}")
                 break
     log = LOG.with_name("probe_redev.log")
     log.parent.mkdir(exist_ok=True)
