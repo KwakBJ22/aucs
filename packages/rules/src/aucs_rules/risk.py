@@ -45,7 +45,7 @@ FAILURE_TYPES = {
     "T11": "값어치·대출·자금",
 }
 RULE_TYPE = {
-    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1",
+    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1",
     "risk.tenants_unknown": "T1", "risk.family": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
@@ -158,6 +158,14 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             "mid",
             "감정평가서에 서류와 실제가 다른 점이 있어요",
             Status.NEEDS_CHECK,
+        )
+    if doubt := f.get("tenant_doubt"):  # 가짜 임차인 의심(11/15) — 단정하지 않고 확인 필요로만
+        add(
+            "risk.tenant_doubt",
+            doubt["level"],
+            f"임차인이 진짜인지 확인 필요 — {doubt['reasons'][0]}",
+            Status.NEEDS_CHECK,
+            reasons=doubt["reasons"],
         )
     if f.get("family_tenant"):
         add("risk.family", "mid", "가족 임차인 의심 — 실제 임대차 확인")

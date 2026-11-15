@@ -67,7 +67,7 @@ def payout(
     t_info = []
     for i, nt in enumerate(tenants):
         t = nt.tenant
-        claimed = claimed_in_time(t, claim_deadline).value
+        claimed = claimed_in_time(t, claim_deadline, auction_start).value
         small = 0
         if claimed and t.deposit_krw and region_class:
             small = (

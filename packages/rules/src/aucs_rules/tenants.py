@@ -38,10 +38,17 @@ def opposing_power(t: Tenant, base_date: date | None) -> RuleResult:
 
 
 def priority_date(t: Tenant) -> RuleResult:
-    """우선변제 순위일 = 대항력 발생일(전입 다음 날)과 확정일자 중 늦은 날 (제3조의2 제2항)."""
-    if t.move_in_date is None or t.fixed_date is None:
+    """우선변제 순위일 = 대항력 발생일(전입 다음 날)과 확정일자 중 늦은 날 (제3조의2 제2항).
+
+    임차권등기가 있으면 그 등기로도 우선변제권이 생김(제3조의3 제5항) → 둘 중 빠른 날."""
+    cand = []
+    if t.move_in_date and t.fixed_date:
+        cand.append(max(t.move_in_date + timedelta(days=1), t.fixed_date))
+    if t.has_lease_registration and t.lease_registration_date:
+        cand.append(t.lease_registration_date)
+    if not cand:
         return RuleResult(None, Status.UNKNOWN, "tenants.priority.missing", [])
-    d = max(t.move_in_date + timedelta(days=1), t.fixed_date)
+    d = min(cand)
     return RuleResult(d, Status.ESTIMATED, "tenants.priority", [{"priority_date": str(d)}])
 
 
@@ -92,8 +99,25 @@ def tax_before_tenant(
     return RuleResult(level, Status.NEEDS_CHECK, "tenants.tax_first", ev)
 
 
-def claimed_in_time(t: Tenant, claim_deadline: date | None) -> RuleResult:
-    """배당요구종기 안에 배당요구했는지."""
+def lease_reg_before_start(t: Tenant, auction_start: date | None) -> bool:
+    """경매개시결정 등기 전에 임차권등기를 마쳤는지 — 그러면 배당요구 없이도 배당받음
+    (민사집행법 제148조 제3호 「첫 경매개시결정등기 전에 등기된 권리자」, 대법원 2005다33039)."""
+    return bool(
+        t.has_lease_registration
+        and t.lease_registration_date
+        and auction_start
+        and t.lease_registration_date < auction_start
+    )
+
+
+def claimed_in_time(
+    t: Tenant, claim_deadline: date | None, auction_start: date | None = None
+) -> RuleResult:
+    """배당요구종기 안에 배당요구했는지. 경매 전 임차권등기는 요구한 것으로 봄."""
+    if lease_reg_before_start(t, auction_start):
+        return RuleResult(True, Status.ESTIMATED, "tenants.claim.lease_reg",
+                          [{"lease_registration_date": str(t.lease_registration_date),
+                            "auction_start": str(auction_start)}])  # fmt: skip
     if t.claim_date is None:
         return RuleResult(False, Status.ESTIMATED, "tenants.claim.none", [])
     if claim_deadline is None:
@@ -173,3 +197,65 @@ def flatten_small_lease_table(rule_rows: list[dict[str, Any]]) -> list[dict[str,
             out.append({"valid_from": r["valid_from"], "valid_to": r.get("valid_to"), "region_class": region_class,
                         "deposit_limit_krw": v["deposit_limit_krw"], "amount_krw": v["amount_krw"]})  # fmt: skip
     return out
+
+
+# ── 가짜 임차인 의심 (11/15 대표님) ─────────────────────────────
+# 판정은 법원(배당이의·명도 소송)이 함 → 화면에는 「확인 필요」로만. 단정하는 말 쓰지 않음.
+_DOC_DOUBT = re.compile(r"무상\s*거주|배당\s*(?:\((?:전부|일부)\))?\s*배제")
+_TENTATIVE = re.compile(r"일응\s*임차인|점유\s*관계[는가]?\s*미상")
+_OWNER_LISTED = re.compile(
+    r"(?:채무자\s*겸\s*)?소유자\s*[가-힣○O]{0,10}(?:와|과)?.{0,15}세대주로\s*등재"
+)
+
+
+def tenant_doubts(
+    tenants: list[Tenant],
+    base_date: date | None,
+    base_is_mortgage: bool,
+    doc_texts: list[str],
+    possession_text: str,
+    price_krw: int | None,
+) -> RuleResult:
+    """임차인이 진짜인지 의심할 만한 근거 → {"level": high/mid/info, "reasons": [...]} 또는 None.
+
+    낙찰자에게 짐이 되는 임차인(대항력 있음, 또는 날짜를 몰라 판단 못 함)이 있을 때만 봄.
+    - 문건: 채권자의 「무상거주확인서」·「배당배제신청」 (가장 강함)
+    - 근저당보다 먼저 들어온 임차인: 은행은 대출 때 다른 세입자가 없다는 확인서를 받음
+    - 확정일자·배당요구 없이 보증금이 큼 / 보증금이 집값의 90% 넘음
+    - 현황조사서: 소유자도 세대주로 올라 있음, 가족 관계, 만나지 못해 「일응」 임차인
+    """
+    risky = [t for t in tenants if opposing_power(t, base_date).value is not False]
+    if not risky:
+        return RuleResult(None, Status.ESTIMATED, "tenants.doubt.none", [])
+    reasons: list[str] = []
+    strong = any(_DOC_DOUBT.search(x or "") and "유치권" not in (x or "") for x in doc_texts)
+    if strong:
+        reasons.append("채권자가 「무상거주확인서」·「배당배제신청」을 냈어요")
+    power = [t for t in risky if opposing_power(t, base_date).value is True]
+    if base_is_mortgage and power:
+        reasons.append(
+            "근저당보다 먼저 들어온 임차인 — 대출 때 은행이 「무상거주확인서」를 받았을 수 있어요"
+        )
+    big = (price_krw or 0) * 0.3
+    if any(t.fixed_date is None and t.claim_date is None and t.deposit_krw and big
+           and t.deposit_krw >= big for t in power):  # fmt: skip
+        reasons.append("확정일자·배당요구 없이 보증금이 커요")
+    if price_krw and any(t.deposit_krw and t.deposit_krw >= price_krw * 0.9 for t in risky):
+        reasons.append("보증금이 집값의 90%를 넘어요")
+    if _OWNER_LISTED.search(possession_text or ""):
+        reasons.append("소유자도 같은 집에 세대주로 올라 있어요")
+    fam = [m.group(1) for t in risky if (m := _FAMILY.search(t.relation_text or ""))]
+    if fam:
+        reasons.append(f"소유자·채무자의 가족({fam[0]})으로 적혀 있어요")
+    tentative = bool(_TENTATIVE.search(possession_text or ""))
+    if tentative:
+        reasons.append("조사 때 만나지 못해 「일응」 임차인으로 적혔어요 — 실제로 사는지 확인")
+    if not reasons:
+        return RuleResult(None, Status.ESTIMATED, "tenants.doubt.none", [])
+    if strong or len(reasons) >= 3:
+        level = "high"
+    elif tentative and len(reasons) == 1:
+        level = "info"  # 만나지 못한 것만으로는 약함
+    else:
+        level = "mid"
+    return RuleResult({"level": level, "reasons": reasons}, Status.NEEDS_CHECK, "tenants.doubt", [])

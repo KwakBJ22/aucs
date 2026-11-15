@@ -13,15 +13,16 @@ from pathlib import Path
 from typing import Any
 
 from aucs_rules.address_match import compare
-from aucs_rules.fix_dictionary import guess_purpose, names_for, normalize_purpose
+from aucs_rules.fix_dictionary import guess_purpose, kind_of, names_for, normalize_purpose
 from aucs_rules.fmt import won_small as won
 from aucs_rules.payout import NamedTenant, payout
-from aucs_rules.rights import Right, analyze
+from aucs_rules.rights import Right, analyze, is_subordinate
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.tenants import (
     Tenant,
     claimed_in_time,
     flatten_small_lease_table,
+    lease_reg_before_start,
     opposing_power,
 )
 from psycopg.types.json import Jsonb
@@ -100,6 +101,11 @@ def build_ladder(
     marks = marks or {}
     res = analyze(rights)
     base: Right | None = res["base"].value
+    starts = [
+        r.receipt_date for r in rights if kind_of(r.purpose) == "auction_start" and r.receipt_date
+    ]
+    auction_start = min(starts) if starts else None
+    tenants, lease_dates = link_lease_rights(rights, tenants)
     rows = []
     for r, j in res["rights"]:
         if j.value == "부기":
@@ -108,8 +114,9 @@ def build_ladder(
             "section": r.section, "rank_no": r.rank_no, "name": normalize_purpose(r.purpose) or r.purpose,
             "date": _iso(r.receipt_date), "amount_krw": r.amount_krw, "holder": r.holder,
             "judgment": j.value, "is_base": r is base, "mark": marks.get((r.section, r.rank_no)),
+            "by_tenant": kind_of(r.purpose) == "lease_right",  # 임차권등기는 임차인 줄에서 셈(배당 뒤 남는 것만)
         })  # fmt: skip
-    assumed = [x for x in rows if x["judgment"] == "인수"]
+    assumed = [x for x in rows if x["judgment"] == "인수" and not x["by_tenant"]]
     unknown_amount = any(x["amount_krw"] is None for x in assumed)
     hold = sum(x["amount_krw"] or 0 for x in assumed)
     t_rows = []
@@ -120,13 +127,15 @@ def build_ladder(
             fixed_date=_d(t.get("fixed")),
             claim_date=_d(t.get("claim")),
             deposit_krw=t.get("deposit_krw"),
+            has_lease_registration=i in lease_dates,
+            lease_registration_date=lease_dates.get(i),
         )  # fmt: skip
-        for t in tenants
+        for i, t in enumerate(tenants)
     ]
     # 예상 배당: 보증금을 아는 임차인이 배당요구했을 때만 (최저가에 낙찰된다고 보고)
     pay = None
     if price_krw and any(
-        tn.deposit_krw and claimed_in_time(tn, claim_deadline).value for tn in tns
+        tn.deposit_krw and claimed_in_time(tn, claim_deadline, auction_start).value for tn in tns
     ):
         pay = payout(
             price_krw, rights,
@@ -135,7 +144,7 @@ def build_ladder(
         )  # fmt: skip
     for idx, (t, tn) in enumerate(zip(tenants, tns, strict=True)):
         power = opposing_power(tn, base.receipt_date if base else None).value
-        claimed = claimed_in_time(tn, claim_deadline).value
+        claimed = claimed_in_time(tn, claim_deadline, auction_start).value
         got = pay["tenants"][idx] if pay else None
         if got and power is True and claimed and got["assume_krw"] is not None:
             a, rcv = got["assume_krw"], got["received_krw"]
@@ -156,6 +165,8 @@ def build_ladder(
                 verdict += f" · 배당 {won(got['received_krw'])} 예상"
         else:
             verdict, add = "전입일을 몰라 판단할 수 없어요", 0
+        if lease_reg_before_start(tn, auction_start) and power is not False:
+            verdict = f"경매 전 임차권등기라 배당요구 없이도 배당받아요 · {verdict}"
         hold += add
         t_rows.append({"name": t.get("name"), "move_in": t.get("move_in"), "deposit_krw": tn.deposit_krw,
                        "verdict": verdict, "power": power})  # fmt: skip
@@ -181,6 +192,35 @@ def build_ladder(
         "base": {"name": normalize_purpose(base.purpose) or base.purpose, "date": _iso(base.receipt_date)} if base else None,
         "rows": rows, "tenants": t_rows, "hold_krw": hold, "line": line, "state": state, "payout": pay,
     }  # fmt: skip
+
+
+def link_lease_rights(
+    rights: list[Right], tenants: list[dict[str, Any]]
+) -> tuple[list[dict[str, Any]], dict[int, date]]:
+    """등기부의 임차권등기 줄을 임차인에 이음: 전입일이 같은 임차인(임차인·임차권등기가 하나씩이면 그 둘).
+
+    못 이은 임차권등기는 임차인 줄로 더함(보증금 = 등기된 임차보증금). 돌려주는 것: 임차인 목록, 번호 → 임차권등기 접수일."""
+    out = [dict(t) for t in tenants]
+    dates: dict[int, date] = {}
+    leases = [r for r in rights if kind_of(r.purpose) == "lease_right" and not is_subordinate(r)]
+    for r in leases:
+        if r.receipt_date is None:
+            continue
+        idx = next(
+            (i for i, t in enumerate(out)
+             if i not in dates and r.move_in_date and _d(t.get("move_in")) == r.move_in_date),
+            None,
+        )  # fmt: skip
+        if idx is None and len(out) == 1 and len(leases) == 1 and not dates:
+            idx = 0
+        if idx is None:
+            out.append({"name": f"임차권등기 {r.holder}".strip(), "move_in": _iso(r.move_in_date),
+                        "deposit_krw": r.amount_krw, "claim": None})  # fmt: skip
+            idx = len(out) - 1
+        elif not out[idx].get("deposit_krw") and r.amount_krw:
+            out[idx]["deposit_krw"] = r.amount_krw
+        dates[idx] = r.receipt_date
+    return out, dates
 
 
 def _d(s: Any) -> date | None:
@@ -307,7 +347,12 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
                 ),
             ],
         )
-        u, pts, meta, spec_row = q_u.fetchone(), q_pts.fetchone(), q_meta.fetchone(), q_spec.fetchone()
+        u, pts, meta, spec_row = (
+            q_u.fetchone(),
+            q_pts.fetchone(),
+            q_meta.fetchone(),
+            q_spec.fetchone(),
+        )
         small_rows, tenants = q_small.fetchall(), q_ten.fetchall()
     if not u:
         return None

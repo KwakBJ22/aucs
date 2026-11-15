@@ -105,3 +105,28 @@ def test_spec_base_check():
     assert r["same"] is False and r["spec_date"] == "2020-11-02"
     assert spec_base_check(None, "2021.3.31.근저당권") is None
     assert spec_base_check(base, None) is None
+
+
+def test_lease_reg_before_auction_gets_payout_not_full_assume():
+    # 임차권등기(2024-03-01, 전입 2018-01-02) — 경매개시(2025-06-20) 전이라 배당요구 없어도 배당
+    rights = _rights() + [
+        Right("을", "2", "주택임차권", D(2024, 3, 1), amount_krw=200_000_000,
+              move_in_date=D(2018, 1, 2), holder="김○○"),
+    ]  # fmt: skip
+    lad = build_ladder(rights, [], D(2025, 9, 1), price_krw=600_000_000)
+    t = lad["tenants"][0]
+    assert t["verdict"].startswith("경매 전 임차권등기라 배당요구 없이도 배당받아요")
+    # 대항력 있음(전입이 근저당보다 앞섬), 우선변제 순위 2024-03-01 → 근저당 3.6억 뒤에 받음
+    lease_row = next(r for r in lad["rows"] if r["name"] == "주택임차권")
+    assert lease_row["by_tenant"] is True
+    assert lad["hold_krw"] < 200_000_000 + 1  # 등기 금액을 한 번만 셈
+
+
+def test_lease_reg_after_start_must_claim():
+    rights = _rights() + [
+        Right("을", "2", "주택임차권", D(2025, 7, 1), amount_krw=200_000_000,
+              move_in_date=D(2018, 1, 2), holder="김○○"),
+    ]  # fmt: skip
+    lad = build_ladder(rights, [], D(2025, 9, 1), price_krw=600_000_000)
+    assert lad["tenants"][0]["verdict"] == "보증금 전액을 떠안아요"
+    assert lad["hold_krw"] == 200_000_000

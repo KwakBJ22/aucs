@@ -43,7 +43,7 @@ from aucs_rules.sale_rate import (
 )
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import spec_facts
-from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant
+from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant, tenant_doubts
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -72,6 +72,9 @@ class Pre:
     events: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     tenants: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     status_reports: set[str] = field(default_factory=set)
+    possession: dict[str, str] = field(
+        default_factory=dict
+    )  # 사건 → 현황조사서 점유 관계 글(가짜 임차인 의심)
     docs: dict[tuple[str, str], Any] = field(
         default_factory=dict
     )  # (사건, 서류 종류) → 가장 최근 원문
@@ -132,23 +135,23 @@ def preload(
         pre.items[r["item_id"]] = r
     cases = sorted({r["case_id"] for r in pre.items.values()})
     for r in cur.execute(
-        "select case_id, event_date, category, after_deadline from core.case_events where case_id = any(%s)",
+        "select case_id, event_date, category, after_deadline, text_masked as text from core.case_events where case_id = any(%s)",
         (cases,),
     ).fetchall():
         pre.events.setdefault(r.pop("case_id"), []).append(r)
     for r in cur.execute(
-        "select case_id, move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration"
+        "select case_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration"
         " from core.tenants where case_id = any(%s)",
         (cases,),
     ).fetchall():
         pre.tenants.setdefault(r.pop("case_id"), []).append(r)
-    pre.status_reports = {
-        r["case_id"]
-        for r in cur.execute(
-            "select distinct case_id from raw.court_doc_raw where case_id = any(%s) and doc_kind = 'status_report'",
-            (cases,),
-        ).fetchall()
-    }
+    for r in cur.execute(
+        """select distinct on (case_id) case_id, (select string_agg(coalesce(o->>'gdsPossCtt', ''), ' ') from jsonb_array_elements(coalesce(payload->'dlt_ordTsRlet', '[]'::jsonb)) o) as poss from raw.court_doc_raw
+           where case_id = any(%s) and doc_kind = 'status_report' order by case_id, fetched_at desc""",
+        (cases,),
+    ).fetchall():
+        pre.status_reports.add(r["case_id"])
+        pre.possession[r["case_id"]] = r["poss"] or ""
     for r in cur.execute(
         """select distinct on (case_id, doc_kind) case_id, doc_kind, payload from raw.court_doc_raw
            where case_id = any(%s) and (left(doc_kind, 12) = 'item_detail_' or doc_kind in ('appraisal', 'appraisal_pdf'))
@@ -448,21 +451,22 @@ def analyze_item(
         events = pre.events.get(item["case_id"], [])
         tenants = pre.tenants.get(item["case_id"], [])
         has_sr = item["case_id"] in pre.status_reports
+        poss = pre.possession.get(item["case_id"], "")
     else:
         events = cur.execute(
-            "select event_date, category, after_deadline from core.case_events where case_id = %s",
+            "select event_date, category, after_deadline, text_masked as text from core.case_events where case_id = %s",
             (item["case_id"],),
         ).fetchall()
         tenants = cur.execute(
-            "select move_in_date, fixed_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
+            "select move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
             (item["case_id"],),
         ).fetchall()
-        has_sr = bool(
-            cur.execute(
-                "select 1 from raw.court_doc_raw where case_id = %s and doc_kind = 'status_report' limit 1",
-                (item["case_id"],),
-            ).fetchone()
-        )
+        sr = cur.execute(
+            """select (select string_agg(coalesce(o->>'gdsPossCtt', ''), ' ') from jsonb_array_elements(coalesce(payload->'dlt_ordTsRlet', '[]'::jsonb)) o) as poss from raw.court_doc_raw
+               where case_id = %s and doc_kind = 'status_report' order by fetched_at desc limit 1""",
+            (item["case_id"],),
+        ).fetchone()
+        has_sr, poss = sr is not None, (sr or {}).get("poss") or ""
     detail = load_detail(cur, item, pre)
     # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
     # 법원 요항을 아직 못 받았으면 받아 둔 감정평가서 원본의 요항표로(11/11)
@@ -540,6 +544,16 @@ def analyze_item(
         facts.update(
             market_price_krw=market["price_krw"], appraisal_krw=item["appraisal_krw"], as_of=today
         )
+    # 가짜 임차인 의심(11/15): 문건(무상거주확인서·배당배제) · 근저당보다 앞선 전입 · 보증금 크기 · 현황조사서 점유 글
+    base_txt = (spec or {}).get("base") or ""
+    doubt = tenant_doubts(
+        [Tenant(move_in_date=t["move_in_date"], fixed_date=t["fixed_date"], claim_date=t.get("claim_date"),
+                deposit_krw=t["deposit_krw"]) for t in tenants],
+        base_date_of(base_txt), "근저당" in base_txt, [e.get("text") or "" for e in events], poss,
+        (market or {}).get("price_krw") or item.get("appraisal_krw"),
+    ).value  # fmt: skip
+    if doubt:
+        facts["tenant_doubt"] = doubt
     sig = signals(facts)
     eff_failed = effective_failed(
         item["failed_count"], item["appraisal_krw"], item["min_price_krw"]
