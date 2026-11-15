@@ -111,8 +111,8 @@ def decide(
         return "none", None
     good = [p for p, ok in cand if ok]
     fit = sorted((x, p) for p in good if (x := between(p, sides)) is not None)
-    if copied:  # 옆 역 좌표를 베낀 역은 700m 만 어긋나도 — 앞뒤 역 사이에 놓이는 것 먼저
-        away = [p for p in good if NEAR_M < dist_m(old, p) <= TWIN_M]
+    if copied:  # 옆 역 좌표를 베낀 역은 조금만 어긋나도 — 앞뒤 역 사이에 놓이는 것 먼저
+        away = [p for p in good if SAME_M < dist_m(old, p) <= TWIN_M]  # 이 자리 임자는 따로 있음
         pick = next((p for _, p in fit if p in away), None) or (
             min(away, key=lambda p: dist_m(old, p)) if away else None
         )
