@@ -28,6 +28,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.station_fix"]
     if key == "station_official":  # 역 좌표를 공식 자료(레일포털)로 맞추기(11/15)
         return [sys.executable, "-m", "aucs_workers.collectors.station_official"]
+    if key == "probe_public":  # 새로 신청한 공공 자료 표본 한 번(11/15) — DB 에 안 넣음, logs/probe_public.log
+        return [sys.executable, "-m", "aucs_workers.collectors.probe_public"]
     if key in KEYS:
         return [
             "powershell.exe",
