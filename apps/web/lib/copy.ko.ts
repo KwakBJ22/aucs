@@ -1249,6 +1249,14 @@ export const copy = {
     redev: "정비사업 구역",
     // 용도지역 · 도시계획시설(11/15 — 토지이용계획에서). 시설은 땅 · 단독 물건에만 옴
     zoning: "용도지역",
+    // 이 지역 평균(11/15 — 한국부동산원 통계): 상가 수익률 · 공실률, 오피스텔 수익률, 전월세전환율. 이 물건의 값이 아님
+    areaAvg: "이 지역 평균",
+    areaAvgValue: (items: { label: string; value: number; unit?: string; per?: string }[]) =>
+      items
+        .map((x) => `${x.label} ${x.per ? `${x.per} ` : ""}${x.value}${x.unit ?? "%"}`)
+        .join(" · "),
+    areaAvgNote: (items: { region: string; period: string }[]) =>
+      `한국부동산원 · ${[...new Set(items.map((x) => `${x.region} ${x.period}`))].join(" · ")}`,
     planFacilities: (f?: { name: string }[] | null) =>
       f?.length ? `도시계획시설에 걸림: ${f.map((x) => x.name).join(" · ")}` : null,
     // 정비구역 세대수(11/15): 기존 → 새로 짓는 세대(분양 · 임대)

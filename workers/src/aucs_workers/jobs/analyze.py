@@ -25,6 +25,7 @@ from aucs_rules.appraisal_points import (
     parse_points,
     plan_zone_of_parcel,
 )
+from aucs_rules.area_stats import area_stats
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
 from aucs_rules.costs import commercial_over_limit
@@ -93,6 +94,21 @@ def _building_key(item: dict[str, Any]) -> tuple[str, str] | None:
     if not p or not item.get("region_code"):
         return None
     return item["region_code"], lot_key(*p)
+
+
+_AREA_STATS: list[Any] = []
+
+
+def load_area_stats(cur: Any) -> Any:
+    """지역 평균 통계(R-ONE, collectors/rone)를 한 번만 받아 둠 — 표가 없으면(이주 0060 전) None."""
+    if not _AREA_STATS:
+        out: dict[str, dict[str, dict[str, Any]]] | None = None
+        if cur.execute("select to_regclass('ref.region_stats') is not null as ok").fetchone()["ok"]:
+            out = {}
+            for r in cur.execute("select stat_key, region, period, value, unit from ref.region_stats").fetchall():
+                out.setdefault(r["stat_key"], {})[r["region"]] = r
+        _AREA_STATS.append(out)
+    return _AREA_STATS[0]
 
 
 def _land_use_ready(cur: Any) -> bool:
@@ -506,6 +522,9 @@ def analyze_item(
         land_plan = {**land_plan, "facilities": []} if land_plan["zones"] else None
     if land_plan and land_plan["facilities"]:
         facts["plan_facilities"] = [x["name"] for x in land_plan["facilities"]]
+    # 이 지역 평균(11/15): 상가 수익률 · 공실률, 오피스텔 수익률, 전월세전환율 — 보기용
+    area = area_stats(item.get("usage_name"), item.get("building_desc"), item.get("sido"),
+                      item.get("sigungu"), load_area_stats(cur))  # fmt: skip
     if not redev and plan_z == "zone":
         # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
         redev = near_zone(cur, item_id) or {
@@ -567,6 +586,7 @@ def analyze_item(
         "redev": redev,
         "plan_zone": plan_z,
         "land_plan": land_plan,
+        "area_stats": area,
         "building": bldg,
         "parts": parts or None,
         # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
@@ -590,7 +610,7 @@ def analyze_item(
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
                "tenants": tenants, "market": market, "building": bldg, "parts": parts, "land": land,
-               "engine": ENGINE_VERSION})  # fmt: skip
+               "area": area, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),

@@ -92,6 +92,13 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             note={t.planFacilities(b.land_plan.facilities)}
           />
         )}
+        {b.area_stats?.items?.length > 0 && (
+          <Row
+            label={t.areaAvg}
+            value={t.areaAvgValue(b.area_stats.items)}
+            note={t.areaAvgNote(b.area_stats.items)}
+          />
+        )}
         {b.note && (
           <p className="sub" style={{ whiteSpace: "pre-wrap" }}>
             {b.note}

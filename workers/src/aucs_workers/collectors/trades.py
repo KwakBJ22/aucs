@@ -213,6 +213,14 @@ def main() -> None:
                 print(f"  {name} {n:,}")
         # 11/4 대표님: 법이 강제하지 않으면 지우지 않음 — 1년 지난 전월세도 남김(예전엔 지웠음)
     print(f"끝: {job.count:,}건")
+    # 지역 평균 통계(R-ONE)도 달마다 같이(11/15) — 키 · 표가 없으면 건너뜀
+    if os.getenv("RONE_API_KEY", "").strip():
+        from aucs_workers.collectors import rone
+
+        try:
+            rone.main()
+        except SystemExit as e:
+            print(f"R-ONE 건너뜀: {e}")
 
 
 if __name__ == "__main__":
