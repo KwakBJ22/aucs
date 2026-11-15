@@ -26,6 +26,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.jobs.analyze", "--item", key.split(":", 1)[1]]
     if key == "station_fix":  # 역 좌표를 주소와 견줘 바로잡기(11/15) — 5분쯤
         return [sys.executable, "-m", "aucs_workers.collectors.station_fix"]
+    if key == "station_official":  # 역 좌표를 공식 자료(레일포털)로 맞추기(11/15)
+        return [sys.executable, "-m", "aucs_workers.collectors.station_official"]
     if key in KEYS:
         return [
             "powershell.exe",
