@@ -1,11 +1,13 @@
 """로컬 DuckDB → Supabase 한 번 옮기기 (대표님 PC에서 실행).
 
 옮기는 것 (10/17 대표님 결정)
-- 법정동코드 → ref.regions, 철도역 → ref.stations
-- 낙찰결과_공개 전부 → core.sale_results (법원 매각결과와 같은 칸만, 출처는 내부용 origin)
+- 법정동코드 → ref.regions
+- 낙찰결과_공개 중 「법원수집」(우리가 법원에서 받은 것)만 → core.sale_results
+  (11/15 대표님: 지지옥션 자료는 절대 넣지 않음 — 「보충」 · 「법원DB」(강사 낙찰가DB 를 거친 줄)는 옮기지 않음.
+   철도역도 옮기지 않음 — 그 표는 좌표가 틀림, 역은 collectors/station_official 이 공식 자료로 채움)
 - 실거래 매매 전부 + 전월세 최근 1년 → core.trades
 
-다시 실행해도 같은 결과가 되도록 표마다 비우고 다시 넣습니다(trades·regions·stations),
+다시 실행해도 같은 결과가 되도록 표마다 비우고 다시 넣습니다(trades·regions),
 매각결과는 같은 사건·물건·기일이 있으면 건너뜁니다.
 
     uv run --with duckdb python tools/duckdb_export/export_once.py
@@ -32,7 +34,6 @@ COURT_CODE = {
 }  # fmt: skip
 RESULT = {"매각": "sold", "대납": "sold", "유찰": "failed", "변경": "changed", "취하": "withdrawn",
           "기각": "dismissed", "각하": "dismissed"}  # fmt: skip
-ORIGIN = {"법원수집": "court_collect", "법원DB": "court_db", "보충": "supplement"}
 PROP = {"아파트": "apt", "연립다세대": "rowhouse", "오피스텔": "officetel", "단독다가구": "house",
         "상업업무용": "commercial"}  # fmt: skip
 
@@ -63,25 +64,12 @@ def main() -> None:
         )
         print(f"법정동 {n:,}")
 
-        # 2) 철도역 — 경매레이더 「철도역」 표는 강사 파일에서 온 것으로 좌표가 틀린 역이 많음(11/15).
-        #    다시 옮기면 꼭 뒤에: uv run python -m aucs_workers.collectors.station_official (공식 좌표로 맞춤)
-        rows = duck.execute(
-            "select 역명, 노선명, 운영기관, 'SRID=4326;POINT(' || 경도 || ' ' || 위도 || ')', try_cast(nullif(폐지일자,'') as date)"
-            " from 철도역 where 위도 is not null and 경도 is not null"
-        ).fetchall()
-        cur.execute("delete from ref.stations")
-        n = copy_rows(
-            cur,
-            "copy ref.stations (name_ko, line_name, operator, geom, closed_date) from stdin",
-            rows,
-        )
-        print(f"철도역 {n:,}")
         pg.commit()
 
         # 3) 낙찰 결과 (공개용 표)
         src = duck.execute(
             "select 법원, 사건번호, 물건번호, 매각기일, 용도, 소재지, 시도, 감정가_원, 최저가_원, 매각가_원,"
-            " 매각가율, 유찰횟수, 결과, 출처 from 낙찰결과_공개"
+            " 매각가율, 유찰횟수, 결과, 출처 from 낙찰결과_공개 where 출처 = '법원수집'"
         ).fetchall()
         rows = []
         for (
@@ -98,7 +86,7 @@ def main() -> None:
             rate,
             failed,
             res,
-            origin,
+            _origin,
         ) in src:
             code = COURT_CODE.get(court)
             if not code or res not in RESULT:
@@ -121,7 +109,7 @@ def main() -> None:
                     failed,
                     RESULT[res],
                     "지분" in (addr or ""),
-                    ORIGIN.get(origin, "supplement"),
+                    "court_collect",
                 )
             )
         cur.execute(
