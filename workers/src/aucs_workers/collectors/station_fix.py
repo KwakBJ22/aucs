@@ -44,7 +44,7 @@ FAR_M = 1500  # 이보다 멀면 좌표가 틀린 것
 
 Pt = tuple[float, float]  # (경도, 위도)
 Cand = tuple[Pt, bool]  # (좌표, 믿을 만한가 — 다른 주소와 같은 점이면 거친 좌표)
-SAME_M = 150  # 같은 노선 다른 역과 이만큼 안이면 좌표를 베껴 적은 것
+SAME_M = 350  # 같은 노선 다른 역과 이만큼 안이면 좌표를 베껴 적은 것
 _PAREN = re.compile(r"\([^)]*\)?")
 # 맨 뒤의 「○○로(길)」 + 건물번호 — 「건원대로 34번길 32-29」는 「건원대로 34번길」 · 「32-29」
 _ROAD = re.compile(r"^(.*(?:로|길))\s*(지하)?\s*(\d+(?:-\d+)?)")
@@ -112,9 +112,11 @@ def decide(
     good = [p for p, ok in cand if ok]
     fit = sorted((x, p) for p in good if (x := between(p, sides)) is not None)
     if copied:  # 옆 역 좌표를 베낀 역은 700m 만 어긋나도 — 앞뒤 역 사이에 놓이는 것 먼저
-        near = sorted((dist_m(old, p), p) for p in good if dist_m(old, p) <= TWIN_M)
-        pick = fit[0][1] if fit else (near[0][1] if near else None)
-        if pick and dist_m(old, pick) > NEAR_M:
+        away = [p for p in good if NEAR_M < dist_m(old, p) <= TWIN_M]
+        pick = next((p for _, p in fit if p in away), None) or (
+            min(away, key=lambda p: dist_m(old, p)) if away else None
+        )
+        if pick:
             return "fix", pick
     d = min(dist_m(old, p) for p, _ in cand)
     if d <= NEAR_M:
@@ -228,9 +230,19 @@ def main() -> None:
             twins = [p for t, p in by_base.get(base_name(name), []) if t != sid]
             sides = [now_at[k] for k in sides_of.get((name, line, op), []) if k in now_at]
             # 고친 좌표로 견줌 — 한 칸씩 밀려 적힌 노선(6호선 연신내 ~ 봉화산)이 차례로 풀림
-            copied = any(
-                t != sid and b != base_name(name) and dist_m(old, p) <= SAME_M
+            same = [
+                t
                 for t, (b, p) in by_line.get(line, {}).items()
+                if t != sid and b != base_name(name) and dist_m(old, p) <= SAME_M
+            ]
+
+            def at_old(c: Cand | None, at: Pt = old) -> bool:
+                return bool(c and c[1] and dist_m(at, c[0]) <= NEAR_M)
+
+            # 이 좌표의 임자가 따로 있거나(그 역의 주소가 여기) 내 주소는 여기가 아닐 때만 베낀 것으로 봄
+            copied = bool(same) and (
+                any(at_old(cand_of(k)) for t in same for k in asked[t])
+                or not (at_old(road) or at_old(lot))
             )
             what, new = decide(old, road, lot, twins, sides, copied)
             n[what] = n.get(what, 0) + 1
