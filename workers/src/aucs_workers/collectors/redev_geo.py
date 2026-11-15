@@ -33,11 +33,17 @@ class ApiError(Exception):
 
 
 def geocode(
-    client: httpx.Client, key: str, domain: str, address: str, kind: str = "parcel"
+    client: httpx.Client,
+    key: str,
+    domain: str,
+    address: str,
+    kind: str = "parcel",
+    refine: bool = True,
 ) -> tuple[float, float] | None:
-    """주소 → (경도, 위도). kind: parcel(지번) · road(도로명). 못 찾으면 None, 인증 · 한도 등 오류면 ApiError."""
+    """주소 → (경도, 위도). kind: parcel(지번) · road(도로명). 못 찾으면 None, 인증 · 한도 등 오류면 ApiError.
+    refine=False 면 적힌 그대로 맞는 주소만(True 는 비슷한 주소 · 길 가운데로도 답함 — 역 좌표 견주기엔 거칠다)."""
     r = client.get(URL, params={"service": "address", "request": "getcoord", "version": "2.0", "crs": "epsg:4326",
-                                "type": kind, "refine": "true", "simple": "false", "format": "json",
+                                "type": kind, "refine": "true" if refine else "false", "simple": "false", "format": "json",
                                 "address": address, "key": key, "domain": domain})  # fmt: skip
     try:
         res = r.json()["response"]
