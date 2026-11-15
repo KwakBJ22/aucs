@@ -12,7 +12,9 @@
 
 - 맞추는 법: 이름(괄호 · 「역」 뗌)이 같은 공식 역 가운데 3km 안에서 노선이 같은 것 → 가장 가까운 것.
   3km 넘게 떨어져 있으면 노선 · 지역까지 맞는 역이 하나뿐일 때만 옮기고, 아니면 「확인 필요」로 적기만 함.
-- 공식 파일에도 옆 역과 같은 좌표로 적힌 역이 있음(마곡 = 발산 · 신용산 = 이촌) — 그런 역은 건드리지 않음.
+- 공식 파일에도 틀린 역이 있음: 옆 역과 같은 좌표(마곡 = 발산 · 신용산 = 이촌)는 건드리지 않고,
+  양원(경의중앙선)은 경북 봉화 좌표로 적혀 있어 우리 좌표를 지킴(OURS). 50km 넘게는 옮기지 않음.
+- 11/15 첫 실행: 같음 778 · 옮김 275(300m 넘게는 38곳) · 멀리 옮김 37(부산 1호선 — 강사 파일에서 한 줄 전체가 밀려 있었음).
 - 공식 파일에 없는 역(GTX-A 등)은 그대로 둠. 이름 · 노선 이름은 바꾸지 않고 좌표만 바꿈.
 - 받은 파일은 logs/station_official.xlsx, 결과는 logs/station_official.log. 관리자 「다시 돌리기」로도 돌림.
 """
@@ -37,6 +39,9 @@ KEEP = ROOT / "logs" / "station_official.xlsx"
 LOG = ROOT / "logs" / "station_official.log"
 SAME_M = 30  # 이만큼 안이면 같은 좌표
 NEAR_M = 3000  # 이만큼 안이면 이름만 같아도 같은 역으로 봄
+FAR_KM = 50  # 이보다 멀리는 안 옮김(이름 같은 다른 지방 역이거나 공식 자료가 틀린 것)
+# 공식 자료가 틀린 역 — 우리 좌표를 지킴. 양원(경의중앙선, 서울 중랑구)이 공식 파일엔 경북 봉화 양원역 좌표로 적혀 있음(11/15)
+OURS: dict[tuple[str, str], Pt] = {("양원역", "경의중앙선"): (127.10800, 37.60660)}
 DUP_M = 150  # 공식 자료에서 같은 노선 다른 역과 이만큼 안이면 베껴 적힌 좌표
 HEAD = {
     "name": ("역사명", "역명(한글)"),
@@ -142,6 +147,9 @@ def pick(
     bad: set[int],
 ) -> tuple[str, Pt | None]:
     """→ (same · move · far · check · dup · none, 새 좌표)."""
+    if (name, line) in OURS:
+        fixed = OURS[(name, line)]
+        return ("same" if dist_m(old, fixed) <= SAME_M else "far"), fixed
     ids = by.get(base_name(name), [])
     if not ids:
         return "none", None
@@ -160,7 +168,7 @@ def pick(
             return "dup", off[i]["pt"]
         return ("same" if dist_m(old, off[i]["pt"]) <= SAME_M else "move"), off[i]["pt"]
     sure = [i for i in ids if same_line(mine, line_key(off[i]["line"], off[i]["op"]))]
-    if len(sure) == 1 and sure[0] not in bad:
+    if len(sure) == 1 and sure[0] not in bad and dist_m(old, off[sure[0]]["pt"]) <= FAR_KM * 1000:
         return "far", off[sure[0]]["pt"]
     return "check", off[ranked[0]]["pt"]
 
