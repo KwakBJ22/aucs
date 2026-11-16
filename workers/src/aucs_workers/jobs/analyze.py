@@ -83,6 +83,8 @@ class Pre:
     parcels: dict[str, Any] | None = None  # 필지 번호 → 걸린 지역 · 지구(표가 없으면 None)
     overrides: set[str] = field(default_factory=set)  # 관리자가 판단한 신호가 있는 물건
     zones: dict[tuple[str, str], list[dict[str, Any]]] | None = None  # 서울 정비구역(구 · 동)
+    units: dict[str, dict[str, Any]] = field(default_factory=dict)  # 물건 → 그 호 전유공용(11/16)
+    complexes: dict[str, dict[str, Any]] = field(default_factory=dict)  # 필지번호 → 단지(11/16)
 
 
 def _market_key(item: dict[str, Any]) -> tuple[str, str, str] | None:
@@ -198,6 +200,12 @@ def preload(
                 "select pnu, uses from core.parcel_land_use where pnu = any(%s)", (pnus,)
             ).fetchall()
         }
+    if _table_ready(cur, "core.building_units"):
+        pre.units = {r["item_id"]: r for r in cur.execute(UNIT_SQL + " where item_id = any(%s)", (ids,)).fetchall()}  # fmt: skip
+    if _table_ready(cur, "ref.complexes"):
+        pn = sorted({p for i in pre.items.values() if (p := pnu_of(i.get("region_code") or "", i.get("lot_no") or ""))})  # fmt: skip
+        for r in cur.execute(COMPLEX_SQL + " where pnu = any(%s) order by pnu, unit_cnt desc nulls last", (pn,)).fetchall():  # fmt: skip
+            pre.complexes.setdefault(r["pnu"], r)  # 한 필지에 단지가 여럿이면 세대가 많은 것
     pre.overrides = {
         r["item_id"]
         for r in cur.execute(
@@ -388,6 +396,34 @@ def load_land_value(
     return res.value
 
 
+_TABLES: dict[str, bool] = {}
+UNIT_SQL = "select item_id, result, own_area, common_area, own_use, own_use_etc from core.building_units"
+COMPLEX_SQL = "select pnu, names, unit_cnt, dong_cnt, max_floors from ref.complexes"
+
+
+def _table_ready(cur: Any, name: str) -> bool:
+    """새 표(이주 0061 · 0062)가 있는지 한 번만 봄 — 없어도 분석이 멈추지 않게."""
+    if name not in _TABLES:
+        row = cur.execute("select to_regclass(%s) is not null as ok", (name,)).fetchone()
+        _TABLES[name] = bool(row and row["ok"])
+    return _TABLES[name]
+
+
+def load_unit_complex(
+    cur: Any, item: dict[str, Any], pre: Pre | None = None
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """그 호의 전유공용면적 · 단지 식별정보(11/16). 없으면 None."""
+    pnu = pnu_of(item.get("region_code") or "", item.get("lot_no") or "")
+    if pre is not None:
+        return pre.units.get(item["item_id"]), pre.complexes.get(pnu or "")
+    unit = cx = None
+    if _table_ready(cur, "core.building_units"):
+        unit = cur.execute(UNIT_SQL + " where item_id = %s", (item["item_id"],)).fetchone()
+    if pnu and _table_ready(cur, "ref.complexes"):
+        cx = cur.execute(COMPLEX_SQL + " where pnu = %s order by unit_cnt desc nulls last limit 1", (pnu,)).fetchone()  # fmt: skip
+    return unit, cx
+
+
 def load_building(
     cur: Any, item: dict[str, Any], today: date, pre: Pre | None = None
 ) -> dict[str, Any] | None:
@@ -405,7 +441,8 @@ def load_building(
     titles = [r["data"] for r in rows if r["kind"] == "title"]
     floors = [r["data"] for r in rows if r["kind"] == "floor"]
     usage = f"{item.get('usage_name') or ''} {item.get('building_desc') or ''}"
-    return summarize(titles, floors, item.get("address"), usage, today)
+    unit, cx = load_unit_complex(cur, item, pre)
+    return summarize(titles, floors, item.get("address"), usage, today, unit, cx)
 
 
 def load_parcel_uses(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> Any:
@@ -514,6 +551,7 @@ def analyze_item(
     if bldg:
         facts.update(
             villa_by_register=bldg["villa"], floor_uses=bldg["unit_floor_uses"], as_of=today,
+            villa_level=bldg.get("villa_level"), unit_use=bldg.get("unit_use"),
             use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)

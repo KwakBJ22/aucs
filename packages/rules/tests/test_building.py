@@ -87,3 +87,21 @@ def test_same_unit() -> None:
 def test_dong_key():
     assert dong_key("주건축물제2동") == "2" and dong_key("제304동") == "304" and dong_key("105동") == "105"
     assert dong_key("에이") == "A" and dong_key("A동") == "A" and dong_key("") == ""
+
+
+def test_unit_level_villa_and_complex():
+    """그 호의 전유 용도가 있으면 층 용도보다 먼저(11/16) — 전용률 · 단지 세대수도."""
+    title = [{"useAprDay": "20180101", "mainPurpsCdNm": "공동주택", "grndFlrCnt": 5}]
+    floors = [{"flrNo": "2", "flrGbCdNm": "지상", "mainPurpsCdNm": "다세대주택"}]
+    addr = "서울 강서구 화곡동 1 2층201호"
+    nb = {"result": "ok", "own_use": "제2종근린생활시설", "own_use_etc": "사무소",
+          "own_area": 30.0, "common_area": 10.0}  # fmt: skip
+    b = summarize(title, floors, addr, "다세대", TODAY, nb, None)
+    assert b["villa"] == "confirmed" and b["villa_level"] == "ho"
+    assert b["exclusive_pct"] == 75 and b["unit_use"] == "제2종근린생활시설 사무소"
+    home = {**nb, "own_use": "다세대주택", "own_use_etc": None}
+    cx = {"names": ["미성하르딘(1102-5)", "미성하르딘"], "unit_cnt": 18, "dong_cnt": 1, "max_floors": 6}
+    b = summarize(title, floors, addr, "다세대", TODAY, home, cx)
+    assert b["villa"] == "clear" and b["complex_name"] == "미성하르딘" and b["complex_units"] == 18
+    b = summarize(title, floors, addr, "다세대", TODAY, {"result": "none"}, None)
+    assert b["villa_level"] == "floor" and "unit_use" not in b

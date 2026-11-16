@@ -157,10 +157,16 @@ def summarize(
     address: str | None,
     usage_text: str | None,
     as_of: date,
+    unit: dict[str, Any] | None = None,
+    complex_: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """화면·규칙용 요약. 표제부가 없으면 None(→ 「건축물대장 못 받음」)."""
-    unit = unit_from_address(address)
-    t = pick_title(titles, unit["dong"])
+    """화면·규칙용 요약. 표제부가 없으면 None(→ 「건축물대장 못 받음」).
+
+    unit: 그 호의 전유공용면적(core.building_units, 11/16) — 있으면 근생빌라를 「이 호」 용도로 가름.
+    complex_: 공동주택 단지 식별정보(ref.complexes, 11/16) — 단지 이름 · 세대수 · 동수.
+    """
+    ua = unit_from_address(address)
+    t = pick_title(titles, ua["dong"])
     if not t:
         return None
     approved = _date(t.get("useAprDay"))
@@ -169,9 +175,17 @@ def summarize(
         _int(t.get(k)) or 0
         for k in ("indrAutoUtcnt", "oudrAutoUtcnt", "indrMechUtcnt", "oudrMechUtcnt")
     )
-    uses = floor_uses(floors, unit["floor"], unit["dong"])
-    villa = None  # 주택으로 나온 물건만 판단
-    if HOUSING.search(usage_text or "") and uses:
+    uses = floor_uses(floors, ua["floor"], ua["dong"])
+    villa, villa_level = None, None  # 주택으로 나온 물건만 판단
+    ho_use = unit_use(unit)
+    if HOUSING.search(usage_text or "") and ho_use:  # 그 호의 전유 용도가 있으면 그것으로(11/16)
+        villa_level = "ho"
+        if NEIGHBORHOOD.search(ho_use) and not HOUSING.search(ho_use):
+            villa = "confirmed"
+        else:
+            villa = "clear"
+    elif HOUSING.search(usage_text or "") and uses:
+        villa_level = "floor"
         nb = [u for u in uses if NEIGHBORHOOD.search(u)]
         if nb and len(nb) == len(uses) and not any(HOUSING.search(u) for u in uses):
             villa = "confirmed"
@@ -194,8 +208,43 @@ def summarize(
         "land_m2": _float(t.get("platArea")),  # 대지 면적 — 땅값 역산(LAND-01)
         "approved": approved.isoformat() if approved else None,
         "age_years": (as_of.year - approved.year) if approved else None,
-        "unit_floor": unit["floor"],
+        "unit_floor": ua["floor"],
         "unit_floor_uses": uses,
         "villa": villa,
+        "villa_level": villa_level,
         "buildings": len(titles),
+        **unit_facts(unit),
+        **complex_facts(complex_),
+    }
+
+
+def unit_use(unit: dict[str, Any] | None) -> str | None:
+    """그 호의 전유 용도 글(「다세대주택」 · 「제2종근린생활시설 사무소」). 못 받았으면 None."""
+    if not unit or unit.get("result") != "ok":
+        return None
+    use = " ".join(x for x in [unit.get("own_use"), unit.get("own_use_etc")] if x).strip()
+    return use or None
+
+
+def unit_facts(unit: dict[str, Any] | None) -> dict[str, Any]:
+    """전유 · 공용 면적과 전용률(전유 ÷ (전유 + 공용)). 그 호를 못 받았으면 빈 dict."""
+    use = unit_use(unit)
+    if not use or unit is None:
+        return {}
+    own, com = _float(unit.get("own_area")), _float(unit.get("common_area"))
+    ratio = round(100 * own / (own + com)) if own and com else None
+    return {"unit_use": use, "own_area_m2": own, "common_area_m2": com, "exclusive_pct": ratio}
+
+
+def complex_facts(c: dict[str, Any] | None) -> dict[str, Any]:
+    """단지 이름 · 세대수 · 동수 · 가장 높은 층. 단지를 못 이었으면 빈 dict."""
+    if not c:
+        return {}
+    names = [n for n in (c.get("names") or []) if n]
+    name = next((n for n in names if "(" not in n), names[0] if names else None)
+    return {
+        "complex_name": name,
+        "complex_units": _int(c.get("unit_cnt")),
+        "complex_dongs": _int(c.get("dong_cnt")),
+        "complex_max_floors": _int(c.get("max_floors")),
     }

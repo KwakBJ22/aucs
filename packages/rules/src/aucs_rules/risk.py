@@ -194,10 +194,11 @@ def signals(f: dict[str, Any]) -> list[Signal]:
     # 건축물대장(그 층 용도)이 있으면 그것으로, 없으면 용도 코드로 짐작(10/27)
     villa = f.get("villa_by_register")
     if villa == "confirmed":
+        where = "이 호가" if f.get("villa_level") == "ho" else "이 층이"  # 11/16 전유부로 호까지
         add(
             "risk.neighborhood_villa", "high",
-            "근생빌라 — 건축물대장에 이 층이 근린생활시설이에요(주택 대출·세금 확인)",
-            Status.CONFIRMED, floor_uses=f.get("floor_uses"),
+            f"근생빌라 — 건축물대장에 {where} 근린생활시설이에요(주택 대출·세금 확인)",
+            Status.CONFIRMED, floor_uses=f.get("floor_uses"), unit_use=f.get("unit_use"),
         )  # fmt: skip
     elif villa == "mixed":
         add(
