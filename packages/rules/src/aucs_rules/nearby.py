@@ -21,14 +21,16 @@ def nearby_stores(row: dict[str, Any] | None) -> dict[str, Any] | None:
         for s in same
         if str(s.get("floor") or "") == "1" and (s.get("small") or s.get("large"))
     )
-    as_of = row.get("as_of")
+    # 11/17: 상권정보 API 는 자료 기준일을 주지 않음(공공데이터포털 업데이트 주기 「실시간」). 파일판 이름의 날짜
+    # (as_of)가 API 와 같은 시점이라는 확인이 없어 화면에는 받은 날을 「받음」으로 냄
+    got = row.get("fetched_at")
     return {
         "radius_m": row.get("radius_m") or 300,
         "total": int(row["total"]),
         "top": [[k, int(v)] for k, v in large[:3]],
         "same_parcel": int(row.get("same_parcel") or 0),
         "ground": [k for k, _ in first.most_common(3)],  # 같은 건물 1층 업종
-        "as_of": as_of.isoformat() if isinstance(as_of, date) else as_of,
+        "fetched": got.date().isoformat() if hasattr(got, "date") else (str(got)[:10] if got else None),
     }
 
 

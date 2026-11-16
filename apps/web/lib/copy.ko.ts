@@ -1274,12 +1274,13 @@ export const copy = {
         `${s.radius_m}m 안 ${s.total.toLocaleString("ko-KR")}곳`,
         ...s.top.map(([k, n]) => `${k} ${n}`),
       ].join(" · "),
-    storesNote: (s: { same_parcel: number; ground: string[]; as_of?: string | null }) =>
+    // 11/17: API 가 기준일을 주지 않아 받은 날을 「받음」으로(파일판 날짜를 기준일처럼 적던 것을 바로잡음)
+    storesNote: (s: { same_parcel: number; ground: string[]; fetched?: string | null }) =>
       [
         s.same_parcel
           ? `이 건물 ${s.same_parcel}곳${s.ground.length ? `(1층 ${s.ground.join(" · ")})` : ""}`
           : null,
-        `소상공인시장진흥공단${s.as_of ? ` (${s.as_of.replace(/^(\d+)-0?(\d+)-0?(\d+)$/, "$1. $2. $3.")} 기준)` : ""}`,
+        `소상공인시장진흥공단${s.fetched ? ` · ${s.fetched.replace(/^(\d+)-0?(\d+)-0?(\d+)$/, "$1. $2. $3.")} 받음(자료 기준일은 제공 안 됨)` : ""}`,
       ]
         .filter(Boolean)
         .join(" / "),

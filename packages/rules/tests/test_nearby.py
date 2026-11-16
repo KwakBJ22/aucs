@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from aucs_rules.nearby import land_trade_price, nearby_stores
 
@@ -7,11 +7,11 @@ TODAY = date(2026, 11, 16)
 
 def test_nearby_stores():
     row = {"total": 337, "radius_m": 300, "by_large": {"교육": 36, "음식": 86, "소매": 58},
-           "same_parcel": 3, "as_of": date(2026, 6, 30),
+           "same_parcel": 3, "fetched_at": datetime(2026, 11, 16, 3, 0),
            "same_list": [{"floor": "1", "small": "카페"}, {"floor": "1", "small": "카페"},
                          {"floor": "2", "small": "미술학원"}]}  # fmt: skip
     s = nearby_stores(row)
-    assert s["top"][0] == ["음식", 86] and s["ground"] == ["카페"] and s["as_of"] == "2026-06-30"
+    assert s["top"][0] == ["음식", 86] and s["ground"] == ["카페"] and s["fetched"] == "2026-11-16"
     assert nearby_stores({"total": 0}) is None and nearby_stores(None) is None
 
 

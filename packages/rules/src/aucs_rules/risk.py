@@ -107,7 +107,7 @@ def signals(f: dict[str, Any]) -> list[Signal]:
     if f.get("lease_reg_released"):  # 11/17 — 보증기관 말소동의: 떠안지 않음, 확인만
         add(
             "risk.lease_reg_released", "info",
-            "선순위 임차권등기 — 보증기관이 말소에 동의해 떠안지 않아요",
+            "선순위 임차권등기 — 보증기관이 말소에 동의해 떠안지 않아요 · 입찰 전 매각물건명세서 확인",
             Status.CONFIRMED, text=f["lease_reg_released"],
         )  # fmt: skip
     if f.get("land_or_building_only"):
