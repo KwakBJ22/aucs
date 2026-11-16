@@ -465,7 +465,7 @@ export type CashBreakdown = {
     tax_krw: number;
     relief_krw: number;
     rate: number;
-    total_pct: number;
+    total_pct: number | null; // 용도 확인 안 됨이면 null(11/17)
     heavy: boolean;
     temporary_two: boolean;
   };

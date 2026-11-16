@@ -928,7 +928,9 @@ export const copy = {
     cap: (x: string) => `${x}을 넘으면 시세보다 비싸게 사요`,
     loanWho: (who: string, pct: number | null) =>
       pct == null
-        ? "상가·오피스텔·땅 대출은 은행마다 달라 대출 없이 계산했어요"
+        ? who === "unknown"
+          ? "용도(주택인지)가 확인되지 않아 대출 없이 계산했어요"
+          : "상가·오피스텔·땅 대출은 은행마다 달라 대출 없이 계산했어요"
         : `대출은 ${({ none: "무주택", first_time: "생애최초", owner: "집 있음", owner_sell: "기존 집 처분 조건" } as Record<string, string>)[who] ?? who} 기준 ${pct}%로 계산했어요`,
     footCourt:
       "법원경매정보·국토부 실거래가 공개 자료로 계산 · 등기부와 현장을 꼭 직접 확인하세요 · 투자 권유가 아니에요",
@@ -1221,6 +1223,10 @@ export const copy = {
       loanEdit: "바꾸기",
       loanPlaceholder: "대출 금액(원)",
       tax: (p: number) => `취득세 등 (${p}%)`,
+      // 11/17: 주택인지 확인할 자료가 없는 물건(법원 용도 「기타」 · 대장 없음) — 세율을 짐작하지 않음
+      taxLabel: "취득세 등",
+      taxUnknown:
+        "용도 확인 안 됨 — 필요한 현금에서 빠졌어요 · 주택이면 1.1~3.5%(다주택은 중과), 그 밖이면 4.6%",
       reg: "등기·법무사(대략)",
       rent: {
         open: "세놓으면",

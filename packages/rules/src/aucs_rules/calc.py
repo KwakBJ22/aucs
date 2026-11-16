@@ -41,8 +41,13 @@ def loan_limit(
     """
     basis = min(x for x in (bid_krw, appraisal_krw, market_krw) if x)
     if kind != "house":  # 11/17 — 기준표는 주택담보대출 비율. 상가 · 오피스텔 · 땅은 은행마다 달라 셈하지 않음
-        value = {"loan_krw": 0, "pct": None, "cap_krw": None, "basis_krw": basis, "who": "non_house",
-                 "note": "상가·오피스텔·땅 대출은 은행마다 달라요 — 「바꾸기」로 받을 금액을 넣어 주세요"}  # fmt: skip
+        note = (
+            "용도(주택인지)가 확인되지 않아 대출을 셈하지 않았어요 — 「바꾸기」로 받을 금액을 넣어 주세요"
+            if kind == "unknown"
+            else "상가·오피스텔·땅 대출은 은행마다 달라요 — 「바꾸기」로 받을 금액을 넣어 주세요"
+        )
+        value = {"loan_krw": 0, "pct": None, "cap_krw": None, "basis_krw": basis,
+                 "who": "unknown" if kind == "unknown" else "non_house", "note": note}  # fmt: skip
         return RuleResult(value, Status.UNKNOWN, f"calc.loan.{cls}", [{"kind": kind}])
     if homes >= 1:
         who = "owner_sell" if selling and homes == 1 and "owner_sell" in table[cls] else "owner"
@@ -79,15 +84,25 @@ NON_HOUSE = {"other": {"rate": 4.0, "edu": 0.4, "farm": 0.2}, "farm": {"rate": 3
 _HOUSE = re.compile(r"(아파트|다세대|연립|빌라|단독|다가구|주택|주거용)")  # 공매 「기타주거용건물」
 
 
+# 주택이 아니라고 확인되는 말(법원 · 공매 용도, 건축물대장 주용도)
+_NON_HOUSE = re.compile(
+    r"(근린|상가|오피스텔|공장|업무|사무|판매|숙박|창고|교육|노유자|의료|운동|종교|문화|위락|자동차|주차|"
+    r"임야|대지|잡종지|도로|토지|목장|염전|하천|구거|유지|제방|묘지|체육|학교|철도|수도|공원|기숙사|빌딩|시설)"
+)
+
+
 def tax_kind(usage: str | None) -> str:
-    """물건 용도 글 → 취득세 종류: house(주택 1~3%·중과) · farm(전답 3%) · other(상가·오피스텔·땅 4%).
-    오피스텔은 취득세에서 주택이 아님. 용도를 모르면 지금처럼 house."""
+    """물건 용도 글 → 취득세 · 대출 종류: house(주택 1~3%·중과) · farm(전답 3%) · other(상가 · 오피스텔 · 땅 4%)
+    · unknown(주택인지 아닌지 확인할 말이 없음 — 법원 용도 「기타」에 대장도 없는 물건 등).
+    오피스텔은 취득세에서 주택이 아님. 11/17 정직 원칙: 확인 안 되면 짐작해 셈하지 않고 unknown."""
     u = (usage or "").strip()
-    if not u or _HOUSE.search(u) or u == "기타":  # 「기타」만 있고 대장도 없으면 모름 → 예전대로(11/17)
+    if _HOUSE.search(u):
         return "house"
-    if u.split()[0] in ("전답", "전", "답", "과수원"):  # 경매 「전답」 · 공매 「전」 「답」
+    if u and u.split()[0] in ("전답", "전", "답", "과수원"):  # 경매 「전답」 · 공매 「전」 「답」
         return "farm"
-    return "other"
+    if _NON_HOUSE.search(u):
+        return "other"
+    return "unknown"
 
 
 def acquisition_tax(
@@ -107,6 +122,12 @@ def acquisition_tax(
     temporary_two: 일시적 2주택(새 집을 사고 3년 안에 기존 집 처분) → 중과 대신 기본 세율 (지방세법 시행령 §28의5).
     relief: 생애최초 감면 표(지방세특례제한법 §36의3) — 넣으면 취득세 본세에서 한도까지 뺍니다.
     """
+    if kind == "unknown":  # 용도 확인 안 됨 — 세율을 짐작하지 않음(필요한 현금에서 빠짐, 화면에 그렇게 적음)
+        return RuleResult(
+            {"tax_krw": 0, "relief_krw": 0, "rate": None, "total_pct": None, "heavy": False,
+             "temporary_two": False, "kind": "unknown"},
+            Status.UNKNOWN, "calc.acq_tax", [{"kind": kind}],
+        )  # fmt: skip
     if kind in ("farm", "other"):
         nh = {**NON_HOUSE, **(table.get("non_house") or {})}[kind]
         total = float(nh["rate"]) + float(nh["edu"]) + float(nh["farm"])

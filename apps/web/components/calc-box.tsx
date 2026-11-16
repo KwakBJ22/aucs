@@ -308,14 +308,18 @@ export function CalcBox({ id }: { id: string }) {
                 {manInput(c.otherMonthly, setOtherMonthly)}
               </>
             )}
-            <Row
-              label={
-                s.tax.relief_krw > 0
-                  ? `${c.tax(s.tax.total_pct)} · ${c.relief(won(s.tax.relief_krw))}`
-                  : c.tax(s.tax.total_pct)
-              }
-              value={`+ ${won(s.tax.tax_krw)}`}
-            />
+            {s.tax.total_pct == null ? (
+              <Row label={c.taxLabel} value={c.taxUnknown} />
+            ) : (
+              <Row
+                label={
+                  s.tax.relief_krw > 0
+                    ? `${c.tax(s.tax.total_pct)} · ${c.relief(won(s.tax.relief_krw))}`
+                    : c.tax(s.tax.total_pct)
+                }
+                value={`+ ${won(s.tax.tax_krw)}`}
+              />
+            )}
             <Row label={c.reg} value={`+ ${won(s.registration_krw)}`} />
             {s.assumed_krw > 0 && <Row label={c.assumed} value={`+ ${won(s.assumed_krw)}`} />}
             {d.move_out && s.move_out_krw > 0 && (

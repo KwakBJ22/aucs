@@ -45,7 +45,7 @@ def test_acquisition_tax() -> None:
 def test_cash_and_cases() -> None:
     v = cash_needed(800_000_000, min_price_krw=700_000_000, appraisal_krw=1_000_000_000,
                     market_krw=1_100_000_000, area_m2=84, cls="regulated", homes=0, first_time=False,
-                    tables={"loan_ltv": LTV, "acquisition_tax": TAX}).value  # fmt: skip
+                    usage="아파트", tables={"loan_ltv": LTV, "acquisition_tax": TAX}).value  # fmt: skip
     assert v["loan_krw"] == 320_000_000 and v["deposit_krw"] == 70_000_000
     assert v["cash_krw"] == 800_000_000 - 320_000_000 + v["tax"]["tax_krw"] + 1_600_000
     c = bid_cases(1_000_000_000, 800_000_000, 78.4, 84.0, 90.0)
@@ -142,7 +142,7 @@ def test_cash_at_min_by_homes() -> None:
 
     v = cash_at_min(min_price_krw=300_000_000, appraisal_krw=400_000_000, market_krw=None,
                     area_m2=84.0, sido="경기도", address="경기도 평택시 비전동",
-                    tables={"regulated_areas": REG, "loan_ltv": LTV, "acquisition_tax": TAX})  # fmt: skip
+                    tables={"regulated_areas": REG, "loan_ltv": LTV, "acquisition_tax": TAX}, usage="아파트")  # fmt: skip
     assert set(v) == {"0", "1", "2"}
     assert v["0"] < 300_000_000 * 0.4  # 무주택은 70% 대출 → 30% + 세금쯤
     assert v["2"] > 300_000_000  # 집이 있으면(owner 0%) 대출 없이 전액 + 세금
@@ -155,7 +155,12 @@ def test_non_house_tax():
     assert tax_kind("상가,오피스텔,근린시설 1층104호") == "other"
     assert tax_kind("오피스텔") == "other" and tax_kind("대지") == "other"
     assert tax_kind("전답") == "farm" and tax_kind("다세대 2층201호") == "house"
-    assert tax_kind(None) == "house"
+    assert tax_kind(None) == "unknown" and tax_kind("기타") == "unknown"
+    assert tax_kind("기타 블리스타운2차 1동 2층205호") == "unknown"  # 설명만으로는 주택인지 모름
+    assert tax_kind("기타 나동 공장 공장(지식산업센터)") == "other"
+    assert tax_kind("기타 단독주택 단독주택") == "house"
+    u = acquisition_tax(100_000_000, homes_after=1, cls="metro", area_m2=None, table=TAX, kind="unknown").value
+    assert u["tax_krw"] == 0 and u["total_pct"] is None
     v = acquisition_tax(1_000_000_000, homes_after=3, cls="regulated", area_m2=44, table=TAX, kind="other").value
     assert v["total_pct"] == 4.6 and v["tax_krw"] == 46_000_000 and not v["heavy"]
     f = acquisition_tax(100_000_000, homes_after=1, cls="metro", area_m2=None, table=TAX, kind="farm").value
