@@ -71,7 +71,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         )}
         {b.is_share && <Row label="" value={<b className="c-red">{t.share}</b>} />}
         {b.building && <BuildingRows g={b.building} />}
-        {b.redev && (
+        {/* 구역 이름 · 단계를 못 이은 물건(「정비구역 안」만 앎)은 빈 줄이 되어 안 냄 — 위 띠에 이미 나옴(11/16) */}
+        {b.redev && (b.redev.name || b.redev.stage || b.redev.biz_type) && (
           <Row
             label={t.redev}
             value={[b.redev.name, b.redev.biz_type, b.redev.stage].filter(Boolean).join(" · ")}

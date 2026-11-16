@@ -33,6 +33,7 @@ from aucs_api.services.item_links import same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
 from aucs_api.services.item_worth import appraisal_gap, worth
 from aucs_api.services.items import card, photo_url
+from aucs_api.services.onbid import KST
 from aucs_api.services.picks import reduction_table
 
 _ITEM_SQL = """
@@ -191,7 +192,8 @@ def build_detail(
             },
         ),  # fmt: skip
         "schedule": sched,
-        "computed_at": r["computed_at"].isoformat() if r["computed_at"] else None,
+        # 한국 시각으로(11/16) — 화면이 앞 16자를 잘라 써서 UTC 면 9시간 늦게 보였음
+        "computed_at": r["computed_at"].astimezone(KST).isoformat() if r["computed_at"] else None,
     }
 
 
