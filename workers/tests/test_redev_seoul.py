@@ -1,3 +1,4 @@
+import json
 from datetime import date
 
 from aucs_workers.collectors.redev_seoul import as_of, to_zone
@@ -28,7 +29,7 @@ def test_to_zone() -> None:
 
 def test_as_of_is_quarter_end() -> None:
     def z(day: str, key: str = "plan") -> dict[str, str | None]:
-        return {"detail": '{"dates": {"%s": "%s"}}' % (key, day)}
+        return {"detail": json.dumps({"dates": {key: day}})}
 
     zones = [
         z("2026-05-28"),
