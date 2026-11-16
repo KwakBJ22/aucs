@@ -114,6 +114,13 @@ def main() -> None:
             redev_gg.main(geo=False)
         except SystemExit as e:
             print(f"경기 정비사업 건너뜀: {e}")
+    # 공동주택 단지 식별정보도 분기마다 같이(11/16) — 세대수 · 동수 · 사용승인일
+    from aucs_workers.collectors import complexes
+
+    try:
+        complexes.main()
+    except SystemExit as e:
+        print(f"단지 식별정보 건너뜀: {e}")
     # 새로 생긴 대표지번의 좌표(11/13 「입지 — 가까운 정비사업」) — 키가 없으면 건너뜀
     if os.getenv("VWORLD_API_KEY", "").strip():
         from aucs_workers.collectors import redev_geo

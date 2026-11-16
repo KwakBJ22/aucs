@@ -40,6 +40,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.redev_seoul"]
     if key == "probe_more":  # R-ONE 자료 꼴 · 건축물대장 전유부 표본(11/15) — logs/probe_more.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--more"]
+    if key == "complexes":  # 공동주택 단지 식별정보 받기(11/16) — 분기마다 redev 가 같이 돌림
+        return [sys.executable, "-m", "aucs_workers.collectors.complexes"]
     if key == "units":  # 건축물대장 전유공용면적(호) 받기(11/16) — 아침 묶음이 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.units"]
     if key == "probe_units":  # 건축물대장 전유공용면적을 호로 좁혀 받기 표본(11/15) — logs/probe_units.log
