@@ -118,7 +118,8 @@ def refresh(conn: psycopg.Connection, today: date) -> int:
         " and valid_from <= %s order by valid_from desc limit 1",
         (today,),
     ).fetchone()
-    reduction = dict((red or {}).get("value") or {})
+    # 확인된 법원 저감률만(11/17 — 확인 안 된 값으로 다음 회차 값을 내지 않음, picks.reduction_table 과 같게)
+    reduction = {k: v for k, v in dict((red or {}).get("value") or {}).items() if isinstance(v, dict) and v.get("verified")}
     n = 0
     if picks:
         out = build(cur.execute(SQL, {"today": today}).fetchall(), stats, reduction, today)

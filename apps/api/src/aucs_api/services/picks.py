@@ -72,7 +72,8 @@ def reduction_table(today: date) -> dict[str, Any]:
             " and valid_from <= %s order by valid_from desc limit 1",
             (today,),
         ).fetchone()
-    return dict((red or {}).get("value") or {})
+    # 11/17 대표님: 확인 안 된 법원 저감률로는 다음 회차 값을 내지 않음(줄을 아예 안 냄)
+    return {k: v for k, v in dict((red or {}).get("value") or {}).items() if isinstance(v, dict) and v.get("verified")}
 
 
 def mark_next_round(

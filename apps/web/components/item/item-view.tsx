@@ -76,9 +76,6 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             d.next_round.min_price_krw ? (
               <>
                 {won(d.next_round.min_price_krw)}
-                {d.next_round.verified ? null : (
-                  <span className="fs-xs fw-5 c-muted"> {t.nextRoundGuess}</span>
-                )}
                 <OddsLine odds={d.next_round.fail_odds} short />
               </>
             ) : (
