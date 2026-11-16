@@ -108,7 +108,9 @@ def load_area_stats(cur: Any) -> Any:
         out: dict[str, dict[str, dict[str, Any]]] | None = None
         if cur.execute("select to_regclass('ref.region_stats') is not null as ok").fetchone()["ok"]:
             out = {}
-            for r in cur.execute("select stat_key, region, period, value, unit from ref.region_stats").fetchall():
+            for r in cur.execute(
+                "select stat_key, region, period, value, unit from ref.region_stats"
+            ).fetchall():
                 out.setdefault(r["stat_key"], {})[r["region"]] = r
         _AREA_STATS.append(out)
     return _AREA_STATS[0]
@@ -535,7 +537,9 @@ def analyze_item(
             "name": None, "biz_type": None, "stage": None, "how": "토지 이용 계획"}  # fmt: skip
     if redev:
         facts["in_redev_zone"] = redev
-        if cash_tables:  # 규제지역(투기과열지구)이면 낙찰자 조합원 자격까지 가름(REDEV-01)
+        # 규제지역(투기과열지구)이면 낙찰자 조합원 자격까지 가름(REDEV-01) — 서울만.
+        # 경기 자료는 기준일이 오래돼(2025. 9.) 단계가 바뀌었을 수 있어 이름 · 단계 · 날짜만 보여 줌(11/16)
+        if cash_tables and item.get("sido") == "서울특별시":
             facts["regulated_area"] = (
                 area_class(item.get("sido"), item.get("address"), cash_tables["regulated_areas"])
                 == "regulated"
