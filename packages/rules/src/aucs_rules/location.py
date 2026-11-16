@@ -22,10 +22,12 @@ DONE_STAGES = ("준공", "청산", "해산", "입주")
 SKIP_TYPES = ("지역주택",)
 
 # 정비구역은 우리가 직접 받는 자료만 씀(11/15 대표님): 서울 정보몽땅 「사업장 목록」 · 서울 열린데이터광장 「도시정비사업 통계」
-ZONE_OURS_SQL = "z.source in ('사업장 목록', '도시정비사업 통계')"
+# · 경기데이터드림 「일반 정비 사업 추진 현황」(11/16)
+ZONE_OURS_SQL = "z.source in ('사업장 목록', '도시정비사업 통계', '경기 정비사업')"
 # 정비사업 한 줄 → ref.place_points 주소(수집기와 API 가 같은 식을 씀)
 ZONE_ADDRESS_SQL = (
-    "'서울특별시 ' || z.gu || ' ' || z.dong_name || ' ' || z.main_no"
+    "case when z.source = '경기 정비사업' then '경기도 ' else '서울특별시 ' end"
+    " || z.gu || ' ' || z.dong_name || ' ' || z.main_no"
     " || case when coalesce(z.sub_no, 0) > 0 then '-' || z.sub_no else '' end"
 )
 

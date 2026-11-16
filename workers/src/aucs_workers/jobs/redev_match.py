@@ -97,19 +97,26 @@ def find_zone(
     item: dict[str, Any],
     zones_by: dict[tuple[str, str], list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any] | None:
-    if item.get("sido") != "서울특별시":
-        return None
+    # 구역의 gu 칸: 서울은 자치구(「도봉구」), 경기는 시군(「고양시」 — 물건의 「고양시 덕양구」에서 앞말)
+    sgg = item.get("sigungu") or ""
+    gu = (
+        sgg
+        if item.get("sido") == "서울특별시"
+        else sgg.split()[0]
+        if sgg and item.get("sido") == "경기도"
+        else ""
+    )
     dong = dong_of(item.get("address"))
-    if not dong:
+    if not gu or not dong:
         return None
     if zones_by is not None:
-        rows: list[Any] = zones_by.get((item.get("sigungu") or "", dong), [])
+        rows: list[Any] = zones_by.get((gu, dong), [])
     else:
         rows = cur.execute(
             f"""select {_ZONE_SQL} from ref.redev_zones z
                 where z.gu = %s and z.dong_name = %s and {ZONE_OURS_SQL}
                 order by z.source = '사업장 목록' desc, z.zone_id""",
-            (item.get("sigungu"), dong),
+            (gu, dong),
         ).fetchall()
     zones = [r if isinstance(r, dict) else dict(zip(_COLS, r, strict=True)) for r in rows]
     z = pick(item, zones)

@@ -107,6 +107,13 @@ def main() -> None:
             redev_seoul.main(geo=False)
         except SystemExit as e:
             print(f"서울 도시정비사업 통계 건너뜀: {e}")
+    if os.getenv("GG_OPENAPI_KEY", "").strip():  # 경기 정비사업도 같이(11/16)
+        from aucs_workers.collectors import redev_gg
+
+        try:
+            redev_gg.main(geo=False)
+        except SystemExit as e:
+            print(f"경기 정비사업 건너뜀: {e}")
     # 새로 생긴 대표지번의 좌표(11/13 「입지 — 가까운 정비사업」) — 키가 없으면 건너뜀
     if os.getenv("VWORLD_API_KEY", "").strip():
         from aucs_workers.collectors import redev_geo
