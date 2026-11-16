@@ -25,7 +25,8 @@ from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
 URL = "https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius"
-# 같은 자료의 파일판(분기) 목록 — 파일 이름 끝의 날짜가 자료 기준일(「…상가(상권)정보_20260630」, 11/16)
+# 같은 자료의 파일판(분기) 목록 — 이름 끝 날짜(「…상가(상권)정보_20260630」)를 as_of 에 적어 둠.
+# 11/17: API 는 기준일을 주지 않고(포털 「실시간」) 파일판과 같은 시점인지 확인 안 됨 → 화면에는 안 씀(받은 날을 씀)
 CATALOG = "https://www.data.go.kr/catalog/15083033/fileData.json"
 RADIUS = 300
 ROWS = 1000
@@ -94,7 +95,7 @@ def fetch(client: httpx.Client, key: str, lon: float, lat: float) -> list[dict[s
 
 
 def as_of(client: httpx.Client) -> str | None:
-    """자료 기준일(파일판 이름의 날짜). 못 읽으면 None — 화면은 기준일 없이 냄."""
+    """파일판 이름의 날짜(API 기준일이라는 확인은 없음 — 참고로만 둠). 못 읽으면 None."""
     try:
         d = client.get(CATALOG, timeout=20).json()
         m = re.search(r"_(20\d{6})", str(d.get("name") or ""))
@@ -146,7 +147,7 @@ def main() -> None:
             ).fetchone()  # 이주 0064 전에도 돌게
             with httpx.Client(timeout=40, headers={"Accept": "application/json"}) as client:
                 day = as_of(client) if has_as_of else None
-                print(f"  자료 기준일 {day or '모름'}")
+                print(f"  파일판 날짜(참고) {day or '못 읽음'}")
                 for i, (item_id, code, lot, lon, lat) in enumerate(todo, 1):
                     try:
                         stores = fetch(client, key, lon, lat)
