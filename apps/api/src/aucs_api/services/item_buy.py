@@ -22,10 +22,10 @@ def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
                     f"승강기 {b['elevators']}대" if b.get("elevators") else None,
                     f"주차 {b['parking']}대" if b.get("parking") else None] if x
     )  # fmt: skip
-    unit = None
-    if b.get("unit_use"):  # 그 호의 전유 용도(11/16) — 층 용도보다 정확
+    unit, unit_label = None, None
+    if b.get("unit_use"):  # 그 호의 전유 용도(11/16) — 층 용도보다 정확. 줄 이름도 「이 호」(11/17)
         ratio = f" · 전용률 {b['exclusive_pct']}%" if b.get("exclusive_pct") else ""
-        unit = f"이 호 용도: {b['unit_use']}{ratio}"
+        unit, unit_label = f"{b['unit_use']}{ratio}", "이 호"
     elif b.get("unit_floor") is not None and b.get("unit_floor_uses"):
         f = b["unit_floor"]
         unit = f"{'지하 ' + str(-f) if f < 0 else f}층 용도: {', '.join(b['unit_floor_uses'])}"
@@ -36,6 +36,7 @@ def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
         or None,
         "extra": extra or None,
         "unit": unit,
+        "unit_label": unit_label,
         "villa": b.get("villa"),
         "dong": b.get("dong"),
     }

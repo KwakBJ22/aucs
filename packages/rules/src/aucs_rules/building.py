@@ -145,7 +145,7 @@ def floor_uses(floors: list[dict[str, Any]], floor: int | None, dong: str | None
         no = _int(r.get("flrNo"))
         if no is None or (-no if under else no) != floor:
             continue
-        use = " ".join(x for x in [r.get("mainPurpsCdNm"), r.get("etcPurps")] if x).strip()
+        use = join_use(r.get("mainPurpsCdNm"), r.get("etcPurps"))
         if use and use not in out:
             out.append(use)
     return out
@@ -193,7 +193,7 @@ def summarize(
             villa = "mixed"
         else:
             villa = "clear"  # 그 층은 주택 → 용도 코드로 짐작한 근생 의심은 내림
-    main_use = " ".join(x for x in [t.get("mainPurpsCdNm"), t.get("etcPurps")] if x).strip() or None
+    main_use = join_use(t.get("mainPurpsCdNm"), t.get("etcPurps")) or None
     return {
         "name": (t.get("bldNm") or "").strip() or None,
         "dong": (t.get("dongNm") or "").strip() or None,
@@ -222,10 +222,16 @@ def unit_use(unit: dict[str, Any] | None) -> str | None:
     """그 호의 전유 용도 글(「다세대주택」 · 「제2종근린생활시설 사무소」). 못 받았으면 None."""
     if not unit or unit.get("result") != "ok":
         return None
-    main, etc = str(unit.get("own_use") or "").strip(), str(unit.get("own_use_etc") or "").strip()
-    if main and etc and (main in etc or etc in main):  # 「다세대주택 다세대주택」 · 「사무소 제2종근린생활시설(사무소)」
-        return max(main, etc, key=len)
-    return " ".join(x for x in [main, etc] if x) or None
+    return join_use(unit.get("own_use"), unit.get("own_use_etc")) or None
+
+
+def join_use(main: Any, etc: Any) -> str:
+    """대장의 주용도 · 기타용도를 한 글로. 한쪽이 다른 쪽에 들어 있으면 긴 것 하나만(11/17 —
+    「공동주택 공동주택」 · 「휴게음식점 제2종근린생활시설(휴게음식점)」처럼 겹쳐 나왔음)."""
+    a, b = str(main or "").strip(), str(etc or "").strip()
+    if a and b and (a in b or b in a):
+        return max(a, b, key=len)
+    return " ".join(x for x in [a, b] if x)
 
 
 def unit_facts(unit: dict[str, Any] | None) -> dict[str, Any]:
@@ -242,7 +248,8 @@ def complex_facts(c: dict[str, Any] | None) -> dict[str, Any]:
     """단지 이름 · 세대수 · 동수 · 가장 높은 층. 단지를 못 이었으면 빈 dict."""
     if not c:
         return {}
-    names = [n for n in (c.get("names") or []) if n]
+    # 지번만 있는 이름(「(1046-3)」)은 이름이 아님 — 괄호 밖에 글자가 있는 것만(11/17)
+    names = [n.strip() for n in (c.get("names") or []) if n and re.sub(r"\(.*?\)", "", n).strip()]
     name = next((n for n in names if "(" not in n), names[0] if names else None)
     return {
         "complex_name": name,

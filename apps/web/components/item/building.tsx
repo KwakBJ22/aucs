@@ -12,6 +12,7 @@ export type Bldg = {
   shape: string | null;
   extra: string | null;
   unit: string | null;
+  unit_label?: string | null; // 「이 호」(그 호의 대장 용도) — 없으면 「이 층」
   villa: "confirmed" | "mixed" | "clear" | null;
 };
 
@@ -31,7 +32,7 @@ export function BuildingRows({ g }: { g: Bldg }) {
       {g.extra && <Row label="" value={g.extra} />}
       {g.unit && (
         <Row
-          label={c.unit}
+          label={g.unit_label ?? c.unit}
           value={
             <span style={{ color: tone }}>
               {g.unit}

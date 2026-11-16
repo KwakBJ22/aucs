@@ -107,3 +107,13 @@ def test_unit_level_villa_and_complex():
     assert b["villa"] == "clear" and b["complex_name"] == "미성하르딘" and b["complex_units"] == 18
     b = summarize(title, floors, addr, "다세대", TODAY, {"result": "none"}, None)
     assert b["villa_level"] == "floor" and "unit_use" not in b
+
+
+def test_join_use_and_complex_name():
+    from aucs_rules.building import complex_facts, join_use
+
+    assert join_use("공동주택", "공동주택") == "공동주택"
+    assert join_use("휴게음식점", "제2종근린생활시설(휴게음식점)") == "제2종근린생활시설(휴게음식점)"
+    assert join_use("공동주택", "다세대주택") == "공동주택 다세대주택"
+    assert complex_facts({"names": ["(1046-3)"], "unit_cnt": 16})["complex_name"] is None
+    assert complex_facts({"names": ["평산빌라(1,2동)"]})["complex_name"] == "평산빌라(1,2동)"
