@@ -4,6 +4,7 @@
 대출은 규정상 최대치일 뿐 소득(DSR)·은행에 따라 줄어듭니다. 화면에서 손님이 직접 바꿀 수 있게 합니다.
 """
 
+import re
 from typing import Any
 
 from aucs_rules.result import RuleResult, Status
@@ -67,6 +68,23 @@ def loan_limit(
     return RuleResult(value, Status.ESTIMATED, f"calc.loan.{cls}", [{"cls": cls}])
 
 
+# 주택 아닌 것의 유상취득(지방세법 §11①7: 농지 3% · 그 밖 4%) — 본세 · 지방교육세 · 농특세(11/16).
+# 기준표 acquisition_tax.non_house 가 있으면 그것을 씀
+NON_HOUSE = {"other": {"rate": 4.0, "edu": 0.4, "farm": 0.2}, "farm": {"rate": 3.0, "edu": 0.2, "farm": 0.2}}
+_HOUSE = re.compile(r"(아파트|다세대|연립|빌라|단독|다가구|주택)")
+
+
+def tax_kind(usage: str | None) -> str:
+    """물건 용도 글 → 취득세 종류: house(주택 1~3%·중과) · farm(전답 3%) · other(상가·오피스텔·땅 4%).
+    오피스텔은 취득세에서 주택이 아님. 용도를 모르면 지금처럼 house."""
+    u = (usage or "").strip()
+    if not u or _HOUSE.search(u):
+        return "house"
+    if u.split()[0] == "전답":
+        return "farm"
+    return "other"
+
+
 def acquisition_tax(
     price_krw: int,
     *,
@@ -76,12 +94,22 @@ def acquisition_tax(
     table: dict[str, Any],
     temporary_two: bool = False,
     relief: dict[str, Any] | None = None,
+    kind: str = "house",
 ) -> RuleResult:
     """주택 취득세 + 지방교육세 + 농특세(85㎡ 초과). homes_after = 이번 집을 포함한 주택 수.
+    kind 가 farm · other 면 집 수와 상관없이 정해진 세율(11/16 — 상가 · 땅에 주택 세율이 붙던 것).
 
     temporary_two: 일시적 2주택(새 집을 사고 3년 안에 기존 집 처분) → 중과 대신 기본 세율 (지방세법 시행령 §28의5).
     relief: 생애최초 감면 표(지방세특례제한법 §36의3) — 넣으면 취득세 본세에서 한도까지 뺍니다.
     """
+    if kind in ("farm", "other"):
+        nh = {**NON_HOUSE, **(table.get("non_house") or {})}[kind]
+        total = float(nh["rate"]) + float(nh["edu"]) + float(nh["farm"])
+        return RuleResult(
+            {"tax_krw": int(price_krw * total / 100), "relief_krw": 0, "rate": float(nh["rate"]),
+             "total_pct": round(total, 3), "heavy": False, "temporary_two": False, "kind": kind},
+            Status.ESTIMATED, "calc.acq_tax", [{"kind": kind}],
+        )  # fmt: skip
     heavy_tbl = table["heavy"]["regulated" if cls == "regulated" else "other"]
     heavy = None
     skip_heavy = temporary_two and homes_after == 2
@@ -162,6 +190,7 @@ def cash_needed(
     selling: bool = False,
     income_krw: int | None = None,
     other_monthly_krw: int = 0,
+    usage: str | None = None,
     tables: dict[str, Any],
 ) -> RuleResult:
     """입찰가 하나에 대한 필요한 현금. 떠안는 돈이 있으면 대출이 어렵다고 보고 0으로.
@@ -182,10 +211,11 @@ def cash_needed(
     loan_krw = loan["loan_krw"] if loan_override_krw is None else min(loan_override_krw, bid_krw)
     if assumed_krw > 0 and loan_override_krw is None:
         loan_krw = 0
-    relief = tables.get("first_home_relief") if first_time and homes == 0 else None
+    kind = tax_kind(usage)
+    relief = tables.get("first_home_relief") if first_time and homes == 0 and kind == "house" else None
     tax = acquisition_tax(
         bid_krw + assumed_krw, homes_after=homes + 1, cls=cls, area_m2=area_m2,
-        table=tables["acquisition_tax"], temporary_two=selling, relief=relief,
+        table=tables["acquisition_tax"], temporary_two=selling, relief=relief, kind=kind,
     ).value  # fmt: skip
     reg = registration_cost(bid_krw)
     deposit = -(-min_price_krw * int(deposit_rate_pct * 100) // 10_000)
@@ -232,6 +262,7 @@ def cash_at_min(
     sido: str | None,
     address: str | None,
     tables: dict[str, Any],
+    usage: str | None = None,
 ) -> dict[str, int]:
     """최저가에 낙찰받을 때 필요한 현금(낙찰가 − 규정상 최대 대출 + 취득세 · 등기), 가진 집 수별 {"0","1","2"}.
     입찰가 계산 화면(cash_needed)과 같은 셈 — 명도·수리비와 떠안는 돈은 빼고(물건마다 달라 계산 화면에서)."""
@@ -241,7 +272,7 @@ def cash_at_min(
         v = cash_needed(
             min_price_krw, min_price_krw=min_price_krw, appraisal_krw=appraisal_krw,
             market_krw=market_krw, area_m2=area_m2, cls=cls, homes=homes, first_time=False,
-            tables=tables,
+            usage=usage, tables=tables,
         ).value  # fmt: skip
         out[str(homes)] = int(v["cash_krw"])
     return out

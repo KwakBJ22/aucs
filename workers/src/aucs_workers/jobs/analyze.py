@@ -795,6 +795,7 @@ def _cash_need(
             market_krw=(market or {}).get("price_krw"),
             area_m2=float(item["building_area_m2"]) if item.get("building_area_m2") else None,
             sido=item.get("sido"), address=item.get("address"), tables=tables,
+            usage=f"{item.get('usage_name') or ''} {item.get('building_desc') or ''}",
         )  # fmt: skip
     except Exception:  # noqa: BLE001 — 기준표 모양이 바뀌어도 분석은 계속(이 칸만 비움)
         return None

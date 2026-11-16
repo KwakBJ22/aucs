@@ -146,3 +146,17 @@ def test_cash_at_min_by_homes() -> None:
     assert set(v) == {"0", "1", "2"}
     assert v["0"] < 300_000_000 * 0.4  # 무주택은 70% 대출 → 30% + 세금쯤
     assert v["2"] > 300_000_000  # 집이 있으면(owner 0%) 대출 없이 전액 + 세금
+
+
+def test_non_house_tax():
+    """상가 · 오피스텔 · 땅은 집 수와 상관없이 4.6%, 전답은 3.4%(지방세법 §11①7, 11/16)."""
+    from aucs_rules.calc import tax_kind
+
+    assert tax_kind("상가,오피스텔,근린시설 1층104호") == "other"
+    assert tax_kind("오피스텔") == "other" and tax_kind("대지") == "other"
+    assert tax_kind("전답") == "farm" and tax_kind("다세대 2층201호") == "house"
+    assert tax_kind(None) == "house"
+    v = acquisition_tax(1_000_000_000, homes_after=3, cls="regulated", area_m2=44, table=TAX, kind="other").value
+    assert v["total_pct"] == 4.6 and v["tax_krw"] == 46_000_000 and not v["heavy"]
+    f = acquisition_tax(100_000_000, homes_after=1, cls="metro", area_m2=None, table=TAX, kind="farm").value
+    assert f["total_pct"] == 3.4

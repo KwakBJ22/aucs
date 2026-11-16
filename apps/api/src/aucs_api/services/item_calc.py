@@ -49,6 +49,7 @@ def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:
 
 _CALC_SQL = """
 select i.item_id, i.sido, i.address, i.appraisal_krw, i.min_price_krw, i.building_area_m2, i.note_masked,
+       i.usage_name, i.building_desc,
        a.result -> 'sale_rate' as sale_rate, a.result -> 'court_cell' as court_cell,
        a.result -> 'local_peers' as local_peers, a.result -> 'new_item' as new_item,
        a.result -> 'market' as market, a.result -> 'signals' as signals, a.result -> 'building' as building
@@ -183,6 +184,7 @@ def build_calc(
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
         "selling": selling, "income_krw": income_krw, "other_monthly_krw": other_monthly_krw,
         "move_out_krw": move["mid_krw"] if move else 0, "repair_krw": repair["mid_krw"] if repair else 0,
+        "usage": f"{r.get('usage_name') or ''} {r.get('building_desc') or ''}",  # 취득세 종류(11/16)
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
     # 떠안는 권리(11/1): 선순위 전세권·대항력 임차인 등을 떠안으면 낙찰가 + 그 돈이 실제 값.
