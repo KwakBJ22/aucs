@@ -99,6 +99,8 @@ def test_unit_level_villa_and_complex():
     b = summarize(title, floors, addr, "다세대", TODAY, nb, None)
     assert b["villa"] == "confirmed" and b["villa_level"] == "ho"
     assert b["exclusive_pct"] == 75 and b["unit_use"] == "제2종근린생활시설 사무소"
+    dup = {**nb, "own_use": "사무소", "own_use_etc": "제2종근린생활시설(사무소)"}
+    assert summarize(title, floors, addr, "다세대", TODAY, dup, None)["unit_use"] == "제2종근린생활시설(사무소)"
     home = {**nb, "own_use": "다세대주택", "own_use_etc": None}
     cx = {"names": ["미성하르딘(1102-5)", "미성하르딘"], "unit_cnt": 18, "dong_cnt": 1, "max_floors": 6}
     b = summarize(title, floors, addr, "다세대", TODAY, home, cx)

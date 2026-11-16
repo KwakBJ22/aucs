@@ -183,6 +183,10 @@ def main() -> None:
     ap.add_argument("--months", type=int, default=3)
     ap.add_argument("--types", nargs="*", default=list(TYPES))
     ap.add_argument(
+        "--skip-done", action="store_true",
+        help="이미 받은 (시군구, 달)은 건너뜀 — 하루 한도에 걸려 멈춘 처음 받기를 이어서(11/16)",
+    )  # fmt: skip
+    ap.add_argument(
         "--sido", help="이 시도만(예: 인천광역시) — 새로 더한 지역을 몇 년치 채울 때(11/4)"
     )
     a = ap.parse_args()
@@ -207,8 +211,16 @@ def main() -> None:
             for name in a.types:
                 svc, op, kind, prop = TYPES[name]
                 n = 0
+                done = set()
+                if a.skip_done:  # 지난달까지만(이번 달은 아직 신고가 들어오는 중이라 늘 다시)
+                    done = {(r[0], r[1]) for r in conn.execute(
+                        "select distinct sigungu_code, to_char(deal_date, 'YYYYMM') from core.trades"
+                        " where prop_type = %s and deal_kind = %s and deal_date < date_trunc('month', current_date)",
+                        (prop, kind)).fetchall()}  # fmt: skip
                 for sgg in sggs:
                     for ym in yms:
+                        if (sgg, ym) in done:
+                            continue
                         rows = [
                             t
                             for it in fetch(client, key, svc, op, sgg, ym)

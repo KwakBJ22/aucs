@@ -222,8 +222,10 @@ def unit_use(unit: dict[str, Any] | None) -> str | None:
     """그 호의 전유 용도 글(「다세대주택」 · 「제2종근린생활시설 사무소」). 못 받았으면 None."""
     if not unit or unit.get("result") != "ok":
         return None
-    use = " ".join(x for x in [unit.get("own_use"), unit.get("own_use_etc")] if x).strip()
-    return use or None
+    main, etc = str(unit.get("own_use") or "").strip(), str(unit.get("own_use_etc") or "").strip()
+    if main and etc and (main in etc or etc in main):  # 「다세대주택 다세대주택」 · 「사무소 제2종근린생활시설(사무소)」
+        return max(main, etc, key=len)
+    return " ".join(x for x in [main, etc] if x) or None
 
 
 def unit_facts(unit: dict[str, Any] | None) -> dict[str, Any]:
