@@ -27,7 +27,17 @@ def test_to_zone() -> None:
 
 
 def test_as_of_is_quarter_end() -> None:
-    z = [{"detail": '{"dates": {"designated": "2026-05-28"}}'}, {"detail": '{"dates": {"plan": "2026-06-25", "move_end": "2026-10-31"}}'},
-         {"detail": None}]  # fmt: skip
-    assert as_of(z, date(2026, 11, 16)) == date(2026, 6, 30)
+    def z(day: str, key: str = "plan") -> dict[str, str | None]:
+        return {"detail": '{"dates": {"%s": "%s"}}' % (key, day)}
+
+    zones = [
+        z("2026-05-28"),
+        z("2026-06-25"),
+        z("2026-04-02"),
+        z("2026-10-31", "move_end"),
+        {"detail": None},
+    ]
+    assert as_of(zones, date(2026, 11, 16)) == date(2026, 6, 30)
+    # 기준일 뒤에 한 건만 더 적힌 분기에는 안 끌려감
+    assert as_of([*zones, z("2026-07-03")], date(2026, 11, 16)) == date(2026, 6, 30)
     assert as_of([{"detail": None}], date(2026, 11, 16)) == date(2026, 11, 16)

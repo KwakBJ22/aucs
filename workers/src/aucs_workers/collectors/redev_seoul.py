@@ -62,21 +62,22 @@ def to_zone(r: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def as_of(zones: list[dict[str, Any]], today: date) -> date:
-    """자료 기준일(순수 함수): 서울시가 「○○년 ○월 기준」으로 분기마다 내는 자료라, 들어 있는 날짜 가운데
-    가장 늦은 날이 속한 분기의 끝날로 봄(26년 6월 기준 자료 → 2026-06-30). 못 가리면 받은 날."""
-    days = [
-        v
-        for z in zones
-        if z["detail"]
-        for k, v in (json.loads(z["detail"]).get("dates") or {}).items()
-        if not k.startswith("move_")  # 이주 시작 · 종료는 앞날의 예정일이 섞여 있어 뺌
-    ]
-    last = max((d for d in days if d <= today.isoformat()), default=None)
-    if not last:
+    """자료 기준일(순수 함수): 분기마다 「○○년 ○월 기준」으로 내는 자료라, 인가 · 지정 날짜가 3건 넘게 들어 있는
+    가장 늦은 분기의 끝날로 봄(26년 6월 기준 자료 → 2026-06-30). 기준일 뒤에 한두 건 더 적힌 날짜에 끌려가지 않게
+    3건을 봄(경기 자료: 기준 2025-09-30 인데 10월 날짜가 한 건). 못 가리면 받은 날."""
+    per: dict[tuple[int, int], int] = {}
+    for z in zones:
+        if not z["detail"]:
+            continue
+        for k, v in (json.loads(z["detail"]).get("dates") or {}).items():
+            # 이주 시작 · 종료는 앞날의 예정일이 섞여 있어 뺌
+            if not k.startswith("move_") and v <= today.isoformat():
+                q = (int(v[:4]), (int(v[5:7]) - 1) // 3 * 3 + 3)
+                per[q] = per.get(q, 0) + 1
+    if not per:
         return today
-    y, m = int(last[:4]), int(last[5:7])
-    q = (m - 1) // 3 * 3 + 3
-    return date(y, q, calendar.monthrange(y, q)[1])
+    y, m = max((q for q, n in per.items() if n >= 3), default=max(per))
+    return date(y, m, calendar.monthrange(y, m)[1])
 
 
 def fetch(key: str) -> list[dict[str, Any]]:
