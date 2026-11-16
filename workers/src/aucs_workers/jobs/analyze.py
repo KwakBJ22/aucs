@@ -27,7 +27,7 @@ from aucs_rules.appraisal_points import (
 )
 from aucs_rules.area_stats import area_stats
 from aucs_rules.building import lot_key, parse_jibun, summarize
-from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
+from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min, usage_for_kind
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
@@ -796,7 +796,7 @@ def _cash_need(
             market_krw=(market or {}).get("price_krw"),
             area_m2=float(item["building_area_m2"]) if item.get("building_area_m2") else None,
             sido=item.get("sido"), address=item.get("address"), tables=tables,
-            usage=" ".join(x for x in [item.get("usage_name"), item.get("building_desc"), (bldg or {}).get("main_use")] if x),  # fmt: skip
+            usage=usage_for_kind(item.get("usage_name"), item.get("building_desc"), (bldg or {}).get("unit_use"), (bldg or {}).get("main_use")),  # fmt: skip
         )  # fmt: skip
     except Exception:  # noqa: BLE001 — 기준표 모양이 바뀌어도 분석은 계속(이 칸만 비움)
         return None

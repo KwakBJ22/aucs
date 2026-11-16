@@ -105,6 +105,18 @@ def tax_kind(usage: str | None) -> str:
     return "unknown"
 
 
+def usage_for_kind(
+    court: str | None, desc: str | None, unit_use: str | None, main_use: str | None
+) -> str:
+    """취득세 · 대출 종류를 가를 글(11/17): 그 호의 대장 전유 용도 → 법원 용도 + 물건 설명 → 대장 주용도(건물 전체) 순.
+    예전엔 셋을 이어 붙여 주택 말이 하나라도 있으면 주택으로 셈 — 주상복합 건물의 상가 · 오피스텔 호가 건물 주용도의
+    「공동주택」 때문에 주택 비율로 대출이 셈해졌음(더파인빌딩 805호). 근생빌라 호는 전유 용도대로 주택 아님."""
+    for u in (unit_use, " ".join(x for x in (court, desc) if x), main_use):
+        if u and tax_kind(u) != "unknown":
+            return u
+    return ""
+
+
 def acquisition_tax(
     price_krw: int,
     *,

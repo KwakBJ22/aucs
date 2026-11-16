@@ -173,3 +173,18 @@ def test_non_house_loan_not_from_house_table():
                     area_m2=44, cls="regulated", homes=0, first_time=False, usage="상가,오피스텔,근린시설",
                     tables={"loan_ltv": LTV, "acquisition_tax": TAX}).value  # fmt: skip
     assert v["loan_krw"] == 0 and v["loan"]["pct"] is None and v["tax"]["total_pct"] == 4.6
+
+
+def test_usage_for_kind_order():
+    from aucs_rules.calc import tax_kind, usage_for_kind
+
+    # 주상복합 상가 호: 건물 주용도의 「공동주택」으로 주택이 되면 안 됨(더파인빌딩 805호, 11/17)
+    u = usage_for_kind("상가,오피스텔,근린시설", "더파인빌딩 8층805호", None,
+                       "업무시설 2종근린생활시설,공동주택(다세대-원룸형 도시형생활주택)")  # fmt: skip
+    assert tax_kind(u) == "other"
+    # 근생빌라 호: 그 호 전유 용도가 근린생활시설이면 주택 아님
+    assert tax_kind(usage_for_kind("다세대", "빌라 3층301호", "제2종근린생활시설", "공동주택")) == "other"
+    # 법원 「기타」 + 설명 없음 → 대장 주용도로
+    assert tax_kind(usage_for_kind("기타", None, None, "공장")) == "other"
+    assert tax_kind(usage_for_kind("기타", None, None, None)) == "unknown"
+    assert tax_kind(usage_for_kind("아파트", "래미안 101동", None, None)) == "house"

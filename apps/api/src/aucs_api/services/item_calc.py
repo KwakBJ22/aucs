@@ -159,7 +159,7 @@ def build_calc(
     assume_krw: int | None = None,
 ) -> dict[str, Any]:
     """CALC-01 묶음(순수 함수): 세 경우·고른 입찰가의 필요한 현금·이 금액 넘으면 시세보다 비싸게 사는 선."""
-    from aucs_rules.calc import area_class, bid_cases, cash_needed
+    from aucs_rules.calc import area_class, bid_cases, cash_needed, usage_for_kind
     from aucs_rules.costs import move_out_cost, rent_returns, repair_cost
 
     app, mn = r["appraisal_krw"], r["min_price_krw"]
@@ -184,8 +184,8 @@ def build_calc(
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
         "selling": selling, "income_krw": income_krw, "other_monthly_krw": other_monthly_krw,
         "move_out_krw": move["mid_krw"] if move else 0, "repair_krw": repair["mid_krw"] if repair else 0,
-        # 취득세 · 대출 종류(11/16~17): 법원 용도 + 물건 설명 + 건축물대장 주용도(「기타」 물건을 가르려고)
-        "usage": " ".join(x for x in [r.get("usage_name"), r.get("building_desc"), b.get("main_use")] if x),
+        # 취득세 · 대출 종류(11/17): 그 호 전유 용도 → 법원 용도 + 물건 설명 → 대장 주용도 순(usage_for_kind)
+        "usage": usage_for_kind(r.get("usage_name"), r.get("building_desc"), b.get("unit_use"), b.get("main_use")),
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
     # 떠안는 권리(11/1): 선순위 전세권·대항력 임차인 등을 떠안으면 낙찰가 + 그 돈이 실제 값.
