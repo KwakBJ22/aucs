@@ -137,7 +137,7 @@ def near_zone(cur: Any, item_id: str) -> dict[str, Any] | None:
             join ref.place_points p on p.geom is not null and i.geom is not null
              and st_dwithin(p.geom, i.geom, {ZONE_GUESS_M})
             join ref.redev_zones z on {ZONE_ADDRESS_SQL} = p.address and {ZONE_OURS_SQL}
-            where i.item_id = %s
+            where i.item_id = %s and p.address like i.sido || ' %%'  -- 시도 경계 너머 구역은 안 이음(11/16)
             order by m, z.source = '사업장 목록' desc, z.zone_id limit 20""",
         (item_id,),
     ).fetchall()
