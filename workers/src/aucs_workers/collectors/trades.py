@@ -1,9 +1,11 @@
 """국토부 실거래가 수집 (서울·경기·인천) → core.trades.
 
     uv run python -m aucs_workers.collectors.trades --months 3     # 매달: 최근 3개월 다시 (늦은 신고·해제 반영)
+    uv run python -m aucs_workers.collectors.trades --types land_sale --months 24   # 토지 처음 한 번(11/16)
 
 - 다시 받은 (시군구, 달, 유형) 은 지우고 새로 넣음 → 몇 번 돌려도 중복 없음
 - 해제된 거래(cdealType=O)는 넣지 않음, 금액은 원 단위(API 는 만원)
+- 토지(land): 지번은 가려져 와서 비움, sub_type = 「지목|용도지역」, 지분 거래는 contract_kind = 「지분」
 - 전월세는 최근 1년만 둠 (무료 DB 한도, 10/17 결정)
 - 원본(raw) 저장은 DB 용량 때문에 Pro 전환 전까지 하지 않음
 - data.go.kr 초당 제한: 초당 5회, 하루 한도에 닿으면 받은 것만 저장하고 멈춤
@@ -36,6 +38,8 @@ TYPES = {
     "officetel_sale": ("RTMSDataSvcOffiTrade", "getRTMSDataSvcOffiTrade", "sale", "officetel"),
     "officetel_lease": ("RTMSDataSvcOffiRent", "getRTMSDataSvcOffiRent", "lease", "officetel"),
     "commercial_sale": ("RTMSDataSvcNrgTrade", "getRTMSDataSvcNrgTrade", "sale", "commercial"),
+    # 토지(11/16): 지번이 「6*」처럼 가려져 필지로는 못 이음 — 같은 동 · 지목 · 용도지역의 ㎡당 가격으로만
+    "land_sale": ("RTMSDataSvcLandTrade", "getRTMSDataSvcLandTrade", "sale", "land"),
 }
 GAP = 0.2  # 초당 5회
 
@@ -75,6 +79,10 @@ def parse_trade(
         _int(it.get("monthlyRent")),
         _int(it.get("dealAmount")),
     )
+    if prop_type == "land":  # 토지: 면적은 dealArea, 지목 · 용도지역은 sub_type 「대|일반상업지역」
+        jimok, use = str(it.get("jimok") or "").strip(), str(it.get("landUse") or "").strip()
+        it = {**it, "landAr": it.get("dealArea"), "houseType": f"{jimok}|{use}" if jimok or use else None,
+              "jibun": None, "contractType": "지분" if str(it.get("shareDealingType") or "").strip() else None}  # fmt: skip
     return {
         "deal_kind": deal_kind,
         "prop_type": prop_type,

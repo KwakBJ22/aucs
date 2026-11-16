@@ -42,6 +42,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.probe_public", "--more"]
     if key == "complexes":  # 공동주택 단지 식별정보 받기(11/16) — 분기마다 redev 가 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.complexes"]
+    if key == "trades_land":  # 토지 매매 실거래 처음 2년치(11/16) — 그 뒤는 매월 trades 가 같이
+        return [sys.executable, "-m", "aucs_workers.collectors.trades", "--types", "land_sale", "--months", "24"]
     if key == "units":  # 건축물대장 전유공용면적(호) 받기(11/16) — 아침 묶음이 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.units"]
     if key == "probe_units":  # 건축물대장 전유공용면적을 호로 좁혀 받기 표본(11/15) — logs/probe_units.log
