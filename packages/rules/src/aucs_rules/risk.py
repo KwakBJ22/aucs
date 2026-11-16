@@ -73,6 +73,8 @@ def prior_rights_title(texts: list[str]) -> str:
     """명세서 「소멸되지 않는 권리」 글에 실제로 나온 권리만(11/1 — 예전엔 넷을 다 늘어놓았음)."""
     t = " ".join(texts or [])
     kinds = [k for k in PRIOR_KINDS if k in t]
+    if kinds == ["임차권"]:  # 11/17 — 명세서 글이 「배당에서 전액 변제되지 아니하면 잔액을 매수인이 인수」
+        return "선순위 임차권 — 배당에서 다 못 받은 보증금은 낙찰자가 떠안아요"
     return f"선순위 {'·'.join(kinds)} 인수" if kinds else "매각으로 안 지워지는 권리 인수"
 
 
@@ -232,7 +234,7 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         old = isinstance(ad, date) and isinstance(as_of0, date) and (as_of0 - ad).days >= 365
         if old or ad is None:
             add(
-                "risk.low_appraisal", "info", "감정가가 시세보다 낮아요 — 더 높게 팔릴 수 있어요",
+                "risk.low_appraisal", "info", "감정가가 추정 시세보다 낮아요 — 더 높게 팔릴 수 있어요",
                 Status.ESTIMATED if old else Status.NEEDS_CHECK, ratio=round(app / mkt, 3),
             )  # fmt: skip
     # 오래된 감정(11/4): 가격시점에서 1년 넘게 지났으면 알림 — 저평가 신호가 이미 나왔으면 되풀이하지 않음
@@ -296,7 +298,7 @@ def signals(f: dict[str, Any]) -> list[Signal]:
                 **({"zone": z} if isinstance(z, dict) else {}),
             )
     if f.get("special_corp_owner"):
-        add("risk.special_corp", "high", "학교·복지·의료법인 소유 — 허가서 없으면 보증금 몰수")
+        add("risk.special_corp", "high", "학교·복지·의료법인 소유 — 관청 허가서를 못 내면 보증금을 잃을 수 있어요(특별매각조건 확인)")
     if f.get("assumed_krw"):
         add("risk.no_loan", "mid", "떠안는 돈이 있어 대출이 어려워요 — 전액 현금 확인")
     if (cost := f.get("total_cost_krw")) and (mkt := f.get("market_price_krw")) and cost > mkt:
