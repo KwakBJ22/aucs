@@ -1382,10 +1382,9 @@ export const copy = {
       baseLine: (name: string, d: string) =>
         `── 말소기준 ${name} ${d} ── 이 아래는 낙찰되면 지워져요`,
       // 11/17: 주소가 물건과 맞으면 다른 회원도 같이 봄(shared) — 예전엔 늘 「나만 볼 수 있어요」라고 적었음
-      keep: (d: string, shared: boolean) =>
-        shared
-          ? `주소가 이 물건과 맞아 다른 회원도 같이 봐요 · 원본 PDF는 ${d}에 지워져요`
-          : `올린 등기부 원본 PDF는 ${d}에 지워져요 · 나만 볼 수 있어요`,
+      // 11/17 대표님: 원본 PDF 지우기는 확인 뒤 정할 일 — 확인될 때까지 지우지 않고 지운다는 말도 안 씀
+      keep: (shared: boolean) =>
+        shared ? "주소가 이 물건과 맞아 다른 회원도 같이 봐요" : "올린 등기부는 나만 볼 수 있어요",
       tenants: "임차인",
       summaryReading: "올린 등기부를 읽고 있어요",
       payTitle: (price: string) => `배당 예상 · 최저가 ${price}에 낙찰되면`,
