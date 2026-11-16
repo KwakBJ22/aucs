@@ -537,10 +537,16 @@ def report_add(uid: str, item_id: str, section: str, note: str) -> int:
     return int(row["report_id"]) if row else 0
 
 
+# 회원 폴더(<회원 번호>/…)에 파일을 두는 보관함 — 탈퇴 때 같이 지움(11/17 대표님: 방침 「탈퇴하면 삭제됩니다」대로).
+# 감정평가서 원본(appraisal-pdfs)은 사건 단위로 모두가 같이 보는 것이라 회원 폴더가 아님.
+MEMBER_BUCKETS = ("field", "registry-uploads", "appraisal-uploads")
+
+
 def delete_account(uid: str) -> bool:
     """탈퇴(11/1): 로그인 계정을 지우면 관심·알림·모의입찰·메모·올린 등기부가 함께 지워짐(외래키 cascade).
     입찰 결과(app.bid_results)는 회원 번호만 비우고 응찰자 수 통계로 남김(0029).
-    사용 기록(app.events)은 회원 번호만 비워 익명으로 남음."""
+    사용 기록(app.events)은 회원 번호만 비워 익명으로 남음.
+    11/17: 현장 사진 · 음성 등 회원 폴더 파일을 먼저 지움 — 못 지우면 계정도 지우지 않고 실패로 돌려줌(다시 시도)."""
     import httpx
 
     from aucs_api import settings
@@ -548,6 +554,23 @@ def delete_account(uid: str) -> bool:
     if not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY:
         return False
     k = settings.SUPABASE_SECRET_KEY
+    head = {"apikey": k, "Authorization": f"Bearer {k}"}
+    with connect() as c:
+        files = c.execute(
+            "select bucket_id, name from storage.objects where bucket_id = any(%s) and name like %s",
+            (list(MEMBER_BUCKETS), f"{uid}/%"),
+        ).fetchall()
+    by: dict[str, list[str]] = {}
+    for f in files:
+        by.setdefault(f["bucket_id"], []).append(f["name"])
+    for bucket, names in by.items():
+        for i in range(0, len(names), 500):
+            d = httpx.request(
+                "DELETE", f"{settings.SUPABASE_URL}/storage/v1/object/{bucket}",
+                headers=head, json={"prefixes": names[i : i + 500]}, timeout=30,
+            )  # fmt: skip
+            if d.status_code not in (200, 204):
+                return False
     r = httpx.delete(
         f"{settings.SUPABASE_URL}/auth/v1/admin/users/{uid}",
         headers={"apikey": k, "Authorization": f"Bearer {k}"},
