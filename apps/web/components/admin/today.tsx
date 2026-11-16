@@ -152,6 +152,7 @@ export function TodayView({ go }: { go: (m: string) => void }) {
         <p className="sub mt-8">
           {formatBytes(d.db.used)} / {formatBytes(d.db.limit)}
         </p>
+        <p className="sub fs-xs">{t.dbNote}</p>
         <p className="sub">
           {t.backup}: {d.backup ? `${when(d.backup.at)} · ${d.backup.message ?? ""}` : t.never}
         </p>

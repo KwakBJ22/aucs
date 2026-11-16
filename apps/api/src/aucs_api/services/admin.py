@@ -25,7 +25,7 @@ def status() -> dict[str, Any]:
     return {
         "jobs": jobs,
         "counts": counts,
-        "db_limit_bytes": 8 * 1024 * 1024 * 1024,
+        "db_limit_bytes": 8 * 1024 * 1024 * 1024,  # Pro 기본 포함 디스크(DB 크기 상한 아님, 11/17)
         "metrics": metrics(),
     }
 

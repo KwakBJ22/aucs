@@ -9,6 +9,8 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
+# Supabase Pro 기본 포함 디스크 8GB(11/17 문서 확인) — DB 크기 상한이 아님. 디스크엔 DB 말고 WAL · 시스템도 들어가고,
+# 90% 차면 자동으로 50% 늘며(4시간에 한 번) 늘어난 만큼 요금. 95% 차고 더 못 늘리면 쓰기가 막힘.
 DB_LIMIT = 8 * 1024 * 1024 * 1024
 DAILY_JOBS = ("court_results", "court_items", "analyze", "court_docs", "notify")  # 아침 묶음 순서
 QUIET = (21, 8)  # 밤 9시 ~ 아침 8시(한국)에는 회원 알림을 보내지 않음
@@ -80,7 +82,8 @@ def red_lights(conn: psycopg.Connection[Any]) -> list[dict[str, str]]:
         red.append({"kind": "member", "key": "inq_late",
                     "text": f"문의 {n['inq_late']}건이 2일 넘게 밀림", "go": "members"})  # fmt: skip
     if n.get("db_bytes", 0) > DB_LIMIT * 0.8:
-        red.append({"kind": "db", "key": "db80", "text": "DB 용량이 80%를 넘음", "go": "today"})
+        red.append({"kind": "db", "key": "db80", "go": "today",
+                    "text": "DB 크기가 포함 디스크(8GB)의 80%를 넘음 — 디스크 90%면 자동으로 늘고 요금이 붙음"})  # fmt: skip
     bk = by.get("backup")
     if not bk or bk["status"] != "ok" or _hours(bk["finished_at"] or bk["started_at"]) > 24 * 8:
         red.append({"kind": "db", "key": "backup", "text": "백업이 8일 넘게 없음", "go": "today"})

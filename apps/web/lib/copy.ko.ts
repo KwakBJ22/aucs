@@ -1933,19 +1933,22 @@ export const copy = {
       picksOld: "하루 반 넘게 안 채워짐",
       service: "서비스 현황",
       nums: [
-        ["items", "입찰일 잡힌 물건"],
+        ["items", "입찰일 잡힌 경매 물건"],
         ["new_users", "어제 새 회원"],
-        ["devices", "어제 들어온 기기"],
+        ["devices", "어제 들어온 기기(브라우저 기준)"],
         ["views", "어제 물건 상세"],
         ["errors", "어제 오류"],
       ] as const,
       fill: (r: number, a: number, w: number) =>
         `서류 채우기 · 등기부 ${r}% · 감정평가서 ${a}% (관심 담긴 진행 물건 ${w.toLocaleString("ko-KR")}건 기준 · 80% 넘으면 유료 전환)`,
       members: (m: number, u: number, k: number) =>
-        `회원 ${m.toLocaleString("ko-KR")}명 · 서류 올린 회원 ${u}명 · 최근 일주일 ${k}건`,
+        `회원 ${m.toLocaleString("ko-KR")}명 · 서류가 맞아 포인트 받은 회원 ${u}명 · 최근 일주일 ${k}건`,
       academy: (u: number, n: number) => `옥스아카데미 · 수업 들은 회원 ${u}명 · 끝낸 수업 ${n}개`,
     },
-    db: "DB 용량",
+    db: "DB 크기",
+    // 11/17: 8GB 는 Supabase Pro 기본 포함 디스크 — DB 크기 상한이 아님(디스크엔 WAL · 시스템도 들어감)
+    dbNote:
+      "8GB는 Pro 기본 포함 디스크예요 · 디스크엔 DB 말고 WAL · 시스템도 들어가요 · 90% 차면 자동으로 50% 늘고 늘어난 만큼 요금(GB당 $0.125)",
     backup: "마지막 백업",
     restore: "복구 시험",
     jobs: "작업",
