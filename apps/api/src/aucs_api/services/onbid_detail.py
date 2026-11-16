@@ -17,10 +17,10 @@ from aucs_api.services.item_links import same_house
 from aucs_api.services.onbid import KIND_KO, KST, onbid_card
 
 # 고정 문구(설계서 7절) — 법률이 걸린 문구는 검토 요청서에 올림
-MOVE_OUT = "명도는 소송으로 해야 해요 · 보통 6개월~1년 걸려요"
+MOVE_OUT = "명도는 소송으로 해야 해요(인도명령 없음) · 걸리는 기간은 사건마다 달라요"
 TRUST = "신탁공매예요 · 최우선변제가 경매와 달라 전문가 확인이 필요해요"
 TAX_FIRST = (
-    "세금이 먼저 배분돼요 · 대항력 있는 임차인이 있으면 보증금보다 세금이 먼저 나갈 수 있어요"
+    "세금은 법정기일 순서로 배분돼요 · 대항력 있는 임차인보다 세금이 먼저 나가면 못 받은 보증금을 떠안을 수 있어요"
 )
 MISSING = ["현황조사서", "매각물건명세서", "문건·송달 내역"]
 MIN_N = 20  # 이보다 적으면 숫자를 내지 않음
