@@ -30,6 +30,7 @@ from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
+from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
 from aucs_rules.price import Trade, market_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import is_land_or_house, signals, top_signal
@@ -85,6 +86,8 @@ class Pre:
     zones: dict[tuple[str, str], list[dict[str, Any]]] | None = None  # 서울 정비구역(구 · 동)
     units: dict[str, dict[str, Any]] = field(default_factory=dict)  # 물건 → 그 호 전유공용(11/16)
     complexes: dict[str, dict[str, Any]] = field(default_factory=dict)  # 필지번호 → 단지(11/16)
+    stores: dict[str, dict[str, Any]] = field(default_factory=dict)  # 물건 → 주변 가게(11/16)
+    land_trades: dict[str, list[dict[str, Any]]] = field(default_factory=dict)  # 읍면동 8자리 → 땅 거래
 
 
 def _market_key(item: dict[str, Any]) -> tuple[str, str, str] | None:
@@ -206,6 +209,12 @@ def preload(
         pn = sorted({p for i in pre.items.values() if (p := pnu_of(i.get("region_code") or "", i.get("lot_no") or ""))})  # fmt: skip
         for r in cur.execute(COMPLEX_SQL + " where pnu = any(%s) order by pnu, unit_cnt desc nulls last", (pn,)).fetchall():  # fmt: skip
             pre.complexes.setdefault(r["pnu"], r)  # 한 필지에 단지가 여럿이면 세대가 많은 것
+    if _table_ready(cur, "core.item_stores"):
+        pre.stores = {r["item_id"]: r for r in cur.execute("select * from core.item_stores where item_id = any(%s)", (ids,)).fetchall()}  # fmt: skip
+    dongs = sorted({i["region_code"][:8] for i in pre.items.values() if (i.get("usage_name") or "") in JIMOK and i.get("region_code")})  # fmt: skip
+    if dongs:
+        for r in cur.execute(LAND_SQL + " and left(region_code, 8) = any(%s)", (today - timedelta(days=730), dongs)).fetchall():  # fmt: skip
+            pre.land_trades.setdefault(r["dong"], []).append(r)
     pre.overrides = {
         r["item_id"]
         for r in cur.execute(
@@ -409,6 +418,25 @@ def _table_ready(cur: Any, name: str) -> bool:
     return _TABLES[name]
 
 
+LAND_SQL = """select left(region_code, 8) as dong, deal_date, price_krw, land_area_m2, sub_type, contract_kind
+  from core.trades where prop_type = 'land' and deal_kind = 'sale' and deal_date >= %s"""
+
+
+def load_nearby(cur: Any, item: dict[str, Any], zones: list[str] | None, today: date, pre: Pre | None = None) -> tuple[Any, Any]:  # fmt: skip
+    """상가 주변 가게 · 같은 동 땅 거래(11/16). 없으면 None."""
+    usage, code = item.get("usage_name") or "", (item.get("region_code") or "")[:8]
+    if pre is not None:
+        row, trades = pre.stores.get(item["item_id"]), pre.land_trades.get(code, [])
+    else:
+        row = None
+        if _table_ready(cur, "core.item_stores"):
+            row = cur.execute("select * from core.item_stores where item_id = %s", (item["item_id"],)).fetchone()  # fmt: skip
+        trades = []
+        if usage in JIMOK and code:
+            trades = cur.execute(LAND_SQL + " and left(region_code, 8) = %s", (today - timedelta(days=730), code)).fetchall()  # fmt: skip
+    return nearby_stores(row), land_trade_price(usage, zones, trades, today) if trades else None
+
+
 def load_unit_complex(
     cur: Any, item: dict[str, Any], pre: Pre | None = None
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
@@ -569,6 +597,7 @@ def analyze_item(
     # 이 지역 평균(11/15): 상가 수익률 · 공실률, 오피스텔 수익률, 전월세전환율 — 보기용
     area = area_stats(item.get("usage_name"), item.get("building_desc"), item.get("sido"),
                       item.get("sigungu"), load_area_stats(cur))  # fmt: skip
+    stores, land_trades = load_nearby(cur, item, (land_plan or {}).get("zones"), today, pre)
     if not redev and plan_z == "zone":
         # 토지 이용 계획에 「정비구역」(11/14) — 가까운 구역을 이어 단계를 알고, 못 이으면 구역 안이라는 것만
         redev = near_zone(cur, item_id) or {
@@ -643,6 +672,8 @@ def analyze_item(
         "plan_zone": plan_z,
         "land_plan": land_plan,
         "area_stats": area,
+        "nearby_stores": stores,
+        "land_trades": land_trades,
         "building": bldg,
         "parts": parts or None,
         # 감정평가에서 읽은 것(추천 실거주 점수 · 화면 표시) — 글 자체는 API 가 원문에서 가려 보여 줌
@@ -666,7 +697,7 @@ def analyze_item(
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
                "tenants": tenants, "market": market, "building": bldg, "parts": parts, "land": land,
-               "area": area, "engine": ENGINE_VERSION})  # fmt: skip
+               "area": area, "stores": stores, "land_trades": land_trades, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),

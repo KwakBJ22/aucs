@@ -1259,6 +1259,28 @@ export const copy = {
         .join(" · "),
     areaAvgNote: (items: { region: string; period: string }[]) =>
       `한국부동산원 · ${[...new Set(items.map((x) => `${x.region} ${x.period}`))].join(" · ")}`,
+    // 주변 가게(11/16 — 소상공인 상권정보, 상가 물건): 반경 안 가게 수 · 많은 업종 셋 / 같은 건물 · 1층 업종 · 기준일
+    stores: "주변 가게",
+    storesValue: (s: { radius_m: number; total: number; top: [string, number][] }) =>
+      [
+        `${s.radius_m}m 안 ${s.total.toLocaleString("ko-KR")}곳`,
+        ...s.top.map(([k, n]) => `${k} ${n}`),
+      ].join(" · "),
+    storesNote: (s: { same_parcel: number; ground: string[]; as_of?: string | null }) =>
+      [
+        s.same_parcel
+          ? `이 건물 ${s.same_parcel}곳${s.ground.length ? `(1층 ${s.ground.join(" · ")})` : ""}`
+          : null,
+        `소상공인시장진흥공단${s.as_of ? ` (${s.as_of.replace(/^(\d+)-0?(\d+)-0?(\d+)$/, "$1. $2. $3.")} 기준)` : ""}`,
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    // 같은 동 땅 거래(11/16 — 국토부 토지 실거래, 지분 거래 뺌): ㎡당 가운데값 · 건수
+    landTrades: "같은 동 땅 거래",
+    landTradesValue: (l: { per_m2_krw: number; n: number }) =>
+      `㎡당 ${Math.round(l.per_m2_krw / 10000).toLocaleString("ko-KR")}만 원 · 평당 ${Math.round((l.per_m2_krw * 3.3058) / 10000).toLocaleString("ko-KR")}만 원`,
+    landTradesNote: (l: { n: number; jimok: string; zone?: string | null }) =>
+      `최근 2년 ${l.jimok}${l.zone ? ` · ${l.zone}` : ""} ${l.n}건 가운데값 · 국토교통부 실거래`,
     planFacilities: (f?: { name: string }[] | null) =>
       f?.length ? `도시계획시설에 걸림: ${f.map((x) => x.name).join(" · ")}` : null,
     // 정비구역 세대수(11/15): 기존 → 새로 짓는 세대(분양 · 임대)

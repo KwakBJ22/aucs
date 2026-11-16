@@ -11,6 +11,7 @@
 
 import argparse
 import os
+import re
 import time
 from collections import Counter
 from typing import Any
@@ -24,6 +25,8 @@ from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
 URL = "https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius"
+# 같은 자료의 파일판(분기) 목록 — 파일 이름 끝의 날짜가 자료 기준일(「…상가(상권)정보_20260630」, 11/16)
+CATALOG = "https://www.data.go.kr/catalog/15083033/fileData.json"
 RADIUS = 300
 ROWS = 1000
 
@@ -90,6 +93,16 @@ def fetch(client: httpx.Client, key: str, lon: float, lat: float) -> list[dict[s
         page += 1
 
 
+def as_of(client: httpx.Client) -> str | None:
+    """자료 기준일(파일판 이름의 날짜). 못 읽으면 None — 화면은 기준일 없이 냄."""
+    try:
+        d = client.get(CATALOG, timeout=20).json()
+        m = re.search(r"_(20\d{6})", str(d.get("name") or ""))
+        return f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else None
+    except (httpx.HTTPError, ValueError, AttributeError):
+        return None
+
+
 def summarize(stores: list[dict[str, Any]], parcel: str | None) -> dict[str, Any]:
     """가게 줄 → 업종별 수 · 같은 필지 가게 (순수 함수)."""
     large = Counter(str(s.get("indsLclsNm") or "").strip() or "기타" for s in stores)
@@ -127,7 +140,13 @@ def main() -> None:
         with run(conn, "stores", "상가 주변 가게") as job:
             todo = conn.execute(TARGETS_SQL, {"cap": a.cap}).fetchall()
             print(f"[시작] 물건 {len(todo):,}건")
+            has_as_of = conn.execute(
+                "select 1 from information_schema.columns where table_schema = 'core'"
+                " and table_name = 'item_stores' and column_name = 'as_of'"
+            ).fetchone()  # 이주 0064 전에도 돌게
             with httpx.Client(timeout=40, headers={"Accept": "application/json"}) as client:
+                day = as_of(client) if has_as_of else None
+                print(f"  자료 기준일 {day or '모름'}")
                 for i, (item_id, code, lot, lon, lat) in enumerate(todo, 1):
                     try:
                         stores = fetch(client, key, lon, lat)
@@ -147,6 +166,11 @@ def main() -> None:
                         (item_id, RADIUS, s["total"], Jsonb(s["by_large"]), Jsonb(s["by_mid"]),
                          s["same_parcel"], Jsonb(s["same_list"])),
                     )  # fmt: skip
+                    if has_as_of:
+                        conn.execute(
+                            "update core.item_stores set as_of = %s where item_id = %s",
+                            (day, item_id),
+                        )
                     job.count += 1
                     if i % 50 == 0:
                         conn.commit()

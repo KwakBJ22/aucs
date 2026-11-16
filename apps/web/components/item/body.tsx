@@ -99,6 +99,16 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             note={t.areaAvgNote(b.area_stats.items)}
           />
         )}
+        {b.stores && (
+          <Row label={t.stores} value={t.storesValue(b.stores)} note={t.storesNote(b.stores)} />
+        )}
+        {b.land_trades && (
+          <Row
+            label={t.landTrades}
+            value={t.landTradesValue(b.land_trades)}
+            note={t.landTradesNote(b.land_trades)}
+          />
+        )}
         {b.note && (
           <p className="sub" style={{ whiteSpace: "pre-wrap" }}>
             {b.note}

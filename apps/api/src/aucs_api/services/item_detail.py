@@ -42,7 +42,8 @@ select i.*, c.court_code, c.case_no, c.claim_deadline, c.dept_name,
        a.result -> 'court_cell' as court_cell, a.result -> 'local_peers' as local_peers,
        a.result -> 'new_item' as new_item, a.result -> 'market' as market, a.result -> 'land_value' as land_value, a.result -> 'redev' as redev,
        a.result ->> 'plan_zone' as plan_zone, a.result -> 'land_plan' as land_plan,
-       a.result -> 'area_stats' as area_stats,
+       a.result -> 'area_stats' as area_stats, a.result -> 'nearby_stores' as nearby_stores,
+       a.result -> 'land_trades' as land_trades,
        a.result -> 'building' as building, a.computed_at,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{}') as data_status
 from core.items i
@@ -118,6 +119,7 @@ def build_detail(
           {"address": r["address"], "area_m2": c["area_m2"], "usage": r["usage_name"],
            "is_share": r["is_share"], "note": r["note_masked"], "redev": r.get("redev"),
            "land_plan": r.get("land_plan"), "area_stats": r.get("area_stats"),
+           "stores": r.get("nearby_stores"), "land_trades": r.get("land_trades"),
            "building": building_lines(r.get("building"))}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals}),
