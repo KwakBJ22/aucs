@@ -271,7 +271,7 @@ export function CalcBox({ id }: { id: string }) {
           )}
           <div className="mt-8">
             <Row
-              label={`${c.loan} · ${c.region[d.cls]} ${s.loan.pct}%`}
+              label={s.loan.pct == null ? c.loan : `${c.loan} · ${c.region[d.cls]} ${s.loan.pct}%`}
               value={
                 <>
                   − {won(s.loan_krw)}{" "}

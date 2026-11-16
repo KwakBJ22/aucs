@@ -454,7 +454,7 @@ export type CashBreakdown = {
   deposit_krw: number;
   loan_krw: number;
   loan: {
-    pct: number;
+    pct: number | null; // 상가 · 오피스텔 · 땅은 null(11/17 — 주택 대출 비율을 쓰지 않음)
     cap_krw: number | null;
     who: string;
     note: string | null;

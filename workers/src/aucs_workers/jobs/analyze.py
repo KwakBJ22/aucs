@@ -667,7 +667,7 @@ def analyze_item(
         "land_value": land,
         "tenant_count": len(tenants),
         # 최저가에 낙찰받을 때 필요한 현금(집 수별) — 찾기·추천의 「가진 현금」 기준(11/9)
-        "cash_need": _cash_need(item, market, cash_tables),
+        "cash_need": _cash_need(item, market, cash_tables, bldg),
         "redev": redev,
         "plan_zone": plan_z,
         "land_plan": land_plan,
@@ -785,7 +785,8 @@ def load_cash_tables(conn: psycopg.Connection, today: date) -> dict[str, Any] | 
 
 
 def _cash_need(
-    item: dict[str, Any], market: dict[str, Any] | None, tables: dict[str, Any] | None
+    item: dict[str, Any], market: dict[str, Any] | None, tables: dict[str, Any] | None,
+    bldg: dict[str, Any] | None = None,
 ) -> dict[str, int] | None:
     if not tables or not item.get("min_price_krw"):
         return None
@@ -795,7 +796,7 @@ def _cash_need(
             market_krw=(market or {}).get("price_krw"),
             area_m2=float(item["building_area_m2"]) if item.get("building_area_m2") else None,
             sido=item.get("sido"), address=item.get("address"), tables=tables,
-            usage=f"{item.get('usage_name') or ''} {item.get('building_desc') or ''}",
+            usage=" ".join(x for x in [item.get("usage_name"), item.get("building_desc"), (bldg or {}).get("main_use")] if x),  # fmt: skip
         )  # fmt: skip
     except Exception:  # noqa: BLE001 — 기준표 모양이 바뀌어도 분석은 계속(이 칸만 비움)
         return None

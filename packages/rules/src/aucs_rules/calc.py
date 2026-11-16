@@ -33,12 +33,17 @@ def loan_limit(
     first_time: bool,
     table: dict[str, Any],
     selling: bool = False,
+    kind: str = "house",
 ) -> RuleResult:
     """규정상 최대 대출. 기준 가격 = min(낙찰가, 감정가, 시세) × 비율, 지역별 한도 적용.
 
     selling: 1주택자가 기존 집을 처분하는 조건(처분 조건부) — 표에 owner_sell 이 있으면 그 비율.
     """
     basis = min(x for x in (bid_krw, appraisal_krw, market_krw) if x)
+    if kind != "house":  # 11/17 — 기준표는 주택담보대출 비율. 상가 · 오피스텔 · 땅은 은행마다 달라 셈하지 않음
+        value = {"loan_krw": 0, "pct": None, "cap_krw": None, "basis_krw": basis, "who": "non_house",
+                 "note": "상가·오피스텔·땅 대출은 은행마다 달라요 — 「바꾸기」로 받을 금액을 넣어 주세요"}  # fmt: skip
+        return RuleResult(value, Status.UNKNOWN, f"calc.loan.{cls}", [{"kind": kind}])
     if homes >= 1:
         who = "owner_sell" if selling and homes == 1 and "owner_sell" in table[cls] else "owner"
     else:
@@ -71,16 +76,16 @@ def loan_limit(
 # 주택 아닌 것의 유상취득(지방세법 §11①7: 농지 3% · 그 밖 4%) — 본세 · 지방교육세 · 농특세(11/16).
 # 기준표 acquisition_tax.non_house 가 있으면 그것을 씀
 NON_HOUSE = {"other": {"rate": 4.0, "edu": 0.4, "farm": 0.2}, "farm": {"rate": 3.0, "edu": 0.2, "farm": 0.2}}
-_HOUSE = re.compile(r"(아파트|다세대|연립|빌라|단독|다가구|주택)")
+_HOUSE = re.compile(r"(아파트|다세대|연립|빌라|단독|다가구|주택|주거용)")  # 공매 「기타주거용건물」
 
 
 def tax_kind(usage: str | None) -> str:
     """물건 용도 글 → 취득세 종류: house(주택 1~3%·중과) · farm(전답 3%) · other(상가·오피스텔·땅 4%).
     오피스텔은 취득세에서 주택이 아님. 용도를 모르면 지금처럼 house."""
     u = (usage or "").strip()
-    if not u or _HOUSE.search(u):
+    if not u or _HOUSE.search(u) or u == "기타":  # 「기타」만 있고 대장도 없으면 모름 → 예전대로(11/17)
         return "house"
-    if u.split()[0] == "전답":
+    if u.split()[0] in ("전답", "전", "답", "과수원"):  # 경매 「전답」 · 공매 「전」 「답」
         return "farm"
     return "other"
 
@@ -197,12 +202,13 @@ def cash_needed(
 
     소득을 넣으면 대출 = min(규정 최대, 소득 기준 최대). 1주택 + selling 이면 일시적 2주택·처분 조건부.
     """
+    kind = tax_kind(usage)
     loan = loan_limit(
         bid_krw, appraisal_krw=appraisal_krw, market_krw=market_krw, cls=cls,
-        homes=homes, first_time=first_time, table=tables["loan_ltv"], selling=selling,
+        homes=homes, first_time=first_time, table=tables["loan_ltv"], selling=selling, kind=kind,
     ).value  # fmt: skip
     dsr = None
-    if income_krw and "dsr" in tables:
+    if income_krw and "dsr" in tables and kind == "house":
         dsr = dsr_limit(
             income_krw, other_monthly_krw=other_monthly_krw, cls=cls, table=tables["dsr"]
         ).value
@@ -211,7 +217,6 @@ def cash_needed(
     loan_krw = loan["loan_krw"] if loan_override_krw is None else min(loan_override_krw, bid_krw)
     if assumed_krw > 0 and loan_override_krw is None:
         loan_krw = 0
-    kind = tax_kind(usage)
     relief = tables.get("first_home_relief") if first_time and homes == 0 and kind == "house" else None
     tax = acquisition_tax(
         bid_krw + assumed_krw, homes_after=homes + 1, cls=cls, area_m2=area_m2,

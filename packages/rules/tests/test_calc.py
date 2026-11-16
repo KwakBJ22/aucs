@@ -160,3 +160,11 @@ def test_non_house_tax():
     assert v["total_pct"] == 4.6 and v["tax_krw"] == 46_000_000 and not v["heavy"]
     f = acquisition_tax(100_000_000, homes_after=1, cls="metro", area_m2=None, table=TAX, kind="farm").value
     assert f["total_pct"] == 3.4
+
+
+def test_non_house_loan_not_from_house_table():
+    """상가 · 땅에는 주택담보대출 비율을 쓰지 않음(11/17)."""
+    v = cash_needed(500_000_000, min_price_krw=500_000_000, appraisal_krw=700_000_000, market_krw=None,
+                    area_m2=44, cls="regulated", homes=0, first_time=False, usage="상가,오피스텔,근린시설",
+                    tables={"loan_ltv": LTV, "acquisition_tax": TAX}).value  # fmt: skip
+    assert v["loan_krw"] == 0 and v["loan"]["pct"] is None and v["tax"]["total_pct"] == 4.6

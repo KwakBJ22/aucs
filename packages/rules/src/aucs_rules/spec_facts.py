@@ -18,6 +18,10 @@ def _has(text: str | None) -> bool:
     return bool(text) and not _NONE.match(text or "")
 
 
+_RELEASE = re.compile(r"말소\s*동의")
+_OTHER_RIGHTS = re.compile(r"전세권|가등기|가처분|지상권|지역권|근저당|유치권")
+
+
 def spec_facts(spec: dict[str, Any] | None) -> dict[str, Any]:
     """명세서 → {illegal_building, unregistered_land_right, lien_reported, statutory_superficies,
     prior_assumed_rights, lease_registration_with_power, spec_note}. 명세서가 없으면 빈 묶음(그 신호는 「모름」 그대로)."""
@@ -39,7 +43,12 @@ def spec_facts(spec: dict[str, Any] | None) -> dict[str, Any]:
         and not re.search(r"성립\s*(여지\s*)?없", sup or "")
     ):
         out["statutory_superficies"] = True
-    if _has(keep):
+    # 「주택임차권등기(다만 주택도시보증공사의 말소동의 확약서가 제출됨)」 — 보증기관이 말소에 동의해
+    # 매수인이 떠안지 않음(11/17: 진행 물건 714건이 「선순위 임차권 인수」로 잘못 떴음). 임차권 말고 다른
+    # 권리(전세권 · 가등기 · 가처분 · 지상권 …)가 함께 적혀 있으면 지금처럼 인수 신호를 냄
+    if _has(keep) and _RELEASE.search(keep or "") and not _OTHER_RIGHTS.search(keep or ""):
+        out["lease_reg_released"] = [re.sub(r"\s+", " ", keep or "")[:120]]
+    elif _has(keep):
         out["prior_assumed_rights"] = [re.sub(r"\s+", " ", keep or "")[:80]]
         # 「주택임차권등기는 배당에서 전액 변제받지 않으면 잔액을 매수인이 인수」 → 대항력 있는 임차권등기
         if re.search(r"임차권\s*등기", keep or "") and re.search(

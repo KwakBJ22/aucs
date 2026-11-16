@@ -926,8 +926,10 @@ export const copy = {
     assumed: "떠안는 돈",
     cashTotal: "내 돈",
     cap: (x: string) => `${x}을 넘으면 시세보다 비싸게 사요`,
-    loanWho: (who: string, pct: number) =>
-      `대출은 ${({ none: "무주택", first_time: "생애최초", owner: "집 있음", owner_sell: "기존 집 처분 조건" } as Record<string, string>)[who] ?? who} 기준 ${pct}%로 계산했어요`,
+    loanWho: (who: string, pct: number | null) =>
+      pct == null
+        ? "상가·오피스텔·땅 대출은 은행마다 달라 대출 없이 계산했어요"
+        : `대출은 ${({ none: "무주택", first_time: "생애최초", owner: "집 있음", owner_sell: "기존 집 처분 조건" } as Record<string, string>)[who] ?? who} 기준 ${pct}%로 계산했어요`,
     footCourt:
       "법원경매정보·국토부 실거래가 공개 자료로 계산 · 등기부와 현장을 꼭 직접 확인하세요 · 투자 권유가 아니에요",
     footOnbid:
@@ -1390,7 +1392,9 @@ export const copy = {
       checkAll: "다 확인했어요",
       summaryMine: (line: string) => `${line} · 내 등기부 기준`,
     },
-    tenantsNone: "현황조사서에 임차인이 없거나 아직 못 받았어요",
+    // 11/17: 받았는데 없는 것과 아직 못 받은 것을 나눔(예전엔 한 문장이라 「인수」 신호와 어긋나 보였음)
+    tenantsNone: "현황조사서를 아직 못 받았어요",
+    tenantsNoneSeen: "현황조사서에 올라온 임차인이 없어요",
     tenantsCount: (n: number) => `임차인 ${n}명`,
     tenantsMore: (n: number) => `${n}명 더 보기`,
     tenantsLess: "접기",

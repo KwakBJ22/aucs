@@ -184,7 +184,8 @@ def build_calc(
         "homes": homes, "first_time": first_time, "deposit_rate_pct": 20 if resale else 10, "tables": tables,
         "selling": selling, "income_krw": income_krw, "other_monthly_krw": other_monthly_krw,
         "move_out_krw": move["mid_krw"] if move else 0, "repair_krw": repair["mid_krw"] if repair else 0,
-        "usage": f"{r.get('usage_name') or ''} {r.get('building_desc') or ''}",  # 취득세 종류(11/16)
+        # 취득세 · 대출 종류(11/16~17): 법원 용도 + 물건 설명 + 건축물대장 주용도(「기타」 물건을 가르려고)
+        "usage": " ".join(x for x in [r.get("usage_name"), r.get("building_desc"), b.get("main_use")] if x),
     }  # fmt: skip
     _, _, rate = worth(r, r.get("signals") or [])
     # 떠안는 권리(11/1): 선순위 전세권·대항력 임차인 등을 떠안으면 낙찰가 + 그 돈이 실제 값.

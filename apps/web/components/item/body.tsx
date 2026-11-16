@@ -125,7 +125,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   if (q.key === "hold")
     return (
       <>
-        {b.tenants.length === 0 && <p className="sub">{t.tenantsNone}</p>}
+        {b.tenants.length === 0 && (
+          <p className="sub">{b.status_report ? t.tenantsNoneSeen : t.tenantsNone}</p>
+        )}
         <Tenants list={b.tenants} />
         <HoldDocLink />
         {d.failure_table ? (
