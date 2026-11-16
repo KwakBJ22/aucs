@@ -272,16 +272,38 @@ def units() -> None:
             dong = re.search(r"(\d+|[가-힣A-Za-z])동\s", desc or "")
             under = bool(re.search(r"지층|지하|비\d", desc or ""))
             rows: list[dict[str, Any]] = []
-            for name in [ho.group(1), ("B" + ho.group(1)) if under else None] if ho else []:
+            base = {"serviceKey": key, "sigunguCd": code[:5], "bjdongCd": code[5:], "platGbCd": plat,
+                    "bun": bun, "ji": ji, "numOfRows": 100, "pageNo": 1, "_type": "json"}  # fmt: skip
+            n = ho.group(1) if ho else ""
+            letter = re.search(r"(에이|비|씨|디)\s*\d+\s*호", desc or "")
+            pre = (
+                {"에이": "A", "비": "B", "씨": "C", "디": "D"}.get(letter.group(1), "")
+                if letter
+                else ""
+            )
+            # 호 이름 꼴을 차례로(11/16): 숫자 → 「416호」 → 「제416호」 → 글자 붙은 꼴(A303 · B102) → 지하(B101)
+            names = [n, n + "호", "제" + n + "호", pre + n if pre else None, pre + n + "호" if pre else None,
+                     "B" + n if under and not pre else None] if n else []  # fmt: skip
+            used = None
+            for name in names:
                 if not name or rows:
                     continue
                 time.sleep(0.3)
                 try:
-                    d = c.get(hub, params={"serviceKey": key, "sigunguCd": code[:5], "bjdongCd": code[5:], "platGbCd": plat,
-                                           "bun": bun, "ji": ji, "hoNm": name, "numOfRows": 100, "pageNo": 1, "_type": "json"}).json()  # fmt: skip
+                    d = c.get(hub, params={**base, "hoNm": name}).json()
                     rows, _ = first_rows(d)
+                    used = name if rows else None
                 except Exception as e:  # noqa: BLE001
                     out.append(f"   오류 {type(e).__name__}")
+            peek = ""
+            if not rows:  # 그 지번에 대장이 있기는 한지 · 호 이름이 어떤 꼴인지
+                try:
+                    some, total = first_rows(c.get(hub, params={**base, "numOfRows": 30}).json())
+                    hos = sorted({str(r.get("hoNm")) for r in some})[:8]
+                    dn = sorted({str(r.get("dongNm")) for r in some})[:4]
+                    peek = f" | 그 지번 전체 {total}줄 · 호 이름 예 {hos} · 동 {dn}"
+                except Exception as e:  # noqa: BLE001
+                    peek = f" | 전체 조회 오류 {type(e).__name__}"
             rows = [r for r in rows if "hoNm" in r]
             dongs = sorted({str(r.get("dongNm") or "").strip() for r in rows})
             own = [r for r in rows if r.get("exposPubuseGbCdNm") == "전유"]
@@ -292,6 +314,7 @@ def units() -> None:
             ok += bool(hit)
             out.append(f"{'○' if hit else '×'} {usage} | {str(desc)[:40]} | 우리 면적 {area} | 호 {ho.group(1) if ho else None} 동 {dong.group(1) if dong else None}"
                        f" | 받은 줄 {len(rows)} 동 {dongs[:4]} | 전유 {[(r.get('mainPurpsCdNm'), r.get('etcPurps'), r.get('area'), r.get('hoNm')) for r in own[:3]]}")  # fmt: skip
+            out[-1] += f" | 맞은 호 이름 {used}" + peek
     out.insert(1, f"전유면적이 우리 면적과 맞음(±1㎡): {ok}/{len(its)}")
     log = LOG.with_name("probe_units.log")
     log.write_text("\n".join(out) + "\n", encoding="utf-8")
