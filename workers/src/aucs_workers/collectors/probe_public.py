@@ -300,6 +300,12 @@ def units() -> None:
 
 def main() -> None:
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
+    if (
+        "%" in key
+    ):  # .env 에 Encoding 키가 들어 있음 — 풀어서 써야 함(안 풀면 「등록되지 않은 키」로 나옴, 11/16)
+        from urllib.parse import unquote
+
+        key = unquote(key)
     rone = os.getenv("RONE_API_KEY", "").strip().strip("\"'")
     sec = [key, rone]
     out = [f"=== {datetime.now():%Y-%m-%d %H:%M} 공공 자료 표본 (키: 공공데이터 {'있음' if key else '없음'} · R-ONE {'있음' if rone else '없음'})"]  # fmt: skip
