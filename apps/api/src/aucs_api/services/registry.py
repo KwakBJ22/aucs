@@ -313,7 +313,7 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
             c,
             [
                 (
-                    """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok,
+                    """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok, shared,
                               user_id = %(uid)s as mine
                        from app.uploaded_registries where item_id = %(id)s and (user_id = %(uid)s or shared)
                        order by (user_id = %(uid)s) desc, upload_id desc limit 1""",
@@ -361,7 +361,7 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
         "upload_id": u["upload_id"], "file_name": u["file_name"], "status": u["status"], "method": u["method"],
         "error": u["error"], "delete_after": u["delete_after"].isoformat(), "ladder": None,
         "created_at": u["created_at"].isoformat(), "choices": {"갑": names_for("갑"), "을": names_for("을")},
-        "mine": bool(u["mine"]),  # False 면 다른 회원이 올려 공개된 것(11/12)
+        "mine": bool(u["mine"]), "shared": bool(u["shared"]),  # False 면 다른 회원이 올려 공개된 것(11/12)
         "points": {"points": pts["points"], "why": pts["note"]} if pts and u["mine"] else None,
     }  # fmt: skip
     # 주소가 이 물건과 다르면(손님이 「그래도 보기」 누르기 전엔) 판정하지 않음

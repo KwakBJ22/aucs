@@ -344,7 +344,7 @@ export function RegistryBox() {
         </>
       )}
       {err && <p className="c-red fs-sm">{err}</p>}
-      {u && <p className="sub fs-xs">{r.keep(u.delete_after)}</p>}
+      {u && <p className="sub fs-xs">{r.keep(u.delete_after, !!u.shared)}</p>}
     </div>
   );
 }

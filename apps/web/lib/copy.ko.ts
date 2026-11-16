@@ -202,7 +202,7 @@ export const copy = {
     toRecord: (n: number) => `입찰일이 지난 관심 물건 ${n}건 · 결과 적어 두기`,
     picks: "오늘의 추천",
     allLink: "전체",
-    picksSub: "입찰까지 10일 넘게 남아 준비할 시간이 있는 물건",
+    picksSub: "입찰까지 10일 이상 남아 준비할 시간이 있는 물건",
     soon: "마감 임박",
     soonSub: "7일 안 · 점수 높은 것만",
     next: "기다리면 더 싸질 물건",
@@ -238,12 +238,16 @@ export const copy = {
     noProfile: "시작 질문에 답하면 내 지역·현금 안에서만 모아 드려요",
     list: [
       ["cheap", "시세보다 싸게 살 여지", "예상 낙찰가가 실거래 시세보다 10% 넘게 낮은 물건"],
-      ["safe", "떠안는 돈 없는 물건", "권리 위험 신호가 하나도 없어 처음 해도 안심되는 물건"],
+      [
+        "safe",
+        "위험 신호 없는 물건",
+        "옥스가 찾은 권리 위험 신호가 없는 물건 · 등기부·현장은 직접 확인하세요",
+      ],
       ["rising", "감정 뒤 값이 오른 곳", "감정가보다 지금 실거래 시세가 10% 넘게 높은 물건"],
       [
         "next",
         "기다리면 더 싸질 물건",
-        "비슷한 물건이 이 회차에 10건 중 7건 넘게 유찰됐거나, 다음 회차가 잡힌 물건",
+        "비슷한 물건이 이 회차에 10건 중 7건 이상 유찰됐거나, 다음 회차가 잡힌 물건",
       ],
       ["station", "역 가까운 곳", "지하철역까지 500m 안(직선 거리)"],
       [
@@ -287,7 +291,7 @@ export const copy = {
       "물건관리번호로 찾기",
       "입찰서 내기 · 입찰가 다시 확인",
       "안내받은 계좌로 보증금 넣기 · 마감 전까지",
-      "개찰 다음 날 옥스가 결과를 알려 드려요",
+      "관심에 담아 두면 개찰 결과가 올라온 뒤 알려 드려요",
     ],
     go: "온비드에서 입찰하기",
     foot: "입찰은 온비드에서 직접 해요 · 옥스는 입찰을 대신하지 않아요",
@@ -295,7 +299,7 @@ export const copy = {
   sameHouse: {
     toCourt: "같은 집이 법원 경매에도 나와 있어요",
     toOnbid: "같은 집이 공매(온비드)에도 나와 있어요",
-    sub: "먼저 팔리는 쪽에서 끝나요 · 두 곳 일정을 함께 보세요",
+    sub: "먼저 잔금을 낸 쪽이 주인이 돼요 · 두 곳 일정을 함께 보세요",
     court: (no: string, date: string) => `경매 ${no} · 매각기일 ${date}`,
     onbid: (no: string, date: string) => `공매 ${no} · 마감 ${date}`,
   },
@@ -331,7 +335,7 @@ export const copy = {
       `감정가가 시세의 ${r}%예요. 「감정가의 몇 %」보다 「시세의 몇 %」로 보세요.`,
     ofMarket: (r: number) => `시세의 ${r}%`,
     expectTitle: "이 정도에 낙찰되곤 해요",
-    expectSub: "공매는 최저가 대비예요 · 100%를 넘는 게 보통이에요",
+    expectSub: "공매는 최저가 대비예요 · 최저가 이상이어야 낙찰되니 100% 이상이에요",
     expectCols: ["응찰자 (그런 경우)", "최저가 대비", "이 물건이면"],
     fewSample: "표본 적음",
     worthAnswer: (mkt: string | null, solo: string | null) =>
@@ -343,7 +347,7 @@ export const copy = {
     balance: "잔금 기한",
     balanceValue: "공고문에서 확인",
     moveOut: "명도",
-    moveOutValue: "소송 전제 · 보통 6개월~1년",
+    moveOutValue: "인도명령이 없어 소송으로 해요 · 걸리는 기간은 사건마다 달라요",
     checkAnswer: (n: number) => (n ? `확인할 것 ${n}개` : "다 확인했어요"),
     copyNo: "물건관리번호 복사",
     copied: "복사했어요",
@@ -788,7 +792,7 @@ export const copy = {
       ],
       [
         "대항력",
-        "임차인이 말소기준보다 먼저 이사(전입)했으면 생겨요. 이 임차인이 배당에서 다 못 받은 보증금은 낙찰자가 떠안아요.",
+        "임차인이 말소기준 날짜보다 먼저 전입하고 살고 있으면 생겨요(효력은 전입 다음 날부터). 이 임차인이 배당에서 다 못 받은 보증금은 낙찰자가 떠안아요.",
       ],
       [
         "배당요구 종기",
@@ -925,7 +929,7 @@ export const copy = {
     moveRepair: "명도·수리(대략)",
     assumed: "떠안는 돈",
     cashTotal: "내 돈",
-    cap: (x: string) => `${x}을 넘으면 시세보다 비싸게 사요`,
+    cap: (x: string) => `${x}을 넘으면 추정 시세보다 비싸게 사요`,
     loanWho: (who: string, pct: number | null) =>
       pct == null
         ? who === "unknown"
@@ -944,7 +948,7 @@ export const copy = {
       korean: "금액을 한글로 읽어 맞춰 봤어요",
       double: "최저가 2배를 넘으면 한 번 더 확인",
       deposit10: "보증금은 최저가의 10%",
-      deposit20: "재매각이라 보증금은 최저가의 20%",
+      deposit20: "재매각 — 보증금은 보통 최저가의 20%(법원 공고 확인)",
       itemNo: (n: number | null) => (n ? `물건번호 ${n} — 입찰표에 꼭 적기` : "물건번호 확인"),
       privacy: "이름·주민번호는 법원에서 직접 적어요 · 옥스에 저장하지 않아요",
     },
@@ -1012,7 +1016,7 @@ export const copy = {
     scoreLine: (pct: number, n: number) => `실제 낙찰가가 예상 범위 안에 든 비율 ${pct}% (${n}건)`,
     scoreSplit: (below: number, above: number) => `· 범위보다 낮게 ${below}% · 높게 ${above}%`,
     scoreNote:
-      "매각기일 전에 낸 예상 범위(낙찰가율 25~75%)와 실제 낙찰가를 비교해요 · 처음 나온 물건은 빼요",
+      "매각기일 전에 낸 예상 범위(비슷한 물건 낙찰가율의 가운데 절반)와 실제 낙찰가를 비교해요 · 처음 나온 물건은 빼요",
     byCourt: "법원별 낙찰가율(가운데 값)",
     byFailed: "유찰 횟수별",
     byMonth: "달마다",
@@ -1028,7 +1032,8 @@ export const copy = {
     note: "지분·특수 사건은 통계에서 뺐어요 · 숫자 옆 작은 수는 건수",
     onbidAllSido: "전국",
     onbid: {
-      basis: "공매 낙찰가율은 최저가 대비예요 · 100%를 넘는 게 보통이라 경매 숫자와 따로 봐요",
+      basis:
+        "공매 낙찰가율은 최저가 대비예요 · 최저가 이상이어야 낙찰되니 100% 이상으로 나와 경매 숫자와 따로 봐요",
       byBidders: "입찰자 수별(최저가 대비)",
       byUsage: "종류별",
       bySido: "시도별",
@@ -1210,7 +1215,8 @@ export const copy = {
       homes: ["없어요", "1채", "2채 이상"],
       firstTime: "생애 첫 집이에요",
       selling: "기존 집 팔 계획이에요",
-      sellingHint: "3년 안에 팔면 취득세는 기본 세율, 대출은 처분 조건으로 계산해요",
+      sellingHint:
+        "3년 안에 팔면 취득세는 기본 세율로, 대출은 6개월 안에 파는 조건(처분 조건부)으로 계산해요",
       dsrOpen: "대출 더 정확히 보기",
       income: "연 소득(만 원)",
       otherMonthly: "다른 대출 월 상환액(만 원)",
@@ -1226,7 +1232,7 @@ export const copy = {
       // 11/17: 주택인지 확인할 자료가 없는 물건(법원 용도 「기타」 · 대장 없음) — 세율을 짐작하지 않음
       taxLabel: "취득세 등",
       taxUnknown:
-        "용도 확인 안 됨 — 필요한 현금에서 빠졌어요 · 주택이면 1.1~3.5%(다주택은 중과), 그 밖이면 4.6%",
+        "용도 확인 안 됨 — 필요한 현금에서 빠졌어요 · 주택이면 1.1~3.5%(다주택은 중과), 그 밖이면 4.6%(농지 3.4%)",
       reg: "등기·법무사(대략)",
       rent: {
         open: "세놓으면",
@@ -1249,7 +1255,7 @@ export const copy = {
       cash: "필요한 현금",
       vsCash: (more: boolean, x: string) =>
         more ? `가진 현금보다 ${x} 더 필요해요` : `가진 현금에서 ${x} 남아요`,
-      cap: (x: string) => `${x}을 넘으면 시세보다 비싸게 사는 셈이에요`,
+      cap: (x: string) => `${x}을 넘으면 추정 시세보다 비싸게 사는 셈이에요`,
       region: { regulated: "규제지역", metro: "수도권", other: "비수도권" } as Record<
         string,
         string
@@ -1376,7 +1382,11 @@ export const copy = {
       failed: "등기부를 읽지 못했어요. 인터넷등기소에서 받은 PDF인지 확인해 주세요",
       baseLine: (name: string, d: string) =>
         `── 말소기준 ${name} ${d} ── 이 아래는 낙찰되면 지워져요`,
-      keep: (d: string) => `올린 등기부는 ${d}에 지워져요 · 나만 볼 수 있어요`,
+      // 11/17: 주소가 물건과 맞으면 다른 회원도 같이 봄(shared) — 예전엔 늘 「나만 볼 수 있어요」라고 적었음
+      keep: (d: string, shared: boolean) =>
+        shared
+          ? `주소가 이 물건과 맞아 다른 회원도 같이 봐요 · 원본 PDF는 ${d}에 지워져요`
+          : `올린 등기부 원본 PDF는 ${d}에 지워져요 · 나만 볼 수 있어요`,
       tenants: "임차인",
       summaryReading: "올린 등기부를 읽고 있어요",
       payTitle: (price: string) => `배당 예상 · 최저가 ${price}에 낙찰되면`,

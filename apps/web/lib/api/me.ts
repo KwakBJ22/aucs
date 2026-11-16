@@ -120,6 +120,7 @@ export type RegistryUpload = {
   ladder: Ladder | null;
   created_at?: string;
   mine?: boolean; // false 면 다른 회원이 올려 공개된 등기부(11/12)
+  shared?: boolean; // 주소가 물건과 맞아 다른 회원도 같이 봄(11/17)
   points?: { points: number; why: string } | null;
   choices?: Record<string, string[]>;
   address?: {
