@@ -43,12 +43,13 @@ class Incomplete(Exception):
 
 
 def fetch(
-    client: httpx.Client, key: str, op: str, code10: str, plat: str, bun: str, ji: str
+    client: httpx.Client, key: str, op: str, code10: str, plat: str, bun: str, ji: str,
+    extra: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     page, total = 1, 0
     params: dict[str, Any] = {"serviceKey": key, "sigunguCd": code10[:5], "bjdongCd": code10[5:], "platGbCd": plat,
-              "bun": bun, "ji": ji, "numOfRows": ROWS, "_type": "json"}  # fmt: skip
+              "bun": bun, "ji": ji, "numOfRows": ROWS, "_type": "json", **(extra or {})}  # fmt: skip
     while True:
         body, status = "", 0
         for attempt in range(5):
