@@ -43,12 +43,12 @@ def test_site_budget_shared(tmp_path, monkeypatch) -> None:  # type: ignore[no-u
         a.call(lambda: {"ok": True}, "3")
 
 
-def test_budget_grows_after_quiet_week_and_shrinks_on_block() -> None:
-    # 2,500번은 시작점 — 7일 무사하면 20% 올리고(11/4 저녁), 막히면 40% 내림
+def test_budget_grows_after_quiet_days_and_shrinks_on_block() -> None:
+    # 2,500번은 시작점 — 3일 무사하면 20% 올리고(11/18, 처음엔 7일), 막히면 40% 내림
     from aucs_workers.collectors.polite import hour_share, roll
 
     b: dict = {}
-    for d in range(1, 9):
+    for d in range(1, 5):
         b = roll(b, f"2026-11-{d:02d}", 2500)
     assert b["cap"] == 3000 and b["ok_days"] == 0
     b["blocked"] = True

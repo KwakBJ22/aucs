@@ -28,7 +28,8 @@ CASE_GAP_SEC = 6.0
 RETRIES = 3
 SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집기 합) — 사건 하나에 6~7번
 CAP_MIN, CAP_MAX = 800, 20000
-GROW_AFTER_DAYS, GROW, SHRINK = 7, 1.2, 0.6
+# 11/18 대표님: 무사한 날 7일 → 3일마다 20% 올림(막힘은 요청 속도 탓이었음 — 간격은 그대로)
+GROW_AFTER_DAYS, GROW, SHRINK = 3, 1.2, 0.6
 SERVICE_HOURS = 18  # 법원 06:00~24:00
 # 막히면 쉬는 시간(11/4 저녁): 1시간 → 같은 날 또 막히면 2시간 → 4시간까지. 다시 시작할 때는 새 브라우저(새 세션)이고
 # 한도는 막힐 때마다 40% 낮춤. 법원 막힘은 IP 보다 세션(쿠키) 단위라는 다른 수집기의 실측을 따름.
@@ -53,7 +54,7 @@ def _budget_file(site: str) -> Path:
 
 
 def roll(b: dict[str, Any], today: str, start_cap: int) -> dict[str, Any]:
-    """하루가 바뀌면 센 수를 0으로 — 어제 안 막혔으면 무사한 날 +1, 7일 모이면 한도 20% 올림."""
+    """하루가 바뀌면 센 수를 0으로 — 어제 안 막혔으면 무사한 날 +1, 3일 모이면 한도 20% 올림."""
     if b.get("date") == today:
         b.setdefault("cap", start_cap)
         b.setdefault("hours", {})
