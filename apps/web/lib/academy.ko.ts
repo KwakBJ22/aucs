@@ -1,5 +1,5 @@
 // 옥스아카데미 교안(11/14 대표님): 처음 온 사람이 겁먹지 않게 — 한 수업 3분, 카드 한 장에 한 가지만.
-// 등급은 초급 · 중급 · 고급(LEVELS). 단계 열쇠(s0…)는 서버 규칙(packages/rules/…/academy.py OPEN_STAGES)과 같아야 포인트가 나감.
+// 레벨 1~7(LEVELS, 11/17 대표님 — 경매를 실제로 하는 순서). 단계 열쇠(s0…)는 서버 규칙(packages/rules/…/academy.py OPEN_STAGES)과 같아야 포인트가 나감.
 // 글은 우리 말로 새로 씀(강사 자료 문구 안 씀). 숫자 · 제도는 법이 바뀌면 여기서 고침.
 
 export type Card = { h: string; b: string; eg?: string };
@@ -12,7 +12,7 @@ export type Lesson = {
   see?: { label: string; href: string }; // 배운 것을 실제 물건에서 보기
   task?: { label: string; href: string }; // 중급: 옥스에서 직접 해 보는 과제
 };
-export type Level = "basic" | "mid" | "adv";
+export type Level = "l1" | "l2" | "l3" | "l4" | "l5" | "l6" | "l7";
 export type Stage = {
   key: string;
   level: Level;
@@ -25,8 +25,8 @@ export type Stage = {
 export const STAGES: Stage[] = [
   {
     key: "s0",
-    level: "basic",
-    title: "겁 풀기",
+    level: "l1",
+    title: "경매, 생각보다 쉬워요",
     goal: "다 듣고 나면 「나도 할 수 있겠다」",
     lessons: [
       {
@@ -150,7 +150,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "s1",
-    level: "basic",
+    level: "l1",
     title: "한 바퀴 돌아보기",
     goal: "처음부터 끝까지 흐름이 보여요",
     lessons: [
@@ -378,7 +378,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "s2",
-    level: "basic",
+    level: "l2",
     title: "용어 교실",
     goal: "물건 카드와 서류의 말이 읽혀요",
     lessons: [
@@ -516,12 +516,61 @@ export const STAGES: Stage[] = [
       },
     ],
   },
+  {
+    key: "m0",
+    level: "l2",
+    title: "처음에는 피할 물건",
+    goal: "첫 입찰에서 피할 물건을 알아봐요",
+    lessons: [
+      {
+        key: "m1-avoid",
+        title: "처음에는 피하는 물건",
+        cards: [
+          {
+            h: "지분 물건",
+            b: "집 전체가 아니라 일부(예: 2분의 1)만 파는 물건이에요. 낙찰받아도 혼자 쓸 수 없고 대출도 어려워요.",
+          },
+          {
+            h: "땅만 · 건물만",
+            b: "땅과 건물 가운데 하나만 파는 물건이에요. 남의 건물이 내 땅에 서 있거나, 남의 땅 위 건물을 사게 돼요.",
+          },
+          {
+            h: "유치권 신고",
+            b: "공사비를 못 받았다며 집을 차지하고 있는 사람이 있다는 뜻이에요. 진짜인지 가리기 어렵고 대출이 막혀요.",
+          },
+          {
+            h: "위반건축물 · 근생빌라",
+            b: "허가와 다르게 지었거나, 서류에는 상가인데 집으로 쓰는 건물이에요. 대출과 세금에서 문제가 생겨요.",
+          },
+          {
+            h: "이런 물건이 나쁜 건 아니에요",
+            b: "아는 사람에게는 기회예요. 다만 첫 입찰에서는 피하고, 레벨 7(특수물건)에서 하나씩 배워요.",
+          },
+          {
+            h: "옥스에서는",
+            b: "찾기의 「초보자 안전 모드」를 켜면 이런 물건이 빠져요. 물건 카드의 빨간 한 줄이 그 표시예요.",
+          },
+        ],
+        quiz: {
+          q: "첫 입찰로 가장 알맞은 물건은?",
+          options: [
+            "2분의 1 지분 아파트",
+            "유치권 신고가 있는 빌라",
+            "집주인이 살고 떠안는 것이 없는 아파트",
+          ],
+          answer: 2,
+          why: "떠안는 것이 없고 세입자가 없는 물건이 가장 쉬워요.",
+        },
+        task: { label: "과제 · 초보자 안전 모드 켜고 찾아보기", href: "/find" },
+      },
+    ],
+  },
   // ── 중급(수업마다 옥스에서 해 보는 과제) · 고급(review: 법률 검토 전 — 포인트 없음)
   {
     key: "m1",
-    level: "mid",
-    title: "안전한 물건 고르기",
-    goal: "떠안는 것이 없는 물건을 스스로 골라요",
+    level: "l4",
+    title: "남는 빚과 사는 사람",
+    goal: "떠안는 것이 있는지 스스로 가려요",
     lessons: [
       {
         key: "m1-base",
@@ -594,52 +643,11 @@ export const STAGES: Stage[] = [
         },
         task: { label: "과제 · 세입자 있는 물건의 「누가 살고 있나」 열어 보기", href: "/find" },
       },
-      {
-        key: "m1-avoid",
-        title: "처음에는 피하는 물건",
-        cards: [
-          {
-            h: "지분 물건",
-            b: "집 전체가 아니라 일부(예: 2분의 1)만 파는 물건이에요. 낙찰받아도 혼자 쓸 수 없고 대출도 어려워요.",
-          },
-          {
-            h: "땅만 · 건물만",
-            b: "땅과 건물 가운데 하나만 파는 물건이에요. 남의 건물이 내 땅에 서 있거나, 남의 땅 위 건물을 사게 돼요.",
-          },
-          {
-            h: "유치권 신고",
-            b: "공사비를 못 받았다며 집을 차지하고 있는 사람이 있다는 뜻이에요. 진짜인지 가리기 어렵고 대출이 막혀요.",
-          },
-          {
-            h: "위반건축물 · 근생빌라",
-            b: "허가와 다르게 지었거나, 서류에는 상가인데 집으로 쓰는 건물이에요. 대출과 세금에서 문제가 생겨요.",
-          },
-          {
-            h: "이런 물건이 나쁜 건 아니에요",
-            b: "아는 사람에게는 기회예요. 다만 첫 입찰에서는 피하고, 고급 과정에서 하나씩 배워요.",
-          },
-          {
-            h: "옥스에서는",
-            b: "찾기의 「초보자 안전 모드」를 켜면 이런 물건이 빠져요. 물건 카드의 빨간 한 줄이 그 표시예요.",
-          },
-        ],
-        quiz: {
-          q: "첫 입찰로 가장 알맞은 물건은?",
-          options: [
-            "2분의 1 지분 아파트",
-            "유치권 신고가 있는 빌라",
-            "집주인이 살고 떠안는 것이 없는 아파트",
-          ],
-          answer: 2,
-          why: "떠안는 것이 없고 세입자가 없는 물건이 가장 쉬워요.",
-        },
-        task: { label: "과제 · 초보자 안전 모드 켜고 찾아보기", href: "/find" },
-      },
     ],
   },
   {
     key: "m2",
-    level: "mid",
+    level: "l3",
     title: "서류 읽기",
     goal: "원문을 직접 읽고 옥스의 한 줄과 견줘요",
     lessons: [
@@ -743,7 +751,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "m3",
-    level: "mid",
+    level: "l5",
     title: "돈 계산",
     goal: "내 돈으로 되는지 스스로 따져요",
     lessons: [
@@ -811,7 +819,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "m4",
-    level: "mid",
+    level: "l3",
     title: "현장 확인",
     goal: "30분 동안 무엇을 볼지 알아요",
     lessons: [
@@ -882,7 +890,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "m5",
-    level: "mid",
+    level: "l5",
     title: "입찰가 정하기",
     goal: "얼마를 쓸지 내 기준이 생겨요",
     lessons: [
@@ -976,7 +984,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "m6",
-    level: "mid",
+    level: "l6",
     title: "입찰하는 날과 낙찰 뒤",
     goal: "혼자 법원에 다녀올 수 있어요",
     lessons: [
@@ -1076,7 +1084,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "m7",
-    level: "mid",
+    level: "l6",
     title: "모의입찰",
     goal: "실제 물건으로 한 번 해 봐요",
     lessons: [
@@ -1118,7 +1126,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a1",
-    level: "adv",
+    level: "l4",
     title: "대항력 있는 임차인과 배당",
     goal: "떠안는 보증금을 스스로 계산해요",
     lessons: [
@@ -1194,7 +1202,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a2",
-    level: "adv",
+    level: "l7",
     title: "지분 · 법정지상권 · 유치권",
     goal: "어려운 세 가지가 무엇인지 알아요",
     lessons: [
@@ -1296,7 +1304,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a3",
-    level: "adv",
+    level: "l7",
     title: "재개발 · 재건축 조합원 자격",
     goal: "새 아파트를 받을 수 있는지 따져요",
     lessons: [
@@ -1370,7 +1378,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a4",
-    level: "adv",
+    level: "l7",
     title: "근생빌라 · 위반건축물",
     goal: "서류와 다른 집을 알아봐요",
     lessons: [
@@ -1443,7 +1451,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a5",
-    level: "adv",
+    level: "l7",
     title: "토지 · 농지 · 공매",
     goal: "집이 아닌 물건과 공매를 알아요",
     lessons: [
@@ -1513,7 +1521,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a6",
-    level: "adv",
+    level: "l5",
     title: "세금과 여러 채",
     goal: "사고 가지고 팔 때의 세금을 알아요",
     lessons: [
@@ -1583,7 +1591,7 @@ export const STAGES: Stage[] = [
   },
   {
     key: "a7",
-    level: "adv",
+    level: "l7",
     title: "낙찰 사례 · 시장 분석 읽기",
     goal: "숫자로 흐름을 읽어요",
     lessons: [
@@ -1650,26 +1658,26 @@ export const STAGES: Stage[] = [
   },
 ];
 
-// 등급(11/14 대표님): 초급 = 옥스 문턱에 섬 · 중급 = 「나도 해 볼까」 자신감, 옥스가 받쳐 줌 · 고급 = 어려운 물건
+// 레벨(11/17 대표님): 경매를 실제로 하는 순서대로 1 → 7. 레벨 1 · 2 는 아는 분이 건너뛸 수 있고(레벨 시험은 다음 단계),
+// 레벨 3부터는 앞 레벨을 다 들어야 열림. 레벨 7(특수물건)은 법률 검토 전.
 export const LEVELS: { key: Level; name: string; title: string; goal: string }[] = [
+  { key: "l1", name: "레벨 1", title: "경매 입문", goal: "경매가 어떻게 굴러가는지 보여요" },
+  { key: "l2", name: "레벨 2", title: "말과 물건 고르기", goal: "물건 카드와 서류의 말이 읽혀요" },
   {
-    key: "basic",
-    name: "초급",
-    title: "처음 만나는 경매",
-    goal: "무섭지 않네, 물건 카드가 읽히네",
+    key: "l3",
+    name: "레벨 3",
+    title: "서류 읽기",
+    goal: "원문을 직접 읽고 현장에서 볼 것을 알아요",
   },
+  { key: "l4", name: "레벨 4", title: "권리분석", goal: "떠안는 것이 있는지 스스로 가려요" },
+  { key: "l5", name: "레벨 5", title: "돈 계산", goal: "내 돈으로 되는지, 얼마를 쓸지 정해요" },
   {
-    key: "mid",
-    name: "중급",
-    title: "내 첫 입찰 준비",
-    goal: "옥스에서 직접 해 보며 「나도 할 수 있겠다」",
+    key: "l6",
+    name: "레벨 6",
+    title: "입찰과 낙찰 뒤",
+    goal: "혼자 법원에 다녀오고 낙찰 뒤를 챙겨요",
   },
-  {
-    key: "adv",
-    name: "고급",
-    title: "남들이 못 보는 물건",
-    goal: "어려운 물건도 따져 볼 수 있어요",
-  },
+  { key: "l7", name: "레벨 7", title: "특수물건", goal: "어려운 물건도 따져 볼 수 있어요" },
 ];
 
 export function findLesson(key: string) {

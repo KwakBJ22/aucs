@@ -32,8 +32,8 @@ function Meter({ label, n, total }: { label: string; n: number; total: number })
   );
 }
 
-// 옥스아카데미(11/14 대표님): 목차(등급 → 단계)만 보이는 커리큘럼 한 장. 수업은 차례대로만 열림 —
-// 초급은 건너뛰고 중급부터 해도 되고, 고급은 중급을 다 들어야 열림. 위에 수업 진도 · 옥스 활용(과제) 두 줄.
+// 옥스아카데미(11/14 · 11/17 대표님): 목차(레벨 1~7 → 단계)만 보이는 커리큘럼 한 장. 수업은 차례대로만 열림 —
+// 레벨 1 · 2 는 건너뛰어도 되고, 레벨 4부터는 앞 레벨을 다 들어야 열림. 위에 수업 진도 · 옥스 활용(과제) 두 줄.
 export default function Academy() {
   const { session } = useSession();
   const token = session?.access_token;
@@ -62,7 +62,6 @@ export default function Academy() {
     done,
   );
   const tasks = taskCount(done);
-  const midDone = levelLessons("mid").every((l) => done.includes(l.key));
   return (
     <main className="page">
       <PageHeader title={t.title} back="/home" />
@@ -82,13 +81,15 @@ export default function Academy() {
       {LEVELS.map((lv) => {
         const stages = STAGES.filter((s) => s.level === lv.key);
         const c = count(levelLessons(lv.key), done);
+        const prev = LEVELS[LEVELS.indexOf(lv) - 1];
+        const prevDone = !prev || levelLessons(prev.key).every((l) => done.includes(l.key));
         const note =
-          lv.key === "basic"
+          lv.key === "l1"
             ? t.noteBasic
-            : lv.key === "adv"
-              ? midDone
+            : lv.key === "l7"
+              ? prevDone
                 ? t.reviewNote
-                : t.noteAdv
+                : t.noteLevel(prev?.name ?? "")
               : null;
         return (
           <section key={lv.key} className="section ac-level">

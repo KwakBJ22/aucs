@@ -52,29 +52,43 @@ export function mark(key: string, token?: string): string[] {
   return list;
 }
 
-// ── 차례(11/14 대표님): 아무 수업이나 열지 못하게, 처음부터 차근차근.
-// 등급 안에서는 앞 수업을 들어야 다음 수업이 열림. 초급은 건너뛰고 중급부터 해도 되지만,
-// 고급은 중급을 다 들어야 열림(옥스를 직접 써 보는 과제가 중급에 있어서 — 고급부터 가면 옥스를 익힐 기회가 없음).
+// ── 차례(11/14 · 11/17 대표님): 아무 수업이나 열지 못하게, 처음부터 차근차근.
+// 레벨 안에서는 앞 수업을 들어야 다음 수업이 열림. 레벨 1 · 2 는 건너뛰고 레벨 3부터 해도 되지만,
+// 레벨 4부터는 앞 레벨을 다 들어야 열림.
 export const levelLessons = (level: Level): Lesson[] =>
   STAGES.filter((s) => s.level === level).flatMap((s) => s.lessons);
 
+const SKIPPABLE: Level[] = ["l1", "l2"];
+
 export function isOpen(key: string, done: string[]): boolean {
   if (done.includes(key)) return true; // 들은 수업은 언제든 다시
-  for (const lv of LEVELS) {
+  for (const [n, lv] of LEVELS.entries()) {
     const list = levelLessons(lv.key);
     const i = list.findIndex((l) => l.key === key);
     if (i < 0) continue;
-    if (lv.key === "adv" && !levelLessons("mid").every((l) => done.includes(l.key))) return false;
+    const prev = LEVELS[n - 1];
+    if (
+      prev &&
+      !SKIPPABLE.includes(prev.key) &&
+      !levelLessons(prev.key).every((l) => done.includes(l.key))
+    )
+      return false;
     return list.slice(0, i).every((l) => done.includes(l.key));
   }
   return false;
 }
 
-// 이어서 들을 수업: 중급을 시작했으면 중급(다 들었으면 고급), 아니면 초급(다 들었으면 중급)
+// 이어서 들을 수업: 레벨 3 이상을 시작했으면 거기서부터(건너뛴 레벨 1 · 2 로 돌려보내지 않음), 아니면 레벨 1부터
 export function nextLesson(done: string[]): Lesson | null {
-  const first = (lv: Level) => levelLessons(lv).find((l) => !done.includes(l.key)) ?? null;
-  const midStarted = levelLessons("mid").some((l) => done.includes(l.key));
-  return (midStarted ? null : first("basic")) ?? first("mid") ?? first("adv");
+  const skipped = LEVELS.filter((lv) => !SKIPPABLE.includes(lv.key)).some((lv) =>
+    levelLessons(lv.key).some((l) => done.includes(l.key)),
+  );
+  for (const lv of LEVELS) {
+    if (skipped && SKIPPABLE.includes(lv.key)) continue;
+    const todo = levelLessons(lv.key).find((l) => !done.includes(l.key) && isOpen(l.key, done));
+    if (todo) return todo;
+  }
+  return null;
 }
 
 // 이 수업 다음에 들을 수업(단계 · 등급을 넘어 이어짐)

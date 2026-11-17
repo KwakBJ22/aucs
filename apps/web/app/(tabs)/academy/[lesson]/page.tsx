@@ -65,7 +65,7 @@ export default function LessonPage() {
         <PageHeader title={t.title} back="/academy" />
         <section className="section ta-center">
           <h2>{t.lockedTitle}</h2>
-          <p className="sub">{stage.level === "adv" ? t.noteAdv : t.lockedSub}</p>
+          <p className="sub">{t.lockedSub}</p>
           {turn && (
             <Link href={`/academy/${turn.key}`} className="btn primary mt-10">
               {t.resume(turn.title)}
