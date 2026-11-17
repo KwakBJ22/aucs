@@ -5,7 +5,7 @@
    「사용」= 결제 뒤 물건 상세를 연 것(무료로 보이는 결론·한 줄 판정은 사용 아님) — 결제 화면에 미리 알림.
 2. 매달: 7일 안 해지 → 쓴 날만 뺌(한 달 요금 ÷ 30 × 쓴 날, 위약금 없음 — 소비자분쟁해결기준)
          7일 뒤 해지 → 그 달 끝까지 쓰고 다음 결제부터 멈춤(돌려줄 돈 없음).
-3. 1년: 쓴 기간을 매달 요금으로 계산하고 위약금은 없음 → 「중간에 그만두면 그동안 매달권을 쓴 것과 같게」.
+3. 1년: 쓴 기간을 매달 요금으로 계산하고, 남은 금액의 10%를 위약금으로 뺌(11/17 대표님 — 공정위 고시 2019-9 업종별 상한 10% 수준).
    (날짜로 나누면 5개월쯤부터 매달권보다 싸게 쓰고 나갈 수 있어 이 방식으로 정함)
 4. 한 건: 상세를 열기 전이면 전액, 연 뒤면 없음(취하·정지·변경은 관리자가 다른 물건으로 바꿔 줌).
 """
@@ -17,6 +17,7 @@ from typing import Any
 from aucs_api.db import connect
 
 FREE_DAYS = 7
+PENALTY_PCT = 10  # 1년권 중간 해지 위약금 — 남은 금액의 %
 # 기준표가 아직 없을 때(0044 적용 전) 쓰는 값 — 이용권 화면이 비지 않게
 DEFAULT_PRICES: dict[str, Any] = {
     "personal": {"month": 29_000, "year": 249_000},
@@ -70,7 +71,13 @@ def refund_estimate(
     if period == "one":
         return Refund(0, "이 물건 상세를 이미 열었어요")
     used = round((monthly or amount / 12) * days / 30)
-    return Refund(max(0, amount - used), f"쓴 {days}일을 매달 요금으로 빼요")
+    rest = max(0, amount - used)
+    if days <= FREE_DAYS:  # 7일 안은 위약금 없음(매달권과 같게)
+        return Refund(rest, f"7일 안 · 쓴 {days}일을 매달 요금으로 빼요")
+    fee = round(rest * PENALTY_PCT / 100)
+    return Refund(
+        rest - fee, f"쓴 {days}일을 매달 요금으로 빼고, 남은 금액에서 위약금 {PENALTY_PCT}%를 빼요"
+    )
 
 
 def _opened(c: Any, uid: str, paid_at: Any, item_id: str | None) -> bool:
