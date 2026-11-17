@@ -55,6 +55,23 @@ def _details_left() -> bool:
         return True
 
 
+# 11/18 대표님: 법원이 그날 물건을 몇 시까지 다 올리는지 재기 — 저녁에 법원 목록을 한 번 더 받고,
+#   다음 날 06:00 아침 묶음에서 새 사건이 더 나오는지 센다. 하루씩 한 시간 당김(토·일은 법원이 안 올림).
+#   안전한 시각이 정해지면 그 시각~24시를 새 물건 채우기로 바꿈. 아침 06:00 묶음은 그대로.
+EVENING_PROBE = {"2026-11-18": 20, "2026-11-19": 19, "2026-11-20": 18, "2026-11-23": 17}
+
+
+def evening_probe() -> None:
+    """오늘 정한 시각이면 법원 목록을 한 번 받음(아침 물건 수집과 같은 명령)."""
+    now = datetime.now()
+    if EVENING_PROBE.get(now.date().isoformat()) != now.hour:
+        return
+    print(f"── 저녁 목록 시험({now.hour}시)", flush=True)
+    code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_items"])
+    if code != 0:
+        print(f"   저녁 목록 시험 멈춤({code})", flush=True)
+
+
 def busy() -> bool:
     """앞 차례가 70분 안에 시작해 아직 안 끝났으면 True."""
     return LOCK.exists() and time.time() - LOCK.stat().st_mtime < 70 * 60
@@ -70,6 +87,7 @@ def main() -> None:
     LOCK.parent.mkdir(exist_ok=True)
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
+        evening_probe()
         share = hour_share(_cap())
         # 11/12: 물건상세 첫 바퀴가 끝나면 그 몫을 서류 보관(현황조사서)으로
         spare = 0 if _details_left() else 35
