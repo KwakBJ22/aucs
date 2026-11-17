@@ -589,6 +589,36 @@ def ask(uid: str, body: str) -> int:
     return int(r["inquiry_id"]) if r else 0
 
 
+GUEST_KINDS = {
+    "privacy": "경매 정보 속 개인정보 삭제 · 가림 요청",
+    "login": "로그인이 안 돼요",
+    "left": "탈퇴한 뒤 문의",
+    "rights": "권리 침해 신고",
+    "other": "제휴 · 그 밖의 문의",
+}
+GUEST_PER_HOUR = 30  # 로그인 없이 받는 문의 — 한 시간에 이보다 많으면 잠깐 막음(자동 도배 막기)
+
+
+def ask_guest(kind: str, name: str, contact: str, case_no: str, body: str) -> int | None:
+    """로그인하지 않은 분의 문의(11/17). 회원 번호가 없어 알림함으로 답할 수 없으니 남긴 연락처로 답함.
+    이름 · 연락처는 문의 글 안에 함께 적어 둠(개인정보처리방침 7번 — 처리 뒤 3년). 한 시간 한도를 넘으면 None."""
+    with connect() as c:
+        n = c.execute(
+            "select count(*) as n from app.inquiries where user_id is null and created_at > now() - interval '1 hour'"
+        ).fetchone()
+        if n and n["n"] >= GUEST_PER_HOUR:
+            return None
+        text = (
+            f"[로그인 없이 · {GUEST_KINDS[kind]}]\n이름: {name}\n연락처: {contact}"
+            + (f"\n사건번호: {case_no}" if case_no else "")
+            + f"\n\n{body}"
+        )[:2000]
+        r = c.execute(
+            "insert into app.inquiries (user_id, body) values (null, %s) returning inquiry_id", (text,)
+        ).fetchone()
+    return int(r["inquiry_id"]) if r else 0
+
+
 def my_inquiries(uid: str) -> list[dict[str, Any]]:
     with connect() as c:
         return c.execute(

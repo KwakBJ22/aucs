@@ -4,6 +4,7 @@ from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from aucs_api.auth.user import current_user_id
 from aucs_api.services import (
@@ -176,6 +177,27 @@ def get_home_feed(
             "notices": notes.result(),
             **pk.result(),  # 오늘의 추천 · 마감 임박 · 다음 달 더 싸지는 물건(11/4)
         }
+
+
+class GuestAskIn(BaseModel):
+    kind: str = Field(pattern="^(privacy|login|left|rights|other)$")
+    name: str = Field(min_length=1, max_length=30)
+    contact: str = Field(min_length=5, max_length=60)
+    case_no: str = Field(default="", max_length=30)
+    body: str = Field(min_length=2, max_length=1500)
+
+
+@router.post("/guest/inquiries")
+def post_guest_inquiry(body: GuestAskIn) -> dict[str, int]:
+    """로그인 없이 남기는 문의(11/17) — 경매 정보 속 개인정보 삭제 요청 · 로그인 문제 등."""
+    from aucs_api.services import admin_ops
+
+    n = admin_ops.ask_guest(
+        body.kind, body.name.strip(), body.contact.strip(), body.case_no.strip(), body.body.strip()
+    )
+    if n is None:
+        raise HTTPException(429, "잠시 뒤 다시 해 주세요")
+    return {"inquiry_id": n}
 
 
 @router.get("/academy/today")

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AskBox } from "@/components/ask-box";
+import { GuestAsk } from "@/components/guest-ask";
 import { PageHeader } from "@/components/layout/page-header";
 import { fetchNotices, type PublicNotice } from "@/lib/api/items";
 import { meApi, type MyInquiry } from "@/lib/api/me";
@@ -48,17 +49,7 @@ export default function HelpPage() {
         ))}
       </section>
 
-      {session ? (
-        <AskBox token={session.access_token} initial={asks} />
-      ) : (
-        <section className="section" id="ask">
-          <h2>{copy.ask.title}</h2>
-          <p className="sub">{t.askLogin}</p>
-          <Link href="/login" className="btn soft mt-8">
-            {t.login}
-          </Link>
-        </section>
-      )}
+      {session ? <AskBox token={session.access_token} initial={asks} /> : <GuestAsk />}
 
       <section className="section" id="faq">
         <h2>{t.faqTitle}</h2>
