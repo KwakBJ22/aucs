@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { LEVELS, TESTS, TEST_PASS, findLesson, type Level } from "@/lib/academy.ko";
+import { LEVELS, TESTS, TEST_PASS, findLesson, mix, type Level } from "@/lib/academy.ko";
 import { SKIPPABLE, doneLessons, levelLessons, mark } from "@/lib/academy";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
@@ -16,7 +16,7 @@ const t = copy.academy;
 export default function LevelTest() {
   const { level } = useParams<{ level: string }>();
   const lv = LEVELS.find((x) => x.key === level);
-  const qs = lv ? TESTS[lv.key as Level] : undefined;
+  const qs = lv ? TESTS[lv.key as Level]?.map(mix) : undefined;
   const { session } = useSession();
   const [done, setDone] = useState<string[] | null>(null);
   const [picks, setPicks] = useState<Record<number, number>>({});
