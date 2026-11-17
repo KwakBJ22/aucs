@@ -59,9 +59,13 @@ def _give(conn: Conn) -> None:
 
 @contextmanager
 def connect() -> Iterator[Conn]:
-    """예전과 같게 쓰면 됨: 끝나면 저장(commit), 오류면 되돌림(rollback)."""
+    """예전과 같게 쓰면 됨: 끝나면 저장(commit), 오류면 되돌림(rollback).
+
+    11/18: DB 는 세계 표준시(UTC)라 current_date · ::date 가 한국 0~9시에 「어제」였음 → 이 묶음(한 트랜잭션) 동안만
+    한국 시각으로(set local — 나눔 연결 6543 은 트랜잭션마다 다른 연결을 받을 수 있어 세션 설정 대신)."""
     conn = _take()
     try:
+        conn.execute("set local time zone 'Asia/Seoul'")
         yield conn
         conn.commit()
     except BaseException:
