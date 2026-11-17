@@ -25,7 +25,7 @@
     top: 0;
     z-index: 15;
     margin: 0 calc(-1 * var(--page-x));
-    padding: 4px calc(4px + var(--page-x));
+    padding: 4px var(--page-x); /* 로고 · 제목 왼쪽 끝을 카드 끝에 맞춤(11/17 — 예전 4px 더 안쪽) */
     background: var(--bg);
   }
 }
@@ -486,6 +486,15 @@ th.num {
   display: block;
   width: auto;
 }
+/* 머리 줄이 좁으면(로고 + 「전문가 버전」 + 종 + ☰) 로고가 줄어 오른쪽 단추가 화면 밖으로 밀리지 않게(11/17) */
+.topbar .brand .logo {
+  min-width: 0;
+}
+.topbar .brand .logo img {
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+}
 .logo-sm img {
   height: 39px;
 }
@@ -778,6 +787,7 @@ button:disabled,
 /* 머리 오른쪽 끝 단추 묶음(종 · 내 정보, 11/12 대표님): 앞 단추를 종 크기(22)만큼 오른쪽으로 붙임 */
 .tb-tools {
   gap: 0;
+  margin-right: -4px; /* ☰ 그림 오른쪽 끝을 카드 끝에 맞춤 — 그림이 누르는 자리 안쪽 4px 에서 끝남(11/17) */
 }
 .tb-tools > :not(:last-child) {
   margin-right: -14px; /* 원래 틈 8 을 빼고 14 를 더 당겨 모두 22 */
