@@ -260,6 +260,7 @@ export const copy = {
     ] as [CollectionKey, string, string][],
   },
   card: {
+    cashNoTax: "용도 확인 필요 · 가진 현금 비교에 취득세가 빠졌어요",
     belowAppraisal: (x: string) => `감정가보다 ${x} 낮음`,
     deposit: (x: string) => `보증금 ${x}`,
     failed: (n: number) => `유찰 ${n}`,

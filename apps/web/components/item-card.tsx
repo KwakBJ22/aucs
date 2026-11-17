@@ -121,6 +121,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
             {copy.walk.card(c.station.name, c.station.walk_min)}
           </div>
         )}
+        {c.cash_notax && <div className="fs-xs c-muted mt-4 ellipsis">{t.cashNoTax}</div>}
         {why && <div className="fs-xs fw-6 mt-6">{why}</div>}
         {!why && !onbid && c.below_appraisal_krw > 0 && (
           <div className="fs-xs fw-6 mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>

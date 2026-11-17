@@ -37,6 +37,7 @@ export type Source = "all" | "court" | "onbid";
 export type ItemCard = {
   item_id: string;
   photo?: string | null; // 첫 사진(없으면 카드에 종류 아이콘, 11/9)
+  cash_notax?: boolean; // 용도 확인 안 됨 — 「가진 현금」 비교에 취득세가 빠짐(11/18)
   source?: "court" | "onbid"; // 공매(온비드)는 경매와 같은 카드 + 아래 칸(10/28)
   kind?: string;
   kind_name?: string;

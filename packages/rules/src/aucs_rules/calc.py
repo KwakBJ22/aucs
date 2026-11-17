@@ -320,4 +320,7 @@ def cash_at_min(
             usage=usage, tables=tables,
         ).value  # fmt: skip
         out[str(homes)] = int(v["cash_krw"])
+    # 11/18: 용도 확인 안 됨 — 취득세가 빠진 금액이라는 표시(찾기 「가진 현금」 비교 · 카드 한 줄)
+    if tax_kind(usage) == "unknown":
+        out["notax"] = 1
     return out

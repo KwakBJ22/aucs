@@ -34,7 +34,8 @@ select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.
        a.result -> 'top' as top, a.result -> 'signals' as signals,
        (a.result -> 'market' ->> 'price_krw')::numeric as market_krw,
        coalesce((select json_object_agg(d.data_kind, d.status) from analysis.item_data_status d where d.item_id = i.item_id), '{{}}') as data_status,
-       (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo
+       (select p.path from core.item_photos p where p.case_id = i.case_id order by p.seq limit 1) as photo,
+       (a.result -> 'cash_need') ? 'notax' as cash_notax
 from core.items i
 join core.cases c using (case_id)
 {ANALYSIS_JOIN}
@@ -118,6 +119,8 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "unknown_count": len(unknown),
         "data_status": r["data_status"],
         "photo": photo_url(r.get("photo")),  # 카드 왼쪽 사진(없으면 화면이 종류 아이콘, 11/9)
+        # 용도 확인 안 됨 — 「가진 현금」 비교에 취득세가 빠짐(11/18)
+        "cash_notax": bool(r.get("cash_notax")),
         # 역(11/12): 모아보기는 SQL 에 이미 있고, 목록·지도는 attach_stations 가 나중에 붙임
         "station": near_station(r.get("station_name"), r.get("station_line"), r.get("station_m")),
     }

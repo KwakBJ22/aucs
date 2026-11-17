@@ -148,6 +148,17 @@ def test_cash_at_min_by_homes() -> None:
     assert v["2"] > 300_000_000  # 집이 있으면(owner 0%) 대출 없이 전액 + 세금
 
 
+def test_cash_at_min_unknown_marks_notax() -> None:
+    """11/18: 용도 확인 안 됨이면 취득세가 빠진 금액이라는 표시(notax)를 붙임 — 주택이면 안 붙음."""
+    from aucs_rules.calc import cash_at_min
+
+    t = {"regulated_areas": REG, "loan_ltv": LTV, "acquisition_tax": TAX}
+    kw = dict(min_price_krw=300_000_000, appraisal_krw=400_000_000, market_krw=None, area_m2=84.0,
+              sido="경기도", address="경기도 평택시 비전동", tables=t)  # fmt: skip
+    assert cash_at_min(**kw, usage="기타").get("notax") == 1
+    assert "notax" not in cash_at_min(**kw, usage="아파트")
+
+
 def test_non_house_tax():
     """상가 · 오피스텔 · 땅은 집 수와 상관없이 4.6%, 전답은 3.4%(지방세법 §11①7, 11/16)."""
     from aucs_rules.calc import tax_kind
