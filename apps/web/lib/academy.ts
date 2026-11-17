@@ -58,7 +58,7 @@ export function mark(key: string, token?: string): string[] {
 export const levelLessons = (level: Level): Lesson[] =>
   STAGES.filter((s) => s.level === level).flatMap((s) => s.lessons);
 
-const SKIPPABLE: Level[] = ["l1", "l2"];
+export const SKIPPABLE: Level[] = ["l1", "l2"];
 
 export function isOpen(key: string, done: string[]): boolean {
   if (done.includes(key)) return true; // 들은 수업은 언제든 다시

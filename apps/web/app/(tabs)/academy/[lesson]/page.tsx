@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { LEVELS, findLesson } from "@/lib/academy.ko";
+import { LEVELS, findLesson, quizzesOf } from "@/lib/academy.ko";
 import {
   count,
   doneLessons,
@@ -30,7 +30,7 @@ export default function LessonPage() {
   const token = session?.access_token;
   const rail = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
-  const [pick, setPick] = useState<number | null>(null);
+  const [picks, setPicks] = useState<Record<number, number>>({}); // 문제 번호 → 고른 답
   const [end, setEnd] = useState<{ stageDone: boolean; points: number | null } | null>(null);
   const [done, setDone] = useState<string[] | null>(null); // 기기에 적어 둔 진도(읽기 전엔 null)
   useEffect(() => {
@@ -55,7 +55,9 @@ export default function LessonPage() {
   const { stage, lesson } = found;
   const next = lessonAfter(lesson.key);
   const level = LEVELS.find((x) => x.key === stage.level);
-  const total = lesson.cards.length + 1; // 카드 + 문제
+  const quizzes = quizzesOf(lesson);
+  const total = lesson.cards.length + quizzes.length; // 카드 + 문제(11/17 수업마다 3개)
+  const answered = quizzes.every((_, i) => picks[i] !== undefined);
   const no = stage.lessons.findIndex((l) => l.key === lesson.key) + 1;
 
   if (done && !isOpen(lesson.key, done)) {
@@ -177,25 +179,30 @@ export default function LessonPage() {
             {c.eg && <p className="ac-eg">{c.eg}</p>}
           </article>
         ))}
-        <article className="ac-card">
-          <p className="sub m-0">{t.quiz}</p>
-          <h2 className="ac-q">{lesson.quiz.q}</h2>
-          {lesson.quiz.options.map((o, i) => (
-            <button
-              key={o}
-              className={`ac-opt${pick === null ? "" : i === lesson.quiz.answer ? " right" : i === pick ? " wrong" : ""}`}
-              disabled={pick !== null}
-              onClick={() => setPick(i)}
-            >
-              {o}
-            </button>
-          ))}
-          {pick !== null && (
-            <p className="ac-b mt-10">
-              <b>{pick === lesson.quiz.answer ? t.right : t.wrong}</b> {lesson.quiz.why}
-            </p>
-          )}
-        </article>
+        {quizzes.map((qz, n) => {
+          const pick = picks[n] ?? null;
+          return (
+            <article key={qz.q} className="ac-card">
+              <p className="sub m-0">{t.quiz(n + 1, quizzes.length)}</p>
+              <h2 className="ac-q">{qz.q}</h2>
+              {qz.options.map((o, i) => (
+                <button
+                  key={o}
+                  className={`ac-opt${pick === null ? "" : i === qz.answer ? " right" : i === pick ? " wrong" : ""}`}
+                  disabled={pick !== null}
+                  onClick={() => setPicks((p) => ({ ...p, [n]: i }))}
+                >
+                  {o}
+                </button>
+              ))}
+              {pick !== null && (
+                <p className="ac-b mt-10">
+                  <b>{pick === qz.answer ? t.right : t.wrong}</b> {qz.why}
+                </p>
+              )}
+            </article>
+          );
+        })}
       </div>
       <div className="btn-pair mt-10">
         <button className="btn secondary" disabled={at === 0} onClick={() => go(at - 1)}>
@@ -206,7 +213,7 @@ export default function LessonPage() {
             {t.nextCard}
           </button>
         ) : (
-          <button className="btn primary" disabled={pick === null} onClick={finish}>
+          <button className="btn primary" disabled={!answered} onClick={finish}>
             {t.finish}
           </button>
         )}

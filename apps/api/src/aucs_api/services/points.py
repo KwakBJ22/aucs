@@ -17,7 +17,7 @@ from psycopg.types.json import Jsonb
 from aucs_api.db import batch, connect
 from aucs_api.services.items import COURT_NAME
 
-_ACADEMY_KEY = re.compile(r"(task:)?[a-z0-9][a-z0-9-]{0,39}")  # 수업 열쇠 · 「task:수업」
+_ACADEMY_KEY = re.compile(r"(task:|test:)?[a-z0-9][a-z0-9-]{0,39}")  # 수업 열쇠 · 「task:수업」 · 「test:l1」(레벨 시험 통과, 11/17)
 _TABLE_SQL = (
     "select value from ref.rule_tables where rule_key = 'points' and valid_from <= current_date "
     "order by valid_from desc limit 1"

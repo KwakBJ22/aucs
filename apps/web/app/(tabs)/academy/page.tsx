@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { LEVELS, STAGES } from "@/lib/academy.ko";
+import { LEVELS, STAGES, TESTS } from "@/lib/academy.ko";
 import {
+  SKIPPABLE,
   count,
   doneLessons,
   levelLessons,
@@ -125,6 +126,19 @@ export default function Academy() {
                 </div>
               );
             })}
+            {TESTS[lv.key] &&
+              (c.n === c.total || SKIPPABLE.includes(lv.key)) &&
+              (done.includes(`test:${lv.key}`) ? (
+                <Link href={`/academy/test/${lv.key}`} className="menu-row">
+                  <span>{t.test}</span>
+                  <span className="chip green">{t.passed}</span>
+                </Link>
+              ) : (
+                <Link href={`/academy/test/${lv.key}`} className="menu-row">
+                  <span>{c.n === c.total ? t.testGo(lv.name) : t.testSkip}</span>
+                  <span className="sub">›</span>
+                </Link>
+              ))}
           </section>
         );
       })}
