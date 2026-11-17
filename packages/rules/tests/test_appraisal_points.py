@@ -112,3 +112,11 @@ def test_parcel_facts() -> None:
     ]
     assert parcel_facts(uses) == {"overcrowded": True, "land_permit_area": True}
     assert parcel_facts(None) == {}
+
+
+def test_illegal_building_from_appraisal_text() -> None:
+    """11/18: 요항의 「건축물대장상 위반건축물로 등재」는 위반건축물 · 「본건과 관련 없음」은 아님."""
+    yes = parse_points([_e("00083014", "- 임대관계 미상임.\n- 건축물대장상 위반건축물로 표기되어 있으니 유의하시기 바람.")])
+    no = parse_points([_e("00083014", "건축물대장상 위반건축물로 등재되어 있으나 본건과 관련 없음.")])
+    assert appraisal_facts(yes).value.get("illegal_building") is True
+    assert "illegal_building" not in appraisal_facts(no).value

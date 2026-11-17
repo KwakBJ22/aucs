@@ -248,4 +248,11 @@ def appraisal_facts(points: list[dict[str, str]]) -> RuleResult:
         f["near_station"] = st
     if re.search(r"초등학교", p.get("위치·주변", "")):
         f["near_school"] = True
+    # 위반건축물(11/18): 감정평가 요항에 「건축물대장상 위반건축물로 등재」가 자주 적힘(명세서 비고에는 없는 물건도) —
+    # 「관련 없음 · 해당 없음 · 해제 · 해소 · 말소」가 같은 문장에 있으면 뺌
+    for s in re.split(r"[.\n]", " ".join(p.values())):
+        if re.search(r"위반\s*건축", s) and not re.search(r"관련\s*없|해당\s*없|아님|해제|해소|말소", s):
+            f["illegal_building"] = True
+            ev.append({"illegal_building": "감정평가 요항"})
+            break
     return RuleResult(f, Status.ESTIMATED, RULE_ID, ev)
