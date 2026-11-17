@@ -24,6 +24,8 @@ STEPS = [
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),
     ("알림", ["aucs_workers.jobs.notify"]),
     ("올린 등기부 원본 지우기", ["aucs_workers.jobs.purge"]),
+    # 11/18 — 수도권이 다 끝난 뒤 전국 매각결과 · 물건 목록을 원문 보관 표에만(지나면 못 받는 것)
+    ("전국 매각결과 · 물건 목록 보관", ["aucs_workers.collectors.court_nationwide"]),
 ]
 
 
