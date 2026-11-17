@@ -1,5 +1,6 @@
 "use client";
 
+import { academyHit } from "@/lib/academy-hit";
 import { apiBaseUrl } from "@/lib/api/client";
 import { supabase } from "@/lib/auth";
 
@@ -34,6 +35,10 @@ supabase?.auth.onAuthStateChange((e, s) => {
 
 export function track(kind: TrackKind, itemId?: string): void {
   if (typeof window === "undefined") return;
+  // 아카데미 과제: 기다리는 과제가 이 동작이면 「해 봤어요」(11/18)
+  if (kind === "view" || kind === "item_view" || kind === "calc" || kind === "watch_add")
+    academyHit(kind);
+  else if (kind === "alert_on") academyHit("alert");
   try {
     const body = JSON.stringify({
       a: anonId(),

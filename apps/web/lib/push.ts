@@ -1,5 +1,6 @@
 "use client";
 
+import { academyHit } from "@/lib/academy-hit";
 import { meApi } from "./api/me";
 import { isStandalone, platform } from "./install";
 
@@ -36,5 +37,6 @@ export async function subscribePush(
     p256dh: json.keys?.p256dh ?? "",
     auth: json.keys?.auth ?? "",
   });
+  academyHit("alert"); // 아카데미 과제 「알림 켜기」(11/18)
   return "ok";
 }

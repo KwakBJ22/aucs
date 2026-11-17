@@ -136,6 +136,12 @@ export type RegistryUpload = {
 // 등기부 PDF 올리기. 먼저 파일 보관함(registry-uploads/<회원>/…)에 바로 올리고 API 는 그걸 가져감(11/3 —
 // 서버(Vercel)가 한 번에 4.5MB 까지만 받아서). 보관함이 안 되면 예전처럼 API 로 직접(multipart).
 export async function uploadRegistry(token: string, itemId: string, file: File): Promise<void> {
+  await sendRegistry(token, itemId, file);
+  const { academyHit } = await import("@/lib/academy-hit");
+  academyHit("registry"); // 아카데미 과제 「등기부 올리기」(11/18) — 올리기가 끝난 뒤에만
+}
+
+async function sendRegistry(token: string, itemId: string, file: File): Promise<void> {
   const { supabase } = await import("@/lib/auth");
   const uid = supabase ? (await supabase.auth.getSession()).data.session?.user.id : undefined;
   if (supabase && uid) {

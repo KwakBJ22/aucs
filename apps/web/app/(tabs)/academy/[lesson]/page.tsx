@@ -15,6 +15,7 @@ import {
   nextLesson,
   syncProgress,
 } from "@/lib/academy";
+import { taskDone, waitTask } from "@/lib/academy-hit";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
@@ -130,13 +131,19 @@ export default function LessonPage() {
             </Link>
           )}
           {lesson.task && (
-            <Link
-              href={lesson.task.href}
-              className="btn soft mt-10"
-              onClick={() => mark(`task:${lesson.key}`, token)}
-            >
-              {lesson.task.label}
-            </Link>
+            <>
+              <Link
+                href={lesson.task.href}
+                className="btn soft mt-10"
+                onClick={() => waitTask(lesson.key, lesson.task!.need)}
+              >
+                {lesson.task.label}
+              </Link>
+              {/* 11/18: 버튼만 눌러서는 안 셈 — 그 화면에서 실제로 해 보면 저절로 「해 봤어요」 */}
+              <p className="sub fs-sm mt-6 mb-0 mx-0">
+                {taskDone(lesson.key) ? t.taskOk : t.taskHow}
+              </p>
+            </>
           )}
           <div className="btn-pair mt-10">
             {next && (

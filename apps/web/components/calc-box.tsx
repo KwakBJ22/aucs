@@ -1,5 +1,6 @@
 "use client";
 
+import { academyHit } from "@/lib/academy-hit";
 import { Delayed, Sk, SkLines } from "@/components/skeleton";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -444,7 +445,10 @@ function MockForm({ id, bid }: { id: string; bid: number }) {
         max_krw: Number(max.replace(/[^0-9]/g, "")) * 10_000 || null,
         reason: reason.trim() || null,
       })
-      .then(() => setDone(true))
+      .then(() => {
+        setDone(true);
+        academyHit("mock"); // 아카데미 졸업 과제 「모의입찰 적어 두기」(11/18)
+      })
       .catch(() => {});
   return (
     <div className="mt-12 pt-10">

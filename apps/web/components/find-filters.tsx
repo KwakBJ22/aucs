@@ -1,5 +1,6 @@
 "use client";
 
+import { academyHit } from "@/lib/academy-hit";
 import { useEffect, useState } from "react";
 import { SAFE_MODE, type FindFilter } from "@/lib/api/items";
 import { copy } from "@/lib/copy.ko";
@@ -55,6 +56,7 @@ export function FindFilters({
   const toggleSafeOpen = () => {
     const next = !safeOpen;
     setSafeOpen(next);
+    if (next) academyHit("safe"); // 아카데미 과제 「초보자 안전 모드」(11/18)
     try {
       localStorage.setItem(KEY_SAFE_OPEN, next ? "1" : "0");
     } catch {

@@ -11,7 +11,8 @@ export type Lesson = {
   quiz: Quiz;
   more?: Quiz[]; // 수업 끝 확인 문제 더(11/17 — 수업마다 3개, 틀려도 막히지 않음)
   see?: { label: string; href: string }; // 배운 것을 실제 물건에서 보기
-  task?: { label: string; href: string }; // 중급: 옥스에서 직접 해 보는 과제
+  // 중급: 옥스에서 직접 해 보는 과제. need: 실제로 해 봐야 셈(11/18) — 「calc」 같은 동작 또는 「view:^/me」 같은 화면(lib/academy-hit.ts)
+  task?: { label: string; href: string; need: string };
 };
 export type Level = "l1" | "l2" | "l3" | "l4" | "l5" | "l6" | "l7";
 export type Stage = {
@@ -804,7 +805,7 @@ export const STAGES: Stage[] = [
             why: "피하고 싶은 것을 고르면 그런 물건이 빠져요.",
           },
         ],
-        task: { label: "과제 · 초보자 안전 모드 켜고 찾아보기", href: "/find" },
+        task: { label: "과제 · 초보자 안전 모드 켜고 찾아보기", href: "/find", need: "safe" },
       },
     ],
   },
@@ -860,7 +861,11 @@ export const STAGES: Stage[] = [
             why: "기준보다 앞선 것은 남을 수 있어요. 명세서 「소멸되지 않는 권리」 칸에 적혀요.",
           },
         ],
-        task: { label: "과제 · 「떠안는 것 없음」 물건 하나 담기", href: "/find" },
+        task: {
+          label: "과제 · 「떠안는 것 없음」 물건 하나 담기",
+          href: "/find",
+          need: "watch_add",
+        },
       },
       {
         key: "m1-tenant",
@@ -912,7 +917,11 @@ export const STAGES: Stage[] = [
             why: "못 받은 5천만 원을 낙찰자가 돌려줘야 해요.",
           },
         ],
-        task: { label: "과제 · 세입자 있는 물건의 「누가 살고 있나」 열어 보기", href: "/find" },
+        task: {
+          label: "과제 · 세입자 있는 물건의 「누가 살고 있나」 열어 보기",
+          href: "/find",
+          need: "item_view",
+        },
       },
     ],
   },
@@ -971,7 +980,7 @@ export const STAGES: Stage[] = [
             why: "살고 있는 사람마다 날짜와 보증금, 배당요구 여부가 나와요.",
           },
         ],
-        task: { label: "과제 · 한 물건의 명세서 원문 열어 보기", href: "/find" },
+        task: { label: "과제 · 한 물건의 명세서 원문 열어 보기", href: "/find", need: "item_view" },
       },
       {
         key: "m2-survey",
@@ -1022,7 +1031,7 @@ export const STAGES: Stage[] = [
             why: "「제시외 건물」이라고 적혀요.",
           },
         ],
-        task: { label: "과제 · 감정평가 요점과 사진 보기", href: "/find" },
+        task: { label: "과제 · 감정평가 요점과 사진 보기", href: "/find", need: "item_view" },
       },
       {
         key: "m2-registry",
@@ -1066,7 +1075,7 @@ export const STAGES: Stage[] = [
             why: "두 곳의 권리를 접수일 순서로 한 줄로 세워요.",
           },
         ],
-        task: { label: "과제 · 등기부 올리고 사다리 보기", href: "/points" },
+        task: { label: "과제 · 등기부 올리고 사다리 보기", href: "/points", need: "registry" },
       },
     ],
   },
@@ -1121,7 +1130,7 @@ export const STAGES: Stage[] = [
             why: "집이 여러 채면 세율이 크게 올라가요. 입찰 전에 계산해요.",
           },
         ],
-        task: { label: "과제 · 내 조건을 넣고 계산 상자 돌려 보기", href: "/find" },
+        task: { label: "과제 · 내 조건을 넣고 계산 상자 돌려 보기", href: "/find", need: "calc" },
       },
       {
         key: "m3-hidden",
@@ -1162,7 +1171,11 @@ export const STAGES: Stage[] = [
             why: "공용 부분 관리비는 낙찰자가 낼 수 있어서 미리 물어봐요.",
           },
         ],
-        task: { label: "과제 · 계산 상자에서 이사비 · 수리비 줄 확인하기", href: "/find" },
+        task: {
+          label: "과제 · 계산 상자에서 이사비 · 수리비 줄 확인하기",
+          href: "/find",
+          need: "calc",
+        },
       },
     ],
   },
@@ -1217,7 +1230,11 @@ export const STAGES: Stage[] = [
             why: "빈집일 수 있다는 단서예요. 확정은 아니에요.",
           },
         ],
-        task: { label: "과제 · 관심 물건의 현장 체크 열어 보기", href: "/watch" },
+        task: {
+          label: "과제 · 관심 물건의 현장 체크 열어 보기",
+          href: "/watch",
+          need: "view:^/watch/[^/]+/field",
+        },
       },
       {
         key: "m4-ask",
@@ -1261,7 +1278,7 @@ export const STAGES: Stage[] = [
             why: "시세와 전세 · 월세를 물어봐요. 남의 개인정보는 묻지 않아요.",
           },
         ],
-        task: { label: "과제 · 물건의 시세 줄과 견줘 보기", href: "/find" },
+        task: { label: "과제 · 물건의 시세 줄과 견줘 보기", href: "/find", need: "item_view" },
       },
     ],
   },
@@ -1310,7 +1327,11 @@ export const STAGES: Stage[] = [
             why: "5억 − 3천 − 4천 = 4억 3천이에요.",
           },
         ],
-        task: { label: "과제 · 물건의 「이 선을 넘으면 비싸요」 확인하기", href: "/find" },
+        task: {
+          label: "과제 · 물건의 「이 선을 넘으면 비싸요」 확인하기",
+          href: "/find",
+          need: "calc",
+        },
       },
       {
         key: "m5-others",
@@ -1357,7 +1378,7 @@ export const STAGES: Stage[] = [
             why: "떠안는 것이 있으면 꺼리는 사람이 많아요.",
           },
         ],
-        task: { label: "과제 · 세 가지 입찰가 보기", href: "/find" },
+        task: { label: "과제 · 세 가지 입찰가 보기", href: "/find", need: "calc" },
       },
       {
         key: "m5-wait",
@@ -1397,7 +1418,11 @@ export const STAGES: Stage[] = [
             why: "기다리는 동안 다른 사람이 사 갈 수 있어요.",
           },
         ],
-        task: { label: "과제 · 「다음 달 더 싸지는 물건」 보기", href: "/home" },
+        task: {
+          label: "과제 · 「다음 달 더 싸지는 물건」 보기",
+          href: "/home",
+          need: "view:^/home",
+        },
       },
     ],
   },
@@ -1450,7 +1475,7 @@ export const STAGES: Stage[] = [
             why: "관심 물건은 입찰일 아침에 「오늘 다시 볼 것」 알림을 보내 드려요.",
           },
         ],
-        task: { label: "과제 · 관심 물건 알림 켜기", href: "/watch" },
+        task: { label: "과제 · 관심 물건 알림 켜기", href: "/watch", need: "alert" },
       },
       {
         key: "m6-form",
@@ -1503,7 +1528,11 @@ export const STAGES: Stage[] = [
             why: "보증금 봉투와 입찰표를 큰 봉투에 함께 넣어 내요.",
           },
         ],
-        task: { label: "과제 · 입찰표 작성 도우미 써 보기", href: "/watch" },
+        task: {
+          label: "과제 · 입찰표 작성 도우미 써 보기",
+          href: "/watch",
+          need: "view:/bid-sheet",
+        },
       },
       {
         key: "m6-after",
@@ -1547,7 +1576,7 @@ export const STAGES: Stage[] = [
             why: "그래서 이사 날짜를 협의할 수 있어요.",
           },
         ],
-        task: { label: "과제 · 내 경매 열어 보기", href: "/me" },
+        task: { label: "과제 · 내 경매 열어 보기", href: "/me", need: "view:^/me" },
       },
     ],
   },
@@ -1603,7 +1632,7 @@ export const STAGES: Stage[] = [
             why: "떠안는 것을 보고, 필요한 현금을 계산하고, 상한선을 정해요.",
           },
         ],
-        task: { label: "졸업 과제 · 물건 하나에 모의입찰 적어 두기", href: "/find" },
+        task: { label: "졸업 과제 · 물건 하나에 모의입찰 적어 두기", href: "/find", need: "mock" },
       },
     ],
   },
