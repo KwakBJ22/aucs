@@ -29,6 +29,10 @@ def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
     elif b.get("unit_floor") is not None and b.get("unit_floor_uses"):
         f = b["unit_floor"]
         unit = f"{'지하 ' + str(-f) if f < 0 else f}층 용도: {', '.join(b['unit_floor_uses'])}"
+    # 「N층 가운데 M층」(11/18): 대장 지상 층수와 이 호의 층이 맞아 보일 때만(층이 건물보다 높으면 다른 동 대장이라 안 냄)
+    uf, top = b.get("unit_floor"), b.get("floors_above")
+    if unit and isinstance(uf, int) and isinstance(top, int) and 0 < uf <= top:
+        unit += f" · 지상 {top}층 가운데 {uf}층"
     return {
         "built": built,
         "old": bool(b.get("age_years") and b["age_years"] >= 30),
