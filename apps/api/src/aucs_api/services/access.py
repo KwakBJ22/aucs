@@ -34,7 +34,9 @@ _cache: tuple[float, dict[str, Any]] = (0.0, {})
 def table() -> dict[str, Any]:
     """기준표 access(1분 기억). 표가 없으면(이주 0068 적용 전) 기본값 — 오픈 전 무료."""
     global _cache
-    if time.monotonic() - _cache[0] < 60:
+    # 11/18: 처음 기억이 빈 값({})인데, 갓 켜진 서버는 monotonic() 이 60 보다 작아 그 빈 값을 돌려줬음 →
+    # free_period 가 없어 오픈 전인데도 402(「하루 무료 이용이 끝났어요」). 빈 기억은 쓰지 않음.
+    if _cache[1] and time.monotonic() - _cache[0] < 60:
         return _cache[1]
     try:
         with connect() as c:
