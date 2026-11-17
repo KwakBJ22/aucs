@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LEVELS, TESTS, TEST_PASS, findLesson, mix, type Level } from "@/lib/academy.ko";
 import { SKIPPABLE, doneLessons, levelLessons, mark } from "@/lib/academy";
+import { TITLES, studied } from "@/lib/academy-game";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
@@ -21,7 +22,12 @@ export default function LevelTest() {
   const [done, setDone] = useState<string[] | null>(null);
   const [picks, setPicks] = useState<Record<number, number>>({});
   const [graded, setGraded] = useState(false);
-  useEffect(() => setDone(doneLessons()), []);
+  const [fromEnd, setFromEnd] = useState(false); // 레벨 마지막 수업에서 바로 넘어옴(?end=1)
+  const router = useRouter();
+  useEffect(() => {
+    setDone(doneLessons());
+    setFromEnd(new URLSearchParams(window.location.search).has("end"));
+  }, []);
 
   if (!lv || !qs?.length)
     return (
@@ -47,7 +53,13 @@ export default function LevelTest() {
   const pass = right >= TEST_PASS;
   const grade = () => {
     setGraded(true);
-    if (right >= TEST_PASS) setDone(mark(`test:${lv.key}`, session?.access_token));
+    if (right >= TEST_PASS) {
+      const first = !(done ?? []).includes(`test:${lv.key}`);
+      setDone(mark(`test:${lv.key}`, session?.access_token));
+      studied();
+      // 11/18 대표님: 레벨을 달성하면 축하 화면 — 처음 통과할 때만(다시 본 시험은 결과만)
+      if (first) return router.push(`/academy/levelup/${lv.key}`);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const again = () => {
@@ -96,6 +108,15 @@ export default function LevelTest() {
         </section>
       ) : (
         <>
+          {fromEnd && (
+            <section className="section ta-center ac-hero">
+              <div className="ac-lvbadge" aria-hidden="true">
+                {TITLES[lv.key as Level].badge}
+              </div>
+              <h2 className="m-0">{t.testIntro(lv.name)}</h2>
+              <p className="sub mb-0">{t.testIntroSub(TITLES[lv.key as Level].title)}</p>
+            </section>
+          )}
           <p className="sub fs-sm mt-0">{t.testSub(qs.length, TEST_PASS)}</p>
           {qs.map((q, n) => (
             <section key={q.q} className="section">

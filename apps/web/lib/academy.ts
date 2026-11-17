@@ -60,6 +60,18 @@ export const levelLessons = (level: Level): Lesson[] =>
 
 export const SKIPPABLE: Level[] = ["l1", "l2"];
 
+/** 그 레벨의 수업을 다 듣고 레벨 시험까지 통과했나 */
+export const levelCleared = (level: Level, done: string[]): boolean =>
+  levelLessons(level).every((l) => done.includes(l.key)) && done.includes(`test:${level}`);
+
+/** 수업은 다 들었는데 시험을 아직 안 본 레벨(앞에서부터 첫 번째) — 「이어서」보다 먼저 시험으로 보냄 */
+export function pendingTest(done: string[]): Level | null {
+  for (const lv of LEVELS)
+    if (levelLessons(lv.key).every((l) => done.includes(l.key)) && !done.includes(`test:${lv.key}`))
+      return lv.key;
+  return null;
+}
+
 export function isOpen(key: string, done: string[]): boolean {
   if (done.includes(key)) return true; // 들은 수업은 언제든 다시
   for (const [n, lv] of LEVELS.entries()) {
@@ -67,12 +79,8 @@ export function isOpen(key: string, done: string[]): boolean {
     const i = list.findIndex((l) => l.key === key);
     if (i < 0) continue;
     const prev = LEVELS[n - 1];
-    if (
-      prev &&
-      !SKIPPABLE.includes(prev.key) &&
-      !levelLessons(prev.key).every((l) => done.includes(l.key))
-    )
-      return false;
+    // 11/18 대표님: 레벨은 시험을 통과해야 오름 — 앞 레벨(건너뛸 수 없는 레벨)의 수업을 다 듣고 레벨 시험까지 통과해야 열림
+    if (prev && !SKIPPABLE.includes(prev.key) && !levelCleared(prev.key, done)) return false;
     return list.slice(0, i).every((l) => done.includes(l.key));
   }
   return false;

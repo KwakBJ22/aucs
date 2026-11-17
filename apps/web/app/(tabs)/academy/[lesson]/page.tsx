@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LEVELS, findLesson, quizzesOf } from "@/lib/academy.ko";
@@ -15,6 +15,7 @@ import {
   nextLesson,
   syncProgress,
 } from "@/lib/academy";
+import { studied } from "@/lib/academy-game";
 import { taskDone, waitTask } from "@/lib/academy-hit";
 import { meApi } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
@@ -29,6 +30,7 @@ export default function LessonPage() {
   const found = findLesson(decodeURIComponent(key ?? ""));
   const { session } = useSession();
   const token = session?.access_token;
+  const router = useRouter();
   const rail = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState(0);
   const [picks, setPicks] = useState<Record<number, number>>({}); // 문제 번호 → 고른 답
@@ -85,6 +87,7 @@ export default function LessonPage() {
   };
   const finish = () => {
     const list = mark(lesson.key, token);
+    studied();
     setDone(list);
     const stageDone = stage.lessons.every((l) => list.includes(l.key));
     setEnd({ stageDone, points: null });
@@ -93,6 +96,10 @@ export default function LessonPage() {
         .academyDone(token, stage.key)
         .then((x) => setEnd({ stageDone, points: x.points }))
         .catch(() => undefined);
+    // 11/18 대표님: 레벨의 마지막 수업을 끝내면 레벨 시험이 바로 나옴 — 통과해야 레벨업
+    const lv = stage.level;
+    if (levelLessons(lv).every((l) => list.includes(l.key)) && !list.includes(`test:${lv}`))
+      router.push(`/academy/test/${lv}?end=1`);
   };
 
   if (end) {

@@ -1940,3 +1940,174 @@ a.col-chip span {
     max-width: 560px;
   }
 }
+
+/* 아카데미 게임 요소(11/18): 레벨 배지 · 축하 화면 꽃가루 · 숫자 세 칸 */
+.ac-hero {
+  position: relative;
+  overflow: hidden;
+}
+.ac-lvbadge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--blue-soft);
+  font-size: 30px;
+  line-height: 1;
+}
+.ac-lvbadge.big {
+  width: 96px;
+  height: 96px;
+  margin: 12px auto;
+  border-radius: 28px;
+  font-size: 54px;
+  animation: ac-pop 0.6s ease-out both;
+}
+.ac-up-h {
+  margin: 4px 0;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+}
+.ac-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.ac-stats > div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.ac-stats b {
+  font-size: var(--fs-xl);
+  font-variant-numeric: tabular-nums;
+}
+.ac-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ac-confetti i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--blue);
+  opacity: 0;
+  animation: ac-fall 2.4s ease-in 0.2s both;
+}
+.ac-confetti i:nth-child(3n) {
+  background: var(--orange);
+}
+.ac-confetti i:nth-child(3n + 1) {
+  background: var(--green);
+}
+.ac-confetti i:nth-child(1) {
+  left: 4%;
+  animation-delay: 0.1s;
+}
+.ac-confetti i:nth-child(2) {
+  left: 10%;
+  animation-delay: 0.5s;
+}
+.ac-confetti i:nth-child(3) {
+  left: 16%;
+  animation-delay: 0.2s;
+}
+.ac-confetti i:nth-child(4) {
+  left: 22%;
+  animation-delay: 0.7s;
+}
+.ac-confetti i:nth-child(5) {
+  left: 28%;
+  animation-delay: 0.3s;
+}
+.ac-confetti i:nth-child(6) {
+  left: 34%;
+  animation-delay: 0.9s;
+}
+.ac-confetti i:nth-child(7) {
+  left: 40%;
+  animation-delay: 0.15s;
+}
+.ac-confetti i:nth-child(8) {
+  left: 46%;
+  animation-delay: 0.6s;
+}
+.ac-confetti i:nth-child(9) {
+  left: 52%;
+  animation-delay: 0.35s;
+}
+.ac-confetti i:nth-child(10) {
+  left: 58%;
+  animation-delay: 0.8s;
+}
+.ac-confetti i:nth-child(11) {
+  left: 64%;
+  animation-delay: 0.25s;
+}
+.ac-confetti i:nth-child(12) {
+  left: 70%;
+  animation-delay: 0.55s;
+}
+.ac-confetti i:nth-child(13) {
+  left: 76%;
+  animation-delay: 0.05s;
+}
+.ac-confetti i:nth-child(14) {
+  left: 82%;
+  animation-delay: 0.45s;
+}
+.ac-confetti i:nth-child(15) {
+  left: 88%;
+  animation-delay: 0.75s;
+}
+.ac-confetti i:nth-child(16) {
+  left: 94%;
+  animation-delay: 0.3s;
+}
+.ac-confetti i:nth-child(17) {
+  left: 7%;
+  animation-delay: 1s;
+}
+.ac-confetti i:nth-child(18) {
+  left: 61%;
+  animation-delay: 1.1s;
+}
+@keyframes ac-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(420px) rotate(540deg);
+  }
+}
+@keyframes ac-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-confetti {
+    display: none;
+  }
+  .ac-lvbadge.big {
+    animation: none;
+  }
+}

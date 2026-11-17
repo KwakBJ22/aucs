@@ -10,10 +10,12 @@ import {
   doneLessons,
   levelLessons,
   nextLesson,
+  pendingTest,
   stageEntry,
   syncProgress,
   taskCount,
 } from "@/lib/academy";
+import { TITLES, nextGoal, reached, streak, xpOf } from "@/lib/academy-game";
 import { fetchAcademyJudge, fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
@@ -112,8 +114,12 @@ export default function Academy() {
   const token = session?.access_token;
   const [done, setDone] = useState<string[]>([]);
   const [paid, setPaid] = useState<string[]>([]);
+  const [days, setDays] = useState(0);
 
-  useEffect(() => setDone(doneLessons()), []);
+  useEffect(() => {
+    setDone(doneLessons());
+    setDays(streak());
+  }, []);
   useEffect(() => {
     if (!token) return;
     let stop = false;
@@ -130,6 +136,10 @@ export default function Academy() {
   }, [token]);
 
   const next = nextLesson(done);
+  const test = pendingTest(done); // 수업을 다 들은 레벨의 시험이 먼저(11/18 — 통과해야 레벨업)
+  const lvNow = reached(done);
+  const me = lvNow ? LEVELS[lvNow - 1] : null;
+  const goal = nextGoal(done, levelLessons);
   const lessons = count(
     STAGES.flatMap((s) => s.lessons),
     done,
@@ -140,10 +150,29 @@ export default function Academy() {
     <main className="page">
       <PageHeader title={t.title} back="/home" />
       <p className="sub fs-base mt-0">{t.sub}</p>
-      <section className="section">
+      {/* 11/18 대표님: 게임처럼 — 지금 레벨 · 칭호 · 경험치 · 연속 학습 · 다음 레벨까지 */}
+      <section className="section ac-hero">
+        <div className="d-flex ai-center gap-12">
+          <div className="ac-lvbadge" aria-hidden="true">
+            {me ? TITLES[me.key].badge : "🌱"}
+          </div>
+          <div className="f-1 minw-0">
+            <p className="sub m-0">{me ? t.nowLevel(me.name) : t.nowNone}</p>
+            <h2 className="m-0">{me ? TITLES[me.key].title : t.nowNoneTitle}</h2>
+            <p className="sub fs-sm m-0">
+              {t.xpLine(xpOf(done))}
+              {days > 0 && ` · ${t.streakLine(days)}`}
+            </p>
+          </div>
+        </div>
+        {goal && <Meter label={t.goalLine(goal.level.name)} n={goal.have} total={goal.total} />}
         <Meter label={t.meterLesson} n={lessons.n} total={lessons.total} />
         <Meter label={t.meterTask} n={tasks.n} total={tasks.total} />
-        {next ? (
+        {test ? (
+          <Link href={`/academy/test/${test}`} className="btn primary mt-12">
+            {t.testUp(LEVELS.find((x) => x.key === test)?.name ?? "")}
+          </Link>
+        ) : next ? (
           <Link href={`/academy/${next.key}`} className="btn primary mt-12">
             {done.length ? t.resume(next.title) : t.start}
           </Link>
@@ -159,20 +188,21 @@ export default function Academy() {
         const stages = STAGES.filter((s) => s.level === lv.key);
         const c = count(levelLessons(lv.key), done);
         const prev = LEVELS[LEVELS.indexOf(lv) - 1];
-        const prevDone = !prev || levelLessons(prev.key).every((l) => done.includes(l.key));
+        const prevDone =
+          !prev ||
+          SKIPPABLE.includes(prev.key) ||
+          (levelLessons(prev.key).every((l) => done.includes(l.key)) &&
+            done.includes(`test:${prev.key}`));
         const note =
-          lv.key === "l1"
-            ? t.noteBasic
-            : lv.key === "l7"
-              ? prevDone
-                ? t.reviewNote
-                : t.noteLevel(prev?.name ?? "")
-              : null;
+          lv.key === "l1" ? t.noteBasic : !prevDone ? t.noteLevel(prev?.name ?? "") : null;
         return (
           <section key={lv.key} className="section ac-level">
             <div className="d-flex jc-between ai-center gap-8">
               <h2 className="m-0">
-                <span className="chip blue">{lv.name}</span> {lv.title}
+                <span className="chip blue">{lv.name}</span> {lv.title}{" "}
+                {done.includes(`test:${lv.key}`) && (
+                  <span aria-label={TITLES[lv.key].title}>{TITLES[lv.key].badge}</span>
+                )}
               </h2>
               <span className="sub fs-sm">{t.of(c.n, c.total)}</span>
             </div>
@@ -211,7 +241,7 @@ export default function Academy() {
                 </Link>
               ) : (
                 <Link href={`/academy/test/${lv.key}`} className="menu-row">
-                  <span>{c.n === c.total ? t.testGo(lv.name) : t.testSkip}</span>
+                  <span>{c.n === c.total ? t.testUp(lv.name) : t.testSkip}</span>
                   <span className="sub">›</span>
                 </Link>
               ))}
