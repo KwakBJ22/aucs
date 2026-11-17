@@ -30,9 +30,9 @@ def test_month_after_seven_days_no_refund() -> None:
 
 
 def test_year_counts_used_days_at_monthly_price() -> None:
-    # 6개월(180일) 쓰면 매달권 6개월(174,000원)을 낸 것과 같게 → 남은 116,000원에서 위약금 10% 빼고 104,400원
+    # 6개월(180일) 쓰면 매달권 6개월(174,000원)을 낸 것과 같게 → 남은 116,000원에서 위약금 29,000원(결제 금액의 10%) 빼고 87,000원
     r = refund_estimate("year", 290_000, D, on(180), YEAR_END, opened=True, monthly=29_000)
-    assert r.amount_krw == 104_400
+    assert r.amount_krw == 87_000
 
 
 def test_year_after_ten_months_nothing_left() -> None:
