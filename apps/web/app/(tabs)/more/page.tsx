@@ -13,6 +13,7 @@ import { signOut, userLabel, useSession } from "@/lib/auth";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
+import { NAV } from "@/lib/nav";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { useIsPc } from "@/lib/use-pc";
 
@@ -158,6 +159,19 @@ export default function More() {
     </section>
   );
 
+  // 휴대폰엔 PC 머리의 전문가 메뉴가 없어 여기서 엶(11/17). 목록은 lib/nav.ts 한 곳.
+  const pro = (
+    <section className="section py-4 px-18" id="pro">
+      <h2 className="pt-14">{t.pro}</h2>
+      {NAV.filter((n) => n.group === "pro" && n.ready).map((n) => (
+        <Link key={n.key} href={n.href} className="menu-row">
+          <span>{n.label}</span>
+          <span className="sub">›</span>
+        </Link>
+      ))}
+    </section>
+  );
+
   if (pc)
     return (
       <main className="page">
@@ -189,6 +203,7 @@ export default function More() {
     <main className="page">
       <PageHeader title={t.title} />
       {head}
+      {pro}
       {cond}
       {alerts}
       {menu}

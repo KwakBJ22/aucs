@@ -181,6 +181,7 @@ export const copy = {
   },
   home: {
     login: "로그인",
+    pro: "전문가 버전", // 휴대폰 홈 위 오른쪽 — 전문가 화면 입구(11/17 대표님)
     loginBanner: "로그인하면 관심 물건이 바뀔 때 알려 드려요",
     forMe: "나에게 맞는 물건",
     changeAnswers: "조건 바꾸기",
@@ -541,6 +542,7 @@ export const copy = {
       ["환불 규정", "/refund"],
     ] as [string, string | null][],
     soon: "준비 중",
+    pro: "전문가 버전", // 휴대폰 「내 정보」 — PC 머리의 전문가 메뉴와 같은 목록(11/17)
     pcTitle: "내 정보",
     hello: "내 정보",
     plan: "이용권·결제 내역",

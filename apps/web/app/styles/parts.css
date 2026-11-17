@@ -782,6 +782,10 @@ button:disabled,
 .tb-tools > :not(:last-child) {
   margin-right: -14px; /* 원래 틈 8 을 빼고 14 를 더 당겨 모두 22 */
 }
+/* 홈 위 「전문가 버전」 — 면 버튼이라 아이콘처럼 당기지 않음(11/17) */
+.tb-tools > .tb-pro {
+  margin-right: 6px;
+}
 
 /* 크게 고르는 카드(시작 화면 「무엇을 하려고」) — 고르는 칩과 같은 규칙, 모양만 카드 */
 .choice {
