@@ -229,7 +229,8 @@ def main() -> None:
                         save(conn, kind, prop, sgg, ym, rows)
                         conn.commit()
                         n += len(rows)
-                job.count += n
+                        # 칸마다 바로 셈(11/18) — 예전엔 끝까지 돈 뒤에만 더해, 한도로 멈추면 저장은 됐는데 0건으로 남았음
+                        job.count += len(rows)
                 print(f"  {name} {n:,}")
         # 11/4 대표님: 법이 강제하지 않으면 지우지 않음 — 1년 지난 전월세도 남김(예전엔 지웠음)
     print(f"끝: {job.count:,}건")
