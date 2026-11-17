@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
+from aucs_rules.calc import tax_kind
 from aucs_rules.redev_member import member_transfer
 from aucs_rules.result import Status
 
@@ -216,6 +217,13 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         )  # fmt: skip
     elif villa != "clear" and usage_code == "21101" and _HOUSING_WORDS.search(usage_text):
         add("risk.neighborhood_villa", "mid", "근생빌라 의심 — 대출·위반건축물·세금 확인")
+    # 0.19.5(11/17): 그 호 대장은 주택인데 법원 용도는 상가 · 오피스텔 등 — 취득세 · 대출은 주택 아닌 쪽으로 셈(calc.usage_for_kind)
+    if (uu := f.get("unit_use")) and tax_kind(uu) == "house" and tax_kind(usage_text) in ("other", "farm"):
+        add(
+            "risk.use_mismatch", "mid",
+            "건축물대장은 주택, 법원 용도는 주택 아님 — 실제 쓰임에 따라 취득세 · 대출이 달라요(주택 아닌 쪽으로 셈했어요)",
+            Status.NEEDS_CHECK, unit_use=uu,
+        )  # fmt: skip
     note = f.get("note") or ""
     if m := _SPECIAL_CONDITION.search(note):
         add(

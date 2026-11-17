@@ -188,3 +188,6 @@ def test_usage_for_kind_order():
     assert tax_kind(usage_for_kind("기타", None, None, "공장")) == "other"
     assert tax_kind(usage_for_kind("기타", None, None, None)) == "unknown"
     assert tax_kind(usage_for_kind("아파트", "래미안 101동", None, None)) == "house"
+    # 0.19.5: 그 호 대장은 주택인데 법원은 상가 · 오피스텔 → 주택 아닌 쪽(둘 다 주택이어야 주택 세율)
+    assert tax_kind(usage_for_kind("상가,오피스텔,근린시설", "8층805호", "다세대주택", "공동주택")) == "other"
+    assert tax_kind(usage_for_kind("아파트", "101동", "아파트", "공동주택")) == "house"

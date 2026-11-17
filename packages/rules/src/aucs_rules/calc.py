@@ -110,8 +110,15 @@ def usage_for_kind(
 ) -> str:
     """취득세 · 대출 종류를 가를 글(11/17): 그 호의 대장 전유 용도 → 법원 용도 + 물건 설명 → 대장 주용도(건물 전체) 순.
     예전엔 셋을 이어 붙여 주택 말이 하나라도 있으면 주택으로 셈 — 주상복합 건물의 상가 · 오피스텔 호가 건물 주용도의
-    「공동주택」 때문에 주택 비율로 대출이 셈해졌음(더파인빌딩 805호). 근생빌라 호는 전유 용도대로 주택 아님."""
-    for u in (unit_use, " ".join(x for x in (court, desc) if x), main_use):
+    「공동주택」 때문에 주택 비율로 대출이 셈해졌음(더파인빌딩 805호). 근생빌라 호는 전유 용도대로 주택 아님.
+
+    0.19.5(11/17 대표님): 그 호 대장과 법원 용도가 주택 / 주택 아님으로 갈리면 주택 아닌 쪽으로 — 취득세 주택 세율은
+    「대장(등기부)에 주택으로 기재 + 실제 주거용」 둘 다여야 함(지방세법 제11조 제1항 제8호, 조심 2018지986)."""
+    court_text = " ".join(x for x in (court, desc) if x)
+    kinds = {tax_kind(unit_use), tax_kind(court_text)} if unit_use else set()
+    if "house" in kinds and kinds & {"other", "farm"}:
+        return unit_use if tax_kind(unit_use) != "house" else court_text  # type: ignore[return-value]
+    for u in (unit_use, court_text, main_use):
         if u and tax_kind(u) != "unknown":
             return u
     return ""
