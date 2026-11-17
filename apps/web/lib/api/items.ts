@@ -218,7 +218,7 @@ export const fetchNotices = () => getJson<PublicNotice[]>("/notices");
 
 // 아카데미 오늘의 물건 문제(11/17) — 실제 물건 · 낙찰 결과로 하루 한 문제(공개)
 export type AcademyToday = {
-  kind: "rate" | "start";
+  kind: "rate" | "start" | "judge";
   q: string;
   options: string[];
   answer: number;
@@ -227,6 +227,8 @@ export type AcademyToday = {
   from: string;
 };
 export const fetchAcademyToday = () => getJson<AcademyToday | null>("/academy/today", 10 * 60_000);
+// 레벨4 실제 물건 판정(11/17) — 명세서 원문이라 로그인 회원만
+export const fetchAcademyJudge = () => getGated<AcademyToday | null>("/academy/judge");
 
 // 이용권 가격(기준표 plans — 관리자가 바꾸면 적용일부터, 11/12)
 export type Prices = Record<string, { month?: number; year?: number; one?: number }>;

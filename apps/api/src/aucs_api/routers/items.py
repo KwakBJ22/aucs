@@ -206,6 +206,13 @@ def get_academy_today() -> dict[str, Any] | None:
     return academy_live.today()
 
 
+@router.get("/academy/judge")
+def get_academy_judge(authorization: str = Header(default="")) -> dict[str, Any] | None:
+    """레벨4 실제 물건 판정(11/17) — 명세서 원문을 보여 주므로 로그인한 회원만."""
+    current_user_id(authorization)
+    return academy_live.judge()
+
+
 @router.get("/regions")
 def get_regions() -> list[dict[str, Any]]:
     return items.regions()

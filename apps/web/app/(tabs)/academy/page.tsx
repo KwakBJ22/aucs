@@ -14,27 +14,36 @@ import {
   syncProgress,
   taskCount,
 } from "@/lib/academy";
-import { fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
+import { fetchAcademyJudge, fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.academy;
 
-// 오늘의 물건 문제(11/17): 실제 물건 · 낙찰 결과로 하루 한 문제 — 정답은 계산으로만 나오는 것
-function Today() {
+// 오늘의 물건 문제(11/17): 실제 물건 · 낙찰 결과로 하루 한 문제 — 정답은 계산으로만 나오는 것.
+// 레벨4가 열리면 「실제 물건 판정」(명세서 원문 한 줄 → 떠안나?)도 같은 모양으로 — 로그인 회원만.
+function Today({
+  load,
+  title,
+  sub,
+}: {
+  load: () => Promise<AcademyToday | null>;
+  title: string;
+  sub: string;
+}) {
   const [x, setX] = useState<AcademyToday | null>(null);
   const [pick, setPick] = useState<number | null>(null);
   useEffect(() => {
-    fetchAcademyToday()
+    load()
       .then(setX)
       .catch(() => undefined);
-  }, []);
+  }, [load]);
   if (!x) return null;
   return (
     <section className="section">
       <div className="d-flex jc-between ai-center gap-8">
-        <h2 className="m-0">{t.today}</h2>
-        <span className="sub fs-sm">{t.todaySub}</span>
+        <h2 className="m-0">{title}</h2>
+        <span className="sub fs-sm">{sub}</span>
       </div>
       <p className="ac-b mt-8">{x.q}</p>
       {x.options.map((o, i) => (
@@ -105,6 +114,7 @@ export default function Academy() {
     done,
   );
   const tasks = taskCount(done);
+  const l4Open = STAGES.some((s) => s.level === "l4" && stageEntry(s, done));
   return (
     <main className="page">
       <PageHeader title={t.title} back="/home" />
@@ -121,7 +131,8 @@ export default function Academy() {
         )}
       </section>
 
-      <Today />
+      <Today load={fetchAcademyToday} title={t.today} sub={t.todaySub} />
+      {token && l4Open && <Today load={fetchAcademyJudge} title={t.judge} sub={t.judgeSub} />}
 
       {LEVELS.map((lv) => {
         const stages = STAGES.filter((s) => s.level === lv.key);

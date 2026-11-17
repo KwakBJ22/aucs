@@ -757,6 +757,8 @@ export const copy = {
     today: "오늘의 물건 문제",
     todaySub: "법원에서 받은 실제 물건으로 하루 한 문제",
     todayItem: "이 물건 보기",
+    judge: "실제 물건 판정",
+    judgeSub: "법원 명세서 한 줄 읽고 판단하기 · 하루 한 문제",
     passed: "통과",
     right: "맞아요.",
     wrong: "아쉬워요.",
