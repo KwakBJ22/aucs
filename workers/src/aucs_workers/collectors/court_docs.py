@@ -5,6 +5,7 @@
     uv run python -m aucs_workers.collectors.court_docs --next           # 유찰된 물건의 다음 회차·사진 미리(11/4, 하루 300)
     uv run python -m aucs_workers.collectors.court_docs --picks          # 홈에 뜰 물건 중 사진 없는 것(11/7, 가볍게)
     uv run python -m aucs_workers.collectors.court_docs --details        # 진행 물건 중 물건상세를 한 번도 안 받은 것(11/7, 가볍게)
+    uv run python -m aucs_workers.collectors.court_docs --new            # 새 사건(7일 안 들어온 것) 물건상세 — 오늘 들어온 것부터(11/18)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
 보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
@@ -45,6 +46,8 @@ QUEUE_MAX = 10  # 5분마다: 손님이 연 물건의 서류(요청 줄) — 11/
 NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받기(11/4, 300 → 100)
 DETAILS_MAX = 300  # 한 번에: 물건상세 첫 바퀴(11/7 — 요항·토지건물 나눔·제시외·대지권을 모든 진행 물건에, 실제 양은 시간 몫이 정함)
 DETAILS_DAYS = 45  # 입찰 이만큼 안의 진행 물건
+NEW_MAX = 300  # 한 번에: 새 사건 물건상세(11/18, 실제 양은 시간 몫이 정함)
+NEW_DAYS = 7  # 들어온 지 이만큼 안의 사건 — 밀린 것까지 따라잡게
 PICKS_MAX = 300  # 한 번에: 홈에 뜰 물건 중 사진 없는 것(11/7 가볍게 받으므로 50 → 300, 실제 양은 시간 몫이 정함)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
 ARCHIVE_USAGES = ("아파트", "다세대", "연립주택,다세대,빌라", "오피스텔")
@@ -186,6 +189,29 @@ def details_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
             limit %(n)s""",
         {"today": today, "to": today + timedelta(days=DETAILS_DAYS), "usages": list(ARCHIVE_USAGES),
          "n": DETAILS_MAX},
+    ).fetchall()  # fmt: skip
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
+
+
+def new_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """새 사건(들어온 지 7일 안) 가운데 물건상세를 아직 안 받은 것 — 오늘 들어온 것부터, 같은 날은 입찰 가까운 순(11/18).
+
+    새 사건은 아침 목록에서만 들어오는데 첫 바퀴(입찰 가까운 순)에서는 뒤로 밀려 사진 · 명세서가 며칠씩 비었음.
+    법원에 물건상세가 아직 없으면 하루 뒤 다시 물음."""
+    rows = conn.execute(
+        f"""select c.court_code, c.case_no
+            from core.items i join core.cases c using (case_id)
+            where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone'
+              and i.sale_date >= %(today)s
+              and (c.created_at at time zone 'Asia/Seoul')::date >= %(since)s
+              and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                              and (r.doc_kind like 'item_detail_%%' or r.fetched_at > now() - interval '1 day'))
+            group by c.case_id, c.court_code, c.case_no
+            order by max((c.created_at at time zone 'Asia/Seoul')::date) desc,
+                     (count(distinct i.item_no) > 6), min(i.sale_date), min({LIVE_FIRST})
+            limit %(n)s""",
+        {"today": today, "since": today - timedelta(days=NEW_DAYS), "usages": list(ARCHIVE_USAGES),
+         "n": NEW_MAX},
     ).fetchall()  # fmt: skip
     return [(court, case_no) for court, case_no in rows if court in COURTS]
 
@@ -425,6 +451,7 @@ def main() -> None:
     )
     ap.add_argument("--picks", action="store_true", help="추천 후보 중 사진 없는 것(11/4)")
     ap.add_argument("--details", action="store_true", help="물건상세를 안 받은 진행 물건(11/7)")
+    ap.add_argument("--new", action="store_true", help="새 사건 물건상세(11/18)")
     ap.add_argument(
         "--queue", action="store_true", help="손님이 연 물건의 서류 요청(11/4, 5분마다)"
     )
@@ -467,12 +494,14 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
             targets = pick_photo_targets(conn, date.today())
         elif a.details:
             targets = details_targets(conn, date.today())
+        elif a.new:
+            targets = new_targets(conn, date.today())
         else:
             targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
         if not targets:
             return
-        light = bool(a.picks or a.next or a.photos or a.details)
+        light = bool(a.picks or a.next or a.photos or a.details or a.new)
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
             page = browser.new_page()

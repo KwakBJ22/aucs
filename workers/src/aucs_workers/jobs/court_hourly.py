@@ -2,7 +2,8 @@
 
 작업 스케줄러가 매시 10분에 부르고, PC 가 꺼져 있다 켜지면 바로 한 번 돕니다(StartWhenAvailable).
 법원 서비스 시간(06~24시)에만 돌고, 시간마다 몫(하루 한도 ÷ 18, polite.py)을 다 쓰면 그 단계는 멈추고 다음 시간에 이어 받습니다.
-받는 순서(손님 눈에 먼저 띄는 것부터): 관심 물건 → 홈에 뜰 물건 사진(물건상세만, 11/7) → 다음 회차 미리 → 서류 보관 → 감정평가서 원본 → 분석.
+받는 순서(손님 눈에 먼저 띄는 것부터): 관심 물건 → 새 사건 물건상세(11/18) → 홈에 뜰 물건 사진(물건상세만, 11/7)
+→ 다음 회차 미리 → 물건상세 첫 바퀴 → 서류 보관 → 분석.
 앞 차례가 아직 돌고 있으면(70분 안) 겹쳐 띄우지 않습니다.
 
     uv run python -m aucs_workers.jobs.court_hourly
@@ -22,12 +23,15 @@ SERVICE = range(6, 24)  # 법원 06:00~24:00 (00~01시도 열리지만 하루 �
 # (이름, 명령, 시간 몫 가운데 이 단계 몫 %) — 11/5: 앞 단계가 몫을 다 써서 서류 보관·다음 회차가 한 번도 못 돌았음
 STEPS = [
     ("관심 물건 서류", ["aucs_workers.collectors.court_docs", "--watched"], None),
+    # 11/18: 새 사건이 첫 바퀴(입찰 가까운 순)에서 밀려 며칠씩 사진·명세서가 비었음 → 맨 앞에 40%.
+    #   사진 30 → 20, 다음 회차 15 → 10, 첫 바퀴 35 → 15, 서류 보관 20 → 15. 새 사건이 없으면 그 몫은 첫 바퀴로
+    ("새 사건 물건상세", ["aucs_workers.collectors.court_docs", "--new"], 40),
     # 11/7: 홈은 사진 있는 물건만 띄움 → 홈에 뜰 물건 사진을 가장 크게(물건상세 한 번이라 같은 몫으로 5배쯤)
     # 11/7 오전: 물건상세 첫 바퀴(모든 진행 물건, 약 9,700번 · 일주일 남짓) — 서류 보관 35 → 20, 사진 35 → 30, 다음 회차 20 → 15
-    ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 30),
-    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 15),
-    ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 35),
-    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 20),
+    ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 20),
+    ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 10),
+    ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 15),
+    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 15),
     # 11/7 대표님: 당분간 이 노트북에서 감정평가서 원본(KAPA)을 받지 않음 — KAPA 가 자동 조회로 막음. 몫 10% 는 첫 바퀴로
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]
@@ -39,6 +43,20 @@ def _cap() -> int:
         return int(Polite(site="court", jitter=False)._load()[1]["cap"])
     except Exception:  # noqa: BLE001 — 막힘 표시 중이면 시작 한도로
         return SITE_DAY_MAX["court"]
+
+
+def _new_left() -> bool:
+    """새 사건 물건상세로 받을 사건이 남았나(11/18)."""
+    try:
+        from datetime import date
+
+        from aucs_workers.collectors.court_docs import new_targets
+        from aucs_workers.db import connect
+
+        with connect() as conn:
+            return bool(new_targets(conn, date.today()))
+    except Exception:  # noqa: BLE001 — 모르면 몫을 옮기지 않음
+        return True
 
 
 def _details_left() -> bool:
@@ -89,11 +107,18 @@ def main() -> None:
     try:
         evening_probe()
         share = hour_share(_cap())
-        # 11/12: 물건상세 첫 바퀴가 끝나면 그 몫을 서류 보관(현황조사서)으로
-        spare = 0 if _details_left() else 35
+        # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)
+        new_spare = 0 if _new_left() else 40
+        details_left = _details_left()
         for name, mod, pct in STEPS:
-            if pct and name == "서류 보관":
-                pct += spare
+            if name == "새 사건 물건상세" and new_spare:
+                continue
+            if pct and name == "물건상세 첫 바퀴":
+                if not details_left:
+                    continue
+                pct += new_spare
+            if pct and name == "서류 보관" and not details_left:
+                pct += 15 + new_spare
             print(f"── {name}", flush=True)
             env = dict(os.environ)
             if pct:
