@@ -179,9 +179,10 @@ export const copy = {
     done: "맞춤 물건 보기",
     count: (n: number) => `진행 중 ${n.toLocaleString("ko-KR")}건`,
   },
+  // 휴대폰 머리 「기본 / 전문가」 보기(11/17 대표님) — 누르면 아래 탭이 통째로 바뀜
+  mode: { toPro: "전문가로", toBasic: "기본으로" },
   home: {
     login: "로그인",
-    pro: "전문가 버전", // 휴대폰 홈 위 오른쪽 — 전문가 화면 입구(11/17 대표님)
     loginBanner: "로그인하면 관심 물건이 바뀔 때 알려 드려요",
     forMe: "나에게 맞는 물건",
     changeAnswers: "조건 바꾸기",

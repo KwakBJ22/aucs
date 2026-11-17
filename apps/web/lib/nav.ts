@@ -131,6 +131,24 @@ export const TABS = [
   { key: "points", label: "포인트", href: "/points", match: ["/points"] },
 ] as const;
 
+// 「전문가로」를 누르면 하단 탭이 이 다섯 칸으로 바뀜(11/17 대표님). 이름은 PC 머리 전문가 메뉴(NAV)와 같게.
+export const PRO_TABS = [
+  { key: "pro-items", label: "전체 물건", href: "/pro/items", match: ["/pro/items"] },
+  { key: "pro-map", label: "지도 분석", href: "/pro/map", match: ["/pro/map"] },
+  { key: "compare", label: "비교함", href: "/compare", match: ["/compare"] },
+  { key: "pro-cases", label: "사건·문건", href: "/pro/cases", match: ["/pro/cases"] },
+  { key: "pro-market", label: "시장 분석", href: "/pro/market", match: ["/pro/market"] },
+] as const;
+
+export type Tab = { key: string; label: string; href: string; match: readonly string[] };
+
+/** 이 주소가 기본 탭 화면인지(basic) 전문가 탭 화면인지(pro) — 물건 화면 같은 곳은 null(지금 보기 그대로). */
+export function modeOfPath(path: string): "basic" | "pro" | null {
+  if (PRO_TABS.some((t) => t.match.some((m) => path.startsWith(m)))) return "pro";
+  if (TABS.some((t) => t.match.some((m) => path.startsWith(m)))) return "basic";
+  return null;
+}
+
 export function activeNav(path: string): NavItem | undefined {
   // 더 긴(구체적인) 주소가 먼저 맞도록
   let best: NavItem | undefined;
@@ -144,7 +162,7 @@ export function activeNav(path: string): NavItem | undefined {
   return best;
 }
 
-export function activeTab(path: string): string {
-  for (const t of TABS) if (t.match.some((m) => path.startsWith(m))) return t.key;
+export function activeTab(path: string, tabs: readonly Tab[] = TABS): string {
+  for (const t of tabs) if (t.match.some((m) => path.startsWith(m))) return t.key;
   return "";
 }

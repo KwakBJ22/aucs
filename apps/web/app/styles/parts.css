@@ -792,9 +792,15 @@ button:disabled,
 .tb-tools > :not(:last-child) {
   margin-right: -14px; /* 원래 틈 8 을 빼고 14 를 더 당겨 모두 22 */
 }
-/* 홈 위 「전문가 버전」 — 면 버튼이라 아이콘처럼 당기지 않음(11/17) */
+/* 머리 「전문가로」 · 「기본으로」 — 면 버튼이라 아이콘처럼 당기지 않음(11/17) */
 .tb-tools > .tb-pro {
   margin-right: 6px;
+}
+/* 전문가 탭 화면(비교함 · 지도 분석)의 뒤로는 PC 에서만 — 휴대폰은 탭 첫 화면(11/17) */
+@media (max-width: 1023px) {
+  .topbar .tb-back.pc-back {
+    display: none;
+  }
 }
 
 /* 크게 고르는 카드(시작 화면 「무엇을 하려고」) — 고르는 칩과 같은 규칙, 모양만 카드 */

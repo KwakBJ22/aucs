@@ -160,12 +160,6 @@ export default function Home() {
   const fresh = notis.filter((n) => !isStale(n)); // 지난 입찰일 알림은 홈에서 뺌(11/1)
   const unread = fresh.filter((n) => !n.read_at).length;
 
-  // 전문가 화면 입구 — 휴대폰엔 PC 머리 메뉴가 없어 홈 위 오른쪽에 둠(11/17 대표님). 로그인 확인은 전문가 화면이 함.
-  const pro = (
-    <Link href="/pro/items" className="btn sm soft tb-pro m-only">
-      {t.pro}
-    </Link>
-  );
   const bell = token ? (
     <Link
       href="/notifications"
@@ -492,15 +486,7 @@ export default function Home() {
 
   return (
     <main className="page">
-      <PageHeader
-        title={<Logo />}
-        right={
-          <>
-            {pro}
-            {bell}
-          </>
-        }
-      />
+      <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
       {recordLine}
       {loginBanner}
