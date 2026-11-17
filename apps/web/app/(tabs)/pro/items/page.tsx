@@ -9,7 +9,7 @@ import { fetchRegions, type RegionRow } from "@/lib/api/items";
 import {
   fetchPro,
   fromQuery,
-  proCsvUrl,
+  downloadProCsv,
   toQuery,
   type ProFilter,
   type ProResult,
@@ -167,9 +167,13 @@ function ProItems() {
       <PageHeader
         title={t.title}
         right={
-          <a href={proCsvUrl(f)} className="chip gray mh-32">
+          <button
+            type="button"
+            onClick={() => void downloadProCsv(f).catch(() => {})}
+            className="chip gray mh-32"
+          >
             {t.csv}
-          </a>
+          </button>
         }
       />
       <div className="pc-hint sub">{t.pcHint}</div>

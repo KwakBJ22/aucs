@@ -26,7 +26,7 @@ where exists (select 1 from core.items i where i.case_id = c.case_id)
 
 
 def main() -> None:
-    """끝난 사건 실명만 비움 — 법원 원문·사진 · 올린 등기부 원본은 남김(11/4, 11/17)."""
+    """끝난 사건 실명 비움(법원 원문·사진 · 올린 등기부 원본은 남김, 11/4 · 11/17) · 3개월 지난 상세 열람 기록 지움."""
     cut = date.today() - timedelta(days=30)
     with connect() as conn, run(conn, "purge", "끝난 사건 실명 비우기") as job:
         closed = [r[0] for r in conn.execute(CLOSED_SQL, {"cut": cut}).fetchall()]
@@ -46,6 +46,10 @@ def main() -> None:
                    where f.doc_id = d.doc_id and d.case_id = any(%s) and f.raw_text is not null""",
                 (part,),
             )
+            conn.commit()
+        # 상세 연 기록(app.detail_views)은 3개월만(접속 기록 3개월, 11/17). 표가 없으면(0068 전) 넘어감
+        if conn.execute("select to_regclass('app.detail_views')").fetchone()[0]:
+            conn.execute("delete from app.detail_views where at < now() - interval '3 months'")
             conn.commit()
     print(
         f"끝난 사건 {len(closed):,}건 실명 비움 (원문 · 사진 · 올린 등기부 원본은 남김)"

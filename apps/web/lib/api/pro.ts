@@ -1,5 +1,5 @@
 // PC 전문가 「전체 물건」 표
-import { apiBaseUrl, getJson } from "./client";
+import { downloadGated, getGated } from "./client";
 
 export type ProFilter = {
   source?: "all" | "court" | "onbid";
@@ -89,8 +89,9 @@ function apiQuery(f: ProFilter): URLSearchParams {
   });
   return q;
 }
-export const fetchPro = (f: ProFilter) => getJson<ProResult>(`/pro/items?${apiQuery(f)}`);
-export const proCsvUrl = (f: ProFilter) => `${apiBaseUrl}/pro/items?${apiQuery(f)}&fmt=csv`;
+export const fetchPro = (f: ProFilter) => getGated<ProResult>(`/pro/items?${apiQuery(f)}`);
+export const downloadProCsv = (f: ProFilter) =>
+  downloadGated(`/pro/items?${apiQuery(f)}&fmt=csv`, "aucs_items.csv");
 
 // 사건·문건 분석
 export type CaseRow = {
@@ -137,10 +138,10 @@ export const fetchCases = (category?: string, q?: string) => {
   const p = new URLSearchParams();
   if (category) p.set("category", category);
   if (q) p.set("q", q);
-  return getJson<{ categories: string[]; cases: CaseRow[] }>(`/pro/cases?${p}`);
+  return getGated<{ categories: string[]; cases: CaseRow[] }>(`/pro/cases?${p}`);
 };
 export const fetchCase = (id: string) =>
-  getJson<CaseDetail>(`/pro/cases/${encodeURIComponent(id)}`);
+  getGated<CaseDetail>(`/pro/cases/${encodeURIComponent(id)}`);
 
 // 낙찰 사례와 시장 분석
 export type Stat = { n: number; p50: number };
@@ -179,7 +180,7 @@ export const fetchMarket = (f: {
   sigungu?: string;
   usage?: string[];
   months?: number;
-}) => getJson<Market>(`/pro/market?${toQuery(f)}`);
+}) => getGated<Market>(`/pro/market?${toQuery(f)}`);
 
 // 공매 시장(전국 입찰 결과). p50 = 최저가 대비, p50_app = 감정가 대비
 export type OnbidStat = Stat & { p50_app: number | null };
@@ -210,4 +211,4 @@ export const fetchOnbidMarket = (f: {
   sigungu?: string;
   usage?: string[];
   months?: number;
-}) => getJson<OnbidMarket>(`/pro/market?${toQuery({ ...f, source: "onbid" } as ProFilter)}`);
+}) => getGated<OnbidMarket>(`/pro/market?${toQuery({ ...f, source: "onbid" } as ProFilter)}`);

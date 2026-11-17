@@ -114,6 +114,11 @@ export class ApiError extends Error {
   }
 }
 export const isNotFound = (e: unknown) => e instanceof ApiError && e.status === 404;
+/** 상세 막힘(11/17): 401 로그인 · 402 이용권 · 429 너무 많이 엶. 그 밖은 null. */
+export const gateStatus = (e: unknown): 401 | 402 | 429 | null =>
+  e instanceof ApiError && [401, 402, 429].includes(e.status)
+    ? (e.status as 401 | 402 | 429)
+    : null;
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -131,6 +136,42 @@ export function getMine<T>(token: string, path: string): Promise<T> {
   return remembered(mine, `me:${account(token)} ${path}`, ME_TTL, () =>
     fetchJson<T>(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } }),
   );
+}
+
+// 상세(물건 · 서류 · 계산 · 전문가 표)는 로그인해야 받음(11/17). 토큰은 SessionProvider 가 넣어 줌 —
+// 세션을 처음 읽기 전에 부르면 읽을 때까지 기다림(로그인했는데 잠깐 「로그인 필요」로 막히지 않게).
+let apiToken: string | null = null;
+let tokenSet: () => void = () => {};
+const tokenReady = new Promise<void>((r) => (tokenSet = r));
+export function setApiToken(t: string | null): void {
+  apiToken = t;
+  tokenSet();
+}
+
+/** 로그인 회원만 받는 자료(GET) — 계정마다 따로 기억(로그아웃하면 지워짐). 토큰이 없으면 401. */
+export async function getGated<T>(path: string): Promise<T> {
+  await tokenReady;
+  const t = apiToken;
+  if (!t) throw new ApiError(401);
+  return remembered(mine, `me:${account(t)} ${path}`, PUB_TTL, () =>
+    fetchJson<T>(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${t}` } }),
+  );
+}
+
+/** 로그인 회원만 받는 파일(전문가 표 CSV) — 받아서 내려받기로 넘김. */
+export async function downloadGated(path: string, name: string): Promise<void> {
+  await tokenReady;
+  if (!apiToken) throw new ApiError(401);
+  const res = await fetch(`${apiBaseUrl}${path}`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${apiToken}` },
+  });
+  if (!res.ok) throw new ApiError(res.status);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(await res.blob());
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
 }
 
 /** 내 자료 기억 비우기(저장·삭제·로그아웃 뒤) — 기기에 적은 것까지. 지운 것이 잠깐 다시 보이지 않게. */

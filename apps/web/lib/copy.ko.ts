@@ -431,6 +431,7 @@ export const copy = {
     viewTable: "표",
     pickTitle: "고른 물건",
     pickEmpty: "목록에서 물건을 누르면 여기서 다섯 질문을 바로 봐요",
+    pickLogin: "로그인하면 여기서 다섯 질문을 바로 봐요",
     toDetail: "상세 전체 보기",
     cols: {
       date: "매각기일",
@@ -515,10 +516,17 @@ export const copy = {
     bandBody: (parts: string[]) => parts.join(" · "),
     bandGo: "올리러 가기",
   },
+  // 상세 막힘(11/17): 하루 무료가 끝남(402) · 너무 많이 엶(429)
+  gate: {
+    paid: "하루 무료 이용이 끝났어요 · 이용권이 있으면 계속 볼 수 있어요",
+    plans: "이용권 보기",
+    tooMany: "짧은 시간에 너무 많이 열었어요 · 잠시 뒤 다시 해 주세요",
+  },
   needLogin: {
     title: "로그인이 필요해요",
     body: "관심 물건과 내 경매 기록은 로그인하면 저장돼요.",
     item: "물건 상세는 로그인하면 볼 수 있어요 · 정식 오픈 전까지 무료예요",
+    pro: "전문가 표는 로그인하면 볼 수 있어요 · 정식 오픈 전까지 무료예요",
   },
   more: {
     title: "내 정보",

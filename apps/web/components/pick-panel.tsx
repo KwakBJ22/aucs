@@ -28,15 +28,15 @@ export function PickPanel({ id }: { id: string | null }) {
   useEffect(() => {
     setD(null);
     setMsg("");
-    if (id)
+    if (id && session)
       fetchItem(id)
         .then((x) => setD(x as ItemDetail | OnbidDetail))
         .catch(() => setD(null));
-  }, [id]);
-  if (!id)
+  }, [id, session]);
+  if (!id || !session)
     return (
       <section className="section">
-        <p className="sub">{t.pickEmpty}</p>
+        <p className="sub">{id ? t.pickLogin : t.pickEmpty}</p>
       </section>
     );
   if (!d)

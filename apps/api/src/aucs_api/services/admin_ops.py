@@ -49,6 +49,12 @@ MORNING = ("court_results", "court_items", "buildings", "official_prices", "land
 KST_DAY = "(date_trunc('day', now() at time zone 'Asia/Seoul') at time zone 'Asia/Seoul')"
 
 
+VIEW_CAPPED_SQL = f"""select count(*) as n from (
+    select user_id from app.detail_views where at >= {KST_DAY} group by user_id
+    having count(*) >= coalesce((select (value->>'per_day')::int from ref.rule_tables
+                                 where rule_key = 'access' order by valid_from desc limit 1), 500)) x"""
+
+
 def _todo(red: list[dict[str, str]], n: dict[str, Any], tmp: list[str]) -> list[dict[str, Any]]:
     """하실 일: 대표님이 눌러야 끝나는 것만. 빨간 불(판단은 ops_watch 한 곳) + 기다리는 확인·답."""
     out: list[dict[str, Any]] = []
@@ -65,6 +71,7 @@ def _todo(red: list[dict[str, str]], n: dict[str, Any], tmp: list[str]) -> list[
         ("reports_open", "제보 {}건", "review"),
         ("inq_open", "답 안 한 문의 {}건", "members"),
         ("refunds_wait", "환불 요청 {}건", "members"),
+        ("view_capped", "오늘 상세 열람 한도에 닿은 회원 {}명 · 자동 수집인지 확인", "members"),
     ):
         if n.get(key):
             out.append({"key": key, "text": text.format(n[key]), "go": go})
@@ -131,6 +138,9 @@ def today() -> dict[str, Any]:
             (list(MORNING),),
         ).fetchall()
         red = red_lights(c)  # 빨간 불 판단은 한 곳(PC 휴대폰 알림과 같음, 11/12)
+        # 상세 열람 한도(11/17, services/access) — 표가 없으면(0068 전) 넘어감
+        if c.execute("select to_regclass('app.detail_views') is not null as ok").fetchone()["ok"]:
+            n = {**n, "view_capped": c.execute(VIEW_CAPPED_SQL).fetchone()["n"]}
     by = {j["job_id"]: j for j in last}
     bk = by.get("backup")
     rt = by.get("restore_test")

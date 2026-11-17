@@ -5,7 +5,7 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from aucs_api import settings
 from aucs_api.cache import PublicCache
@@ -32,6 +32,12 @@ app.include_router(pro.router)
 app.include_router(events.router)
 app.include_router(errors.router)
 app.include_router(cron.router)
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots() -> PlainTextResponse:
+    """API 는 검색 로봇이 들어오지 않게(11/17). 지키지 않는 로봇은 상세 로그인 · 횟수 한도로 막음."""
+    return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
 
 @app.exception_handler(Exception)

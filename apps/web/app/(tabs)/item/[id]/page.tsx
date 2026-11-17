@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
 import { SkDetail } from "@/components/skeleton";
-import { isNotFound } from "@/lib/api/client";
+import { gateStatus, isNotFound } from "@/lib/api/client";
+import { GateBlock } from "@/components/gate-block";
 import {
   requestDocs,
   fetchItem,
@@ -32,11 +33,13 @@ export default function Item() {
   const pc = useIsPc();
 
   const [failed, setFailed] = useState(false);
+  const [gate, setGate] = useState<402 | 429 | null>(null);
   const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const seen = useRef<string | null>(null);
   const [tries, setTries] = useState(0);
   useEffect(() => {
     setFailed(false);
+    setGate(null);
     fetchItem(decodeURIComponent(id))
       .then((x) => {
         setD(x);
@@ -50,9 +53,21 @@ export default function Item() {
           `${isOnbid(x) ? "공매" : x.court} ${x.case_no} · ${x.place} ${x.building ?? x.usage ?? ""}`,
         );
       })
-      .catch((e: unknown) => (isNotFound(e) ? setD(null) : setFailed(true)));
+      .catch((e: unknown) => {
+        const g = gateStatus(e);
+        if (g === 402 || g === 429) setGate(g);
+        else if (isNotFound(e)) setD(null);
+        else setFailed(true);
+      });
   }, [id, tries, fresh]);
 
+  if (gate && d === undefined)
+    return (
+      <main className="page">
+        <PageHeader title="" back="history" />
+        <GateBlock status={gate} />
+      </main>
+    );
   if (failed && d === undefined)
     return (
       <main className="page">

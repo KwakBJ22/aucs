@@ -1,14 +1,22 @@
-"""PC 전문가 보기 (전체 물건 표)."""
+"""PC 전문가 보기 (전체 물건 표) — 로그인 · 이용권이 있어야 봄(11/17, CSV 내려받기 포함)."""
 
 from datetime import date, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import Response
 
-from aucs_api.services import pro
+from aucs_api.auth.user import current_user_id
+from aucs_api.services import access, pro
 
-router = APIRouter(prefix="/pro")
+
+def pro_viewer(authorization: str = Header(default="")) -> str:
+    uid = current_user_id(authorization)
+    access.allowed(uid, None)
+    return uid
+
+
+router = APIRouter(prefix="/pro", dependencies=[Depends(pro_viewer)])
 
 
 @router.get("/items", response_model=None)
@@ -55,7 +63,8 @@ def get_cases(
 
 
 @router.get("/cases/{case_id}")
-def get_case(case_id: str) -> dict[str, Any]:
+def get_case(case_id: str, authorization: str = Header(default="")) -> dict[str, Any]:
+    access.count_view(current_user_id(authorization), case_id)
     d = pro.case_detail(case_id, date.today())
     if d is None:
         raise HTTPException(status_code=404, detail="없는 사건")

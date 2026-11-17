@@ -1,4 +1,4 @@
-import { getJson, postQuiet } from "./client";
+import { getGated, getJson, postQuiet } from "./client";
 
 export type Signal = {
   rule_id: string;
@@ -246,7 +246,7 @@ export type Question = {
 // 관할 법원 평균 응찰자 수(회원 기록, 5건부터 avg)
 export type CourtBidders = { n: number; avg: number | null; median: number | null; min_n: number };
 export const fetchCourtBidders = (id: string) =>
-  getJson<CourtBidders>(`/items/${encodeURIComponent(id)}/court-bidders`);
+  getGated<CourtBidders>(`/items/${encodeURIComponent(id)}/court-bidders`);
 // 관심도(경쟁 신호) — 적으면 서버가 비워 보냄
 export type Interest = { viewers_7d: number; watchers: number };
 export type SameHouse = {
@@ -331,7 +331,7 @@ export type AppraisalParts = {
   land_total_m2: number | null;
 };
 
-export const fetchItem = (id: string) => getJson<ItemDetail>(`/items/${encodeURIComponent(id)}`);
+export const fetchItem = (id: string) => getGated<ItemDetail>(`/items/${encodeURIComponent(id)}`);
 
 // 공매 상세(10/28, 설계서 4절) — /items/OB-… 이 돌려줌
 export type OnbidRound = {
@@ -393,7 +393,7 @@ export type OnbidNotice = {
   rows: { label: string; value: string }[];
 };
 export const fetchNotice = (id: string) =>
-  getJson<OnbidNotice>(`/items/${encodeURIComponent(id)}/notice`);
+  getGated<OnbidNotice>(`/items/${encodeURIComponent(id)}/notice`);
 export const isOnbid = (d: { source?: string }): d is OnbidDetail => d.source === "onbid";
 
 // DOC-01 원문 보기
@@ -443,10 +443,11 @@ export type ItemDocs = {
     sends: { date: string | null; text: string | null; result: string | null }[];
   } | null;
 };
-export const fetchDocs = (id: string) => getJson<ItemDocs>(`/items/${encodeURIComponent(id)}/docs`);
+export const fetchDocs = (id: string) =>
+  getGated<ItemDocs>(`/items/${encodeURIComponent(id)}/docs`);
 
 export const fetchBidCheck = (id: string, bid: number) =>
-  getJson<BidCheck>(`/items/${encodeURIComponent(id)}/bid-check?bid=${bid}`);
+  getGated<BidCheck>(`/items/${encodeURIComponent(id)}/bid-check?bid=${bid}`);
 
 export type CashBreakdown = {
   bid_krw: number;
@@ -539,7 +540,7 @@ export function fetchCalc(
   if (o.bid) q.set("bid", String(o.bid));
   if (o.loan != null) q.set("loan", String(o.loan));
   if (o.assume != null) q.set("assume", String(o.assume));
-  return getJson<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);
+  return getGated<Calc>(`/items/${encodeURIComponent(id)}/calc?${q.toString()}`);
 }
 
 // 입찰일 아침(BID-02)
@@ -563,7 +564,7 @@ export type BidDay = {
   checked_at: string | null;
 };
 export const fetchBidDay = (id: string) =>
-  getJson<BidDay>(`/items/${encodeURIComponent(id)}/bid-day`);
+  getGated<BidDay>(`/items/${encodeURIComponent(id)}/bid-day`);
 
 /** 물건 상세를 열었는데 현황조사가 없으면 서류 받기를 줄 세움(11/4 — 「자료 기다림」을 손님이 본 물건부터 채움). */
 export const requestDocs = (id: string) =>

@@ -1,13 +1,24 @@
-"""물건 목록·지역 (공개)."""
+"""물건 목록·지역 (공개) · 물건 상세 (로그인 · 이용권 · 횟수 한도 — services/access, 11/17)."""
 
 from datetime import date
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
-from aucs_api.services import docs, item_calc, item_detail, items, onbid_detail
+from aucs_api.auth.user import current_user_id
+from aucs_api.services import access, docs, item_calc, item_detail, items, onbid_detail
 
 router = APIRouter()
+
+
+def viewer(item_id: str, authorization: str = Header(default="")) -> str:
+    """상세를 볼 수 있는 회원인지(로그인 401 · 이용권 402)."""
+    uid = current_user_id(authorization)
+    access.allowed(uid, item_id)
+    return uid
+
+
+Viewer = Annotated[str, Depends(viewer)]
 
 
 @router.get("/items")
@@ -171,7 +182,8 @@ def post_docs_request(item_id: str) -> dict[str, bool]:
 
 
 @router.get("/items/{item_id}")
-def get_item(item_id: str) -> dict[str, Any]:
+def get_item(item_id: str, uid: Viewer) -> dict[str, Any]:
+    access.count_view(uid, item_id)
     if item_id.startswith("OB-"):  # 공매(온비드) — 10/28
         d = onbid_detail.detail(item_id, date.today())
         if not d:
@@ -184,7 +196,7 @@ def get_item(item_id: str) -> dict[str, Any]:
 
 
 @router.get("/items/{item_id}/docs")
-def get_item_docs(item_id: str) -> dict[str, Any]:
+def get_item_docs(item_id: str, _: Viewer) -> dict[str, Any]:
     """DOC-01 원문 보기 (현황조사서·문건송달내역)."""
     d = docs.item_docs(item_id)
     if d is None:
@@ -193,7 +205,7 @@ def get_item_docs(item_id: str) -> dict[str, Any]:
 
 
 @router.get("/items/{item_id}/bid-check")
-def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, Any]:
+def get_bid_check(item_id: str, _: Viewer, bid: Annotated[int, Query(ge=1)]) -> dict[str, Any]:
     d = item_calc.bid_check(item_id, bid)
     if d is None:
         raise HTTPException(404, "물건을 찾을 수 없어요")
@@ -201,7 +213,7 @@ def get_bid_check(item_id: str, bid: Annotated[int, Query(ge=1)]) -> dict[str, A
 
 
 @router.get("/items/{item_id}/court-bidders")
-def get_court_bidders(item_id: str) -> dict[str, Any]:
+def get_court_bidders(item_id: str, _: Viewer) -> dict[str, Any]:
     """관할 법원 평균 응찰자 수(회원 기록, 5건부터)."""
     from aucs_api.services.court_stats import court_bidders
 
@@ -209,7 +221,7 @@ def get_court_bidders(item_id: str) -> dict[str, Any]:
 
 
 @router.get("/items/{item_id}/notice")
-def get_notice(item_id: str) -> dict[str, Any]:
+def get_notice(item_id: str, _: Viewer) -> dict[str, Any]:
     """공매 공고문 보기(GM-01)."""
     from aucs_api.services.onbid_detail import notice_page
 
@@ -220,7 +232,7 @@ def get_notice(item_id: str) -> dict[str, Any]:
 
 
 @router.get("/items/{item_id}/bid-day")
-def get_bid_day(item_id: str) -> dict[str, Any]:
+def get_bid_day(item_id: str, _: Viewer) -> dict[str, Any]:
     d = item_calc.bid_day(item_id, date.today())
     if d is None:
         raise HTTPException(status_code=404, detail="없는 물건")
@@ -230,6 +242,7 @@ def get_bid_day(item_id: str) -> dict[str, Any]:
 @router.get("/items/{item_id}/calc")
 def get_calc(
     item_id: str,
+    _: Viewer,
     bid: Annotated[int | None, Query(ge=1)] = None,
     homes: Annotated[int, Query(ge=0, le=5)] = 0,
     first: bool = False,
