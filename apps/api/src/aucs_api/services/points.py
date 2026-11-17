@@ -27,6 +27,9 @@ _TODAY_SQL = """select kind, count(*) as n from app.contrib_uploads
                 where user_id = %(uid)s and points > 0
                   and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
                 group by kind"""
+# 끝난 사건: 사건의 모든 물건 매각기일 + 30일 지남 — 등기부 공개(registry.latest)와 같은 기준(11/18)
+_ENDED_SQL = """select not exists (select 1 from core.items i where i.case_id = %s
+                    and (i.sale_date is null or i.sale_date >= current_date - 30)) as ended"""
 _BALANCE_SQL = """select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
                        + coalesce(sum(delta) filter (where delta < 0), 0) as balance
                   from app.point_ledger where user_id = %(uid)s"""
@@ -151,16 +154,18 @@ def _grant(c: Any, uid: str, item_id: str, case_id: str, kind: str, sha: str, ma
            registry_upload_id: int | None = None, review: bool = False) -> dict[str, Any]:  # fmt: skip
     """올린 서류 한 건을 적고 포인트를 정함(같은 파일은 한 번만)."""
     t = _table(c)
-    q_today, q_prev = batch(c, [
+    q_today, q_prev, q_end = batch(c, [
         (_TODAY_SQL, {"uid": uid}),
         ("""select (now()::date - max(created_at)::date) as days from app.contrib_uploads
             where case_id = %s and kind = %s and points > 0""", (case_id, kind)),
+        (_ENDED_SQL, (case_id,)),
     ])  # fmt: skip
     today = {r["kind"]: int(r["n"]) for r in q_today.fetchall()}.get(kind, 0)
     prev = q_prev.fetchone()
     days = prev["days"] if prev else None
+    end = q_end.fetchone()
     res = points_for(kind, t, matched=matched, today_count=today, paid_before=days is not None,
-                     days_since_last_paid=days).value  # fmt: skip
+                     days_since_last_paid=days, case_ended=bool(end and end["ended"])).value  # fmt: skip
     pts = 0 if review else int(res["points"])
     status = "review" if review else ("ok" if matched else "rejected")
     r = c.execute(
@@ -249,16 +254,19 @@ def my_registry_points(uid: str, item_id: str) -> dict[str, Any] | None:
 def my_appraisal(uid: str, item_id: str) -> dict[str, Any] | None:
     """이 물건에 내가 마지막으로 올린 감정평가서(상세 화면 한 줄, 11/14): 확인 대기 · 받은 포인트 · 반려."""
     with connect() as c:
-        r = c.execute(
-            """select status, points, note, created_at from app.contrib_uploads
+        q_r, q_end = batch(c, [
+            ("""select status, points, note, created_at from app.contrib_uploads
                where user_id = %s and item_id = %s and kind = 'appraisal'
-               order by contrib_id desc limit 1""",
-            (uid, item_id),
-        ).fetchone()
+               order by contrib_id desc limit 1""", (uid, item_id)),
+            (_ENDED_SQL.replace("= %s", "= (select case_id from core.items where item_id = %s)", 1), (item_id,)),
+        ])  # fmt: skip
+        r = q_r.fetchone()
+        e = q_end.fetchone()
+    ended = bool(e and e["ended"])  # 끝난 사건 — 단추에 「300P」를 안 붙임(11/18)
     if not r:
-        return None
+        return {"ended": True} if ended else None
     return {"status": r["status"], "points": r["points"], "created_at": r["created_at"].isoformat(),
-            "why": "review" if r["status"] == "review" else r["note"]}  # fmt: skip
+            "why": "review" if r["status"] == "review" else r["note"], "ended": ended}  # fmt: skip
 
 
 def academy_progress(uid: str) -> list[str]:

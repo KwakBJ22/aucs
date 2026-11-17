@@ -499,6 +499,7 @@ export const copy = {
       limit: "오늘 받을 수 있는 건수를 다 채웠어요",
       already: "이미 다른 분이 올린 서류예요",
       same_file: "이미 올라온 파일이에요",
+      ended: "끝난 사건이라 포인트는 없어요",
       unreadable: "PDF를 읽지 못했어요",
       no_file: "파일을 받지 못했어요 · 다시 올려 주세요",
       no_item: "없는 물건이에요",
@@ -511,6 +512,9 @@ export const copy = {
     hereDone: (p: string) => `올린 감정평가서가 들어갔어요 · ${p} 받았어요`,
     hereDoneNoPoint: "올린 감정평가서가 들어갔어요",
     hereUploadShort: "받은 파일 올리기 · 300P",
+    // 끝난 사건(11/18) — 포인트 없이
+    hereUploadEnded: "받은 감정평가서 올리기",
+    hereUploadShortEnded: "받은 파일 올리기",
     herePendingShort: "올렸어요 · 확인 중",
     hereMine: (p: string) => `내가 올린 서류예요 · ${p} 받았어요`,
     hereMineNoPoint: "내가 올린 서류예요",

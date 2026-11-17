@@ -202,7 +202,12 @@ export type PointRow = {
 };
 export type PointResult = { ok?: boolean; points: number; why: string; found?: string[] };
 // 이 물건에 내가 올린 감정평가서(11/14): 확인 대기(review) · 받음(ok) · 반려(rejected). 올린 적 없으면 빈 것
-export type MyAppraisal = { status?: "review" | "ok" | "rejected"; points?: number; why?: string };
+export type MyAppraisal = {
+  status?: "review" | "ok" | "rejected";
+  points?: number;
+  why?: string;
+  ended?: boolean; // 끝난 사건 — 올려도 포인트 없음(11/18)
+};
 
 // 감정평가서 PDF 올리기: 등기부와 같이 보관함(appraisal-uploads/<회원>/…)에 바로 → API 가 받아 사건번호를 맞춰 봄
 export async function uploadAppraisal(

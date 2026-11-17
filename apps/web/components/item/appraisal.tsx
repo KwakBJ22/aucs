@@ -117,7 +117,8 @@ function AppraisalUpload({
     uploadAppraisal(token, itemId, f)
       .then((x) => {
         if (x.why === "review") setMine({ status: "review" });
-        else if (x.points || x.why === "first") setMine({ status: "ok", points: x.points });
+        else if (x.points || x.why === "first" || x.why === "ended")
+          setMine({ status: "ok", points: x.points, ended: x.why === "ended" });
         else if (x.why === "mismatch" && x.found?.[0]) setErr(p.mismatchFound(x.found[0]));
         else setErr(why(x.why, x.points));
       })
@@ -141,7 +142,15 @@ function AppraisalUpload({
         disabled={busy}
         onClick={() => file.current?.click()}
       >
-        {busy ? p.sending : compact ? p.hereUploadShort : p.hereUpload}
+        {busy
+          ? p.sending
+          : compact
+            ? mine.ended
+              ? p.hereUploadShortEnded
+              : p.hereUploadShort
+            : mine.ended
+              ? p.hereUploadEnded
+              : p.hereUpload}
       </button>
       <input
         ref={file}
