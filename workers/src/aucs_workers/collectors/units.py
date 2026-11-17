@@ -26,7 +26,10 @@ from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
 OP = "getBrExposPubuseAreaInfo"
-LETTER = {"에이": "A", "비": "B", "씨": "C", "디": "D"}
+LETTER = {"에이": "A", "비": "B", "씨": "C", "디": "D", "와이": "Y"}
+# 지하 호(11/18): 「지하층101호」 · 「지1층비122호」 · 「제지하2층 제비201호」 — 예전엔 숫자만으로 먼저 찾아 지상 같은 번호 호를
+# 잘못 잡았음(11건). 「22층비2210호」의 「비」는 지하가 아니라 글자(B동 · B호)라 층 글자로만 가림.
+UNDER = r"지하|지층|지\s*\d+\s*층"
 
 TARGETS_SQL = """
 select i.item_id, i.region_code, i.lot_no, i.building_desc
@@ -38,7 +41,11 @@ where to_regclass('core.building_units') is not null
   and i.building_desc ~ '[0-9]+\\s*호'
   and (u.item_id is null
        or (u.result = 'ok' and u.fetched_at < now() - interval '90 days')
-       or (u.result = 'none' and u.fetched_at < now() - interval '14 days'))
+       or (u.result = 'none' and u.fetched_at < now() - interval '14 days')
+       -- 11/18: 지하 호인데 지상 호를 잡아 둔 것은 다시 받음
+       or (u.result = 'ok' and i.building_desc ~ '(지하|지층|지 *[0-9]+ *층)'
+           and not exists (select 1 from jsonb_array_elements(coalesce(u.rows, '[]'::jsonb)) r
+                           where r->>'exposPubuseGbCdNm' = '전유' and r->>'flrGbCdNm' = '지하')))
 order by not exists (select 1 from app.watch_items w where w.item_id = i.item_id), i.sale_date, i.item_id
 limit %(cap)s
 """
@@ -50,16 +57,18 @@ def ho_names(desc: str) -> tuple[list[str], str | None]:
     if not ho:
         return [], None
     n = ho.group(1)
-    dong = re.search(r"(\d+|[가-힣A-Za-z])동\s", desc)
+    dong = re.search(r"(\d+|[가-힣A-Za-z])동[\s\-]", desc)  # 「201동-803호」도(11/18)
     floor = re.search(r"(\d+)\s*층\s*제?\s*" + re.escape(n) + r"\s*호", desc)
-    letter = re.search(r"(에이|비|씨|디)\s*\d+\s*호", desc)
+    letter = re.search(r"(에이|비|씨|디|와이)\s*-?\s*\d+\s*호", desc)  # 「디-520호」도(11/18)
     pre = LETTER.get(letter.group(1), "") if letter else ""
-    under = bool(re.search(r"지층|지하|비\d", desc))
-    names = [n, n + "호", "제" + n + "호"]
-    if pre:
-        names += [pre + n, pre + n + "호"]
-    elif under:
-        names.append("B" + n)
+    under = is_under(desc)
+    plain = [n, n + "호", "제" + n + "호"]
+    if under:  # 지하면 B 붙은 꼴부터(숫자만 먼저 찾으면 지상 같은 번호를 잡음)
+        names = ["B" + n, "B" + n + "호", "비" + n + "호", "지하" + n + "호", *plain]
+    elif pre:  # 글자 붙은 호(A303 · B-102)는 글자 꼴부터
+        names = [pre + n, pre + n + "호", pre + "-" + n, pre + "-" + n + "호", *plain]
+    else:
+        names = plain
     if floor:
         names.append(f"{floor.group(1)}층{n}호")
     seen: list[str] = []
@@ -67,6 +76,18 @@ def ho_names(desc: str) -> tuple[list[str], str | None]:
         if x not in seen:
             seen.append(x)
     return seen, dong.group(1) if dong else None
+
+
+def is_under(desc: str) -> bool:
+    return bool(re.search(UNDER, desc))
+
+
+def found(rows: list[dict[str, Any]], under: bool) -> bool:
+    """그 호의 전유 줄이 있나. 지하 호면 전유 줄이 지하여야 함(11/18)."""
+    return any(
+        r.get("exposPubuseGbCdNm") == "전유" and (not under or r.get("flrGbCdNm") == "지하")
+        for r in rows
+    )
 
 
 def pick(rows: list[dict[str, Any]], dong: str | None) -> list[dict[str, Any]]:
@@ -147,7 +168,7 @@ def main() -> None:
                                 conn.commit()
                                 raise
                             rows = pick(got, dong)
-                            if any(r.get("exposPubuseGbCdNm") == "전유" for r in rows):
+                            if found(rows, is_under(desc or "")):
                                 used = name
                                 break
                     save(conn, item_id, code, lot, used, rows if used else [])
