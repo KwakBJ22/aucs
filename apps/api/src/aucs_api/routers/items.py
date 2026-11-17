@@ -153,7 +153,7 @@ def get_home_feed(
             sigungu=sg,
             max_cash=max_cash,
             sort="deadline",
-            limit=20,
+            limit=80,  # 같은 사건은 3건까지만 남기고 20건으로 자름(아래 per_case)
             today=today,
             extra={"homes": homes},
         )
@@ -171,12 +171,26 @@ def get_home_feed(
         except Exception:  # noqa: BLE001 — 공매가 안 와도 홈은 그대로
             onbid_soon = None
         return {
-            "mine": {**base, **mine.result()},
+            "mine": per_case({**base, **mine.result()}),
             "onbid_soon": onbid_soon,
             "market": mk.result() if mk else None,
             "notices": notes.result(),
             **pk.result(),  # 오늘의 추천 · 마감 임박 · 다음 달 더 싸지는 물건(11/4)
         }
+
+
+def per_case(feed: dict[str, Any], keep: int = 3, limit: int = 20) -> dict[str, Any]:
+    """「나에게 맞는 물건」: 같은 사건은 앞에서 3건까지만(11/18 대표님) — 상가 한 사건 20칸이 칸을 다 채웠음."""
+    seen: dict[tuple[str, str], int] = {}
+    out = []
+    for it in feed.get("items") or []:
+        k = (it.get("court") or "", it.get("case_no") or "")
+        seen[k] = seen.get(k, 0) + 1
+        if seen[k] <= keep:
+            out.append(it)
+        if len(out) >= limit:
+            break
+    return {**feed, "items": out}
 
 
 class GuestAskIn(BaseModel):
