@@ -647,7 +647,7 @@ export const copy = {
     undo: "되돌리기",
   },
   pro: {
-    title: "전체 물건",
+    title: "통합검색",
     csv: "CSV 받기",
     pcHint: "넓은 화면(PC)에서 보기 좋게 만든 화면이에요",
     allSido: "서울·경기·인천",

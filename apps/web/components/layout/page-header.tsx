@@ -50,7 +50,7 @@ export function PageHeader({
       onClick={() => {
         const next = mode === "pro" ? "basic" : "pro";
         setMode(next);
-        router.push(next === "pro" ? "/pro/items" : "/home");
+        router.push(next === "pro" ? "/pro/map" : "/home"); // 전문가 첫 메뉴(11/17)
       }}
     >
       {mode === "pro" ? copy.mode.toBasic : copy.mode.toPro}

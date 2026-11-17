@@ -66,15 +66,7 @@ export const NAV: NavItem[] = [
     match: ["/points"],
     sub: [],
   },
-  {
-    key: "pro-items",
-    label: "전체 물건",
-    href: "/pro/items",
-    group: "pro",
-    ready: true,
-    match: ["/pro/items"],
-    sub: [],
-  },
+  // 전문가 메뉴 차례: 지도 분석 → 통합검색(예전 「전체 물건」) → …(11/17 대표님)
   {
     key: "pro-map",
     label: "지도 분석",
@@ -82,6 +74,15 @@ export const NAV: NavItem[] = [
     group: "pro",
     ready: true,
     match: ["/pro/map"],
+    sub: [],
+  },
+  {
+    key: "pro-items",
+    label: "통합검색",
+    href: "/pro/items",
+    group: "pro",
+    ready: true,
+    match: ["/pro/items"],
     sub: [],
   },
   {
@@ -133,8 +134,8 @@ export const TABS = [
 
 // 「전문가로」를 누르면 하단 탭이 이 다섯 칸으로 바뀜(11/17 대표님). 이름은 PC 머리 전문가 메뉴(NAV)와 같게.
 export const PRO_TABS = [
-  { key: "pro-items", label: "전체 물건", href: "/pro/items", match: ["/pro/items"] },
   { key: "pro-map", label: "지도 분석", href: "/pro/map", match: ["/pro/map"] },
+  { key: "pro-items", label: "통합검색", href: "/pro/items", match: ["/pro/items"] },
   { key: "compare", label: "비교함", href: "/compare", match: ["/compare"] },
   { key: "pro-cases", label: "사건·문건", href: "/pro/cases", match: ["/pro/cases"] },
   { key: "pro-market", label: "시장 분석", href: "/pro/market", match: ["/pro/market"] },
