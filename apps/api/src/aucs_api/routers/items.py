@@ -180,17 +180,17 @@ def get_home_feed(
 
 
 def per_case(feed: dict[str, Any], keep: int = 3, limit: int = 20) -> dict[str, Any]:
-    """「나에게 맞는 물건」: 같은 사건은 앞에서 3건까지만(11/18 대표님) — 상가 한 사건 20칸이 칸을 다 채웠음."""
+    """「나에게 맞는 물건」(11/18 대표님): 같은 사건은 3건까지만(상가 한 사건 20칸이 칸을 다 채웠음),
+    사진 있는 물건을 앞에 — 같은 쪽 안에서는 입찰일 가까운 순 그대로."""
     seen: dict[tuple[str, str], int] = {}
-    out = []
+    kept = []
     for it in feed.get("items") or []:
         k = (it.get("court") or "", it.get("case_no") or "")
         seen[k] = seen.get(k, 0) + 1
         if seen[k] <= keep:
-            out.append(it)
-        if len(out) >= limit:
-            break
-    return {**feed, "items": out}
+            kept.append(it)
+    out = [it for it in kept if it.get("photo")] + [it for it in kept if not it.get("photo")]
+    return {**feed, "items": out[:limit]}
 
 
 class GuestAskIn(BaseModel):

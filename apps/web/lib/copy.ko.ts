@@ -543,7 +543,6 @@ export const copy = {
       ["환불 규정", "/refund"],
     ] as [string, string | null][],
     soon: "준비 중",
-    pro: "전문가 버전", // 휴대폰 「내 정보」 — PC 머리의 전문가 메뉴와 같은 목록(11/17)
     pcTitle: "내 정보",
     hello: "내 정보",
     plan: "이용권·결제 내역",
