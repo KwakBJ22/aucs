@@ -1090,6 +1090,7 @@ export const copy = {
     search: "사건번호·주소",
     empty: "해당하는 사건이 없어요",
     pick: "왼쪽에서 사건을 고르세요",
+    backList: "← 목록",
     progress: "진행 판단",
     deadline: (d: string) => `배당요구 종기 ${d}`,
     flow: "문건 흐름",

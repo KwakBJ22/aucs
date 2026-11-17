@@ -4,11 +4,12 @@ import { Delayed, SkRows } from "@/components/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { fetchCase, fetchCases, type CaseDetail, type CaseRow } from "@/lib/api/pro";
 import { copy } from "@/lib/copy.ko";
 import { dday, todayKst, won } from "@/lib/format";
 import { PrintHead } from "@/components/print-head";
+import { useIsPc } from "@/lib/use-pc";
 
 const t = copy.proCases;
 const DOT = { high: "var(--red)", mid: "var(--orange)", low: "var(--faint)" } as const;
@@ -109,6 +110,35 @@ function Cases() {
   const [cats, setCats] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [d, setD] = useState<CaseDetail | null>(null);
+  const pc = useIsPc();
+  // 휴대폰(11/18 대표님): 누르면 상세만 한 화면으로 — 목록이 길어 아래에 열린 상세가 안 보였음.
+  // 열 때 보던 자리를 적어 두고, 「← 목록」 · 뒤로가기로 돌아오면 그 자리로.
+  const listY = useRef<number | null>(null);
+  const openedHere = useRef(false);
+  const open = (caseId: string) => {
+    if (pc) return go({ id: caseId });
+    listY.current = window.scrollY;
+    openedHere.current = true;
+    const p = new URLSearchParams(sp.toString());
+    p.set("id", caseId);
+    router.push(`/pro/cases?${p}`); // 뒤로가기로 목록에 돌아오게 push
+  };
+  const close = () => {
+    if (openedHere.current) router.back();
+    else go({ id: "" }); // 주소로 바로 들어온 경우
+  };
+  useEffect(() => {
+    if (pc) return;
+    if (id) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    openedHere.current = false;
+    const y = listY.current;
+    if (y == null) return;
+    listY.current = null;
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  }, [id, pc]);
 
   const go = (patch: Record<string, string>) => {
     const p = new URLSearchParams(sp.toString());
@@ -139,6 +169,25 @@ function Cases() {
       .then(setD)
       .catch(() => setD(null));
   }, [id]);
+
+  if (!pc && id)
+    return (
+      <main className="page pro-page">
+        <PageHeader title={t.title} />
+        <button type="button" className="link mb-8 no-print" onClick={close}>
+          {t.backList}
+        </button>
+        <section className="section m-0 print-area">
+          {d ? (
+            <Detail d={d} />
+          ) : (
+            <Delayed>
+              <SkRows n={8} />
+            </Delayed>
+          )}
+        </section>
+      </main>
+    );
 
   return (
     <main className="page pro-page">
@@ -181,7 +230,7 @@ function Cases() {
           {list?.map((c) => (
             <button
               key={c.case_id}
-              onClick={() => go({ id: c.case_id })}
+              onClick={() => open(c.case_id)}
               className="d-block w-full ta-left b-0 r-10 p-8"
               style={{ background: c.case_id === id ? "var(--blue-soft)" : "none" }}
             >

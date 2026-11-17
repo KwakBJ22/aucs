@@ -33,11 +33,32 @@ function Today({
 }) {
   const [x, setX] = useState<AcademyToday | null>(null);
   const [pick, setPick] = useState<number | null>(null);
+  // 고른 답은 이 기기에 기억(11/18 대표님) — 「이 물건 보기」 갔다 와도 다시 풀라고 하지 않게.
+  // 문제 종류마다 한 칸(마지막 문제만) — 새 문제가 오면 덮어씀
+  const slot = x ? `aucs_ac_pick:${x.kind}` : "";
+  const qid = x ? `${x.item_id ?? ""}|${x.q}` : "";
   useEffect(() => {
     load()
       .then(setX)
       .catch(() => undefined);
   }, [load]);
+  useEffect(() => {
+    if (!slot) return;
+    try {
+      const v = JSON.parse(localStorage.getItem(slot) ?? "null") as { q: string; i: number } | null;
+      if (v?.q === qid) setPick(v.i);
+    } catch {
+      /* 기억 못 하는 브라우저 — 그대로 */
+    }
+  }, [slot, qid]);
+  const choose = (i: number) => {
+    setPick(i);
+    try {
+      localStorage.setItem(slot, JSON.stringify({ q: qid, i }));
+    } catch {
+      /* 그대로 */
+    }
+  };
   if (!x) return null;
   return (
     <section className="section">
@@ -51,7 +72,7 @@ function Today({
           key={o}
           className={`ac-opt${pick === null ? "" : i === x.answer ? " right" : i === pick ? " wrong" : ""}`}
           disabled={pick !== null}
-          onClick={() => setPick(i)}
+          onClick={() => choose(i)}
         >
           {o}
         </button>
