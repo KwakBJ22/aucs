@@ -305,7 +305,10 @@ def parse_upload(upload_id: int, ocr: bool = True) -> None:
 
 
 def latest(uid: str, item_id: str) -> dict[str, Any] | None:
-    """이 물건에 내가 올린 마지막 등기부와 사다리. 내 것이 없으면 다른 회원이 올려 공개된 것(11/12)."""
+    """이 물건에 내가 올린 마지막 등기부와 사다리. 내 것이 없으면 다른 회원이 올려 공개된 것(11/12).
+
+    끝난 사건(사건의 모든 물건 매각기일 + 30일 지남)은 다른 회원이 올린 등기부를 보이지 않음 — 지지옥션 약관
+    제4조 4항(종결 사건 개인정보 서류 열람 제한)과 같은 수준(11/17 대표님). 원본은 지우지 않음."""
     case = "(select case_id from core.items where item_id = %(id)s)"
     with connect() as c:
         # 서로 상관없는 조회 5개를 한 번에 보냄(10/27 — 예전엔 차례로 5번 왕복)
@@ -315,7 +318,9 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
                 (
                     """select upload_id, file_name, status, method, rights, error, delete_after, created_at, address, address_ok, shared,
                               user_id = %(uid)s as mine
-                       from app.uploaded_registries where item_id = %(id)s and (user_id = %(uid)s or shared)
+                       from app.uploaded_registries where item_id = %(id)s and (user_id = %(uid)s or (shared and exists (
+                         select 1 from core.items i where i.case_id = (select case_id from core.items where item_id = %(id)s)
+                           and (i.sale_date is null or i.sale_date >= current_date - 30))))
                        order by (user_id = %(uid)s) desc, upload_id desc limit 1""",
                     {"uid": uid, "id": item_id},
                 ),
