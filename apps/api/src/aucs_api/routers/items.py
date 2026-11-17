@@ -6,7 +6,15 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from aucs_api.auth.user import current_user_id
-from aucs_api.services import access, docs, item_calc, item_detail, items, onbid_detail
+from aucs_api.services import (
+    academy_live,
+    access,
+    docs,
+    item_calc,
+    item_detail,
+    items,
+    onbid_detail,
+)
 
 router = APIRouter()
 
@@ -168,6 +176,12 @@ def get_home_feed(
             "notices": notes.result(),
             **pk.result(),  # 오늘의 추천 · 마감 임박 · 다음 달 더 싸지는 물건(11/4)
         }
+
+
+@router.get("/academy/today")
+def get_academy_today() -> dict[str, Any] | None:
+    """아카데미 오늘의 물건 문제(11/17, 공개 — 목록에 나오는 값만 씀)."""
+    return academy_live.today()
 
 
 @router.get("/regions")

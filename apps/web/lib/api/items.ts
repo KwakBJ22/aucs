@@ -216,6 +216,18 @@ export function fetchCollections(opts: {
 export type PublicNotice = { notice_id: number; title: string; body: string; start_at: string };
 export const fetchNotices = () => getJson<PublicNotice[]>("/notices");
 
+// 아카데미 오늘의 물건 문제(11/17) — 실제 물건 · 낙찰 결과로 하루 한 문제(공개)
+export type AcademyToday = {
+  kind: "rate" | "start";
+  q: string;
+  options: string[];
+  answer: number;
+  why: string;
+  item_id: string | null;
+  from: string;
+};
+export const fetchAcademyToday = () => getJson<AcademyToday | null>("/academy/today", 10 * 60_000);
+
 // 이용권 가격(기준표 plans — 관리자가 바꾸면 적용일부터, 11/12)
 export type Prices = Record<string, { month?: number; year?: number; one?: number }>;
 export const fetchPrices = () => getJson<Prices>("/plans/prices");

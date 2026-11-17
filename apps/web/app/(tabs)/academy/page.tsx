@@ -14,10 +14,52 @@ import {
   syncProgress,
   taskCount,
 } from "@/lib/academy";
+import { fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 
 const t = copy.academy;
+
+// 오늘의 물건 문제(11/17): 실제 물건 · 낙찰 결과로 하루 한 문제 — 정답은 계산으로만 나오는 것
+function Today() {
+  const [x, setX] = useState<AcademyToday | null>(null);
+  const [pick, setPick] = useState<number | null>(null);
+  useEffect(() => {
+    fetchAcademyToday()
+      .then(setX)
+      .catch(() => undefined);
+  }, []);
+  if (!x) return null;
+  return (
+    <section className="section">
+      <div className="d-flex jc-between ai-center gap-8">
+        <h2 className="m-0">{t.today}</h2>
+        <span className="sub fs-sm">{t.todaySub}</span>
+      </div>
+      <p className="ac-b mt-8">{x.q}</p>
+      {x.options.map((o, i) => (
+        <button
+          key={o}
+          className={`ac-opt${pick === null ? "" : i === x.answer ? " right" : i === pick ? " wrong" : ""}`}
+          disabled={pick !== null}
+          onClick={() => setPick(i)}
+        >
+          {o}
+        </button>
+      ))}
+      {pick !== null && (
+        <p className="ac-b mt-10">
+          <b>{pick === x.answer ? t.right : t.wrong}</b> {x.why}{" "}
+          {x.item_id && (
+            <Link href={`/item/${encodeURIComponent(x.item_id)}`} className="link">
+              {t.todayItem}
+            </Link>
+          )}
+        </p>
+      )}
+    </section>
+  );
+}
 
 function Meter({ label, n, total }: { label: string; n: number; total: number }) {
   return (
@@ -78,6 +120,8 @@ export default function Academy() {
           <p className="chip green mt-12">{t.allDone}</p>
         )}
       </section>
+
+      <Today />
 
       {LEVELS.map((lv) => {
         const stages = STAGES.filter((s) => s.level === lv.key);
