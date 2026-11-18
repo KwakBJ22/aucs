@@ -21,6 +21,8 @@ dev = ["ruff>=0.12", "mypy>=1.16", "pytest>=8.4", "httpx>=0.28"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# 대표님 PC 감정평가서 받기 도구(저장소 맨 위, 커밋 안 함) — 검사에서 뺌(11/18)
+extend-exclude = ["test_appraisal*.py", "test_selenium*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
