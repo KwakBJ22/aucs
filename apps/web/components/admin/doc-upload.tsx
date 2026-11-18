@@ -28,7 +28,7 @@ export function DocUpload() {
       .caseItems(token, q.trim())
       .then((x) => {
         setRows(x);
-        setOpen(x.length === 1 ? x[0].item_id : null);
+        setOpen(x.length === 1 ? (x[0]?.item_id ?? null) : null);
       })
       .catch((e) => say(errText(e)))
       .finally(() => setBusy(false));
