@@ -56,6 +56,19 @@ def test_budget_grows_after_quiet_days_and_shrinks_on_block() -> None:
     assert hour_share(2500) == 139
 
 
+def test_budget_ignores_older_clock() -> None:
+    # 11/18: 시계가 하루 늦은 곳이 읽어도 셈 · 한도 · 무사한 날을 건드리지 않음(날짜가 엇갈려 20,000 까지 오른 사고)
+    from aucs_workers.collectors.polite import roll
+
+    b = {"date": "2026-11-18", "count": 140, "hours": {"06": 140}, "cap": 3000, "ok_days": 6}
+    for _ in range(10):
+        b = roll(b, "2026-11-17", 2500)
+        b = roll(b, "2026-11-18", 2500)
+    assert b["date"] == "2026-11-18" and b["count"] == 140 and b["cap"] == 3000 and b["ok_days"] == 6
+    nxt = roll(b, "2026-11-19", 2500)
+    assert nxt["cap"] == 3600 and nxt["count"] == 0
+
+
 def test_hour_share_stops_hourly_job(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     from aucs_workers.collectors import polite as m
 

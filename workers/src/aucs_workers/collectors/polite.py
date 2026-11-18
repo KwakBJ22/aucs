@@ -54,8 +54,12 @@ def _budget_file(site: str) -> Path:
 
 
 def roll(b: dict[str, Any], today: str, start_cap: int) -> dict[str, Any]:
-    """하루가 바뀌면 센 수를 0으로 — 어제 안 막혔으면 무사한 날 +1, 3일 모이면 한도 20% 올림."""
-    if b.get("date") == today:
+    """하루가 바뀌면 센 수를 0으로 — 어제 안 막혔으면 무사한 날 +1, 3일 모이면 한도 20% 올림.
+
+    파일 날짜가 오늘보다 뒤면(시계가 늦은 곳 — UTC 인 대화창 VM 이 한국 0~9시에 읽을 때) 날이 바뀐 것으로
+    보지 않음(11/18 사고: 두 날짜가 번갈아 써서 셈이 0이 되고 한도가 몇 분 만에 20,000 까지 오름).
+    그래서 한도는 날짜가 앞으로 바뀔 때 한 번만 오름."""
+    if b.get("date") == today or str(b.get("date") or "") > today:
         b.setdefault("cap", start_cap)
         b.setdefault("hours", {})
         return b
