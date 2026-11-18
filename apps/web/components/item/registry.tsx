@@ -186,7 +186,8 @@ function pointsLine(why: string, pts: number): string {
   return typeof x === "function" ? x(copy.points.pt(pts)) : (x ?? "");
 }
 
-export function RegistryBox() {
+// admin: 관리자 「서류 올리기」(11/18) — 같은 칸, 포인트 안내만 뺌
+export function RegistryBox({ admin = false }: { admin?: boolean }) {
   const r = t.reg;
   const reg = useContext(RegCtx);
   const pc = useIsPc();
@@ -340,7 +341,7 @@ export function RegistryBox() {
               }}
             />
           </label>
-          <p className="sub fs-xs mb-0">{r.hint}</p>
+          {!admin && <p className="sub fs-xs mb-0">{r.hint}</p>}
         </>
       )}
       {err && <p className="c-red fs-sm">{err}</p>}

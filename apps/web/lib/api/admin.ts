@@ -332,6 +332,18 @@ export async function pointReviewPdf(token: string, id: number): Promise<string>
   return URL.createObjectURL(await res.blob());
 }
 
+// 서류 올리기(11/18): 사건번호로 찾은 물건
+export type CaseItem = {
+  item_id: string;
+  court: string;
+  case_no: string;
+  item_no: number | null;
+  address: string | null;
+  usage: string | null;
+  sale_date: string | null;
+  has_appraisal: boolean;
+};
+
 export const adminApi = {
   pointReviews: (t: string) => call<PointReview[]>(t, "/points/review"),
   decidePoint: (t: string, id: number, ok: boolean) =>
@@ -345,6 +357,8 @@ export const adminApi = {
   today: (t: string) => call<Today>(t, "/today"),
   jobs: (t: string) => call<Jobs>(t, "/jobs"),
   markStale: (t: string) => call<{ n: number }>(t, "/jobs/mark-stale", "POST"),
+  caseItems: (t: string, q: string) =>
+    call<CaseItem[]>(t, `/case-items?q=${encodeURIComponent(q)}`),
   appraisalTargets: (t: string, offset = 0) =>
     call<AppraisalTargets>(t, `/appraisal/targets?offset=${offset}`),
   ackJob: (t: string, job_id: string) => call(t, `/jobs/${enc(job_id)}/ack`, "POST"),

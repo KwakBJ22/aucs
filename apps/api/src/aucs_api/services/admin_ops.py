@@ -252,6 +252,40 @@ def appraisal_targets(offset: int = 0) -> dict[str, Any]:
     }
 
 
+def case_items(q: str) -> list[dict[str, Any]]:
+    """서류 올리기(11/18 대표님): 사건번호(2025타경12345 · 25-12345 · 12345)로 물건 찾기 — 30건까지, 입찰 늦은 순."""
+    from aucs_rules.courts import COURTS
+
+    from aucs_api.services.items import parse_query
+
+    pq = parse_query(q)
+    if not pq or pq["kind"] == "text":
+        return []
+    v = pq["case_no"] if pq["kind"] == "case" else "%" + pq["suffix"]
+    with connect() as c:
+        rows = c.execute(
+            """select i.item_id, c.court_code, c.case_no, i.item_no, i.address, i.usage_name, i.sale_date,
+                      exists (select 1 from core.appraisal_files f where f.case_id = i.case_id) as has_appraisal
+               from core.items i join core.cases c using (case_id)
+               where c.case_no like %s
+               order by i.sale_date desc nulls last, c.court_code, i.item_no limit 30""",
+            (v,),
+        ).fetchall()
+    return [
+        {
+            "item_id": r["item_id"],
+            "court": COURTS.get(r["court_code"], r["court_code"]),
+            "case_no": r["case_no"],
+            "item_no": r["item_no"],
+            "address": r["address"],
+            "usage": r["usage_name"],
+            "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
+            "has_appraisal": r["has_appraisal"],
+        }
+        for r in rows
+    ]
+
+
 # ── 2 작업·수집 ───────────────────────────────────────
 
 

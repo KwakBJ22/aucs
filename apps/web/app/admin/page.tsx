@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AdminGate } from "@/components/admin/gate";
 import { AdminProvider } from "@/components/admin/ctx";
 import { AppraisalGet } from "@/components/admin/appraisal-get";
+import { DocUpload } from "@/components/admin/doc-upload";
 import { BroadcastView } from "@/components/admin/broadcasts";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
@@ -21,6 +22,7 @@ const MENUS = [
   "today",
   "jobs",
   "review",
+  "upload",
   "members",
   "notices",
   "plans",
@@ -57,6 +59,7 @@ export default function AdminPage() {
                   <ReviewView />
                 </>
               )}
+              {m === "upload" && <DocUpload />}
               {m === "members" && <MembersView />}
               {m === "notices" && (
                 <>

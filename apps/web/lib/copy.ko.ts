@@ -500,6 +500,7 @@ export const copy = {
       already: "이미 다른 분이 올린 서류예요",
       same_file: "이미 올라온 파일이에요",
       ended: "끝난 사건이라 포인트는 없어요",
+      admin: "관리자가 올린 서류라 포인트는 없어요",
       unreadable: "PDF를 읽지 못했어요",
       no_file: "파일을 받지 못했어요 · 다시 올려 주세요",
       no_item: "없는 물건이에요",
@@ -1920,6 +1921,7 @@ export const copy = {
       today: "오늘",
       jobs: "작업·수집",
       review: "자료 검수",
+      upload: "서류 올리기",
       members: "회원",
       notices: "공지·알림",
       plans: "이용권·포인트",
@@ -2013,6 +2015,17 @@ export const copy = {
     add: "더하기",
     remove: "빼기",
     removeAsk: "관리자에서 뺄까요?",
+    // 서류 올리기(11/18 대표님): 손님 물건 화면과 같은 칸 · 포인트 없음
+    upload: {
+      ask: "사건번호(2025타경12345 · 25-12345 · 12345)",
+      go: "찾기",
+      none: "찾은 물건이 없어요",
+      note: "손님 물건 화면과 같은 칸이에요 · 관리자가 올린 서류는 포인트가 없어요",
+      item: (n: number | null) => (n ? `물건 ${n}` : ""),
+      hasAppraisal: "감정평가서 있음",
+      appraisal: "감정평가서",
+      registry: "등기부등본",
+    },
     getAppraisal: {
       title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
       how: "받은 파일을 PC의 「D:\\Auction\\감정평가서」 폴더에 두면 5분 안에 알아서 올라가요 · 올라간 사건은 여기서 빠져요",

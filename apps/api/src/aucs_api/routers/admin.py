@@ -300,6 +300,12 @@ def get_appraisal_targets(_: Any_, offset: int = Query(default=0, ge=0)) -> dict
     return admin_ops.appraisal_targets(offset)
 
 
+# 3-3 서류 올리기(11/18 대표님): 사건번호로 물건을 찾아 손님 화면과 같은 칸으로 감정평가서 · 등기부를 올림(포인트 없음)
+@router.get("/case-items")
+def get_case_items(_: Any_, q: str = Query(default="", max_length=30)) -> list[dict[str, Any]]:
+    return admin_ops.case_items(q)
+
+
 # 5-2 포인트 벌기: 글 없는 그림 감정평가서 확인(11/12)
 @router.get("/points/review")
 def get_points_review(_: Any_) -> list[dict[str, Any]]:

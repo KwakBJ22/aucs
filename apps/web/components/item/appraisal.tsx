@@ -64,14 +64,17 @@ export function AppraisalPoints({
 // 물건 상세에서 바로 올리기(11/14 대표님): 법원에서 받은 파일을 이 자리에서 올리고, 어떻게 됐는지 이 자리에 남김
 // (전에는 포인트 화면으로 가야 했고, 올린 뒤 결과가 한 번 뜨고 사라져 올렸는지 알 수 없었음)
 // compact: 머리 서류 줄의 작은 단추 · statusOnly: 원본이 이미 있을 때 「내가 올림」만(11/14 — 올린 뒤 표시가 사라져 안 올라간 줄 앎)
-function AppraisalUpload({
+// admin: 관리자 「서류 올리기」(11/18) — 같은 칸, 포인트 글만 뺌
+export function AppraisalUpload({
   itemId,
   compact = false,
   statusOnly = false,
+  admin = false,
 }: {
   itemId: string;
   compact?: boolean;
   statusOnly?: boolean;
+  admin?: boolean;
 }) {
   const p = copy.points;
   const { session } = useSession();
@@ -117,7 +120,7 @@ function AppraisalUpload({
     uploadAppraisal(token, itemId, f)
       .then((x) => {
         if (x.why === "review") setMine({ status: "review" });
-        else if (x.points || x.why === "first" || x.why === "ended")
+        else if (x.points || x.why === "first" || x.why === "ended" || x.why === "admin")
           setMine({ status: "ok", points: x.points, ended: x.why === "ended" });
         else if (x.why === "mismatch" && x.found?.[0]) setErr(p.mismatchFound(x.found[0]));
         else setErr(why(x.why, x.points));
@@ -148,7 +151,7 @@ function AppraisalUpload({
             ? mine.ended
               ? p.hereUploadShortEnded
               : p.hereUploadShort
-            : mine.ended
+            : mine.ended || admin
               ? p.hereUploadEnded
               : p.hereUpload}
       </button>

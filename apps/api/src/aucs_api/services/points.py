@@ -154,11 +154,12 @@ def _grant(c: Any, uid: str, item_id: str, case_id: str, kind: str, sha: str, ma
            registry_upload_id: int | None = None, review: bool = False) -> dict[str, Any]:  # fmt: skip
     """올린 서류 한 건을 적고 포인트를 정함(같은 파일은 한 번만)."""
     t = _table(c)
-    q_today, q_prev, q_end = batch(c, [
+    q_today, q_prev, q_end, q_adm = batch(c, [
         (_TODAY_SQL, {"uid": uid}),
         ("""select (now()::date - max(created_at)::date) as days from app.contrib_uploads
             where case_id = %s and kind = %s and points > 0""", (case_id, kind)),
         (_ENDED_SQL, (case_id,)),
+        ("select 1 from app.admins where user_id = %s", (uid,)),
     ])  # fmt: skip
     today = {r["kind"]: int(r["n"]) for r in q_today.fetchall()}.get(kind, 0)
     prev = q_prev.fetchone()
@@ -166,7 +167,11 @@ def _grant(c: Any, uid: str, item_id: str, case_id: str, kind: str, sha: str, ma
     end = q_end.fetchone()
     res = points_for(kind, t, matched=matched, today_count=today, paid_before=days is not None,
                      days_since_last_paid=days, case_ended=bool(end and end["ended"])).value  # fmt: skip
-    pts = 0 if review else int(res["points"])
+    # 관리자가 올린 서류는 손님과 같이 넣되 포인트는 주지 않음(11/18 대표님)
+    admin = q_adm.fetchone() is not None
+    if admin and not review and matched:
+        res = {**res, "why": "admin"}
+    pts = 0 if review or admin else int(res["points"])
     status = "review" if review else ("ok" if matched else "rejected")
     r = c.execute(
         """insert into app.contrib_uploads (user_id, item_id, case_id, kind, registry_upload_id, sha256, status, points, note, decided_at)
