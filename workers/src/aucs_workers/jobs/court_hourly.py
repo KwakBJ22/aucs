@@ -76,7 +76,22 @@ def _details_left() -> bool:
 # 11/18 대표님: 법원이 그날 물건을 몇 시까지 다 올리는지 재기 — 저녁에 법원 목록을 한 번 더 받고,
 #   다음 날 06:00 아침 묶음에서 새 사건이 더 나오는지 센다. 하루씩 한 시간 당김(토·일은 법원이 안 올림).
 #   안전한 시각이 정해지면 그 시각~24시를 새 물건 채우기로 바꿈. 아침 06:00 묶음은 그대로.
-EVENING_PROBE = {"2026-11-18": 20, "2026-11-19": 19, "2026-11-20": 18, "2026-11-23": 17}
+# 11/18 20시는 하루 한도가 먼저 다 차서 못 잼 → 11/19 20시로 다시(대표님), 그 뒤 한 시간씩 당김
+EVENING_PROBE = {"2026-11-19": 20, "2026-11-20": 19, "2026-11-23": 18, "2026-11-24": 17}
+PROBE_RESERVE = 450  # 저녁 목록 한 번(수도권 약 330쪽) 몫 — 시험 날엔 그 시각 전까지 매시 수집이 이만큼 남겨 둠
+
+
+
+def probe_reserved() -> bool:
+    """오늘 시험이 아직 남았고 하루 한도에서 남은 몫이 시험 몫 아래면 True(이번 시간 매시 수집은 쉼, 11/19)."""
+    h = EVENING_PROBE.get(datetime.now().date().isoformat())
+    if h is None or datetime.now().hour >= h:
+        return False
+    try:
+        b = Polite(site="court", jitter=False)._load()[1]
+        return int(b["cap"]) - int(b["count"]) < PROBE_RESERVE
+    except Exception:  # noqa: BLE001 — 모르면 지금처럼
+        return False
 
 
 def evening_probe() -> None:
@@ -106,6 +121,9 @@ def main() -> None:
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
         evening_probe()
+        if probe_reserved():
+            print(f"저녁 목록 시험 몫({PROBE_RESERVE}번)을 남겨 두려고 이번 시간은 쉼", flush=True)
+            return
         share = hour_share(_cap())
         # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)
         new_spare = 0 if _new_left() else 40
