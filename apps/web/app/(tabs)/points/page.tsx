@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DDay } from "@/components/dday";
-import { OriginalLink } from "@/components/item/appraisal";
 import { PageHeader } from "@/components/layout/page-header";
 import { NeedLogin } from "@/components/need-login";
 import { Delayed, SkRows } from "@/components/skeleton";
 import {
   meApi,
-  uploadAppraisal,
   uploadRegistry,
   type DocKind,
   type PointRow,
@@ -30,16 +28,11 @@ const iros = () => {
   if (/iphone|ipad|ipod/i.test(ua)) return "https://apps.apple.com/kr/app/id952161112";
   return "https://www.iros.go.kr/index.jsp";
 };
-const KINDS: DocKind[] = ["registry", "appraisal"];
+// 11/18 대표님: 감정평가서 올리기는 손님 화면에서 뺌 — 등기부만
+const KINDS: DocKind[] = ["registry"];
 
 const dDay = (iso: string | null) =>
   iso ? Math.round((parseTime(iso).getTime() - new Date().setHours(0, 0, 0, 0)) / 864e5) : null;
-
-function resultText(why: string, pts: number): string {
-  const r = t.result[why];
-  if (typeof r === "function") return r(t.pt(pts));
-  return r ?? why;
-}
 
 // 포인트 벌기(11/12 대표님): 서류가 빈 물건 → 맡기기(10분) → 받는 곳 → 올리기 → 맞으면 포인트
 export default function PointsPage() {
@@ -124,10 +117,8 @@ export default function PointsPage() {
       setOpen(null);
       load();
     };
-    (kind === "registry"
-      ? uploadRegistry(token, r.item_id, f).then(() => done(t.registrySent))
-      : uploadAppraisal(token, r.item_id, f).then((x) => done(resultText(x.why, x.points)))
-    )
+    uploadRegistry(token, r.item_id, f)
+      .then(() => done(t.registrySent))
       .catch((e: Error) => setNotice(e.message))
       .finally(() => setBusy(false));
   };
@@ -170,9 +161,7 @@ export default function PointsPage() {
         <div className="sub m-0">{t.balance}</div>
         <div className="item-price">{sum ? t.pt(sum.balance) : "-"}</div>
         {notice && <div className="bg-panel r-14 p-12 mt-10 fs-md">{notice}</div>}
-        {sum && (
-          <p className="sub mt-4 mb-0">{t.today(sum.today.registry + sum.today.appraisal)}</p>
-        )}
+        {sum && <p className="sub mt-4 mb-0">{t.today(sum.today.registry)}</p>}
       </section>
 
       <section className="section">
@@ -210,7 +199,7 @@ export default function PointsPage() {
             {open?.id === r.item_id && (
               <div className="bg-panel r-14 p-12 mt-8">
                 <div className="fs-sm fw-6">{t.left(Math.floor(leftSec / 60), leftSec % 60)}</div>
-                {open.kind === "registry" ? (
+                {open.kind === "registry" && (
                   <>
                     {/* 인터넷등기소는 열람 화면으로 바로 가는 주소가 없음(첫 화면 검색칸이 열람 입구) → 주소를 복사해 감 */}
                     <a
@@ -227,8 +216,6 @@ export default function PointsPage() {
                     </a>
                     <p className="sub fs-sm mt-6">{t.registryHint}</p>
                   </>
-                ) : (
-                  <OriginalLink court={r.court} caseNo={r.case_no} />
                 )}
                 <div className="btn-pair mt-10">
                   <button

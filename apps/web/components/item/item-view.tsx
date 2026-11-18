@@ -186,16 +186,10 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             </span>
           ))}
           {/* 감정평가서(11/11 대표님 — 어디서 보는지 안 보였음): 서류 줄 끝에 바로 */}
-          <OriginalLink
-            pdf={d.appraisal?.pdf_url}
-            court={d.court}
-            caseNo={d.case_no}
-            itemId={closed ? undefined : d.item_id}
-            compact
-          />
+          <OriginalLink pdf={d.appraisal?.pdf_url} court={d.court} caseNo={d.case_no} compact />
         </div>
       </section>
-      {!closed && <PointsBand id={d.item_id} reg={reg} pdf={d.appraisal?.pdf_url} />}
+      {!closed && <PointsBand id={d.item_id} reg={reg} />}
 
       <div className="pc-grid g-14-62-24">
         {pc && (
@@ -283,12 +277,10 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
 }
 
 // 서류가 빈 물건이면 상세 맨 위에 「채우고 포인트 받기」 띠(11/12 대표님 — 상세에서도 잘 보이게)
-function PointsBand({ id, reg, pdf }: { id: string; reg: MyReg; pdf?: string | null }) {
+// 11/18 대표님: 감정평가서 올리기를 손님 화면에서 뺌 → 등기부만
+function PointsBand({ id, reg }: { id: string; reg: MyReg }) {
   const p = copy.points;
-  const parts = [
-    ...(reg.u ? [] : [p.heroPerks[0]?.join(" ") ?? ""]),
-    ...(pdf ? [] : [p.heroPerks[1]?.join(" ") ?? ""]),
-  ];
+  const parts = reg.u ? [] : [p.heroPerks[0]?.join(" ") ?? ""];
   if (!parts.length) return null;
   return (
     <Link href={`/points?item=${encodeURIComponent(id)}`} className="pt-band">

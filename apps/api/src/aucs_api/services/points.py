@@ -64,8 +64,7 @@ _BOARD_WHERE = """
 from core.items i join core.cases c using (case_id)
 where i.display_policy = 'public' and i.sale_date between current_date and current_date + 30
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
-  and (not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
-       or not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id))
+  and not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
   and (%(item)s::text is null or i.item_id = %(item)s)
 """
 _BOARD_SQL = (
@@ -88,7 +87,7 @@ def _row(r: dict[str, Any]) -> dict[str, Any] | None:
     """한 줄 → 화면 줄. 남이 맡긴 서류는 빼고, 둘 다 남이 맡겼으면 None."""
     holds = r["holds"] or {}
     need = {}
-    for k in ("registry", "appraisal"):
+    for k in ("registry",):  # 11/18 대표님: 감정평가서는 손님 화면에서 뺌 — 등기부만
         if not r[f"need_{k}"]:
             continue
         h = holds.get(k)
