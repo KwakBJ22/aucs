@@ -20,10 +20,12 @@ export function AppraisalPoints({
   a,
   court,
   caseNo,
+  itemId,
 }: {
   a: NonNullable<ItemDetail["appraisal"]>;
   court: string;
   caseNo: string;
+  itemId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const c = t.appraisal;
@@ -54,12 +56,11 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} />
+      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} itemId={itemId} earn />
     </div>
   );
 }
 
-// 11/18 대표님: 손님 화면에서는 감정평가서 올리기를 뺌(등기부만) — 지금은 관리자 「서류 올리기」만 씀
 // 물건 상세에서 바로 올리기(11/14 대표님): 법원에서 받은 파일을 이 자리에서 올리고, 어떻게 됐는지 이 자리에 남김
 // (전에는 포인트 화면으로 가야 했고, 올린 뒤 결과가 한 번 뜨고 사라져 올렸는지 알 수 없었음)
 // compact: 머리 서류 줄의 작은 단추 · statusOnly: 원본이 이미 있을 때 「내가 올림」만(11/14 — 올린 뒤 표시가 사라져 안 올라간 줄 앎)
@@ -178,11 +179,15 @@ export function OriginalLink({
   court,
   caseNo,
   compact = false,
+  earn = false,
+  itemId,
 }: {
   pdf?: string | null;
   court: string;
   caseNo: string;
+  itemId?: string; // 있으면 이 자리에서 바로 올림(물건 상세, 11/14)
   compact?: boolean; // 머리 서류 줄에 놓는 작은 단추(11/11) — 안내 글 없이
+  earn?: boolean; // 원본이 없을 때 「올리면 500P」(포인트 벌기로, 11/12)
 }) {
   const [copied, setCopied] = useState(false);
   const c = t.appraisal;
@@ -191,9 +196,12 @@ export function OriginalLink({
   const cls = compact ? "btn soft sm" : "btn soft mt-10";
   if (pdf)
     return (
-      <a className={cls} href={pdf} target="_blank" rel="noreferrer">
-        {compact ? c.short : c.original}
-      </a>
+      <>
+        <a className={cls} href={pdf} target="_blank" rel="noreferrer">
+          {compact ? c.short : c.original}
+        </a>
+        {itemId && !compact && <AppraisalUpload itemId={itemId} statusOnly />}
+      </>
     );
   return (
     <>
@@ -215,6 +223,15 @@ export function OriginalLink({
         <p className={`sub fs-sm ${compact ? "w-full m-0" : "mt-6"}`}>
           {copied ? c.copied(court, year, num) : c.courtHint(court, year, num)}
         </p>
+      )}
+      {itemId ? (
+        <AppraisalUpload itemId={itemId} compact={compact} />
+      ) : (
+        earn && (
+          <Link href="/points" className="link fs-sm mt-6 d-inline-block">
+            {copy.points.earn}
+          </Link>
+        )
       )}
     </>
   );

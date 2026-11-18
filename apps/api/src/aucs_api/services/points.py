@@ -64,7 +64,8 @@ _BOARD_WHERE = """
 from core.items i join core.cases c using (case_id)
 where i.display_policy = 'public' and i.sale_date between current_date and current_date + 30
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
-  and not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
+  and (not exists (select 1 from app.uploaded_registries r where r.item_id = i.item_id and r.shared)
+       or not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id))
   and (%(item)s::text is null or i.item_id = %(item)s)
 """
 _BOARD_SQL = (
@@ -87,7 +88,7 @@ def _row(r: dict[str, Any]) -> dict[str, Any] | None:
     """한 줄 → 화면 줄. 남이 맡긴 서류는 빼고, 둘 다 남이 맡겼으면 None."""
     holds = r["holds"] or {}
     need = {}
-    for k in ("registry",):  # 11/18 대표님: 감정평가서는 손님 화면에서 뺌 — 등기부만
+    for k in ("registry", "appraisal"):
         if not r[f"need_{k}"]:
             continue
         h = holds.get(k)
@@ -377,6 +378,20 @@ def save_appraisal(uid: str, item_id: str, path: str) -> dict[str, Any]:
 
     from aucs_api.services.registry import take_from_storage
 
+    # 11/19 대표님: 한 사람 하루 감정평가서 올리기 한도(기준표 daily_max.appraisal) — 넘으면 받지 않음(법원 차단 예방, 관리자 빼고)
+    with connect() as c:
+        q_t, q_n, q_a = batch(c, [
+            (_TABLE_SQL, None),
+            ("""select count(*) as n from app.contrib_uploads
+                where user_id = %s and kind = 'appraisal'
+                  and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date""", (uid,)),
+            ("select 1 from app.admins where user_id = %s", (uid,)),
+        ])  # fmt: skip
+        t = q_t.fetchone()
+        cap = int(((dict(t["value"]) if t else {}).get("daily_max") or {}).get("appraisal") or 0)
+        n = q_n.fetchone()
+        if not q_a.fetchone() and cap and n and int(n["n"]) >= cap:
+            return {"ok": False, "points": 0, "why": "day_limit"}
     raw = take_from_storage(uid, path, APPRAISAL_IN)
     if raw is None:
         return {"ok": False, "why": "no_file"}
