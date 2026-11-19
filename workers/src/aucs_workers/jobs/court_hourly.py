@@ -83,13 +83,17 @@ PROBE_RESERVE = 450  # 저녁 목록 한 번(수도권 약 330쪽) 몫 — 시�
 
 
 def probe_reserved() -> bool:
-    """오늘 시험이 아직 남았고 하루 한도에서 남은 몫이 시험 몫 아래면 True(이번 시간 매시 수집은 쉼, 11/19)."""
+    """오늘 시험이 아직 남았고, 이번 시간 몫까지 쓰면 남은 몫이 시험 몫 아래가 되면 True(이번 시간 매시 수집은 쉼).
+
+    11/19: 처음엔 「지금 남은 몫 < 450」만 봐서 18시에 482가 남은 채 돌고 200번을 써 20시 시험에 282번만 남았음
+    → 이번 시간 몫(hour_share)을 쓴 뒤 기준으로 봄."""
     h = EVENING_PROBE.get(datetime.now().date().isoformat())
     if h is None or datetime.now().hour >= h:
         return False
     try:
         b = Polite(site="court", jitter=False)._load()[1]
-        return int(b["cap"]) - int(b["count"]) < PROBE_RESERVE
+        cap = int(b["cap"])
+        return cap - int(b["count"]) - hour_share(cap) < PROBE_RESERVE
     except Exception:  # noqa: BLE001 — 모르면 지금처럼
         return False
 
