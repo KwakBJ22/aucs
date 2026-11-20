@@ -198,7 +198,7 @@ def main() -> None:
                                 raise SystemExit(1) from e
                             say(f"  ! {name} {year} {sgg}: {e} — 건너뜀(다음에 다시)")
                             continue
-                        except (httpx.HTTPError, ValueError) as e:
+                        except Exception as e:  # noqa: BLE001 — 끊김 · 깨진 응답(XML) 등 무엇이든 그 칸만 건너뛰고 로그에 남김
                             # 11/21 04:45 인터넷이 끊겨(잠자기 등) 프로그램이 통째로 멈췄던 것 → 1분 쉬고 그 칸만 건너뜀
                             say(
                                 f"  ! {name} {year} {sgg}: {type(e).__name__} {e} — 1분 쉬고 건너뜀"
