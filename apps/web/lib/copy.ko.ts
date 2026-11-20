@@ -923,6 +923,29 @@ export const copy = {
     remove: "지우기",
     private: "나만 볼 수 있어요 · 남의 집 안이나 사람 얼굴은 찍지 마세요",
   },
+  // 실거래 전체 보기(11/21) — 상세 「얼마짜리인가」에서 국토부 사이트 대신 옥스 안에서
+  itemTrades: {
+    title: "실거래 전체 보기",
+    link: "실거래 전체 보기",
+    head: (name: string | null | undefined, built: number | null | undefined) =>
+      [name, built ? `${built}년 준공` : null].filter(Boolean).join(" · "),
+    area: (a: number) => `${a}㎡`,
+    areaNote: "전용면적(㎡ 반올림)마다 따로 봐요",
+    chart: "해마다 평균 매매가 · 옅은 띠는 최저~최고 · 빨간 점은 이 단지 낙찰(같은 면적)",
+    years: "해마다 매매",
+    yearRow: (y: number, n: number) => `${y}년 · ${n}건`,
+    range: (lo: string, hi: string) => `${lo} ~ ${hi}`,
+    recent: "최근 2년 거래",
+    sale: "매매",
+    jeonse: "전세",
+    wolse: "월세",
+    floor: (f: number) => `${f}층`,
+    more: (n: number) => `모두 보기(${n}건)`,
+    auctions: "같은 단지 지난 낙찰",
+    none: "이 단지의 지난 매매 기록을 찾지 못했어요",
+    basis: (last: string | null | undefined) =>
+      `국토교통부 실거래가 공개 자료 · 2006년 1월${last ? ` ~ ${last.replace("-", "년 ")}월` : ""} 계약 · 해제된 거래는 빼요`,
+  },
   onbidNotice: {
     title: "공고문",
     open: "온비드 공고 원문",

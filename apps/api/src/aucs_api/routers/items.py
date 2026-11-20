@@ -277,6 +277,19 @@ def get_court_bidders(item_id: str, _: Viewer) -> dict[str, Any]:
     return court_bidders(item_id) or {"n": 0, "avg": None, "median": None, "min_n": 5}
 
 
+@router.get("/items/{item_id}/trades")
+def get_item_trades(
+    item_id: str, _: Viewer, area: Annotated[int | None, Query(ge=1, le=100000)] = None
+) -> dict[str, Any]:
+    """실거래 전체 보기(11/21): 같은 단지 매매 2006년부터(해마다) + 최근 2년 한 건씩 + 같은 단지 낙찰."""
+    from aucs_api.services.item_trades import item_trades
+
+    d = item_trades(item_id, area, date.today())
+    if d is None:
+        raise HTTPException(404, "같은 단지 거래를 찾을 수 없어요")
+    return d
+
+
 @router.get("/items/{item_id}/notice")
 def get_notice(item_id: str, _: Viewer) -> dict[str, Any]:
     """공매 공고문 보기(GM-01)."""

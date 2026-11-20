@@ -262,6 +262,26 @@ export type Question = {
 export type CourtBidders = { n: number; avg: number | null; median: number | null; min_n: number };
 export const fetchCourtBidders = (id: string) =>
   getGated<CourtBidders>(`/items/${encodeURIComponent(id)}/court-bidders`);
+// 실거래 전체 보기(11/21): 같은 단지 매매 2006년부터(해마다) + 최근 2년 한 건씩 + 같은 단지 낙찰
+export type ItemTrades = {
+  name?: string | null;
+  built?: number | null;
+  last?: string | null; // 요약에 든 마지막 계약 달 「2026-10」
+  areas: { area: number; n: number }[];
+  area: number | null;
+  years: { y: number; n: number; low: number; avg: number; high: number }[];
+  recent: {
+    kind: "sale" | "lease";
+    date: string;
+    floor: number | null;
+    price: number | null;
+    deposit: number | null;
+    rent: number | null;
+  }[];
+  auctions: { date: string; price: number; area: number | null; unit: string | null }[];
+};
+export const fetchItemTrades = (id: string, area?: number | null) =>
+  getGated<ItemTrades>(`/items/${encodeURIComponent(id)}/trades${area ? `?area=${area}` : ""}`);
 // 관심도(경쟁 신호) — 적으면 서버가 비워 보냄
 export type Interest = { viewers_7d: number; watchers: number };
 export type SameHouse = {

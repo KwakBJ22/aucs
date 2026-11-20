@@ -13,6 +13,7 @@ import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { t } from "@/components/item/shared";
 import { GoLinks } from "@/components/item/go-links";
 import { useState } from "react";
+import Link from "next/link";
 
 const TENANTS_FIRST = 5;
 
@@ -267,7 +268,18 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             ))}
           </>
         )}
-        <GoLinks keys={["rt", "naver", "valuemap", "disco"]} d={d} />
+        {/* 지난 실거래 요약이 있는 단지(11/21)는 국토부 사이트 대신 옥스 안 「실거래 전체 보기」 */}
+        {b.history_n > 0 && (
+          <Link className="link fs-sm" href={`/item/${encodeURIComponent(d.item_id)}/trades`}>
+            {copy.itemTrades.link}
+          </Link>
+        )}
+        <GoLinks
+          keys={
+            b.history_n > 0 ? ["naver", "valuemap", "disco"] : ["rt", "naver", "valuemap", "disco"]
+          }
+          d={d}
+        />
         {b.complex && <ComplexBlock cx={b.complex} />}
         <GoLinks keys={["kb", "kapt"]} d={d} />
       </>
