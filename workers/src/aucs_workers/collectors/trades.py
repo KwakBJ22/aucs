@@ -31,7 +31,8 @@ BASE = "https://apis.data.go.kr/1613000"
 TYPES = {
     "apt_sale": ("RTMSDataSvcAptTrade", "getRTMSDataSvcAptTrade", "sale", "apt"),
     "apt_lease": ("RTMSDataSvcAptRent", "getRTMSDataSvcAptRent", "lease", "apt"),
-    "rowhouse_sale": ("RTMSDataSvcRHTrade", "getRTMSDataSvcRHTrade", "sale", "rowhouse"),
+    # 11/21: 운영계정 하루 100만은 새 「…2」 주소에만 걸림(옛 주소는 개발 한도 그대로) — 응답 칸 같음 확인
+    "rowhouse_sale": ("RTMSDataSvcRHTrade2", "getRTMSDataSvcRHTrade2", "sale", "rowhouse"),
     "rowhouse_lease": ("RTMSDataSvcRHRent", "getRTMSDataSvcRHRent", "lease", "rowhouse"),
     "house_sale": ("RTMSDataSvcSHTrade", "getRTMSDataSvcSHTrade", "sale", "house"),
     "house_lease": ("RTMSDataSvcSHRent", "getRTMSDataSvcSHRent", "lease", "house"),
