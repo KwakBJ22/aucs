@@ -140,6 +140,14 @@ def fetch_month(
         page += 1
 
 
+def say(msg: str) -> None:
+    """화면에도, 파일(실거래\\archive.log)에도 — 창을 닫아도 어디서 멈췄는지 남게(11/21)."""
+    print(msg, flush=True)
+    ROOT.mkdir(parents=True, exist_ok=True)
+    with open(ROOT / "archive.log", "a", encoding="utf-8") as f:
+        f.write(f"{time.strftime('%m-%d %H:%M:%S')} {msg}\n")
+
+
 def months(year: int, today: date) -> list[str]:
     last = today.month - 1 if year == today.year else 12  # 이번 달은 빼고(신고 중)
     return [f"{year}{m:02d}" for m in range(1, last + 1)]
@@ -164,7 +172,7 @@ def main() -> None:
                       f"{got[0].get('dealAmount')}만" if got else ""))  # fmt: skip
             return
         sggs = sgg_codes(client, key)
-        print(f"시군구 {len(sggs)}곳 · 저장 {ROOT}")
+        say(f"시작 · 시군구 {len(sggs)}곳 · 저장 {ROOT} · 초당 {a.rate}번")
         started, calls = time.monotonic(), 0
         with ThreadPoolExecutor(a.workers) as pool:
             for name in a.types:
@@ -186,10 +194,16 @@ def main() -> None:
                             )
                         except ApiError as e:
                             if any(w in str(e) for w in STOP_WORDS):
-                                raise SystemExit(
-                                    f"[멈춤] {name} {year} {sgg}: {e} — 한도·키 확인"
-                                ) from e
-                            print(f"  ! {name} {year} {sgg}: {e} — 건너뜀(다음에 다시)")
+                                say(f"[멈춤] {name} {year} {sgg}: {e} — 한도·키 확인")
+                                raise SystemExit(1) from e
+                            say(f"  ! {name} {year} {sgg}: {e} — 건너뜀(다음에 다시)")
+                            continue
+                        except (httpx.HTTPError, ValueError) as e:
+                            # 11/21 04:45 인터넷이 끊겨(잠자기 등) 프로그램이 통째로 멈췄던 것 → 1분 쉬고 그 칸만 건너뜀
+                            say(
+                                f"  ! {name} {year} {sgg}: {type(e).__name__} {e} — 1분 쉬고 건너뜀"
+                            )
+                            time.sleep(60)
                             continue
                         calls += len(yms)
                         rows = [x for p in parts for x in p]
@@ -202,7 +216,7 @@ def main() -> None:
                         )  # 다 쓴 뒤에 이름을 바꿈 — 중간에 꺼져도 반쪽 파일이 남지 않게
                         n_year += len(rows)
                     mins = (time.monotonic() - started) / 60
-                    print(f"{name} {year}: {n_year:,}건 · 지금까지 약 {calls:,}번 · {mins:.0f}분")
+                    say(f"{name} {year}: {n_year:,}건 · 지금까지 약 {calls:,}번 · {mins:.0f}분")
 
 
 if __name__ == "__main__":
