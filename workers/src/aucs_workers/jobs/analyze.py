@@ -751,10 +751,15 @@ def analyze_item(
 
 
 def load_sales(conn: psycopg.Connection, today: date) -> list[Sale]:
-    """최근 12개월 매각 사례 (면적은 우리 물건 표에서 이어 붙임)."""
+    """최근 12개월 매각 사례 (면적은 우리 물건 표에서 이어 붙임).
+
+    입찰가를 잘못 쓴 것으로 보이는 낙찰(감정가 3배 이상 + 0 하나를 빼도 최저가를 넘음,
+    11/17 의정부 2026타경70099 702%)은 특수 사건처럼 비교 사례에서 뺌.
+    """
     rows = conn.execute(
         """select s.sale_date, s.sido, i.sigungu, s.usage_name, coalesce(s.building_area_m2, i.building_area_m2),
-                  s.failed_count, s.sale_rate, s.is_share or s.is_special_case, s.address, s.court_code,
+                  s.failed_count, s.sale_rate, s.is_share or s.is_special_case
+                  or coalesce(s.sale_rate >= 300 and s.winning_bid_krw >= s.min_price_krw * 10, false), s.address, s.court_code,
                   case when s.appraisal_krw > 0 then s.min_price_krw * 100.0 / s.appraisal_krw end
            from core.sale_results s left join core.items i on i.item_id = s.item_id
            where s.result = 'sold' and s.sale_rate is not null and s.sale_date >= %s""",

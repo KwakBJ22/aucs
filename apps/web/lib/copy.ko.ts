@@ -1080,7 +1080,7 @@ export const copy = {
     scoreLine: (pct: number, n: number) => `실제 낙찰가가 예상 범위 안에 든 비율 ${pct}% (${n}건)`,
     scoreSplit: (below: number, above: number) => `· 범위보다 낮게 ${below}% · 높게 ${above}%`,
     scoreNote:
-      "매각기일 전에 낸 예상 범위(비슷한 물건 낙찰가율의 가운데 절반)와 실제 낙찰가를 비교해요 · 처음 나온 물건은 빼요",
+      "매각기일 전에 낸 예상 범위(비슷한 물건 낙찰가율의 가운데 절반)와 실제 낙찰가를 비교해요 · 처음 나온 물건 · 비교할 물건이 적은 것 · 입찰가를 잘못 쓴 것으로 보이는 낙찰은 빼요",
     byCourt: "법원별 낙찰가율(가운데 값)",
     byFailed: "유찰 횟수별",
     byMonth: "달마다",

@@ -246,11 +246,17 @@ def case_detail(case_id: str, today: date) -> dict[str, Any] | None:
 
 
 # 낙찰 사례와 시장 분석 + 낙찰가 성적표 (특수 사건·지분은 통계에서 뺌)
+# 입찰가를 잘못 쓴 것으로 보이는 낙찰: 감정가 3배 이상 + 0 하나를 빼도 최저가를 넘음
+# (11/17 의정부 2026타경70099 — 최저가 13.57억에 136.1억, 감정가의 702%). 통계 · 성적표에서 뺌.
+MISBID = "coalesce(s.sale_rate >= 300 and s.winning_bid_krw >= s.min_price_krw * 10, false)"
+
+
 def _market_where(f: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     sql = (
         " where s.result = 'sold' and s.sale_rate is not null and s.sale_date >= %(since)s"
         " and not coalesce(s.is_special_case, false) and not coalesce(s.is_share, false)"
         f" and coalesce(s.usage_name, '') !~ '{VEHICLES}'"  # 부동산만
+        f" and not {MISBID}"  # 입찰가를 잘못 쓴 것으로 보이는 낙찰
     )
     p: dict[str, Any] = {"since": f["since"]}
     if f.get("sido"):
@@ -270,6 +276,34 @@ def _market_where(f: dict[str, Any]) -> tuple[str, dict[str, Any]]:
 
 
 _MED = "round(percentile_cont(0.5) within group (order by s.sale_rate)::numeric, 1)"
+
+
+# 낙찰가 성적표: 매각기일 전에 낸 예상 범위(p25~p75)와 실제 낙찰가율을 견줌.
+# 뺌 — 처음 나온 물건(유찰 0) · 비교 물건이 적어 범위가 한 점인 것(small_sample) · 지분 · 특수 · 자동차 등
+# · 입찰가를 잘못 쓴 것으로 보이는 낙찰(MISBID).
+# 한 번에 세고 크게 빗나간 5건도 같이 꺼냄(전엔 같은 큰 조인을 두 번 돌림).
+_SCORE_SQL = f"""with pred as (
+  select s.sale_date, s.court_code, s.case_no, s.address, s.sale_rate, s.item_id,
+         (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
+         (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
+  from core.sale_results s
+  join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
+                and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
+  where s.result = 'sold' and s.sale_rate is not null and not {MISBID}
+    and coalesce(s.failed_count, 0) > 0
+    and not coalesce(s.is_special_case, false) and not coalesce(s.is_share, false)
+    and coalesce(s.usage_name, '') !~ '{VEHICLES}'
+    and a.result -> 'sale_rate' ->> 'p25' is not null and a.result -> 'sale_rate' ->> 'p75' is not null
+    and not coalesce((a.result -> 'sale_rate' ->> 'small_sample')::boolean, false)
+    and not coalesce((a.result ->> 'new_item')::boolean, false)),
+top as (
+  select * from pred order by greatest(p25 - sale_rate, sale_rate - p75) desc limit 5)
+select count(*) as n,
+       count(*) filter (where sale_rate between p25 and p75) as inside,
+       count(*) filter (where sale_rate < p25) as below,
+       count(*) filter (where sale_rate > p75) as above,
+       (select coalesce(json_agg(top), '[]'::json) from top) as misses
+from pred"""
 
 
 def market(f: dict[str, Any], today: date) -> dict[str, Any]:
@@ -305,48 +339,19 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                 from core.sale_results s {where} order by s.sale_date desc, s.result_id desc limit 100""",
                     p,
                 ),
-                (
-                    """with pred as (
-                 select s.item_id, s.sale_rate, (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
-                        (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
-                 from core.sale_results s
-                 join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
-                               and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
-                 where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' ->> 'p25' is not null and a.result -> 'sale_rate' ->> 'p75' is not null
-                   and not coalesce((a.result ->> 'new_item')::boolean, false))
-               select count(*) as n,
-                      count(*) filter (where sale_rate between p25 and p75) as inside,
-                      count(*) filter (where sale_rate < p25) as below,
-                      count(*) filter (where sale_rate > p75) as above
-               from pred""",
-                    None,
-                ),
-                (
-                    """select s.sale_date, s.court_code, s.case_no, s.address, s.sale_rate, s.item_id,
-                      (a.result -> 'sale_rate' ->> 'p25')::numeric as p25,
-                      (a.result -> 'sale_rate' ->> 'p75')::numeric as p75
-               from core.sale_results s
-               join lateral (select result from analysis.item_analysis x where x.item_id = s.item_id
-                             and x.computed_at::date < s.sale_date order by x.version desc limit 1) a on true
-               where s.result = 'sold' and s.sale_rate is not null and a.result -> 'sale_rate' ->> 'p25' is not null and a.result -> 'sale_rate' ->> 'p75' is not null
-                 and not coalesce((a.result ->> 'new_item')::boolean, false)
-               order by greatest((a.result -> 'sale_rate' ->> 'p25')::numeric - s.sale_rate,
-                                 s.sale_rate - (a.result -> 'sale_rate' ->> 'p75')::numeric) desc
-               limit 5""",
-                    None,
-                ),
+                (_SCORE_SQL, None),
             ],
         )
         by_court, by_failed, by_month, by_usage, rows = (q.fetchall() for q in qs[:5])
-        score = qs[5].fetchone()
-        misses = qs[6].fetchall()
+        score = dict(qs[5].fetchone() or {})
+        misses = score.pop("misses", None) or []
     return {
         "by_usage": by_usage,
         "misses": [
             {
                 **r,
                 "court": COURT_NAME.get(r["court_code"], r["court_code"]),
-                "sale_date": r["sale_date"].isoformat(),
+                "sale_date": str(r["sale_date"]),
                 "sale_rate": float(r["sale_rate"]),
                 "p25": float(r["p25"]),
                 "p75": float(r["p75"]),
@@ -368,7 +373,7 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
             }
             for r in rows
         ],
-        "scorecard": dict(score or {}),
+        "scorecard": score,
     }
 
 
