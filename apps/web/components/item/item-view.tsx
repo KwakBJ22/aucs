@@ -7,6 +7,7 @@ import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { CompareAdd, WsLink } from "@/components/item/actions";
 import { Body } from "@/components/item/body";
+import { CapLine } from "@/components/item/cap-line";
 import { answerOf } from "@/components/item/checklist";
 import { InterestLine } from "@/components/item/interest-line";
 import { ItemPhotos } from "@/components/item/item-photos";
@@ -166,6 +167,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
           </span>
         </div>
+        {!closed && <CapLine id={d.item_id} minPrice={d.min_price_krw} />}
         <div className="band-grid tiles mt-14">
           {nums.map(([k, v]) => (
             <div key={k} className={k === t.nextRound ? "tile-wide" : undefined}>

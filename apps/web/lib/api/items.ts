@@ -498,6 +498,8 @@ export type Calc = {
   cases: { key: string; bid_krw: number; rate: number; chance: string; cash_krw: number }[];
   selected: CashBreakdown;
   cap_krw: number | null;
+  // 손해 안 보는 선 풀이(11/20): 시세에서 뺀 것 — 시세가 없거나 떠안는 돈을 모르면 null
+  cap_parts?: { market_krw: number; tax_krw: number; fix_krw: number; assume_krw: number } | null;
   slider: { min: number; max: number; step: number };
   resale: boolean;
   assume?: { risk: boolean; krw: number | null }; // 떠안는 돈(선순위 전세권·대항력 임차인 등, 11/1)

@@ -1213,6 +1213,18 @@ export const copy = {
       iros: "인터넷등기소에서 떼기",
       copied: "주소를 복사했어요 · 그 사이트 검색칸에 붙여 넣어 주세요",
     },
+    // 손해 안 보는 선(11/20) — 상세 맨 위, 최저가 바로 아래
+    cap: {
+      title: "여기까지 쓰면 시세보다 싸게 사요",
+      none: "최저가로 사도 시세보다 비싸요",
+      parts: (mkt: string, tax: string, fix: string, assume: string | null) =>
+        `추정 시세 ${mkt} − 세금·등기 ${tax} − 명도·수리 ${fix}` +
+        (assume ? ` − 떠안는 돈 ${assume}` : ""),
+      basis: (homes: number) =>
+        `${homes === 0 ? "집 없음" : homes === 1 ? "집 1채" : "집 2채 이상"} 기준 · 이익은 빼지 않은 값`,
+      toCalc: "내 조건으로 셈하기",
+      assumeUnknown: "떠안는 돈을 몰라 「여기까지」를 셈하지 않았어요",
+    },
     appraisal: {
       head: "감정평가 요점",
       source: "법원 감정평가요항표", // 평가사 이름은 원본을 받으면 이 자리에(○○감정평가사)

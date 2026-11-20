@@ -203,16 +203,16 @@ def build_calc(
     if extra:
         sel = {**sel, "cash_krw": sel["cash_krw"] + extra, "assume_krw": extra}
     cap = None
+    cap_parts = None  # 상세 맨 앞 「손해 안 보는 선」 풀이(11/20) — 시세에서 뺀 것
     if mkt and (not risk or assume_krw is not None):
         at = cash_needed(mkt, **common).value
-        cap = (
-            mkt
-            - at["tax"]["tax_krw"]
-            - at["registration_krw"]
-            - at["move_out_krw"]
-            - at["repair_krw"]
-            - extra
-        )
+        cap_parts = {
+            "market_krw": mkt,
+            "tax_krw": at["tax"]["tax_krw"] + at["registration_krw"],
+            "fix_krw": at["move_out_krw"] + at["repair_krw"],
+            "assume_krw": extra,
+        }
+        cap = mkt - cap_parts["tax_krw"] - cap_parts["fix_krw"] - extra
     return {
         "cls": cls,
         "cases": cases,
@@ -221,6 +221,7 @@ def build_calc(
         "move_out": move,
         "repair": repair,
         "cap_krw": cap,
+        "cap_parts": cap_parts,
         "slider": {"min": mn, "max": max(int(mn * 1.6), int((cap or 0) * 1.1)), "step": 1_000_000},
         "resale": resale,
         "assume": {"risk": risk, "krw": assume_krw if risk else None},
