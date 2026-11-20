@@ -177,7 +177,10 @@ def main() -> None:
         with ThreadPoolExecutor(a.workers) as pool:
             for name in a.types:
                 svc, op, _, _ = TYPES[name]
+                spent = False
                 for year in range(a.to_year, a.from_year - 1, -1):
+                    if spent:
+                        break
                     yms = months(year, today)
                     if not yms:
                         continue
@@ -186,7 +189,11 @@ def main() -> None:
                     n_year = 0
                     for sgg in sggs:
                         f = out_dir / f"{sgg}.jsonl.gz"
-                        if f.exists() and year < today.year:
+                        if f.exists() and (
+                            year < today.year
+                            or date.fromtimestamp(f.stat().st_mtime)
+                            == today  # 올해 것도 오늘 받았으면 그만
+                        ):
                             continue
                         try:
                             parts = list(
@@ -194,12 +201,16 @@ def main() -> None:
                             )
                         except ApiError as e:
                             if any(w in str(e) for w in STOP_WORDS):
-                                say(f"[멈춤] {name} {year} {sgg}: {e} — 한도·키 확인")
-                                raise SystemExit(1) from e
+                                # 11/21: 한도는 API(종류)마다 따로 — 이 종류만 오늘 멈추고 다음 종류로
+                                say(
+                                    f"[멈춤] {name} {year} {sgg}: {e} — 이 종류는 내일 다시, 다음 종류로"
+                                )
+                                spent = True
+                                break
                             say(f"  ! {name} {year} {sgg}: {e} — 건너뜀(다음에 다시)")
                             continue
                         except Exception as e:  # noqa: BLE001 — 끊김 · 깨진 응답(XML) 등 무엇이든 그 칸만 건너뛰고 로그에 남김
-                            # 11/21 04:45 인터넷이 끊겨(잠자기 등) 프로그램이 통째로 멈췄던 것 → 1분 쉬고 그 칸만 건너뜀
+                            # 잡지 못한 오류로 프로그램이 통째로 끝나지 않게 — 1분 쉬고 그 칸만 건너뜀
                             say(
                                 f"  ! {name} {year} {sgg}: {type(e).__name__} {e} — 1분 쉬고 건너뜀"
                             )
