@@ -239,6 +239,7 @@ const PATHS = [
     run: async (page) => {
       await page.goto(`${BASE}/item/${encodeURIComponent(ITEM.item_id)}`);
       await seen(page, ITEM.verdict);
+      await seen(page, "로드뷰"); // 바로 가기(11/20) — 지도 아래, 좌표 있는 물건
     },
   },
   {

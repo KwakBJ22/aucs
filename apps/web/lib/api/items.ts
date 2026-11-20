@@ -276,6 +276,7 @@ export type ItemDetail = ItemCard & {
   verdict: string;
   fatal: string | null;
   address: string | null;
+  pnu?: string | null; // 첫 필지 번호 19자리(토지이음 바로 가기, 11/20)
   sale_place: string | null;
   dept_name: string | null;
   next_round: {

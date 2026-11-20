@@ -5,6 +5,7 @@ from typing import Any
 
 from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
+from aucs_rules.building import parse_jibun
 from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
 from aucs_rules.location import (
@@ -54,6 +55,14 @@ where i.item_id = %(id)s and i.display_policy = 'public'
   and coalesce(i.usage_name, '') !~ %(vehicles)s  -- 차·배는 다루지 않음(목록처럼 상세도 막음, 11/1)
 """
 
+
+def _pnu(region_code: str | None, lot_no: str | None) -> str | None:
+    """법정동 10자리 + 첫 지번 → 필지 번호 19자리(토지이음 바로 가기, 11/20). 수집기 pnu_of 와 같은 셈."""
+    p = parse_jibun(lot_no)
+    if not p or not region_code or len(region_code) != 10:
+        return None
+    plat, bun, ji = p
+    return f"{region_code}{'2' if plat == '1' else '1'}{bun}{ji}"
 
 def build_detail(
     r: dict[str, Any],
@@ -161,6 +170,7 @@ def build_detail(
         if r.get("status_code") == "gone"
         else next((s["title"] for s in signals if s.get("level") == "fatal"), None),
         "address": r["address"],
+        "pnu": _pnu(r.get("region_code"), r.get("lot_no")),
         "sale_place": r["sale_place"],
         "dept_name": r["dept_name"],
         "next_round": {

@@ -11,6 +11,7 @@ import { ItemMap, Stations } from "@/components/item/item-map";
 import { FailMobile } from "@/components/item/failure";
 import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { t } from "@/components/item/shared";
+import { GoLinks } from "@/components/item/go-links";
 import { useState } from "react";
 
 const TENANTS_FIRST = 5;
@@ -62,6 +63,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
       <>
         <Row label="주소" value={b.address ?? "-"} />
         <ItemMap lat={d.lat} lon={d.lon} address={b.address ?? d.address} />
+        <GoLinks keys={["roadview"]} d={d} />
         <Stations d={d} />
         {b.area_m2 && (
           <Row
@@ -86,6 +88,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             }
           />
         )}
+        {b.redev && <GoLinks keys={["redev"]} d={d} />}
         {b.land_plan?.zones?.length > 0 && (
           <Row
             label={t.zoning}
@@ -93,6 +96,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             note={t.planFacilities(b.land_plan.facilities)}
           />
         )}
+        <GoLinks keys={["eum"]} d={d} />
         {b.area_stats?.items?.length > 0 && (
           <Row
             label={t.areaAvg}
@@ -103,6 +107,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         {b.stores && (
           <Row label={t.stores} value={t.storesValue(b.stores)} note={t.storesNote(b.stores)} />
         )}
+        <GoLinks keys={["sbiz"]} d={d} />
         {b.land_trades && (
           <Row
             label={t.landTrades}
@@ -178,7 +183,12 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
               ◆ {s.title}
             </div>
           ))}
-        {!d.outcome?.closed && <RegistryBox />}
+        {!d.outcome?.closed && (
+          <>
+            <RegistryBox />
+            <GoLinks keys={["iros"]} d={d} />
+          </>
+        )}
       </>
     );
   if (q.key === "worth")
@@ -257,7 +267,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             ))}
           </>
         )}
+        <GoLinks keys={["rt", "naver", "valuemap", "disco"]} d={d} />
         {b.complex && <ComplexBlock cx={b.complex} />}
+        <GoLinks keys={["kb", "kapt"]} d={d} />
       </>
     );
   if (q.key === "cost")
@@ -270,6 +282,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           <Row key={x.key} label={x.label} value={x.short} />
         ))}
         {!d.outcome?.closed && <CalcBox id={d.item_id} />}
+        <GoLinks keys={["price"]} d={d} />
       </>
     );
   return <CheckBody b={b} />;
