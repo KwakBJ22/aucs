@@ -204,7 +204,7 @@ export const copy = {
     toRecord: (n: number) => `입찰일이 지난 관심 물건 ${n}건 · 결과 적어 두기`,
     picks: "오늘의 추천",
     allLink: "전체",
-    picksSub: "입찰까지 10일 이상 남아 준비할 시간이 있는 물건",
+    picksSub: "입찰 2주 안(유찰 뒤 다음 회차는 한 달 안) 물건 중 고른 것",
     soon: "마감 임박",
     soonSub: "7일 안 · 점수 높은 것만",
     next: "기다리면 더 싸질 물건",
@@ -656,7 +656,6 @@ export const copy = {
   pro: {
     title: "통합검색",
     csv: "CSV 받기",
-    pcHint: "넓은 화면(PC)에서 보기 좋게 만든 화면이에요",
     allSido: "서울·경기·인천",
     allSigungu: "모든 시군구",
     search: "주소·단지·사건번호",

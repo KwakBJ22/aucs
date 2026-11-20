@@ -114,7 +114,6 @@ function ProMarket() {
             <button
               key={k}
               className={`pill${usage.includes(k) ? " on" : ""}`}
-
               onClick={() =>
                 setUsage(usage.includes(k) ? usage.filter((x) => x !== k) : [...usage, k])
               }
@@ -203,40 +202,69 @@ function ProMarket() {
             <div className="pt-14 pb-0 px-14">
               <h2 className="fs-base">{t.cases}</h2>
             </div>
-            <table className="pro-table">
-              <thead>
-                <tr>
-                  {t.cols.map((c) => (
-                    <th key={c}>{c}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {m?.cases.map((r) => (
-                  <tr key={`${r.court}${r.case_no}${r.sale_date}${r.address}`}>
-                    <td>{r.sale_date.slice(5)}</td>
-                    <td>
-                      {r.item_id ? (
-                        <Link prefetch={false} href={`/item/${encodeURIComponent(r.item_id)}`}>
-                          {r.court} {r.case_no}
-                        </Link>
-                      ) : (
-                        `${r.court} ${r.case_no}`
-                      )}
-                    </td>
-                    <td>{r.usage_name}</td>
-                    <td>{r.address}</td>
-                    <td>{r.building_area_m2 ? `${Math.round(r.building_area_m2)}㎡` : ""}</td>
-                    <td>{won(r.appraisal_krw)}</td>
-                    <td>{won(r.winning_bid_krw)}</td>
-                    <td>
-                      <b>{Math.round(r.sale_rate)}%</b>
-                    </td>
-                    <td>{r.failed_count ?? 0}</td>
+            {/* 11/20: 휴대폰은 표(911px) 대신 카드 */}
+            <div className="m-block">
+              {m?.cases.map((r) => (
+                <Link
+                  key={`c-${r.court}${r.case_no}${r.sale_date}${r.address}`}
+                  prefetch={false}
+                  href={r.item_id ? `/item/${encodeURIComponent(r.item_id)}` : "#cases"}
+                  className="pro-card"
+                >
+                  <div className="pc-top">
+                    <span>
+                      {r.court} {r.case_no} · {r.usage_name}
+                    </span>
+                    <span className="nowrap">{r.sale_date.slice(5)}</span>
+                  </div>
+                  <div className="pc-addr clamp2">{r.address}</div>
+                  <div className="pc-price">
+                    {t.cols[6]} <b>{won(r.winning_bid_krw)}</b> <b>{Math.round(r.sale_rate)}%</b>
+                    <span className="sub">
+                      {" "}
+                      · {t.cols[5]} {won(r.appraisal_krw)}
+                      {r.failed_count ? ` · ${t.cols[8]} ${r.failed_count}` : ""}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="pc-only">
+              <table className="pro-table">
+                <thead>
+                  <tr>
+                    {t.cols.map((c) => (
+                      <th key={c}>{c}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {m?.cases.map((r) => (
+                    <tr key={`${r.court}${r.case_no}${r.sale_date}${r.address}`}>
+                      <td>{r.sale_date.slice(5)}</td>
+                      <td>
+                        {r.item_id ? (
+                          <Link prefetch={false} href={`/item/${encodeURIComponent(r.item_id)}`}>
+                            {r.court} {r.case_no}
+                          </Link>
+                        ) : (
+                          `${r.court} ${r.case_no}`
+                        )}
+                      </td>
+                      <td>{r.usage_name}</td>
+                      <td>{r.address}</td>
+                      <td>{r.building_area_m2 ? `${Math.round(r.building_area_m2)}㎡` : ""}</td>
+                      <td>{won(r.appraisal_krw)}</td>
+                      <td>{won(r.winning_bid_krw)}</td>
+                      <td>
+                        <b>{Math.round(r.sale_rate)}%</b>
+                      </td>
+                      <td>{r.failed_count ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
           <div className="sub mt-8">{t.note}</div>
         </>

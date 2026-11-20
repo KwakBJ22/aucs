@@ -72,10 +72,46 @@
   white-space: normal;
   min-width: 220px;
 }
-@media (min-width: 1024px) {
-  .pc-hint {
-    display: none;
+/* 11/20 휴대폰 통합검색: 범위 칸(유찰 ~ · 감정가 ~ 억)은 한 덩어리로, 요약은 두 칸 · 숫자는 한 줄로, 결과는 카드 */
+.pro-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pro-card {
+  display: block;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.pro-card:last-child {
+  border-bottom: 0;
+}
+.pro-card .pc-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.pro-card .pc-addr {
+  font-weight: 600;
+  margin: 4px 0;
+}
+.pro-card .pc-sig {
+  font-size: var(--fs-sm);
+  margin-top: 2px;
+}
+@media (max-width: 1023px) {
+  .pro-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .pro-summary b {
+    white-space: nowrap;
+    font-size: 15px;
+  }
+}
+@media (min-width: 1024px) {
   .pro-summary {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
@@ -1618,6 +1654,8 @@ a.col-chip span {
   gap: 12px;
 }
 .mv-map {
+  /* 11/20: 지도 안 로고(NAVER)가 휴대폰 아래 탭 위로 그려졌음 — 지도 칸 안에서만 쌓이게(position 은 주지 않음) */
+  isolation: isolate;
   width: 100%;
   height: 60vh;
   border: 1px solid var(--line-map);

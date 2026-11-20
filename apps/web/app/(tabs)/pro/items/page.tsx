@@ -176,7 +176,6 @@ function ProItems() {
           </button>
         }
       />
-      <div className="pc-hint sub">{t.pcHint}</div>
 
       <section className="section pro-filters">
         <div className="pro-row">
@@ -244,7 +243,6 @@ function ProItems() {
             <button
               key={k}
               className={`pill${f.usage?.includes(k) ? " on" : ""}`}
-
               onClick={() => toggle("usage", k)}
             >
               {v}
@@ -252,39 +250,43 @@ function ProItems() {
           ))}
         </div>
         <div className="pro-row">
-          <span className="sub">{t.failed}</span>
-          <input
-            type="number"
-            min={0}
-            value={f.failed_min ?? ""}
-            onChange={(e) => set({ failed_min: num(e.target.value) })}
-            style={{ ...sel, width: 64 }}
-          />
-          ~
-          <input
-            type="number"
-            min={0}
-            value={f.failed_max ?? ""}
-            onChange={(e) => set({ failed_max: num(e.target.value) })}
-            style={{ ...sel, width: 64 }}
-          />
-          <span className="sub">{t.appraisal}</span>
-          <input
-            type="number"
-            min={0}
-            value={f.app_min ?? ""}
-            onChange={(e) => set({ app_min: num(e.target.value) })}
-            style={{ ...sel, width: 72 }}
-          />
-          ~
-          <input
-            type="number"
-            min={0}
-            value={f.app_max ?? ""}
-            onChange={(e) => set({ app_max: num(e.target.value) })}
-            style={{ ...sel, width: 72 }}
-          />
-          <span className="sub">{t.eok}</span>
+          <span className="pro-range">
+            <span className="sub">{t.failed}</span>
+            <input
+              type="number"
+              min={0}
+              value={f.failed_min ?? ""}
+              onChange={(e) => set({ failed_min: num(e.target.value) })}
+              style={{ ...sel, width: 64 }}
+            />
+            ~
+            <input
+              type="number"
+              min={0}
+              value={f.failed_max ?? ""}
+              onChange={(e) => set({ failed_max: num(e.target.value) })}
+              style={{ ...sel, width: 64 }}
+            />
+          </span>
+          <span className="pro-range">
+            <span className="sub">{t.appraisal}</span>
+            <input
+              type="number"
+              min={0}
+              value={f.app_min ?? ""}
+              onChange={(e) => set({ app_min: num(e.target.value) })}
+              style={{ ...sel, width: 72 }}
+            />
+            ~
+            <input
+              type="number"
+              min={0}
+              value={f.app_max ?? ""}
+              onChange={(e) => set({ app_max: num(e.target.value) })}
+              style={{ ...sel, width: 72 }}
+            />
+            <span className="sub">{t.eok}</span>
+          </span>
           <select
             value={f.rate_max ?? ""}
             onChange={(e) => set({ rate_max: num(e.target.value) })}
@@ -316,7 +318,6 @@ function ProItems() {
             <button
               key={k}
               className={`chip ${f.exclude?.includes(k) ? "orange" : "gray"} b-0 mh-30`}
-
               onClick={() => toggle("exclude", k)}
             >
               {v}
@@ -355,7 +356,7 @@ function ProItems() {
       )}
 
       <div className="d-flex jc-between ai-center my-8 mx-0">
-        <div className="pos-relative">
+        <div className="pos-relative pc-only">
           <button className="chip gray b-0 mh-30" onClick={() => setColOpen(!colOpen)}>
             {t.colPick} ›
           </button>
@@ -395,7 +396,56 @@ function ProItems() {
       </div>
 
       <div className={pc && pick ? "pc-grid g-58-42" : ""}>
-        <section className="section p-0 ox-auto">
+        {/* 11/20: 휴대폰은 표 대신 카드(표는 1,141px 라 가격·기일이 옆으로 밀려 안 보였음) */}
+        <section className="section p-0 m-block pro-cards">
+          {!data &&
+            Array.from({ length: 6 }, (_, i) => (
+              <div key={`skc-${i}`} className="pro-card">
+                <Delayed>
+                  <Sk className="sk-line" />
+                </Delayed>
+              </div>
+            ))}
+          {data?.rows.length === 0 && <div className="pro-card sub">{t.empty}</div>}
+          {data?.rows.map((r) => (
+            <Link
+              key={r.item_id}
+              prefetch={false}
+              href={`/item/${encodeURIComponent(r.item_id)}`}
+              className="pro-card"
+            >
+              <div className="pc-top">
+                <span style={r.source === "onbid" ? { color: "var(--blue-text)" } : undefined}>
+                  {r.court} {r.case_no}
+                  {r.item_no > 1 ? `-${r.item_no}` : ""} · {r.usage}
+                </span>
+                <span className="nowrap">
+                  {dday(r.d_day)} · {r.sale_date?.slice(5)}
+                </span>
+              </div>
+              <div className="pc-addr clamp2">
+                {(r.address ?? "").replace(/^(서울특별시|경기도)\s+/, "")}
+              </div>
+              <div className="pc-price">
+                <b>{won(r.min_price_krw)}</b> <span className="sub">{r.min_rate}%</span>
+                <span className="sub">
+                  {" "}
+                  · {t.cols.appraisal} {won(r.appraisal_krw)}
+                  {r.failed_count ? ` · ${t.cols.failed} ${r.failed_count}` : ""}
+                </span>
+              </div>
+              {r.signal && (
+                <div
+                  className="pc-sig clamp2"
+                  style={{ color: r.fatal ? "var(--red)" : "var(--orange)" }}
+                >
+                  {r.signal}
+                </div>
+              )}
+            </Link>
+          ))}
+        </section>
+        <section className="section p-0 ox-auto pc-only">
           <table className="pro-table items-table">
             <thead>
               <tr>
