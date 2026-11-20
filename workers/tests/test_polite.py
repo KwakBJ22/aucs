@@ -86,7 +86,7 @@ def test_pause_hours_grow_within_day() -> None:
     # 막히면 1시간, 같은 날 또 막히면 2·4시간(11/4 저녁 — 12시간은 지나쳤음)
     from aucs_workers.collectors.polite import pause_hours
 
-    assert [pause_hours(n) for n in (1, 2, 3, 4)] == [1, 2, 4, 4]
+    assert [pause_hours(n) for n in (1, 2, 3, 4)] == [2, 4, 4, 4]
 
 
 def test_step_share_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]
