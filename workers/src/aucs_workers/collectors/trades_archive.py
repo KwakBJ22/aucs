@@ -161,9 +161,23 @@ def main() -> None:
     ap.add_argument("--rate", type=float, default=5.0, help="초당 최대 호출(모르면 5)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--probe", action="store_true", help="2006-01 강남구 아파트 매매 한 달만")
+    ap.add_argument(
+        "--try", dest="try_", nargs="*", metavar="서비스/기능",
+        help="주소 시험 — 강남구 2023-01 한 달만(예: RTMSDataSvcRHTrade2/getRTMSDataSvcRHTrade2)",
+    )
     a = ap.parse_args()
     key, today, lim = service_key(), date.today(), Limiter(a.rate)
     with httpx.Client(timeout=40) as client:
+        if a.try_:
+            # 11/21: 운영 100만은 새 「…2」 서비스에만 걸린 것으로 보임 — 기능 이름은 불러 봐야 앎
+            for so in a.try_:
+                svc, op = so.split("/")
+                try:
+                    got = fetch_month(client, lim, key, svc, op, "11680", "202301")
+                    print(f"{so}: {len(got):,}건 · 칸 {sorted(got[0]) if got else '-'}")
+                except Exception as e:  # noqa: BLE001
+                    print(f"{so}: 실패 {type(e).__name__} {str(e)[:80]}")
+            return
         if a.probe:
             svc, op, _, _ = TYPES["apt_sale"]
             for ym in ("200601", "201101", "202001"):
