@@ -178,6 +178,11 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         </div>
         <OutcomeBand d={d} />
         <p className="fs-base fw-6 lh-15 mt-14 mb-0 mx-0">{d.verdict}</p>
+        {!closed && d.court_interest && d.court_interest.n > 0 && (
+          <div className="sub fs-sm mt-6">
+            {copy.interest.court(d.court_interest.n, d.court_interest.at)}
+          </div>
+        )}
         <InterestLine v={d.interest} />
         <SameHouse list={d.same_house} />
         <ItemPhotos list={d.photos} />

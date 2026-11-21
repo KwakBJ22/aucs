@@ -337,6 +337,7 @@ export type ItemDetail = ItemCard & {
   schedule: Schedule;
   same_house?: SameHouse[];
   interest?: Interest | null;
+  court_interest?: { n: number; at: string | null } | null; // 법원 사이트 관심 등록 수(0073)
   court_bidders?: CourtBidders | null;
   photos?: string[];
   // 가까운 역 세 곳(어림 — 직선 × 1.3, 분당 67m, 11/12)

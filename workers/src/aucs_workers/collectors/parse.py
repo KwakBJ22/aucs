@@ -214,6 +214,8 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
         "appraisal_krw": to_int(r.get("gamevalAmt")),
         "min_price_krw": min_price(r),
         "failed_count": to_int(r.get("yuchalCnt")),
+        # 법원 사이트에서 관심 물건으로 담은 사람 수(11/21 — 경쟁 신호)
+        "court_interest": to_int(r.get("gwansMulRegCnt")),
         "sale_date": sale_date,
         "sale_place": r.get("maePlace") or None,
         "status_code": r.get("mulStatcd"),

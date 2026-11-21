@@ -975,6 +975,9 @@ export const copy = {
       ]
         .filter(Boolean)
         .join(" · ") + " · 경쟁이 붙을 수 있어요",
+    // 법원 경매 사이트에서 관심 물건으로 담은 사람 수(11/21 — 법원이 주는 수 그대로)
+    court: (n: number, at: string | null) =>
+      `법원 경매 사이트에서 ${n}명이 관심 물건으로 담았어요${at ? ` · ${at.slice(5).replace("-", "/")} 기준` : ""}`,
   },
   install: {
     title: "옥스를 홈 화면에 두세요",

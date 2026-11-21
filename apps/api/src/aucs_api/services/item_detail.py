@@ -411,6 +411,10 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
     out["same_house"] = same_house(item_id)
     out["interest"] = interest(item_id)
+    # 법원 사이트 관심 등록 수(0073, 11/21) — 법원이 준 그대로 · 받은 날 함께
+    if r.get("court_interest") is not None:
+        at = r.get("court_interest_at")
+        out["court_interest"] = {"n": r["court_interest"], "at": at.isoformat() if at else None}
     out["court_bidders"] = court_bidders(item_id)
     out["photos"] = photos(item_id)
     out["stations"] = walk_stations(stations)
