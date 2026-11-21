@@ -81,6 +81,14 @@ def near_station(
     return {"name": station_name(name), "line": line, "straight_m": straight_m, **w}
 
 
+def rate_pct(mn: int | None, app: int | None) -> float | None:
+    """최저가 ÷ 감정가 %. 1% 아래는 소수 한 자리(유찰이 많아 225만 ÷ 6.77억이 「0%」로 보이던 것, 11/21)."""
+    if not app or not mn:
+        return None
+    x = mn * 100 / app
+    return round(x) if x >= 1 else round(x, 1)
+
+
 def card(r: dict[str, Any], today: date) -> dict[str, Any]:
     """DB 한 줄 → 카드 한 장 (계산은 여기서 한 번만)."""
     app, mn = r["appraisal_krw"], r["min_price_krw"]
@@ -105,7 +113,7 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "area_m2": float(r["building_area_m2"]) if r["building_area_m2"] else None,
         "appraisal_krw": app,
         "min_price_krw": mn,
-        "min_rate": round(mn * 100 / app) if app and mn else None,
+        "min_rate": rate_pct(mn, app),
         "deposit_krw": mn // 10
         if mn
         else None,  # 입찰보증금(보통 최저가 10%) — 재매각·특별조건은 상세에서

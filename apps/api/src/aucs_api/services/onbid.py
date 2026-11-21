@@ -8,6 +8,8 @@ from typing import Any
 from aucs_rules.find_filter import ONBID_VISIBLE, court_where, onbid_where
 from aucs_rules.pick import usage_kind
 
+from aucs_api.services.items import rate_pct
+
 KST = timezone(timedelta(hours=9))
 KIND_KO = {
     "seized": "압류",
@@ -67,7 +69,7 @@ def onbid_card(r: dict[str, Any], today: date) -> dict[str, Any]:
         "area_m2": float(area) if area else None,
         "appraisal_krw": app,
         "min_price_krw": mn,
-        "min_rate": round(mn * 100 / app) if app and mn else None,
+        "min_rate": rate_pct(mn, app),
         "deposit_krw": mn // 10 if mn else None,  # 보통 최저가 10% — 공고에 따로 있으면 상세에서
         "failed_count": r["failed_count"],
         "below_appraisal_krw": app - mn if app and mn and app > mn else 0,

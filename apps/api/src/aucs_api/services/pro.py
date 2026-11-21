@@ -18,7 +18,7 @@ from aucs_rules.find_filter import court_where as build_where
 from aucs_rules.progress import judge_progress
 
 from aucs_api.db import batch, connect
-from aucs_api.services.items import COURT_NAME
+from aucs_api.services.items import COURT_NAME, rate_pct
 from aucs_api.services.onbid import KIND_KO
 
 SORTS = {
@@ -86,7 +86,7 @@ def _row(r: dict[str, Any], today: date) -> dict[str, Any]:
         "area_m2": float(r["building_area_m2"]) if r["building_area_m2"] else None,
         "appraisal_krw": app,
         "min_price_krw": mn,
-        "min_rate": round(mn * 100 / app) if app and mn else None,
+        "min_rate": rate_pct(mn, app),
         "failed_count": r["failed_count"],
         "sale_date": r["sale_date"].isoformat() if r["sale_date"] else None,
         "d_day": (r["sale_date"] - today).days if r["sale_date"] else None,
