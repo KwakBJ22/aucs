@@ -32,7 +32,13 @@ from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
 from aucs_api.services.item_links import same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
-from aucs_api.services.item_trades import KIND_SQL, OTHER_KIND_SQL
+from aucs_api.services.item_trades import (
+    APPROVED_SQL,
+    KIND_SQL,
+    NEAR_MIN_LOTS,
+    NEAR_MIN_N,
+    OTHER_KIND_SQL,
+)
 from aucs_api.services.item_worth import appraisal_gap, worth
 from aucs_api.services.items import card, photo_url
 from aucs_api.services.onbid import KST
@@ -313,6 +319,17 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                    where i.item_id = %s""",
                 (item_id,),
             )
+            # 이 건물 거래가 없을 때 같은 동네 비슷한 집이 있는지(11/21) — item_trades.NEAR_* 와 같은 조건
+            q_near = c.execute(
+                f"""select count(*) as n, count(distinct t.lot_no) as lots
+                   from core.trades t join core.items i
+                     on t.region_code = left(i.region_code, 8) || '00' and t.prop_type = {KIND_SQL}
+                   where i.item_id = %s and t.deal_kind = 'sale' and t.price_krw > 0
+                     and t.deal_date >= current_date - 730 and t.lot_no is distinct from i.lot_no
+                     and t.area_m2 between i.building_area_m2 * 0.9 and i.building_area_m2 * 1.1
+                     and abs(t.build_year - {APPROVED_SQL}) <= 5""",
+                (item_id,),
+            )
             # 가까운 역 세 곳(직선 3km 안 — 준역세권까지) — 상세 「역까지 걸어서」(11/12) · 입지 등급(11/13)
             q_stn = c.execute(
                 """select st.name_ko as name, st.line_name as line,
@@ -363,6 +380,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         trades = q_trades.fetchall()
         peers = q_peers.fetchall()
         hist = q_hist.fetchone()["n"]
+        near = q_near.fetchone()
         sale = q_sale.fetchone()
         stations = q_stn.fetchall()
         hubs = q_hubs.fetchall()
@@ -388,6 +406,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         if q["key"] == "worth":
             q["body"]["complex"] = cx
             q["body"]["history_n"] = hist
+            q["body"]["nearby_ok"] = (
+                not hist and near["n"] >= NEAR_MIN_N and near["lots"] >= NEAR_MIN_LOTS
+            )
     out["same_house"] = same_house(item_id)
     out["interest"] = interest(item_id)
     out["court_bidders"] = court_bidders(item_id)

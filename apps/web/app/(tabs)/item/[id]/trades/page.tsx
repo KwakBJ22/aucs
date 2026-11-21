@@ -72,6 +72,46 @@ function Chart({ d }: { d: ItemTrades }) {
   );
 }
 
+// 같은 동네 비슷한 집(11/21) — 이 건물 거래가 없을 때만, 참고값(입찰가 셈에 안 씀)
+function Nearby({ d }: { d: ItemTrades }) {
+  const nb = d.nearby;
+  return (
+    <>
+      <section className="section">
+        <h2>{t.nearTitle}</h2>
+        <p className="sub m-0">{t.nearWhy}</p>
+        {!nb ? (
+          <p className="sub mt-8 mb-0">{t.nearNone}</p>
+        ) : (
+          <>
+            <Row label={t.nearValue} value={<b>{won(nb.value)}</b>} />
+            <div className="sub m-0 fs-xs">
+              {t.nearBasis(nb.n, nb.lots, nb.low_m2, nb.high_m2, nb.built)}
+            </div>
+            <div className="note blue mt-8">{t.nearNote}</div>
+          </>
+        )}
+      </section>
+      {nb && nb.buildings.length > 0 && (
+        <section className="section">
+          {nb.buildings.map((x) => (
+            <Row
+              key={x.lot ?? x.name ?? x.last}
+              label={t.nearRow(x.name, x.built, x.area)}
+              value={
+                <>
+                  <b>{won(x.mid)}</b> <span className="sub m-0">{t.nearN(x.n, x.last)}</span>
+                </>
+              }
+            />
+          ))}
+        </section>
+      )}
+      <p className="sub fs-xs">{t.nearBasisSrc}</p>
+    </>
+  );
+}
+
 export default function TradesPage() {
   const id = decodeURIComponent(String(useParams().id));
   const [area, setArea] = useState<number | null>(null);
@@ -100,9 +140,13 @@ export default function TradesPage() {
           </section>
         </Delayed>
       ) : !d.years.length ? (
-        <section className="section">
-          <p className="sub m-0">{t.none}</p>
-        </section>
+        "nearby" in d ? (
+          <Nearby d={d} />
+        ) : (
+          <section className="section">
+            <p className="sub m-0">{t.none}</p>
+          </section>
+        )
       ) : (
         <>
           <section className="section">

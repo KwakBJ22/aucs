@@ -269,9 +269,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           </>
         )}
         {/* 지난 실거래 요약이 있는 단지(11/21)는 국토부 사이트 대신 옥스 안 「실거래 전체 보기」 */}
-        {b.history_n > 0 && (
+        {(b.history_n > 0 || b.nearby_ok) && (
           <Link className="link fs-sm" href={`/item/${encodeURIComponent(d.item_id)}/trades`}>
-            {copy.itemTrades.link}
+            {b.history_n > 0 ? copy.itemTrades.link : copy.itemTrades.nearLink}
           </Link>
         )}
         <GoLinks

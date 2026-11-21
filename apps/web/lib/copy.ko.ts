@@ -943,6 +943,20 @@ export const copy = {
     more: (n: number) => `모두 보기(${n}건)`,
     auctions: "같은 단지 지난 낙찰",
     none: "이 단지의 지난 매매 기록을 찾지 못했어요",
+    // 같은 동네 비슷한 집(11/21) — 이 건물 거래가 없을 때만
+    nearLink: "같은 동네 비슷한 집 거래",
+    nearTitle: "같은 동네 비슷한 집",
+    nearWhy:
+      "이 건물 매매 기록이 없어 같은 동 · 같은 종류 · 비슷한 넓이 · 비슷한 때 지은 집의 거래로 봤어요",
+    nearValue: "참고값",
+    nearBasis: (n: number, lots: number, lo: number, hi: number, built: number) =>
+      `최근 2년 ${n}건(건물 ${lots}곳) · 전용 ${lo}~${hi}㎡ · ${built - 5}~${built + 5}년 준공 · 튀는 거래는 빼고 ㎡당 가운데 값으로`,
+    nearNote: "이 물건의 시세가 아니에요 · 건물마다 값이 달라 입찰가 계산에는 쓰지 않아요",
+    nearNone: "같은 동네에도 비슷한 거래가 적어 참고값을 내지 않았어요",
+    nearRow: (name: string | null, built: number | null, area: number) =>
+      [name, built ? `${built}년` : null, `${area}㎡`].filter(Boolean).join(" · "),
+    nearN: (n: number, last: string) => `${n}건 · 마지막 ${last.slice(2, 7).replace("-", ".")}`,
+    nearBasisSrc: "국토교통부 실거래가 공개 자료 · 해제된 거래는 빼요",
     basis: (last: string | null | undefined) =>
       `국토교통부 실거래가 공개 자료 · 2006년 1월${last ? ` ~ ${last.replace("-", "년 ")}월` : ""} 계약 · 해제된 거래는 빼요 · 값은 튀는 거래(가족 간 · 지분 거래 등으로 보이는 것)를 시세와 같은 기준으로 빼고 셌어요`,
   },

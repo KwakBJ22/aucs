@@ -13,6 +13,8 @@
 from datetime import date, timedelta
 from typing import Any
 
+from aucs_rules.price import Trade, _drop_outliers
+
 from aucs_api.db import connect
 from aucs_api.services.item_complex import PEERS_SQL, _unit
 
@@ -25,6 +27,45 @@ KIND_SQL = """case when i.usage_name = '아파트' then 'apt'
 # 같은 지번인데 다른 종류로 신고된 거래(아파트 ↔ 연립다세대, 11/21) — 그 종류 거래가 없을 때만. analyze.OTHER_KIND 와 같게
 OTHER_KIND_SQL = """case when i.usage_name = '아파트' then 'rowhouse'
   when i.usage_name in ('다세대', '연립주택,다세대,빌라') then 'apt' end"""
+
+
+# 같은 동네 비슷한 집(11/21 대표님): 이 건물 거래가 없을 때만 참고로 — 이 물건 시세가 아니고 입찰가 셈에 안 씀.
+# 같은 법정동 · 같은 종류 · 전용 ±10% · 준공 ±5년 · 최근 2년 매매, 이 지번은 빼고. 5건 · 2곳 미만이면 안 냄.
+# 준공 연도는 시세 규칙 3단계(rules/price.py)와 같은 조건 — 빼면 새 빌라와 30년 된 빌라가 섞여 감정가의 27~176%까지
+# 벌어졌음(11/21 표본 8건). 넣으면 진행 빌라 294건에서 감정가의 69~115%(10~90%). 준공 연도를 모르면 안 냄.
+APPROVED_SQL = """(select left(a.result->'building'->>'approved', 4)::int from analysis.item_analysis a
+  where a.item_id = i.item_id and a.result->'building'->>'approved' ~ '^[0-9]{4}'
+  order by a.version desc limit 1)"""
+_NEAR_WHERE = """
+from core.trades
+where region_code = left(%(rc)s, 8) || '00' and prop_type = %(prop)s and deal_kind = 'sale'
+  and price_krw > 0 and deal_date >= %(since)s and lot_no is distinct from %(lot)s
+  and area_m2 between %(a)s * 0.9 and %(a)s * 1.1 and abs(build_year - %(by)s) <= 5
+"""
+NEAR_SQL = (
+    """select lot_no as lot, max(complex_name) as name, max(build_year) as built, count(*)::int as n,
+       max(deal_date) as last, percentile_cont(0.5) within group (order by price_krw)::bigint as mid,
+       round(avg(area_m2))::int as area"""
+    + _NEAR_WHERE
+    + "group by lot_no order by max(deal_date) desc"
+)
+NEAR_PRICES_SQL = "select deal_date, price_krw, area_m2" + _NEAR_WHERE
+NEAR_MIN_N, NEAR_MIN_LOTS = 5, 2
+
+
+def near_value(
+    rows: list[dict[str, Any]], prices: list[dict[str, Any]], area: float
+) -> dict | None:
+    """같은 동네 비슷한 집 → 참고값(순수 함수): 튀는 거래를 시세와 같은 규칙으로 빼고 ㎡당 중간값 × 이 면적."""
+    if len(prices) < NEAR_MIN_N or len(rows) < NEAR_MIN_LOTS:
+        return None
+    ts = [
+        Trade(p["deal_date"], int(p["price_krw"]), float(p["area_m2"]), None, None) for p in prices
+    ]
+    kept = _drop_outliers(ts) or ts
+    ppm = sorted(t.price_krw / t.area_m2 for t in kept)
+    mid = ppm[len(ppm) // 2] if len(ppm) % 2 else (ppm[len(ppm) // 2 - 1] + ppm[len(ppm) // 2]) / 2
+    return {"value": int(mid * area), "n": len(prices), "lots": len(rows)}
 
 
 def pick_area(areas: list[dict[str, Any]], item_area: float | None, want: int | None) -> int | None:
@@ -43,7 +84,7 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
     with connect() as c:
         it = c.execute(
             f"""select i.region_code as rc, i.lot_no as lot, i.building_area_m2, {KIND_SQL} as prop,
-                       {OTHER_KIND_SQL} as other
+                       {OTHER_KIND_SQL} as other, {APPROVED_SQL} as by
                 from core.items i where i.item_id = %s""",
             (item_id,),
         ).fetchone()
@@ -53,7 +94,25 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
             f"select 1 from core.trade_yearly where {_LOT} and prop_type = %(prop)s limit 1", it
         ).fetchone()
         if not has and it["other"]:
-            it = {**it, "prop": it["other"]}
+            has = c.execute(
+                f"select 1 from core.trade_yearly where {_LOT} and prop_type = %(other)s limit 1",
+                it,
+            ).fetchone()
+            if has:
+                it = {**it, "prop": it["other"]}
+        if not has:  # 이 건물 거래가 없음 → 같은 동네 비슷한 집(참고)
+            a = float(it["building_area_m2"] or 0)
+            if not a or not it["by"]:
+                return None
+            q = {**it, "a": a, "since": today - timedelta(days=730)}
+            rows = c.execute(NEAR_SQL, q).fetchall()
+            prices = c.execute(NEAR_PRICES_SQL, q).fetchall()
+            v = near_value(rows, prices, a)
+            return {
+                "areas": [], "area": None, "years": [], "recent": [], "auctions": [],
+                "nearby": v and {**v, "low_m2": round(a * 0.9), "high_m2": round(a * 1.1), "built": it["by"],
+                    "buildings": [{**r, "last": r["last"].isoformat()} for r in rows[:15]]},
+            }  # fmt: skip
         areas = c.execute(
             f"""select area_m2 as area, sum(n_all)::int as n from core.trade_yearly
                 where {_LOT} and prop_type = %(prop)s group by 1 order by 1""",

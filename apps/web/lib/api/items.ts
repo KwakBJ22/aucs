@@ -280,6 +280,24 @@ export type ItemTrades = {
     rent: number | null;
   }[];
   auctions: { date: string; price: number; area: number | null; unit: string | null }[];
+  // 이 건물 거래가 없을 때만: 같은 동 · 같은 종류 · 전용 ±10% · 최근 2년(참고 — 입찰가 셈에 안 씀)
+  nearby?: {
+    value: number;
+    n: number;
+    lots: number;
+    low_m2: number;
+    high_m2: number;
+    built: number; // 이 물건 준공 연도(±5년 안 거래만)
+    buildings: {
+      lot: string | null;
+      name: string | null;
+      built: number | null;
+      n: number;
+      last: string;
+      mid: number;
+      area: number;
+    }[];
+  } | null;
 };
 export const fetchItemTrades = (id: string, area?: number | null) =>
   getGated<ItemTrades>(`/items/${encodeURIComponent(id)}/trades${area ? `?area=${area}` : ""}`);
