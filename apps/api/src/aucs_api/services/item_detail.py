@@ -5,7 +5,7 @@ from typing import Any
 
 from aucs_rules.appraisal_parts import appraisal_parts
 from aucs_rules.appraisal_points import parse_points
-from aucs_rules.building import parse_jibun
+from aucs_rules.building import lot_key, parse_jibun, pick_title
 from aucs_rules.find_filter import VEHICLES
 from aucs_rules.fmt import won
 from aucs_rules.location import (
@@ -28,7 +28,7 @@ from aucs_api.services.court_stats import court_bidders
 from aucs_api.services.docs import spec_sheet, spec_text
 from aucs_api.services.fail_odds import odds_for
 from aucs_api.services.interest import interest
-from aucs_api.services.item_buy import building_lines
+from aucs_api.services.item_buy import RATIO_USES, building_lines, ratio_line
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
 from aucs_api.services.item_links import same_building, same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
@@ -411,6 +411,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
     out["same_house"] = same_house(item_id)
     out["same_building"] = same_building(item_id)
+    add_ratio(out, r)
     out["interest"] = interest(item_id)
     # 법원 사이트 관심 등록 수(0073, 11/21) — 법원이 준 그대로 · 받은 날 함께
     if r.get("court_interest") is not None:
@@ -512,3 +513,21 @@ def photos(item_id: str) -> list[str]:
             (item_id,),
         ).fetchall()
     return [u for r in rows if (u := photo_url(r["path"]))]
+
+def add_ratio(out: dict[str, Any], r: dict[str, Any]) -> None:
+    """땅 · 단독 · 근린 등만: 「무엇을 사나」 건물 줄에 건폐율 · 용적률(표제부, 11/21)."""
+    p = parse_jibun(r.get("lot_no"))
+    if not p or not r.get("region_code") or not RATIO_USES.search(r.get("usage_name") or ""):
+        return
+    with connect() as c:
+        rows = c.execute(
+            "select data from core.building_register where region_code = %s and lot_no = %s"
+            " and kind = 'title' order by seq",
+            (r["region_code"], lot_key(*p)),
+        ).fetchall()
+    line = ratio_line(pick_title([x["data"] for x in rows], None))
+    if not line:
+        return
+    for q in out["questions"]:
+        if q["key"] == "buy" and q["body"].get("building"):
+            q["body"]["building"]["ratio"] = line

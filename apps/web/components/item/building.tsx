@@ -14,6 +14,7 @@ export type Bldg = {
   unit: string | null;
   unit_label?: string | null; // 「이 호」(그 호의 대장 용도) — 없으면 「이 층」
   villa: "confirmed" | "mixed" | "clear" | null;
+  ratio?: string | null; // 건폐율 · 용적률(땅 · 단독 · 근린 등만, 11/21)
 };
 
 export function BuildingRows({ g }: { g: Bldg }) {
@@ -30,6 +31,7 @@ export function BuildingRows({ g }: { g: Bldg }) {
       )}
       {g.shape && <Row label={c.shape} value={g.shape} />}
       {g.extra && <Row label="" value={g.extra} />}
+      {g.ratio && <Row label="" value={g.ratio} />}
       {g.unit && (
         <Row
           label={g.unit_label ?? c.unit}

@@ -1,5 +1,6 @@
 """「무엇을 사나」: 건축물대장 요약 → 화면 줄"""
 
+import re
 from typing import Any
 
 
@@ -44,3 +45,28 @@ def building_lines(b: dict[str, Any] | None) -> dict[str, Any] | None:
         "villa": b.get("villa"),
         "dong": b.get("dong"),
     }
+
+
+# 건폐율 · 용적률(11/21 — 경매레이더에 있던 것): 다시 짓거나 늘려 지을 여지를 보는 값이라
+# 땅 · 단독 · 다가구 · 근린 · 상가 건물에만(아파트 · 빌라 · 오피스텔은 안 냄 — 화면 간결).
+RATIO_USES = re.compile(r"단독|다가구|대지|근린|상가|공장|창고|숙박|주유|전답|임야")
+
+
+def ratio_line(t: dict[str, Any] | None) -> str | None:
+    """표제부 한 장 → 「건폐율 N% · 용적률 M%」(값이 0 · 없으면 그 칸 뺌, 순수 함수)."""
+    if not t:
+        return None
+
+    def pct(v: Any) -> str | None:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f"{f:.0f}%" if f > 0 else None
+
+    parts = [
+        f"{k} {v}"
+        for k, v in [("건폐율", pct(t.get("bcRat"))), ("용적률", pct(t.get("vlRat")))]
+        if v
+    ]
+    return " · ".join(parts) or None
