@@ -129,11 +129,33 @@ def main() -> None:
     ap.add_argument("--cap", type=int, default=800)
     ap.add_argument("--probe", action="store_true", help="한 건만 받아 응답을 보여 줌(저장도 함)")
     ap.add_argument("--recheck", action="store_true", help="이미 받은 아파트·빌라 중 동이 안 맞는 것만 다시 받음(11/11)")
+    ap.add_argument(
+        "--try", dest="try_", nargs="*", metavar="기능",
+        help="브이월드 기능 시험(11/21 — 지목을 주는 기능 찾기): 「대지,임야,전답」 땅 한 필지로 불러 첫 줄을 보여 줌",
+    )  # fmt: skip
     a = ap.parse_args()
     key = os.getenv("VWORLD_API_KEY", "").strip().strip("\"'")
     domain = os.getenv("VWORLD_DOMAIN", "https://aucs.co.kr").strip()
     if not key:
         raise SystemExit("VWORLD_API_KEY 가 비어 있습니다 (.env)")
+    if a.try_:
+        with connect() as conn:
+            code, lot = conn.execute(
+                "select region_code, lot_no from core.items where usage_name = '대지,임야,전답'"
+                " and sale_date >= current_date and length(region_code) = 10 and lot_no is not null limit 1"
+            ).fetchone()
+        pnu = pnu_of(code, lot)
+        with httpx.Client(timeout=30, headers={"Accept": "application/json"}) as client:
+            for op in a.try_:
+                for year in (date.today().year, date.today().year - 1):
+                    r = client.get(f"{BASE}/{op}", params={
+                        "key": key, "domain": domain, "pnu": pnu, "stdrYear": year, "format": "json",
+                        "numOfRows": 10, "pageNo": 1})  # fmt: skip
+                    print(f"--- {op} · pnu {pnu} · {year}년 · HTTP {r.status_code}")
+                    print((r.text or "")[:1500])
+                    if '"field"' in (r.text or ""):
+                        break
+        return
     this_year = date.today().year
     with connect() as conn, run(conn, "official_prices", "공시가격") as job:
         if a.recheck:
