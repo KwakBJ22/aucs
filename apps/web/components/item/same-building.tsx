@@ -16,10 +16,12 @@ export function SameBuilding({ v }: { v?: Sb | null }) {
       <b>{t.title(v.n, v.cases)}</b>
       <div className="mt-6">
         {v.list.map((x) => (
-          <Link key={x.item_id} prefetch={false} href={`/item/${x.item_id}`} className="link">
-            {[x.no, x.unit, x.date.slice(5).replace("-", "/")].filter(Boolean).join(" · ")}
-            {x.min_price_krw ? ` · 최저 ${won(x.min_price_krw)}` : ""}
-          </Link>
+          <div key={x.item_id} className="mt-2">
+            <Link prefetch={false} href={`/item/${x.item_id}`} className="link">
+              {[x.no, x.unit, x.date.slice(5).replace("-", "/")].filter(Boolean).join(" · ")}
+              {x.min_price_krw ? ` · 최저 ${won(x.min_price_krw)}` : ""}
+            </Link>
+          </div>
         ))}
       </div>
       {rest > 0 && <div className="sub fs-sm mt-2">{t.more(rest)}</div>}
