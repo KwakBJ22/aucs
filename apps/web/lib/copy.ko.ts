@@ -16,7 +16,7 @@ export const copy = {
   tabs: { home: "홈", find: "찾기", watch: "관심", me: "내 경매", more: "내 정보" }, // 「전체」는 찾기 칩과 겹쳐서(11/1)
   terms: {
     close: "닫기",
-    more: "경매 처음이세요? 전체 안내",
+    more: "옥스아카데미에서 배우기",
     extra: [
       [
         "감정가",
@@ -141,7 +141,7 @@ export const copy = {
   },
   footer: {
     links: [
-      ["서비스 소개", "/guide"],
+      ["옥스아카데미", "/academy"],
       ["이용약관", "/terms"],
       ["개인정보처리방침", "/privacy"],
       ["환불 규정", "/refund"],
@@ -549,7 +549,7 @@ export const copy = {
     items: [
       ["이용권 보기", "/plans"],
       ["낙찰가 성적표", "/pro/market"],
-      ["경매 처음이세요? 쉬운 안내", "/guide"],
+      ["옥스아카데미", "/academy"],
       ["공지·고객센터", "/help"],
       ["이용약관", "/terms"],
       ["개인정보처리방침", "/privacy"],

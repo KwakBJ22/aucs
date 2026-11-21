@@ -35,7 +35,7 @@ function Sheet({ word, text, onClose }: { word: string; text: string; onClose: (
           </button>
         </div>
         <p className="fs-base lh-16 mt-6 mb-12 mx-0">{text}</p>
-        <Link href="/guide" className="link" onClick={onClose}>
+        <Link href="/academy" className="link" onClick={onClose}>
           {copy.terms.more}
         </Link>
       </div>
