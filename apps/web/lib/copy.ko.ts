@@ -963,7 +963,7 @@ export const copy = {
     nearN: (n: number, last: string) => `${n}건 · 마지막 ${last.slice(2, 7).replace("-", ".")}`,
     nearBasisSrc: "국토교통부 실거래가 공개 자료 · 해제된 거래는 빼요",
     basis: (last: string | null | undefined) =>
-      `국토교통부 실거래가 공개 자료 · 2006년 1월${last ? ` ~ ${last.replace("-", "년 ")}월` : ""} 계약 · 해제된 거래는 빼요 · 값은 튀는 거래(가족 간 · 지분 거래 등으로 보이는 것)를 시세와 같은 기준으로 빼고 셌어요`,
+      `국토교통부 실거래가 공개 자료(2006년부터) · 이 건물 마지막 매매 ${last ? `${last.slice(0, 4)}년 ${Number(last.slice(5, 7))}월` : "없음"} · 해제된 거래는 빼요 · 값은 튀는 거래(가족 간 · 지분 거래 등으로 보이는 것)를 시세와 같은 기준으로 빼고 셌어요`,
   },
   onbidNotice: {
     title: "공고문",

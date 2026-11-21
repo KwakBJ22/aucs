@@ -177,7 +177,9 @@ export default function TradesPage() {
                   <>
                     <b>{won(x.mid)}</b>{" "}
                     <span className="sub m-0">
-                      {x.kept > 1 ? t.range(wonShort(x.low), wonShort(x.high)) : ""}
+                      {x.kept > 1 && x.low !== x.high
+                        ? t.range(wonShort(x.low), wonShort(x.high))
+                        : ""}
                     </span>
                   </>
                 }
