@@ -383,7 +383,7 @@ export const copy = {
     cond: "조건",
     condOpen: "조건 고르기",
     condClose: "조건 닫기",
-    condReset: "처음으로",
+    condReset: "초기화",
     usage: "종류",
     usages: {
       apt: "아파트",
@@ -433,7 +433,7 @@ export const copy = {
       farmland: "농지",
       resale: "재매각",
     } as Record<string, string>,
-    saveCond: "이 조건 저장하고 새 물건 알림 받기",
+    saveCond: "저장 후 알림받기",
     saved: "저장했어요 · 새 물건이 나오면 알려 드려요",
     viewCard: "카드",
     viewTable: "표",

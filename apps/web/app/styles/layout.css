@@ -38,6 +38,10 @@
   .tabbar {
     display: none !important;
   }
+  /* d-flex(utils, 뒤에 옴)가 m-only 를 이겨 PC 에 머리 ≡(내 정보)가 보이던 것 — PC 는 머리 오른쪽 「내 정보」 하나(11/21) */
+  .m-only.d-flex {
+    display: none !important;
+  }
   .app-shell {
     min-height: 100vh;
     min-height: 100dvh;

@@ -371,7 +371,7 @@ export default function Home() {
 
   // 옥스아카데미로 들어가는 배너(11/14 대표님 — 맨 위가 아니라 추천 아래에 따로 · 들은 만큼 「이어서」)
   const academyBand = (
-    <Link href="/academy" className="pt-band">
+    <Link href="/academy" className="pt-band ac-band">
       <span className="f-1">
         <b className="d-block">{copy.academy.band}</b>
         <span className="pt-band-sub">{copy.academy.bandSub}</span>

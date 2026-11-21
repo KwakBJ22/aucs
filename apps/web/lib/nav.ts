@@ -27,7 +27,6 @@ export const NAV: NavItem[] = [
       { label: "모아 보기", href: "/collections" },
       { label: "알림함", href: "/notifications" },
       { label: "옥스아카데미", href: "/academy" },
-      { label: "경매 처음이세요?", href: "/guide" },
     ],
   },
   {

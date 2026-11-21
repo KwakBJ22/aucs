@@ -381,7 +381,7 @@ export default function Find() {
         <PageHeader title={t.title} sub={regions.join(" · ")} right={mapLink} />
         <div className="pc-grid g-18-34-48">
           <section
-            className="section pc-sticky mt-0 oy-auto quiet-scroll"
+            className="section pc-sticky pc-filters mt-0 oy-auto quiet-scroll"
             style={{ maxHeight: "calc(100dvh - 140px)" }}
           >
             <h2>{t.cond}</h2>

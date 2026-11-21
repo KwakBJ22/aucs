@@ -1647,6 +1647,60 @@ a.col-chip span {
   font-weight: 700;
 }
 
+/* 홈 옥스아카데미 배너(11/21 대표님 — 더 눈에 띄게, 나중에 디자인 배너로 이 칸만 바꿈) */
+.ac-band {
+  padding: 18px 18px;
+  background: var(--blue);
+  color: #fff;
+}
+.ac-band b {
+  font-size: var(--fs-lg);
+}
+.ac-band .pt-band-sub {
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 500;
+}
+.ac-band .pt-band-go {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--blue-text);
+}
+
+/* PC 찾기 왼쪽 조건(11/21 대표님 — 너무 길어 촘촘하게): PC 에서만 칩 · 칸 · 틈을 줄임 */
+@media (min-width: 1024px) {
+  .pc-filters .filters {
+    gap: 6px;
+  }
+  .pc-filters .f-label {
+    margin: 10px 0 6px;
+  }
+  .pc-filters .f-label:first-child {
+    margin-top: 4px;
+  }
+  .pc-filters .pills {
+    gap: 5px;
+  }
+  .pc-filters .pills button {
+    min-height: 28px;
+    padding: 2px 10px;
+    font-size: var(--fs-sm);
+  }
+  .pc-filters .f-input {
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: var(--fs-md);
+  }
+  .pc-filters .line-row {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .pc-filters h2 {
+    margin-bottom: 4px;
+  }
+}
+
 /* ══ 지도 분석(11/12) — 휴대폰: 지도 위 · 목록 아래 / PC: 지도 왼쪽 64 · 목록 오른쪽 36 */
 .mv-wrap {
   display: flex;
