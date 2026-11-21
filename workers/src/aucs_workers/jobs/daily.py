@@ -13,6 +13,7 @@ from datetime import date
 
 STEPS = [
     ("매각결과", ["aucs_workers.collectors.court_results"]),
+    ("낙찰 순간 기록", ["aucs_workers.jobs.sale_snapshot"]),  # 11/21 — 입찰 전 분석을 얼려 둠(요인표)
     ("물건 수집", ["aucs_workers.collectors.court_items"]),
     ("건축물대장", ["aucs_workers.collectors.buildings"]),
     ("건축물대장 호", ["aucs_workers.collectors.units"]),  # 11/16 — 전유 용도 · 면적
