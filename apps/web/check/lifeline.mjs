@@ -116,8 +116,24 @@ const TODAY = {
   restore: null,
 };
 
+// 실거래 전체 보기(11/21) — API item_trades 와 같은 모양
+const TRADES = {
+  name: "검사단지",
+  built: 1988,
+  last: "2026-10",
+  areas: [{ area: 84, n: 3 }],
+  area: 84,
+  years: [
+    { y: 2025, n: 2, kept: 2, low: 900000000, mid: 950000000, high: 1000000000 },
+    { y: 2026, n: 1, kept: 1, low: 1000000000, mid: 1000000000, high: 1000000000 },
+  ],
+  recent: [],
+  auctions: [],
+};
+
 function apiAnswer(method, p, hit) {
   if (/^\/items\/[^/]+$/.test(p)) return ITEM;
+  if (/^\/items\/[^/]+\/trades$/.test(p)) return TRADES;
   if (p === "/me/billing") return BILLING;
   if (method === "POST" && /^\/me\/billing\/\d+\/refund$/.test(p)) {
     hit.refund = true;
@@ -240,6 +256,16 @@ const PATHS = [
       await page.goto(`${BASE}/item/${encodeURIComponent(ITEM.item_id)}`);
       await seen(page, ITEM.verdict);
       await seen(page, "로드뷰"); // 바로 가기(11/20) — 지도 아래, 좌표 있는 물건
+    },
+  },
+  {
+    name: "실거래 전체 보기",
+    dev: phone,
+    login: true,
+    run: async (page) => {
+      await page.goto(`${BASE}/item/${encodeURIComponent(ITEM.item_id)}/trades`);
+      await seen(page, "해마다 매매");
+      await seen(page, "2025년 · 2건");
     },
   },
   {
