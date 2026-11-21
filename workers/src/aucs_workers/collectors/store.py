@@ -46,13 +46,19 @@ def _val(c: str, extra: dict[str, str] | None = None) -> str:
 
 
 _ITEM = (
-    f"insert into core.items ({', '.join(_ITEM_COLS)}, geom, fetched_at, checked_at) values ("
+    f"insert into core.items ({', '.join(_ITEM_COLS)}, court_interest, court_interest_at, geom,"
+    " fetched_at, checked_at) values ("
     + ", ".join(_val(c, _ITEM_VALUE) for c in _ITEM_COLS)
+    + ", %(court_interest)s, (now() at time zone 'Asia/Seoul')::date"
     + ", case when %(lon)s::float is null then null else "
     "st_setsrid(st_makepoint(%(lon)s::float, %(lat)s::float), 4326)::geography end, now(), now())"
     " on conflict (item_id) do update set "
     + ", ".join(f"{c} = excluded.{c}" for c in _ITEM_COLS[3:])
     + ", geom = excluded.geom, fetched_at = now(), checked_at = now()"
+    # 법원 관심 수는 날마다 바뀌어 updated_at(다시 분석) 비교에는 넣지 않음(0073)
+    + ", court_interest = coalesce(excluded.court_interest, core.items.court_interest)"
+    + ", court_interest_at = case when excluded.court_interest is null then core.items.court_interest_at"
+    " else excluded.court_interest_at end"
     # 내용이 실제로 바뀐 때만 updated_at 을 올림 → 아침 분석(--stale)이 바뀐 물건만 다시 계산
     + ", updated_at = case when ("
     + ", ".join(f"core.items.{c}" for c in _ITEM_COLS[3:])
