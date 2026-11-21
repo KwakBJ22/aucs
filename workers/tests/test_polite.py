@@ -64,7 +64,9 @@ def test_budget_ignores_older_clock() -> None:
     for _ in range(10):
         b = roll(b, "2026-11-17", 2500)
         b = roll(b, "2026-11-18", 2500)
-    assert b["date"] == "2026-11-18" and b["count"] == 140 and b["cap"] == 3000 and b["ok_days"] == 6
+    assert (
+        b["date"] == "2026-11-18" and b["count"] == 140 and b["cap"] == 3000 and b["ok_days"] == 6
+    )
     nxt = roll(b, "2026-11-19", 2500)
     assert nxt["cap"] == 3600 and nxt["count"] == 0
 
@@ -100,23 +102,36 @@ def test_step_share_from_env(monkeypatch) -> None:  # type: ignore[no-untyped-de
 
 def test_long_block_asks_once_a_day(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     # 11/9 오래 막힘: 「until」 전에는 아예 묻지 않고, 지난 뒤 1번 물어 또 막히면 24시간 뒤로
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
     from aucs_workers.collectors import polite as m
 
+    now = m.now_kst
+
     monkeypatch.setattr(m, "LOGS", tmp_path)
     f = tmp_path / "court_blocked.txt"
-    f.write_text(
-        f"x\nuntil {datetime.now() + timedelta(hours=3):%Y-%m-%d %H:%M}\n", encoding="utf-8"
-    )
+    f.write_text(f"x\nuntil {now() + timedelta(hours=3):%Y-%m-%d %H:%M}\n", encoding="utf-8")
     with pytest.raises(Blocked):
         Polite(sleep=lambda s: None)
-    f.write_text(
-        f"x\nuntil {datetime.now() - timedelta(minutes=1):%Y-%m-%d %H:%M}\n", encoding="utf-8"
-    )
+    f.write_text(f"x\nuntil {now() - timedelta(minutes=1):%Y-%m-%d %H:%M}\n", encoding="utf-8")
     p = Polite(sleep=lambda s: None, jitter=False)  # 확인 차례 — 열림
     with pytest.raises(Blocked):
         p.call(lambda: {"ok": False, "msg": "비정상 IP"}, "확인")
     assert p.count == 1
     nxt = m.read_until(f.read_text(encoding="utf-8"))
-    assert nxt is not None and nxt > datetime.now() + timedelta(hours=23)
+    assert nxt is not None and nxt > now() + timedelta(hours=23)
+
+
+def test_hour_key_is_korea_time(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # 11/21: 관리자 요청으로 돈 수집이 장부에 세계 표준시 시각(03시)으로 적혔음 → 늘 한국 시각
+    import json
+    from datetime import datetime, timedelta, timezone
+
+    from aucs_workers.collectors import polite as m
+
+    monkeypatch.setattr(m, "LOGS", tmp_path)
+    monkeypatch.setattr(m, "REQUEST_GAP_SEC", 0)
+    Polite(sleep=lambda s: None, jitter=False, hourly=False).call(lambda: {"ok": True}, "1")
+    b = json.loads((tmp_path / "court_budget.json").read_text(encoding="utf-8"))
+    k = datetime.now(timezone(timedelta(hours=9)))
+    assert b["date"] == k.date().isoformat() and list(b["hours"]) == [f"{k:%H}"]

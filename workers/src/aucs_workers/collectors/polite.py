@@ -20,7 +20,7 @@ import os
 import random
 import time
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +37,14 @@ SERVICE_HOURS = 18  # 법원 06:00~24:00
 # 한도는 막힐 때마다 20% 낮춤(11/20). 법원 막힘은 IP 보다 세션(쿠키) 단위라는 다른 수집기의 실측을 따름.
 BLOCK_BASE_HOURS, BLOCK_MAX_HOURS = 2, 4
 LOGS = Path(__file__).resolve().parents[4] / "logs"
+# 11/21: 관리자 요청(5분 작업)으로 돈 전국 보관이 장부에 세계 표준시 「03」·「04」시로 적힘 — 프로세스 시계와
+# 상관없이 날짜 · 시간 몫 · 막힘 시각은 늘 한국 시각으로 셈(한국은 서머타임 없음).
+KST = timezone(timedelta(hours=9))
+
+
+def now_kst() -> datetime:
+    """한국 시각(시간대 없는 값 — 막힘 파일에 적힌 시각과 바로 견줌)."""
+    return datetime.now(KST).replace(tzinfo=None)
 
 
 class Blocked(Exception):
@@ -134,13 +142,13 @@ class Polite:
             f = _block_file(site)
             until = read_until(f.read_text(encoding="utf-8")) if f.exists() else None
             if until is not None:
-                if datetime.now() < until:
+                if now_kst() < until:
                     raise Blocked(f"{site} 오래 막힘 — {until:%m-%d %H:%M} 까지 묻지 않음 ({f})")
                 # 지난 뒤 첫 요청이 하루 한 번의 확인(막혀 있으면 call 이 24시간 뒤로 다시 미룸)
             elif f.exists():
-                at = datetime.fromtimestamp(f.stat().st_mtime)
+                at = datetime.fromtimestamp(f.stat().st_mtime, KST).replace(tzinfo=None)
                 hours = pause_hours(self._blocks_today())
-                if datetime.now() - at < timedelta(hours=hours):
+                if now_kst() - at < timedelta(hours=hours):
                     raise Blocked(
                         f"{site} 이 {at:%m-%d %H:%M} 에 막음 — {hours}시간 쉼 ({f} 를 지우면 다시 시작)"
                     )
@@ -152,7 +160,7 @@ class Polite:
             b = json.loads(_budget_file(self.site or "").read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
             return 1
-        return int(b.get("blocks") or 1) if b.get("date") == date.today().isoformat() else 1
+        return int(b.get("blocks") or 1) if b.get("date") == now_kst().date().isoformat() else 1
 
     def _j(self, n: float) -> float:
         return random.uniform(0, n) if self._jitter else 0.0
@@ -170,7 +178,7 @@ class Polite:
                 break
             except Exception:  # noqa: BLE001
                 time.sleep(0.2)
-        return f, roll(b, date.today().isoformat(), SITE_DAY_MAX.get(self.site or "", 0))
+        return f, roll(b, now_kst().date().isoformat(), SITE_DAY_MAX.get(self.site or "", 0))
 
     def _spend(self) -> None:
         """사이트 전체 하루 한도와 이번 시간 몫(수집기 여럿이 함께 씀)."""
@@ -185,7 +193,7 @@ class Polite:
         cap = int(b["cap"])
         if b["count"] >= cap:
             raise DailyLimitReached(f"{self.site} 하루 전체 한도 {cap}번")
-        hh = f"{datetime.now():%H}"
+        hh = f"{now_kst():%H}"
         if self.hourly and b["hours"].get(hh, 0) >= hour_share(cap):
             raise DailyLimitReached(
                 f"{self.site} 이번 시간 몫 {hour_share(cap)}번 — 다음 시간에 이어서"
@@ -230,10 +238,10 @@ class Polite:
             self._shrink()
             LOGS.mkdir(exist_ok=True)
             bf = _block_file(self.site)
-            line = f"{datetime.now():%Y-%m-%d %H:%M} {what}\n"
+            line = f"{now_kst():%Y-%m-%d %H:%M} {what}\n"
             if bf.exists() and read_until(bf.read_text(encoding="utf-8")) is not None:
                 # 오래 막힘 중의 확인도 막힘 → 하루 뒤에 다시 한 번만
-                nxt = datetime.now() + timedelta(hours=DAILY_CHECK_HOURS)
+                nxt = now_kst() + timedelta(hours=DAILY_CHECK_HOURS)
                 line += f"until {nxt:%Y-%m-%d %H:%M}\n"
             bf.write_text(line, encoding="utf-8")
         raise Blocked(
