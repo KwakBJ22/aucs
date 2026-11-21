@@ -10,6 +10,7 @@ import { Body } from "@/components/item/body";
 import { CapLine } from "@/components/item/cap-line";
 import { answerOf } from "@/components/item/checklist";
 import { InterestLine } from "@/components/item/interest-line";
+import { SameBuilding } from "@/components/item/same-building";
 import { ItemPhotos } from "@/components/item/item-photos";
 import { OriginalLink } from "@/components/item/appraisal";
 import { OddsLine } from "@/components/item/next-round";
@@ -185,6 +186,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         )}
         <InterestLine v={d.interest} />
         <SameHouse list={d.same_house} />
+        {!closed && <SameBuilding v={d.same_building} />}
         <ItemPhotos list={d.photos} />
         <div className="d-flex gap-6 f-wrap ai-center mt-10">
           {d.tags.map((x) => (

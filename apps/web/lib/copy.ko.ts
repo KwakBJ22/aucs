@@ -299,6 +299,11 @@ export const copy = {
     go: "온비드에서 입찰하기",
     foot: "입찰은 온비드에서 직접 해요 · 옥스는 입찰을 대신하지 않아요",
   },
+  sameBuilding: {
+    title: (n: number, cases: number) =>
+      `같은 건물에서 경매 ${n}건이 더 나와 있어요${cases > 1 ? ` · 사건 ${cases}개` : ""}`,
+    more: (n: number) => `외 ${n}건`,
+  },
   sameHouse: {
     toCourt: "같은 집이 법원 경매에도 나와 있어요",
     toOnbid: "같은 집이 공매(온비드)에도 나와 있어요",

@@ -303,6 +303,18 @@ export const fetchItemTrades = (id: string, area?: number | null) =>
   getGated<ItemTrades>(`/items/${encodeURIComponent(id)}/trades${area ? `?area=${area}` : ""}`);
 // 관심도(경쟁 신호) — 적으면 서버가 비워 보냄
 export type Interest = { viewers_7d: number; watchers: number };
+// 같은 건물(같은 지번)에서 나온 다른 경매 — 진행 중인 것, 앞 5건(11/21)
+export type SameBuilding = {
+  n: number;
+  cases: number;
+  list: {
+    item_id: string;
+    no: string;
+    unit: string | null;
+    date: string;
+    min_price_krw: number | null;
+  }[];
+};
 export type SameHouse = {
   source: Source;
   item_id: string;
@@ -338,6 +350,7 @@ export type ItemDetail = ItemCard & {
   same_house?: SameHouse[];
   interest?: Interest | null;
   court_interest?: { n: number; at: string | null } | null; // 법원 사이트 관심 등록 수(0073)
+  same_building?: SameBuilding | null;
   court_bidders?: CourtBidders | null;
   photos?: string[];
   // 가까운 역 세 곳(어림 — 직선 × 1.3, 분당 67m, 11/12)
