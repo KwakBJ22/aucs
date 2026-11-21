@@ -269,7 +269,8 @@ export type ItemTrades = {
   last?: string | null; // 요약에 든 마지막 계약 달 「2026-10」
   areas: { area: number; n: number }[];
   area: number | null;
-  years: { y: number; n: number; low: number; avg: number; high: number }[];
+  // n: 신고된 거래 수 · kept: 튀는 거래 뺀 뒤 · mid/low/high 는 뺀 뒤 값(시세와 같은 규칙)
+  years: { y: number; n: number; kept: number; low: number; mid: number; high: number }[];
   recent: {
     kind: "sale" | "lease";
     date: string;

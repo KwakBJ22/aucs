@@ -304,9 +304,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             # 같은 단지 지난 낙찰(같은 동 이름·지번이 주소에 있는 매각 결과, 이 사건은 빼고)
             q_peers = c.execute(PEERS_SQL, (item_id,))
-            # 지난 실거래 요약이 있는 단지인지(11/21) — 있으면 「실거래 전체 보기」(옥스 안 화면)
+            # 지난 실거래 요약(core.trade_yearly)이 있는 단지인지(11/21) — 있으면 「실거래 전체 보기」(옥스 안 화면)
             q_hist = c.execute(
-                """select count(*) as n from core.trade_monthly m join core.items i
+                """select count(*) as n from core.trade_yearly m join core.items i
                      on m.region_code = left(i.region_code, 8) || '00' and m.lot_no = i.lot_no
                    where i.item_id = %s""",
                 (item_id,),

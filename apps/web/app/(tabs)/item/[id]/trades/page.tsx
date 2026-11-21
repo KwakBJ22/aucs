@@ -39,7 +39,7 @@ function Chart({ d }: { d: ItemTrades }) {
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
         <polygon points={band} fill="var(--blue)" opacity={0.12} />
         <polyline
-          points={ys.map((x) => `${mid(x)},${py(x.avg)}`).join(" ")}
+          points={ys.map((x) => `${mid(x)},${py(x.mid)}`).join(" ")}
           fill="none"
           stroke="var(--blue)"
           strokeWidth={2}
@@ -131,9 +131,9 @@ export default function TradesPage() {
                 label={t.yearRow(x.y, x.n)}
                 value={
                   <>
-                    <b>{won(x.avg)}</b>{" "}
+                    <b>{won(x.mid)}</b>{" "}
                     <span className="sub m-0">
-                      {x.n > 1 ? t.range(wonShort(x.low), wonShort(x.high)) : ""}
+                      {x.kept > 1 ? t.range(wonShort(x.low), wonShort(x.high)) : ""}
                     </span>
                   </>
                 }

@@ -1,6 +1,7 @@
 """실거래 전체 보기(11/21 대표님): 같은 단지(같은 법정동 · 지번)의 매매를 2006년부터.
 
-- 해마다: core.trade_monthly(PC 에 받아 둔 지난 자료 요약, jobs/trade_summary.py) — 건수 · 최저 · 평균 · 최고.
+- 해마다: core.trade_yearly(PC 에 받아 둔 지난 자료 요약, jobs/trade_summary.py) — 신고 건수 · 중간값 · 최저 · 최고.
+  값은 튀는 거래를 시세 계산과 같은 규칙(사분위 범위 1.5배 밖)으로 뺀 뒤(11/21 대표님).
 - 최근 2년 한 건씩: core.trades(매월 수집 원본) — 날짜 · 층 · 값, 전세 · 월세도.
 - 같은 단지 지난 낙찰: item_complex.PEERS_SQL(상세 「같은 단지 지난 낙찰」과 같은 셈).
 면적은 ㎡ 반올림으로 묶음 — 물건 면적에 가장 가까운 것(±3㎡ 안)을 먼저 보여 주고, 없으면 거래가 가장 많은 면적.
@@ -36,7 +37,7 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
         if not it or not it["rc"] or not it["lot"]:
             return None
         areas = c.execute(
-            f"""select area_m2 as area, sum(n)::int as n from core.trade_monthly
+            f"""select area_m2 as area, sum(n_all)::int as n from core.trade_yearly
                 where {_LOT} group by 1 order by 1""",
             it,
         ).fetchall()
@@ -44,15 +45,14 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
         if area is None:
             return {"areas": [], "area": None, "years": [], "recent": [], "auctions": []}
         head = c.execute(
-            f"""select string_agg(distinct complex_name, ' · ') as name, max(build_year) as built, max(ym) as last
-                from core.trade_monthly where {_LOT}""",
+            f"""select string_agg(distinct names, ' · ') as name, max(build_year) as built,
+                       max(last_month) as last
+                from core.trade_yearly where {_LOT}""",
             it,
         ).fetchone()
         years = c.execute(
-            f"""select extract(year from ym)::int as y, sum(n)::int as n, min(min_krw) as low,
-                       (sum(avg_krw * n) / sum(n))::bigint as avg, max(max_krw) as high
-                from core.trade_monthly where {_LOT} and area_m2 = %(area)s
-                group by 1 order by 1""",
+            f"""select y, n_all as n, n as kept, mid_krw as mid, low_krw as low, high_krw as high
+                from core.trade_yearly where {_LOT} and area_m2 = %(area)s order by y""",
             {**it, "area": area},
         ).fetchall()
         recent = c.execute(
@@ -64,7 +64,7 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
         ).fetchall()
         peers = c.execute(PEERS_SQL, (item_id,)).fetchall()
     return {
-        "name": head["name"],
+        "name": " · ".join(sorted({x for x in (head["name"] or "").split(" · ") if x})) or None,
         "built": head["built"],
         "last": head["last"].isoformat()[:7] if head["last"] else None,
         "areas": areas,

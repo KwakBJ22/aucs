@@ -931,7 +931,7 @@ export const copy = {
       [name, built ? `${built}년 준공` : null].filter(Boolean).join(" · "),
     area: (a: number) => `${a}㎡`,
     areaNote: "전용면적(㎡ 반올림)마다 따로 봐요",
-    chart: "해마다 평균 매매가 · 옅은 띠는 최저~최고 · 빨간 점은 이 단지 낙찰(같은 면적)",
+    chart: "해마다 가운데 매매가 · 옅은 띠는 최저~최고 · 빨간 점은 이 단지 낙찰(같은 면적)",
     years: "해마다 매매",
     yearRow: (y: number, n: number) => `${y}년 · ${n}건`,
     range: (lo: string, hi: string) => `${lo} ~ ${hi}`,
@@ -944,7 +944,7 @@ export const copy = {
     auctions: "같은 단지 지난 낙찰",
     none: "이 단지의 지난 매매 기록을 찾지 못했어요",
     basis: (last: string | null | undefined) =>
-      `국토교통부 실거래가 공개 자료 · 2006년 1월${last ? ` ~ ${last.replace("-", "년 ")}월` : ""} 계약 · 해제된 거래는 빼요`,
+      `국토교통부 실거래가 공개 자료 · 2006년 1월${last ? ` ~ ${last.replace("-", "년 ")}월` : ""} 계약 · 해제된 거래는 빼요 · 값은 튀는 거래(가족 간 · 지분 거래 등으로 보이는 것)를 시세와 같은 기준으로 빼고 셌어요`,
   },
   onbidNotice: {
     title: "공고문",
