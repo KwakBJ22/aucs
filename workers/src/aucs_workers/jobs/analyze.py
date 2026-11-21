@@ -236,30 +236,43 @@ def trade_type(usage: str | None, building_desc: str | None) -> str | None:
     return None
 
 
+# 같은 지번인데 다른 종류로 신고된 거래(11/21 대표님 「작업해」): 대장은 아파트인데 실거래는 연립다세대로
+# (또는 그 반대) 신고된 작은 건물 — 같은 건물이라 그 종류 거래가 없을 때만 씀. 진행 물건 중 아파트 33 · 빌라 91건.
+OTHER_KIND = {"apt": "rowhouse", "rowhouse": "apt"}
+
+
 def load_market(
     conn: psycopg.Connection, item: dict[str, Any], today: date, pre: Pre | None = None
 ) -> dict[str, Any] | None:
-    """같은 법정동·같은 지번(같은 단지·건물)의 최근 24개월 매매로 시세. 전용 ±3㎡."""
+    """같은 법정동·같은 지번(같은 단지·건물)의 최근 24개월 매매로 시세. 전용 ±3㎡.
+    그 종류 거래가 없으면 같은 지번의 다른 종류(아파트 ↔ 연립다세대) 거래로."""
     kind = trade_type(item.get("usage_name"), item.get("building_desc"))
     area = item.get("building_area_m2")
     if not kind or not area or not item.get("region_code") or not item.get("lot_no"):
         return None
-    if pre is not None:
-        rows = pre.trades.get((trade_region(item["region_code"]), kind, item["lot_no"]), [])
-    else:
-        rows = conn.execute(
+    region = trade_region(item["region_code"])
+
+    def get(k: str) -> list[Any]:
+        if pre is not None:
+            return pre.trades.get((region, k, item["lot_no"]), [])
+        return conn.execute(
             """select deal_date, price_krw, area_m2, floor, build_year from core.trades
                where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
                  and deal_date >= %s and price_krw > 0""",
-            (trade_region(item["region_code"]), kind, item["lot_no"], today - timedelta(days=730)),
+            (region, k, item["lot_no"], today - timedelta(days=730)),
         ).fetchall()
+
+    rows, other = get(kind), None
+    if not rows and kind in OTHER_KIND:
+        other = OTHER_KIND[kind]
+        rows = get(other)
     lot = item["lot_no"]
     trades = [Trade(r[0], int(r[1]), float(r[2]), r[3], lot, r[4]) for r in rows]
     res = market_price(trades, as_of=today, complex_name=lot, area_m2=float(area))
     if res.value is None:
         return None
     recent = sorted(res.evidence, key=lambda e: e["date"], reverse=True)[:5]
-    return {**res.value, "recent": recent}
+    return {**res.value, "recent": recent} | ({"other_kind": other} if other else {})
 
 
 def commercial_over(

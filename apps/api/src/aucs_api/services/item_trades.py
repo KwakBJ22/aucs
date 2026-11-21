@@ -22,6 +22,9 @@ _LOT = "region_code = left(%(rc)s, 8) || '00' and lot_no = %(lot)s"
 KIND_SQL = """case when i.usage_name = '아파트' then 'apt'
   when i.usage_name = '오피스텔' or (i.usage_name = '상가,오피스텔,근린시설' and i.building_desc like '%%오피스텔%%') then 'officetel'
   when i.usage_name in ('다세대', '연립주택,다세대,빌라') then 'rowhouse' end"""
+# 같은 지번인데 다른 종류로 신고된 거래(아파트 ↔ 연립다세대, 11/21) — 그 종류 거래가 없을 때만. analyze.OTHER_KIND 와 같게
+OTHER_KIND_SQL = """case when i.usage_name = '아파트' then 'rowhouse'
+  when i.usage_name in ('다세대', '연립주택,다세대,빌라') then 'apt' end"""
 
 
 def pick_area(areas: list[dict[str, Any]], item_area: float | None, want: int | None) -> int | None:
@@ -39,12 +42,18 @@ def pick_area(areas: list[dict[str, Any]], item_area: float | None, want: int | 
 def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] | None:
     with connect() as c:
         it = c.execute(
-            f"""select i.region_code as rc, i.lot_no as lot, i.building_area_m2, {KIND_SQL} as prop
+            f"""select i.region_code as rc, i.lot_no as lot, i.building_area_m2, {KIND_SQL} as prop,
+                       {OTHER_KIND_SQL} as other
                 from core.items i where i.item_id = %s""",
             (item_id,),
         ).fetchone()
         if not it or not it["rc"] or not it["lot"] or not it["prop"]:
             return None
+        has = c.execute(
+            f"select 1 from core.trade_yearly where {_LOT} and prop_type = %(prop)s limit 1", it
+        ).fetchone()
+        if not has and it["other"]:
+            it = {**it, "prop": it["other"]}
         areas = c.execute(
             f"""select area_m2 as area, sum(n_all)::int as n from core.trade_yearly
                 where {_LOT} and prop_type = %(prop)s group by 1 order by 1""",

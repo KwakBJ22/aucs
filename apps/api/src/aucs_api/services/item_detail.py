@@ -32,7 +32,7 @@ from aucs_api.services.item_buy import building_lines
 from aucs_api.services.item_complex import PEERS_SQL, build_complex, c_area
 from aucs_api.services.item_links import same_house
 from aucs_api.services.item_text import GONE_LINE, PENDING, RESULT_KO, TAGS, failure_table, verdict
-from aucs_api.services.item_trades import KIND_SQL
+from aucs_api.services.item_trades import KIND_SQL, OTHER_KIND_SQL
 from aucs_api.services.item_worth import appraisal_gap, worth
 from aucs_api.services.items import card, photo_url
 from aucs_api.services.onbid import KST
@@ -309,7 +309,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             q_hist = c.execute(
                 f"""select count(*) as n from core.trade_yearly m join core.items i
                      on m.region_code = left(i.region_code, 8) || '00' and m.lot_no = i.lot_no
-                       and m.prop_type = {KIND_SQL}
+                       and m.prop_type in ({KIND_SQL}, {OTHER_KIND_SQL})
                    where i.item_id = %s""",
                 (item_id,),
             )
