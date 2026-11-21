@@ -258,6 +258,29 @@ export type Stats = {
     sale_date: string | null;
   }[];
 };
+// 낙찰가 예측(11/21) — API services/admin_predict.screen
+export type PredictFactor = {
+  u: "apt" | "villa";
+  key: string;
+  name: string;
+  n: number;
+  n_without: number;
+  effect: number; // 같은 종류 · 같은 유찰 묶음 가운데 값과의 차이(%p)
+  ratio: number; // 낙찰가 ÷ 시세(%) 가운데 값
+  by_month: Record<string, number | null>;
+  enough: boolean;
+  steady: boolean;
+  wrong_way: boolean;
+  examples: { item_id: string; address: string | null; sale_date: string; ratio: number }[];
+};
+export type PredictScreen = {
+  kept: { month: string; sold: number; failed: number; sold_market: number }[];
+  score: { month: string; n: number; inside: number; below: number; above: number }[];
+  months: string[];
+  sample: Partial<Record<"apt" | "villa", number>>;
+  rule: { min_side: number; min_month: number; months: number };
+  factors: PredictFactor[];
+};
 export type Screens = {
   jobs: { jobs: Jobs; errors: ErrorRow[] };
   review: {
@@ -267,6 +290,7 @@ export type Screens = {
   members: { users: UserRow[]; inquiries: Inquiry[]; refunds: RefundReq[] };
   stats: { status: { metrics?: Metrics }; stats: Stats };
   plans: PlansScreen;
+  predict: PredictScreen;
   settings: {
     rules: RuleRow[];
     flags: Flag[];

@@ -1983,6 +1983,33 @@ export const copy = {
     mfaGo: "확인",
     mfaWrong: "숫자가 맞지 않아요 · 앱의 새 숫자로 다시 해 주세요",
     mfaFail: "인증을 시작하지 못했어요",
+    // 낙찰가 예측(11/21) — 낙찰 순간 기록(입찰 전에 보여 준 값)으로만 셈 · 기준은 claude/요인표.md
+    predict: {
+      score: "성적표 — 예상 범위에 든 낙찰",
+      scoreRow: (n: number, inside: number, below: number, above: number) =>
+        `범위 안 ${Math.round((inside / n) * 100)}% · 낮게 ${Math.round((below / n) * 100)}% · 높게 ${Math.round((above / n) * 100)}% (${n}건)`,
+      scoreNote:
+        "유찰 1회 이상 · 처음 나온 물건 · 표본 적음 · 지분 · 특수 · 자동차 · 입찰가 오기는 빼요",
+      kept: "쌓인 낙찰 순간 기록",
+      keptRow: (sold: number, failed: number, market: number) =>
+        `낙찰 ${sold} · 유찰 ${failed} · 시세 있던 낙찰 ${market}`,
+      factors: "요인표 — 낙찰가 ÷ 시세",
+      kinds: { apt: "아파트", villa: "빌라" } as Record<string, string>,
+      sample: (n: number) => `입찰 전 시세가 있던 낙찰 ${n}건`,
+      rule: (side: number, months: number) =>
+        `예측에 넣는 기준: 있는 쪽 · 없는 쪽 각 ${side}건 이상 · 최근 ${months}달 같은 쪽 · 넣었을 때 성적표가 오름(넣어 봐야 알아요)`,
+      effect: (e: number) => `${e > 0 ? "+" : ""}${e}%p`,
+      line: (ratio: number, n: number, without: number) =>
+        `낙찰가 ÷ 시세 ${ratio}% · ${n}건(없는 쪽 ${without}건)`,
+      month: (m: string, v: number | null) =>
+        `${Number(m.slice(5))}월 ${v == null ? "적음" : `${v > 0 ? "+" : ""}${v}`}`,
+      pass: "통과 후보",
+      wrong: "원인부터",
+      few: "표본 적음",
+      unsteady: "달마다 확인 중",
+      wrongNote: "상식으로는 낮아야 하는데 높게 나왔어요 · 물건을 열어 까닭부터 봐요",
+      none: "아직 쌓인 기록이 없어요",
+    },
     menu: {
       today: "오늘",
       jobs: "작업·수집",
@@ -1991,6 +2018,7 @@ export const copy = {
       members: "회원",
       notices: "공지·알림",
       plans: "이용권·포인트",
+      predict: "낙찰가 예측",
       stats: "통계",
       settings: "설정",
     },

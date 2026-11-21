@@ -35,7 +35,7 @@ def get_screen(
     q: str = Query(default="", max_length=60),
     days: int = Query(default=30, ge=1, le=365),
 ) -> dict[str, Any]:
-    """관리자 메뉴 한 화면 자료 한 번에. menu: jobs · review · members · stats · settings."""
+    """관리자 메뉴 한 화면 자료 한 번에. menu: jobs · review · members · plans · predict · stats · settings."""
     if menu == "jobs":
         return _together(jobs=(admin_ops.jobs,), errors=(admin_ops.errors,))
     if menu == "review":
@@ -48,6 +48,10 @@ def get_screen(
         return out
     if menu == "plans":
         return admin_money.screen()
+    if menu == "predict":  # 낙찰가 예측(11/21) — 낙찰 순간 기록으로 성적표 · 요인표
+        from aucs_api.services import admin_predict
+
+        return admin_predict.screen()
     if menu == "stats":
         return _together(status=(admin.status,), stats=(admin_ops.stats, days))
     if menu == "settings":

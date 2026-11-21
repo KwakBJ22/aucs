@@ -11,6 +11,7 @@ import { MembersView } from "@/components/admin/members";
 import { NoticesView } from "@/components/admin/notices";
 import { PlansView } from "@/components/admin/plans";
 import { PointsReview } from "@/components/admin/points-review";
+import { PredictView } from "@/components/admin/predict";
 import { ReviewView } from "@/components/admin/review";
 import { SettingsView } from "@/components/admin/settings";
 import { StatsView } from "@/components/admin/stats";
@@ -26,6 +27,7 @@ const MENUS = [
   "members",
   "notices",
   "plans",
+  "predict",
   "stats",
   "settings",
 ] as const;
@@ -68,6 +70,7 @@ export default function AdminPage() {
                 </>
               )}
               {m === "plans" && <PlansView />}
+              {m === "predict" && <PredictView />}
               {m === "stats" && <StatsView />}
               {m === "settings" && <SettingsView />}
             </div>
