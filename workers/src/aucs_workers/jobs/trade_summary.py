@@ -61,6 +61,8 @@ def main() -> None:
             prop = TYPES[name][3]
             t0, read, skip, n_rows, dropped = time.monotonic(), 0, 0, 0, 0
             with conn.transaction():
+                # 파일 수천 개를 읽는 동안 COPY 하나가 열려 있음 — DB 기본 시간 제한(11/21 apt 23만 줄째에서 걸림)을 이 묶음에서만 풂
+                conn.execute("set local statement_timeout = 0")
                 conn.execute("delete from core.trade_yearly where prop_type = %s", (prop,))
                 with (
                     conn.cursor() as cur,
