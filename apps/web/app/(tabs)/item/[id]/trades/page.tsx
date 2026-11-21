@@ -35,7 +35,7 @@ function Chart({ d }: { d: ItemTrades }) {
       .map((x) => `${mid(x)},${py(x.low)}`)
       .join(" ");
   return (
-    <figure className="m-0 mt-8" aria-label={t.chart}>
+    <figure className="m-0 mt-8" style={{ maxWidth: 520 }} aria-label={t.chart}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img">
         <polygon points={band} fill="var(--blue)" opacity={0.12} />
         <polyline

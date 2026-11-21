@@ -44,7 +44,7 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
         if area is None:
             return {"areas": [], "area": None, "years": [], "recent": [], "auctions": []}
         head = c.execute(
-            f"""select max(complex_name) as name, max(build_year) as built, max(ym) as last
+            f"""select string_agg(distinct complex_name, ' · ') as name, max(build_year) as built, max(ym) as last
                 from core.trade_monthly where {_LOT}""",
             it,
         ).fetchone()
@@ -59,7 +59,7 @@ def item_trades(item_id: str, want: int | None, today: date) -> dict[str, Any] |
             f"""select deal_kind as kind, deal_date as date, floor, price_krw as price,
                        deposit_krw as deposit, monthly_rent_krw as rent
                 from core.trades where {_LOT} and round(area_m2) = %(area)s and deal_date >= %(since)s
-                order by deal_date desc limit 200""",
+                order by deal_date desc limit 1000""",
             {**it, "area": area, "since": today - timedelta(days=730)},
         ).fetchall()
         peers = c.execute(PEERS_SQL, (item_id,)).fetchall()
