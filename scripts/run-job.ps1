@@ -17,5 +17,12 @@ if ($Job -eq 'onbid_first') { & $uv run --with duckdb python tools/duckdb_export
 & $uv run python -m @parts *>&1 | Tee-Object -FilePath $log -Append
 if ($LASTEXITCODE -ne 0) {
   Add-Type -AssemblyName System.Windows.Forms
-  [System.Windows.Forms.MessageBox]::Show("옥스 $Job 작업이 멈췄습니다.`n`n로그: $log`n`n코워크에 알려 주세요.", '옥스 — 수집 확인') | Out-Null
+  # 11/22: 아침 묶음은 끝까지 돌고 한 단계만 실패해도 여기로 옴 → 「멈췄습니다」 대신 무엇이 빠졌는지(다음 날 아침에 다시 돎)
+  $fail = Get-Content $log -ErrorAction SilentlyContinue | Where-Object { $_ -match '^끝 · 실패: ' } | Select-Object -Last 1
+  if ($fail) {
+    $msg = "옥스 $Job 작업은 끝까지 돌았지만 실패한 단계가 있습니다.`n`n" + ($fail -replace '^끝 · 실패: ', '') + "`n`n다음 날 아침에 다시 받습니다. 로그: $log"
+  } else {
+    $msg = "옥스 $Job 작업이 멈췄습니다.`n`n로그: $log`n`n코워크에 알려 주세요."
+  }
+  [System.Windows.Forms.MessageBox]::Show($msg, '옥스 — 수집 확인') | Out-Null
 }

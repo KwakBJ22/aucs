@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 from psycopg.types.json import Jsonb
 
+from aucs_workers.collectors.net import get_retry
 from aucs_workers.collectors.official_prices import pnu_of
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
@@ -44,8 +45,8 @@ def fetch(client: httpx.Client, key: str, domain: str, pnu: str) -> tuple[list[d
     page, text = 1, ""
     while True:
         time.sleep(GAP)
-        r = client.get(URL, params={"key": key, "domain": domain, "pnu": pnu, "format": "json",
-                                    "numOfRows": ROWS, "pageNo": page})  # fmt: skip
+        r = get_retry(client, URL, params={"key": key, "domain": domain, "pnu": pnu, "format": "json",
+                                           "numOfRows": ROWS, "pageNo": page})  # fmt: skip
         text = (r.text or "").strip()
         if r.status_code != 200 or not text.startswith("{"):
             raise ApiError(f"HTTP {r.status_code} {text[:160]}")

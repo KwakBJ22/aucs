@@ -23,6 +23,7 @@ from aucs_rules.building import dong_key, ho_from_address, parse_jibun, unit_fro
 from aucs_rules.holding_tax import dong_matches
 from psycopg.types.json import Jsonb
 
+from aucs_workers.collectors.net import get_retry
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
@@ -82,7 +83,7 @@ def fetch(client: httpx.Client, key: str, domain: str, kind: str, pnu: str, year
     page, total, last = 1, 0, {}
     while True:
         time.sleep(GAP)
-        r = client.get(f"{BASE}/{OPS[kind]}", params={
+        r = get_retry(client, f"{BASE}/{OPS[kind]}", params={
             "key": key, "domain": domain, "pnu": pnu, "stdrYear": year, "format": "json",
             "numOfRows": ROWS, "pageNo": page})  # fmt: skip
         text = (r.text or "").strip()
@@ -182,7 +183,7 @@ def main() -> None:
                             if not got["items"]:  # 올해 공시 전이거나 없음 → 지난해
                                 got = fetch(client, key, domain, kind, pnu, this_year - 1)
                             cache[(kind, pnu)] = got
-                    except ApiError as e:
+                    except (ApiError, httpx.HTTPError) as e:
                         print(f"\n[멈춤] {kind} {pnu}: {e}\n  키·서비스(국가중점데이터)·하루 한도를 확인하세요. 받은 데까지 저장했어요.")
                         conn.commit()
                         raise SystemExit(1) from e
