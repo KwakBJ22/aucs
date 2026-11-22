@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NeedLogin } from "@/components/need-login";
 import type { ItemDetail } from "@/lib/api/items";
-import { meApi, type Workspace } from "@/lib/api/me";
+import { meApi, type WatchCard, type Workspace } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import {
@@ -18,6 +18,7 @@ import {
   uploadVoice,
   type FieldFile,
 } from "@/lib/field";
+import { MAX_STOPS, isPhone, naverRoute, nearestOrder, openNaver, type Stop } from "@/lib/route";
 
 const t = copy.field;
 
@@ -34,6 +35,10 @@ export default function FieldPage() {
   const [busy, setBusy] = useState("");
   const [rec, setRec] = useState<MediaRecorder | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pos, setPos] = useState<[number, number] | null>(null);
+  const [watch, setWatch] = useState<WatchCard[]>([]);
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const [noApp, setNoApp] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(() => {
@@ -49,13 +54,21 @@ export default function FieldPage() {
         setW(x.w);
       })
       .catch(() => setW(null));
+    // 여러 곳 도는 순서: 좌표 있는 관심 물건(11/23)
+    meApi
+      .watch(token)
+      .then(setWatch)
+      .catch(() => setWatch([]));
     reload();
   }, [token, id, reload]);
   // 위치를 허락했으면 물건까지 거리를 보여 줌(저장하지 않음)
   useEffect(() => {
     if (!d?.lat || !d?.lon || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (p) => setDist(meters([p.coords.latitude, p.coords.longitude], [d.lat!, d.lon!])),
+      (p) => {
+        setPos([p.coords.latitude, p.coords.longitude]);
+        setDist(meters([p.coords.latitude, p.coords.longitude], [d.lat!, d.lon!]));
+      },
       () => {},
       { maximumAge: 60000, timeout: 8000 },
     );
@@ -119,6 +132,55 @@ export default function FieldPage() {
   const mapQ = (q: string) => `https://map.kakao.com/?q=${encodeURIComponent(q)}`;
   const askText = t.ask.join("\n");
 
+  // 여러 곳 도는 순서(11/23): 이 물건 + 입찰이 끝나지 않은 관심 물건(좌표 있는 것). 처음엔 2주 안 입찰만 골라 둠.
+  const T = t.tour;
+  const stopOf = (c: {
+    item_id: string;
+    place: string | null;
+    building?: string | null;
+    usage?: string | null;
+    lat: number | null;
+    lon: number | null;
+  }): Stop | null =>
+    c.lat != null && c.lon != null
+      ? {
+          id: c.item_id,
+          name: `${c.place ?? ""} ${c.building ?? c.usage ?? ""}`.trim(),
+          lat: c.lat,
+          lon: c.lon,
+        }
+      : null;
+  const here = d ? stopOf({ ...d, item_id: id }) : null;
+  const others = watch.filter(
+    (c) =>
+      c.item_id !== id &&
+      c.step !== "result" &&
+      c.step !== "after" &&
+      (c.d_day == null || c.d_day >= 0),
+  );
+  const pool = [here, ...others.map(stopOf)].filter((x): x is Stop => x != null);
+  const chosen =
+    picked ??
+    new Set(
+      [id, ...others.filter((c) => c.d_day != null && c.d_day <= 14).map((c) => c.item_id)].slice(
+        0,
+        MAX_STOPS,
+      ),
+    );
+  const route = nearestOrder(
+    pool.filter((x) => chosen.has(x.id)),
+    pos,
+  );
+  const rest = pool.filter((x) => !chosen.has(x.id));
+  const phone = typeof navigator !== "undefined" ? isPhone(navigator.userAgent) : null;
+  const flip = (k: string) => {
+    const n = new Set(chosen);
+    if (n.has(k)) n.delete(k);
+    else if (n.size < MAX_STOPS) n.add(k);
+    setPicked(n);
+  };
+  const km = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
+
   return (
     <main className="page">
       <PageHeader title={t.title} back={`/watch/${encodeURIComponent(id)}`} />
@@ -157,6 +219,52 @@ export default function FieldPage() {
                   </a>
                 )}
               </div>
+            </section>
+          )}
+
+          {here && (
+            <section className="section">
+              <h2>{T.title}</h2>
+              <p className="sub mt-0">{pos ? T.fromHere : T.fromFirst}</p>
+              {route.map((x, i) => (
+                <label key={x.id} className="d-flex gap-8 ai-center py-6 px-0">
+                  <input type="checkbox" checked onChange={() => flip(x.id)} />
+                  <b className="c-blue-text">{i + 1}</b>
+                  <span className="minw-0">
+                    <span className="d-block fs-md">{x.name}</span>
+                    {i > 0 && (
+                      <span className="sub fs-xs">
+                        {T.gap(km(meters([route[i - 1]!.lat, route[i - 1]!.lon], [x.lat, x.lon])))}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              ))}
+              {rest.map((x) => (
+                <label key={x.id} className="d-flex gap-8 ai-center py-6 px-0 sub">
+                  <input
+                    type="checkbox"
+                    checked={false}
+                    disabled={chosen.size >= MAX_STOPS}
+                    onChange={() => flip(x.id)}
+                  />
+                  <span className="fs-md">{x.name}</span>
+                </label>
+              ))}
+              {chosen.size >= MAX_STOPS && rest.length > 0 && <p className="sub fs-xs">{T.max}</p>}
+              <button
+                className="btn primary mt-10"
+                disabled={!phone || route.length === 0}
+                onClick={() => {
+                  setNoApp(false);
+                  openNaver(naverRoute(route, window.location.origin), () => setNoApp(true));
+                }}
+              >
+                {T.go(route.length)}
+              </button>
+              {!phone && <p className="sub fs-xs mt-6">{T.pc}</p>}
+              {noApp && <p className="sub c-red mt-6">{T.noApp}</p>}
+              <p className="sub fs-xs mt-6 mb-0">{T.note}</p>
             </section>
           )}
 

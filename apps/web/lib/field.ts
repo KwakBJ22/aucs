@@ -79,13 +79,5 @@ export async function removeFile(path: string): Promise<void> {
   await supabase?.storage.from(BUCKET).remove([path]);
 }
 
-// 두 좌표 사이 거리(m)
-export function meters(a: [number, number], b: [number, number]): number {
-  const R = 6371000;
-  const rad = (x: number) => (x * Math.PI) / 180;
-  const dLat = rad(b[0] - a[0]);
-  const dLon = rad(b[1] - a[1]);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLon / 2) ** 2;
-  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
-}
+// 두 좌표 사이 거리(m) — 길찾기 순서(lib/route)와 한 벌(11/23 옮김)
+export { meters } from "./route";
