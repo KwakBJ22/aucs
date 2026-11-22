@@ -135,6 +135,9 @@ function apiAnswer(method, p, hit) {
   if (/^\/items\/[^/]+$/.test(p)) return ITEM;
   if (/^\/items\/[^/]+\/trades$/.test(p)) return TRADES;
   if (p === "/me/billing") return BILLING;
+  // 결제 화면(11/23): 결제 키가 없을 때 — 값은 보이고 단추는 잠김
+  if (p === "/me/pay/quote")
+    return { open: false, amount_krw: 29000, until: "2026-12-22", item: null, card: null };
   if (method === "POST" && /^\/me\/billing\/\d+\/refund$/.test(p)) {
     hit.refund = true;
     return { estimate_krw: 290000, rule: "전액" };
@@ -231,6 +234,19 @@ const PATHS = [
       await seen(page, "29,000원");
       await page.getByRole("tab", { name: /1년/ }).click();
       await seen(page, "249,000원"); // 11/12 1년 290,000 → 249,000
+    },
+  },
+  {
+    name: "결제 화면(결제 계약 전 잠김)",
+    dev: phone,
+    login: true,
+    run: async (page) => {
+      await page.goto(`${BASE}/checkout?plan=personal`);
+      await seen(page, "29,000원");
+      await seen(page, "12/22까지");
+      await seen(page, "결제는 사업자등록");
+      if (!(await page.getByRole("button", { name: /카드 등록하고/ }).isDisabled()))
+        throw new Error("결제 계약 전인데 결제 단추가 열려 있음");
     },
   },
   {

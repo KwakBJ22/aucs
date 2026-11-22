@@ -446,3 +446,76 @@ export const meApi = {
   addPush: (t: string, sub: { endpoint: string; p256dh: string; auth: string }) =>
     call(t, "/push", { method: "POST", body: JSON.stringify(sub) }),
 };
+
+// 결제(11/23 미리 구성 — 서버에 토스페이먼츠 키가 들어가면 quote.open 이 참이 되어 열림).
+// 실패하면 서버 문장(detail)을 그대로 보여 줌 — 토스 코드 [XXX] 는 떼고.
+export class PayError extends Error {}
+async function payCall<T>(token: string, path: string, body?: unknown): Promise<T> {
+  const post = body !== undefined;
+  const res = await fetch(`${apiBaseUrl}/me/pay${path}`, {
+    method: post ? "POST" : "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(post ? { "Content-Type": "application/json" } : {}),
+    },
+    body: post ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let msg = "";
+    try {
+      msg = String(((await res.json()) as { detail?: unknown }).detail ?? "");
+    } catch {
+      /* 빈 응답 */
+    }
+    throw new PayError(msg.replace(/^\[[^\]]+\]\s*/, "") || "결제를 마치지 못했어요");
+  }
+  if (post) clearMeCache();
+  return (await res.json()) as T;
+}
+export type PayQuote = {
+  open: boolean;
+  amount_krw: number;
+  until: string;
+  item: { id: string; no: string; address: string | null } | null;
+  card: string | null;
+};
+export type PayOrder = {
+  order_id: string;
+  amount_krw: number;
+  order_name: string;
+  client_key: string;
+  customer_key: string;
+  email: string | null;
+};
+export type PayResult = {
+  order_id?: string;
+  status: "ready" | "waiting" | "paid" | "failed" | "cancelled" | "expired" | "card";
+  plan?: string;
+  item_id?: string | null;
+  amount_krw?: number;
+  order_name?: string;
+  vbank?: { bank: string | null; account: string | null; due: string | null } | null;
+  fail?: string | null;
+  until?: string;
+  receipt_url?: string | null;
+  card?: string;
+};
+export const payApi = {
+  quote: (t: string, plan: string, period: string, item?: string | null) =>
+    payCall<PayQuote>(
+      t,
+      `/quote?plan=${plan}&period=${period}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
+    ),
+  order: (t: string, b: { plan: string; period: string; item_id: string | null; method: string }) =>
+    payCall<PayOrder>(t, "/order", b),
+  confirm: (t: string, b: { payment_key: string; order_id: string; amount: number }) =>
+    payCall<PayResult>(t, "/confirm", b),
+  fail: (t: string, b: { order_id: string; code: string; message: string }) =>
+    payCall<{ ok: boolean }>(t, "/fail", b),
+  status: (t: string, id: string) => payCall<PayResult>(t, `/order/${encodeURIComponent(id)}`),
+  cardStart: (t: string) =>
+    payCall<{ client_key: string; customer_key: string }>(t, "/card/start", {}),
+  cardIssue: (t: string, b: { auth_key: string; customer_key: string }) =>
+    payCall<PayResult>(t, "/card/issue", b),
+};

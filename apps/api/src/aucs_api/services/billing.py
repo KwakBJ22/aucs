@@ -175,11 +175,25 @@ def refund_requests(only_waiting: bool = True) -> list[dict[str, Any]]:
         ).fetchall()
 
 
+def _cancel_toss(c: Any, payment_id: int, money: int, answer: str) -> None:
+    """토스페이먼츠로 받은 결제(payment_key 있음)면 돈도 돌려줌. 입금 전용 계좌는 돌려받을 계좌가 있어야 해
+    관리자가 직접(토스 상점 관리자) — 결제 키가 없는 예전 · 관리자 결제도 그대로 직접."""
+    from aucs_api.services import pay
+
+    p = c.execute(
+        "select payment_key, method_note from app.payments where payment_id = %s", (payment_id,)
+    ).fetchone()
+    if not p or not p["payment_key"] or not pay.is_open() or "가상계좌" in (p["method_note"] or ""):
+        return
+    if money > 0:
+        pay.cancel(p["payment_key"], answer or "환불", money)
+
+
 def decide_refund(
     actor: str | None, request_id: int, ok: bool, amount: int | None, answer: str
 ) -> bool:
     """환불 처리(대표만). 승인하면 결제를 환불됨으로 표시하고 회원에게 알림.
-    실제 카드 취소는 토스페이먼츠를 붙이면 여기서 취소 API를 부름(그 전엔 관리자가 직접)."""
+    토스로 받은 결제면 승인 때 토스 취소 API 도 부름(_cancel_toss, 11/23) — 취소가 실패하면 아무것도 바꾸지 않음."""
     from aucs_api.services.admin_ops import audit
 
     with connect() as c:
@@ -190,6 +204,8 @@ def decide_refund(
         if not r:
             return False
         money = r["estimate_krw"] if amount is None else amount
+        if ok:
+            _cancel_toss(c, r["payment_id"], money, answer)
         c.execute(
             "update app.refund_requests set status = %s, answer = %s, decided_by = %s, decided_at = now() where request_id = %s",
             ("done" if ok else "rejected", answer, actor, request_id),

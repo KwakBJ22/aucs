@@ -35,3 +35,8 @@ SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "").strip().strip("\"'")
 # 웹 푸시 (VAPID) 공개 키 — 비밀 키는 수집기(workers)만 씀
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
+
+# 토스페이먼츠(11/23 미리 구성). 두 키가 다 있어야 결제가 열림 — 없으면 결제 단추가 잠긴 채(지금).
+# 클라이언트 키(test_ck · live_ck)는 화면에 보내도 되는 값, 시크릿 키(test_sk · live_sk)는 서버에만.
+TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY", "").strip()
+TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY", "").strip()

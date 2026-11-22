@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from aucs_api import settings
 from aucs_api.cache import PublicCache
 from aucs_api.db import warm
-from aucs_api.routers import admin, cron, errors, events, health, items, me, pro
+from aucs_api.routers import admin, cron, errors, events, health, items, me, pay, pro
 from aucs_api.services import errors as error_log
 
 app = FastAPI(title="옥스 API", on_startup=[warm])
@@ -32,6 +32,8 @@ app.include_router(pro.router)
 app.include_router(events.router)
 app.include_router(errors.router)
 app.include_router(cron.router)
+app.include_router(pay.public)
+app.include_router(pay.router)
 
 
 @app.get("/robots.txt", include_in_schema=False)

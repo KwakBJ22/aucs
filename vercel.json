@@ -24,6 +24,10 @@
     {
       "path": "/cron/notify?morning=true",
       "schedule": "30 22 * * *"
+    },
+    {
+      "path": "/cron/renew",
+      "schedule": "0 17 * * *"
     }
   ],
   "git": {

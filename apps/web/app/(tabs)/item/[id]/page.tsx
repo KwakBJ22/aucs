@@ -65,7 +65,7 @@ export default function Item() {
     return (
       <main className="page">
         <PageHeader title="" back="history" />
-        <GateBlock status={gate} />
+        <GateBlock status={gate} itemId={decodeURIComponent(id)} />
       </main>
     );
   if (failed && d === undefined)

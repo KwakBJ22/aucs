@@ -26,3 +26,12 @@ def cron_notify(authorization: str = Header(default=""), morning: bool = False) 
     from aucs_workers.jobs.notify import run_once
 
     return {"ok": True, "result": run_once(morning=morning)}
+
+
+@router.get("/renew")
+def cron_renew(authorization: str = Header(default="")) -> dict[str, Any]:
+    """매달 자동결제(11/23 미리 구성): 오늘 끝나는 매달 이용권을 다음 달로. 결제 키가 없으면 아무것도 안 함."""
+    _check(authorization)
+    from aucs_api.services.pay import renew_due
+
+    return {"ok": True, "result": renew_due()}

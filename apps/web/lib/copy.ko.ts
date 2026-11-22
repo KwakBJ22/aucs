@@ -550,6 +550,7 @@ export const copy = {
   gate: {
     paid: "하루 무료 이용이 끝났어요 · 이용권이 있으면 계속 볼 수 있어요",
     plans: "이용권 보기",
+    one: "이 물건만 보기 (한 건 이용권)",
     tooMany: "짧은 시간에 너무 많이 열었어요 · 잠시 뒤 다시 해 주세요",
   },
   needLogin: {
@@ -1724,6 +1725,35 @@ export const copy = {
     refundPlan:
       "환불 · 결제 7일 안에 물건 상세를 한 번도 안 열었으면 전액 · 그 밖은 이용권 화면의 환불 규칙대로",
     pay: (price: string) => `${price} 결제하고 바로 보기`,
+    // 결제 붙이기(11/23 미리 구성)
+    monthCard: "매달은 카드를 한 번 등록해 두면 매달 같은 날 자동으로 결제돼요",
+    cardSaved: (x: string) => `등록된 카드 · ${x}`,
+    payCard: (price: string) => `카드 등록하고 ${price} 결제`,
+    opening: "결제창을 여는 중…",
+    until: (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}까지`,
+    done: {
+      checking: "결제를 확인하고 있어요…",
+      paid: "결제를 마쳤어요",
+      card: "카드를 바꿨어요 · 다음 결제부터 이 카드로 해요",
+      waiting: "입금을 기다리고 있어요",
+      waitingSub: "기한 안에 아래 계좌로 넣으면 바로 열리고 알림을 보내 드려요",
+      bank: "은행",
+      account: "계좌",
+      due: "입금 기한",
+      receipt: "영수증 보기",
+      toItem: "물건 상세 보기",
+      toHome: "물건 보러 가기",
+      history: "결제 내역",
+      failTitle: "결제를 마치지 못했어요",
+      again: "다시 결제하기",
+      ask: "문의하기",
+      noParams: "결제 정보가 없어요 · 결제 내역에서 확인해 주세요",
+    },
+    fail: {
+      canceled: "결제를 그만뒀어요",
+      canceledSub: "돈은 나가지 않았어요",
+      failed: "결제가 되지 않았어요",
+    },
   },
   plans: {
     title: "이용권",
