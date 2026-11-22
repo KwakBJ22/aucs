@@ -1693,6 +1693,38 @@ export const copy = {
       "아직 저장한 계산이 없어요 · 관심에 담은 물건은 위 계산 아래 「작업 공간에 저장」으로 남길 수 있어요",
     open: "계산 화면 크게 보기",
   },
+  // 결제(11/22 디자인 — 결제 계약 뒤 단추만 엶)
+  checkout: {
+    title: "결제",
+    year: "1년",
+    planMonth: "개인 · 매달",
+    planYear: "개인 · 1년",
+    pickItem: "물건 상세에서 고른 물건",
+    period: "열리는 기간",
+    periodMonth: "결제한 날부터 한 달 · 매달 결제",
+    periodYear: "결제한 날부터 1년",
+    periodOne: "매각기일 다음 날까지",
+    untilOne: (m: number, d: number, w: string) => `${m}/${d}(${w})까지 · 매각기일 다음 날`,
+    includes: "포함",
+    includesOne: "이 물건 상세 전부",
+    amount: "결제 금액",
+    method: "결제 수단",
+    methods: [
+      ["card", "신용카드"],
+      ["bank", "계좌이체"],
+      ["naver", "네이버페이"],
+      ["kakao", "카카오페이"],
+      ["toss", "토스페이"],
+      ["vbank", "입금 전용 계좌"],
+    ] as [string, string][],
+    methodNote:
+      "계좌이체는 은행 앱에서 바로 · 입금 전용 계좌는 안내한 기한 안에 넣으면 돼요 · 입금이 확인되면 바로 열려요",
+    refundOne:
+      "환불 · 열어 보기 전에는 전액 · 연 뒤에는 환불 없음 · 사건이 취하·정지·변경되면 다른 물건으로 바꿔 드려요",
+    refundPlan:
+      "환불 · 결제 7일 안에 물건 상세를 한 번도 안 열었으면 전액 · 그 밖은 이용권 화면의 환불 규칙대로",
+    pay: (price: string) => `${price} 결제하고 바로 보기`,
+  },
   plans: {
     title: "이용권",
     monthly: "매달",

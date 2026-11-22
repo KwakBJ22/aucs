@@ -101,9 +101,13 @@ export default function Plans() {
                 </Link>
               ) : p.key !== "free" ? (
                 <>
-                  <button className="btn primary md mt-12" disabled title={t.payLater}>
+                  {/* 결제 화면으로(11/22 — 결제 화면은 미리 만들어 두고 마지막 단추만 잠금) */}
+                  <Link
+                    href={`/checkout?plan=${p.key}${yearly ? "&y=1" : ""}`}
+                    className="btn primary md mt-12"
+                  >
                     {p.cta}
-                  </button>
+                  </Link>
                   {/* 눌러도 반응이 없던 것(11/1) — 왜 안 되는지 바로 아래에 */}
                   <div className="sub fs-xs mt-4 ta-center">{t.payNote}</div>
                 </>
