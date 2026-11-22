@@ -110,9 +110,47 @@ def evening_probe() -> None:
         print(f"   저녁 목록 시험 멈춤({code})", flush=True)
 
 
+def alive(pid: int) -> bool:
+    """그 프로세스가 아직 살아 있나. 윈도우에서 os.kill(pid, 0)은 프로세스를 끝내 버리므로 쓰지 않음."""
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+    import ctypes
+
+    k32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    h = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return False
+    try:
+        code = ctypes.c_ulong()
+        ok = bool(k32.GetExitCodeProcess(h, ctypes.byref(code)))
+        return ok and code.value == 259  # STILL_ACTIVE
+    finally:
+        k32.CloseHandle(h)
+
+
 def busy() -> bool:
-    """앞 차례가 70분 안에 시작해 아직 안 끝났으면 True."""
-    return LOCK.exists() and time.time() - LOCK.stat().st_mtime < 70 * 60
+    """앞 차례가 70분 안에 시작해 아직 안 끝났으면 True.
+
+    11/22: 09:10 차례가 09:28 에 끊겼는데 잠금 파일이 남아 10:10 차례가 건너뜀 →
+    잠금에 적힌 프로세스가 이미 없으면 기다리지 않고 바로 돎."""
+    if not LOCK.exists() or time.time() - LOCK.stat().st_mtime >= 70 * 60:
+        return False
+    try:
+        pid = int(LOCK.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return True  # 읽는 찰나 · 이상한 내용이면 예전처럼 기다림
+    if alive(pid):
+        return True
+    print(f"앞 차례(프로세스 {pid})가 이미 끝나 있음 — 잠금을 지우고 돎", flush=True)
+    return False
 
 
 def main() -> None:
