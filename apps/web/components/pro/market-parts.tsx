@@ -38,7 +38,7 @@ export function StatTable({
             />
           </span>
           <span className="ta-right">
-            <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}</span>
+            <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n.toLocaleString("ko-KR")}</span>
           </span>
         </div>
       ))}

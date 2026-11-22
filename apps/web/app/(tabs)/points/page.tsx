@@ -135,35 +135,44 @@ export default function PointsPage() {
           <circle cx="24" cy="24" r="20" />
           <path d="M19 15h7a5 5 0 0 1 0 10h-7M19 15v18" />
         </svg>
-        <h2 className="pt-hero-title">{t.heroTitle}</h2>
-        <p className="pt-hero-body">{t.heroBody}</p>
-        <div className="pt-perks">
-          {t.heroPerks.map(([k, v]) => (
-            <div key={k}>
-              <span>{k}</span>
-              <b>{v}</b>
-            </div>
-          ))}
+        {/* 11/22 디자인: PC 는 왼쪽 설명 · 차례, 오른쪽 받는 포인트 두 칸 */}
+        <div className="pt-hero-l">
+          <h2 className="pt-hero-title">{t.heroTitle}</h2>
+          <p className="pt-hero-body">{t.heroBody}</p>
+          <ol className="pt-steps">
+            {t.steps.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ol>
         </div>
-        <p className="pt-hero-pay">
-          {t.heroPay}
-          <br />
-          {t.heroPayMax}
-        </p>
-        <ol className="pt-steps">
-          {t.steps.map((s) => (
-            <li key={s}>{s}</li>
-          ))}
-        </ol>
+        <div className="pt-hero-r">
+          <div className="pt-perks">
+            {t.heroPerks.map(([k, v]) => (
+              <div key={k}>
+                <span>{k}</span>
+                <b>{v}</b>
+              </div>
+            ))}
+          </div>
+          <p className="pt-hero-pay">{t.heroPay}</p>
+        </div>
       </section>
 
       <section className="section">
-        <div className="sub m-0">{t.balance}</div>
-        <div className="item-price">{sum ? t.pt(sum.balance) : "-"}</div>
+        <div className="d-flex jc-between ai-end gap-12">
+          <div>
+            <div className="sub m-0">{t.balance}</div>
+            <div className="item-price pt-balance">{sum ? t.pt(sum.balance) : "-"}</div>
+            {sum && (
+              <p className="sub mt-4 mb-0">{t.today(sum.today.registry + sum.today.appraisal)}</p>
+            )}
+          </div>
+          {/* 이용권에 쓰기(11/22 디자인) */}
+          <Link href="/plans" className="link f-none">
+            {t.usePlans}
+          </Link>
+        </div>
         {notice && <div className="bg-panel r-14 p-12 mt-10 fs-md">{notice}</div>}
-        {sum && (
-          <p className="sub mt-4 mb-0">{t.today(sum.today.registry + sum.today.appraisal)}</p>
-        )}
       </section>
 
       <section className="section">
@@ -176,18 +185,21 @@ export default function PointsPage() {
         )}
         {rows?.length === 0 && <p className="sub mt-12">{t.empty}</p>}
         {rows?.map((r) => (
-          <div key={r.item_id} className="mt-14">
+          <div key={r.item_id} className="pt-row">
+            {/* 11/22 디자인: 이름 · 사건은 왼쪽(누르면 물건), 올리기 단추는 같은 줄 오른쪽 */}
             <Link
               prefetch={false}
               href={`/item/${encodeURIComponent(r.item_id)}`}
-              className="link fw-6"
+              className="pt-row-name c-inherit"
             >
-              {r.place} {r.building ?? ""}
+              <b>
+                {r.place} {r.building ?? ""}
+              </b>
+              <span className="sub">
+                <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
+              </span>
             </Link>
-            <div className="sub mt-2">
-              <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
-            </div>
-            <div className="d-flex gap-8 f-wrap mt-8">
+            <div className="pt-row-btns">
               {KINDS.filter((k) => r.need[k]).map((k) => (
                 <button
                   key={k}
@@ -199,7 +211,7 @@ export default function PointsPage() {
               ))}
             </div>
             {open?.id === r.item_id && (
-              <div className="bg-panel r-14 p-12 mt-8">
+              <div className="bg-panel r-14 p-12 mt-8 pt-row-open">
                 <div className="fs-sm fw-6">{t.left(Math.floor(leftSec / 60), leftSec % 60)}</div>
                 {open.kind === "registry" ? (
                   <>

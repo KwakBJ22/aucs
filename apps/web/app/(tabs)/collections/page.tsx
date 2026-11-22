@@ -61,7 +61,7 @@ function CollectionsView() {
       <PageHeader title={t.title} />
       <div className="d-flex jc-between ai-center gap-8 f-wrap">
         <p className="sub m-0">{t.sub}</p>
-        <div className="pills" role="group">
+        <div className="scope-seg" role="group">
           <button className={!all ? "on" : ""} onClick={() => go(key, false)}>
             {t.mine}
           </button>
@@ -105,9 +105,7 @@ function CollectionsView() {
         )}
         {rows?.length === 0 && <p className="sub">{t.empty}</p>}
         <div className="col-list">
-          {rows?.map((c) => (
-            <ItemCard key={c.item_id} c={c} why={c.why} />
-          ))}
+          {rows?.map((c) => <ItemCard key={c.item_id} c={c} why={c.why} />)}
         </div>
       </section>
     </main>

@@ -198,14 +198,15 @@ export default function ComparePage() {
   const blank = pc && data ? Math.max(0, data.max - cols.length) : 0;
 
   return (
-    <main className="page compare-page">
+    <main className="page wide compare-page">
       <PageHeader
         title={t.title}
         back="/watch"
+        sub={pc && cols.length > 0 ? t.note : undefined}
         right={
           data ? (
             <span className="sub">
-              {cols.length}/{data.max}
+              {cols.length} / {data.max}
             </span>
           ) : undefined
         }
@@ -227,7 +228,7 @@ export default function ComparePage() {
         </section>
       )}
       {cols.length > 0 && (
-        <section className="section p-0 ox-auto">
+        <section className={`section ox-auto ${pc ? "cmp-box" : "p-0"}`}>
           <table className="compare-table">
             <thead>
               <tr>
@@ -253,9 +254,9 @@ export default function ComparePage() {
                   </th>
                 ))}
                 {Array.from({ length: blank }, (_, i) => (
-                  <th key={`b${i}`} className="sub fw-4">
+                  <th key={`b${i}`} className="sub fw-4 cmp-add">
                     <Link href="/watch" className="link">
-                      {t.addMore}
+                      {pc ? `+ ${t.addMore}` : t.addMore}
                     </Link>
                   </th>
                 ))}
@@ -309,10 +310,12 @@ export default function ComparePage() {
           <span>{more ? t.less : t.more}</span>
         </button>
       )}
-      {cols.length > 0 && <div className="sub">{t.note}</div>}
+      {cols.length > 0 && !pc && <div className="sub">{t.note}</div>}
       {data && data.excluded.length > 0 && (
         <section className="section">
-          <h2>{t.excluded}</h2>
+          <h2>
+            {t.excluded} {data.excluded.length}
+          </h2>
           {data.excluded.map((e) => (
             <div key={e.item_id} className="d-flex jc-between ai-center py-8 px-0 fs-md">
               <span>

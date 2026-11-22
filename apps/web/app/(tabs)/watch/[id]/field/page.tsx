@@ -162,11 +162,14 @@ export default function FieldPage() {
 
           <section className="section">
             <h2>{t.askTitle}</h2>
-            {t.ask.map((q) => (
-              <div key={q} className="fs-md py-6 px-0">
-                {q}
-              </div>
-            ))}
+            {/* 물어볼 말은 연한 판 하나에(11/22 디자인) */}
+            <div className="field-ask">
+              {t.ask.map((q) => (
+                <div key={q} className="fs-md py-4 px-0">
+                  {q}
+                </div>
+              ))}
+            </div>
             <button
               className="btn secondary sm mt-8"
               onClick={() =>
@@ -181,7 +184,12 @@ export default function FieldPage() {
           </section>
 
           <section className="section">
-            <h2>{t.lookTitle}</h2>
+            <h2>
+              {t.lookTitle}{" "}
+              <span className="c-blue-text">
+                {t.look.filter(([k]) => w?.checks[`field_${k}`]).length} / {t.look.length}
+              </span>
+            </h2>
             {t.look.map(([k, label, sub]) => {
               const key = `field_${k}`;
               const on = Boolean(w?.checks[key]);
@@ -194,9 +202,7 @@ export default function FieldPage() {
                     style={{ width: 20, height: 20 }}
                   />
                   <span>
-                    <span className="fw-6" style={{ opacity: on ? 0.5 : 1 }}>
-                      {label}
-                    </span>
+                    <span className={on ? "fw-6 field-done" : "fw-6"}>{label}</span>
                     <span className="sub d-block">{sub}</span>
                   </span>
                 </label>

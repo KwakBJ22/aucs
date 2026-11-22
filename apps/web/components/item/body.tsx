@@ -10,12 +10,20 @@ import { AppraisalPoints, OriginalLink } from "@/components/item/appraisal";
 import { ItemMap, Stations } from "@/components/item/item-map";
 import { FailMobile } from "@/components/item/failure";
 import { RegistryBox, HoldDocLink } from "@/components/item/registry";
-import { t } from "@/components/item/shared";
+import { Panel, t } from "@/components/item/shared";
+import { useIsPc } from "@/lib/use-pc";
 import { GoLinks } from "@/components/item/go-links";
 import { useState } from "react";
 import Link from "next/link";
 
 const TENANTS_FIRST = 5;
+const FAIL_CHIP: Record<string, string> = {
+  걸림: "red",
+  "확인 필요": "orange",
+  확인함: "green",
+  대비됨: "blue",
+  "해당 없음": "gray",
+};
 
 // 임차인(11/11 대표님 — 32명을 다 늘어놓지 않음): 명수 한 줄 + 처음 5명, 나머지는 「모두 보기」
 function Tenants({ list }: { list: Record<string, string | number | null>[] }) {
@@ -59,63 +67,113 @@ function Tenants({ list }: { list: Record<string, string | number | null>[] }) {
 
 export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   const b = q.body;
-  if (q.key === "buy")
+  const pc = useIsPc();
+  const P = t.panel;
+  if (q.key === "buy") {
+    const st = d.stations?.[0];
+    const area = b.area_m2
+      ? `${b.area_m2.toFixed(1)}㎡ (${Math.round(b.area_m2 / 3.3058)}평)`
+      : null;
     return (
       <>
         <Row label="주소" value={b.address ?? "-"} />
-        <ItemMap lat={d.lat} lon={d.lon} address={b.address ?? d.address} />
-        <GoLinks keys={["roadview"]} d={d} />
-        <Stations d={d} />
-        {b.area_m2 && (
-          <Row
-            label="면적"
-            value={`${b.area_m2.toFixed(1)}㎡ (${Math.round(b.area_m2 / 3.3058)}평)`}
-          />
+        {/* PC(11/22 디자인): 지도 | 입지 한 줄 · 정비구역 안 — 아래로 「가까운 역」 · 「건물과 땅」 칸 */}
+        <div className="buy-top">
+          <div className="minw-0">
+            <ItemMap lat={d.lat} lon={d.lon} address={b.address ?? d.address} />
+            <GoLinks keys={["roadview"]} d={d} />
+          </div>
+          {pc && (d.location?.line || d.location?.inside) && (
+            <div className="buy-loc">
+              <Stations d={d} part="head" />
+            </div>
+          )}
+        </div>
+        {pc ? (
+          st && (
+            <Panel
+              id="station"
+              title={P.station}
+              sum={P.stationSum(
+                d.location?.grade ?? null,
+                st.name,
+                st.walk_min,
+                (d.stations?.length ?? 1) - 1,
+              )}
+              tag={d.location?.grade ? <span className="chip blue">{d.location.grade}</span> : null}
+            >
+              <Stations d={d} part="list" />
+            </Panel>
+          )
+        ) : (
+          <Stations d={d} />
         )}
-        {b.is_share && <Row label="" value={<b className="c-red">{t.share}</b>} />}
-        {b.building && <BuildingRows g={b.building} />}
-        {/* 구역 이름 · 단계를 못 이은 물건(「정비구역 안」만 앎)은 빈 줄이 되어 안 냄 — 위 띠에 이미 나옴(11/16) */}
-        {b.redev && (b.redev.name || b.redev.stage || b.redev.biz_type) && (
-          <Row
-            label={t.redev}
-            value={[b.redev.name, b.redev.biz_type, b.redev.stage].filter(Boolean).join(" · ")}
-            note={
-              [
-                b.redev.homes && t.redevHomes(b.redev.homes),
-                b.redev.dates && t.redevDates(b.redev.dates, b.redev.dates_as_of),
-              ]
-                .filter(Boolean)
-                .join(" / ") || null
-            }
-          />
-        )}
-        {b.redev && <GoLinks keys={["redev"]} d={d} />}
-        {b.land_plan?.zones?.length > 0 && (
-          <Row
-            label={t.zoning}
-            value={b.land_plan.zones.join(" · ")}
-            note={t.planFacilities(b.land_plan.facilities)}
-          />
-        )}
-        <GoLinks keys={["eum"]} d={d} />
-        {b.area_stats?.items?.length > 0 && (
-          <Row
-            label={t.areaAvg}
-            value={t.areaAvgValue(b.area_stats.items)}
-            note={t.areaAvgNote(b.area_stats.items)}
-          />
-        )}
-        {b.stores && (
-          <Row label={t.stores} value={t.storesValue(b.stores)} note={t.storesNote(b.stores)} />
-        )}
-        <GoLinks keys={["sbiz"]} d={d} />
-        {b.land_trades && (
-          <Row
-            label={t.landTrades}
-            value={t.landTradesValue(b.land_trades)}
-            note={t.landTradesNote(b.land_trades)}
-          />
-        )}
+        <Panel
+          id="building"
+          title={P.building}
+          sum={[area?.replace(" ", ""), b.building?.built].filter(Boolean).join(" · ")}
+        >
+          {b.area_m2 && (
+            <Row
+              label="면적"
+              value={`${b.area_m2.toFixed(1)}㎡ (${Math.round(b.area_m2 / 3.3058)}평)`}
+            />
+          )}
+          {b.is_share && <Row label="" value={<b className="c-red">{t.share}</b>} />}
+          {b.building && <BuildingRows g={b.building} />}
+          {/* 구역 이름 · 단계를 못 이은 물건(「정비구역 안」만 앎)은 빈 줄이 되어 안 냄 — 위 띠에 이미 나옴(11/16) */}
+          {b.redev && (b.redev.name || b.redev.stage || b.redev.biz_type) && (
+            <Row
+              label={t.redev}
+              value={
+                <>
+                  {[b.redev.name, b.redev.biz_type, b.redev.stage].filter(Boolean).join(" · ")}
+                  {pc && <GoLinks inline keys={["redev"]} d={d} />}
+                </>
+              }
+              note={
+                [
+                  b.redev.homes && t.redevHomes(b.redev.homes),
+                  b.redev.dates && t.redevDates(b.redev.dates, b.redev.dates_as_of),
+                ]
+                  .filter(Boolean)
+                  .join(" / ") || null
+              }
+            />
+          )}
+          {b.redev && !pc && <GoLinks keys={["redev"]} d={d} />}
+          {b.land_plan?.zones?.length > 0 && (
+            <Row
+              label={t.zoning}
+              value={
+                <>
+                  {b.land_plan.zones.join(" · ")}
+                  {pc && <GoLinks inline keys={["eum"]} d={d} />}
+                </>
+              }
+              note={t.planFacilities(b.land_plan.facilities)}
+            />
+          )}
+          {(!pc || !b.land_plan?.zones?.length) && <GoLinks keys={["eum"]} d={d} />}
+          {b.area_stats?.items?.length > 0 && (
+            <Row
+              label={t.areaAvg}
+              value={t.areaAvgValue(b.area_stats.items)}
+              note={t.areaAvgNote(b.area_stats.items)}
+            />
+          )}
+          {b.stores && (
+            <Row label={t.stores} value={t.storesValue(b.stores)} note={t.storesNote(b.stores)} />
+          )}
+          <GoLinks keys={["sbiz"]} d={d} />
+          {b.land_trades && (
+            <Row
+              label={t.landTrades}
+              value={t.landTradesValue(b.land_trades)}
+              note={t.landTradesNote(b.land_trades)}
+            />
+          )}
+        </Panel>
         {b.note && (
           <p className="sub" style={{ whiteSpace: "pre-wrap" }}>
             {b.note}
@@ -128,14 +186,45 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         )}
       </>
     );
-  if (q.key === "hold")
+  }
+  if (q.key === "hold") {
+    const sigs = b.signals.filter((s: { status: string }) => s.status !== "모름");
+    const signalBox = sigs.length > 0 && (
+      <div className="hold-sigs">
+        {sigs.map((s: { rule_id: string; title: string; level: string }) => (
+          <div key={s.rule_id} className={s.level === "fatal" ? "sig fatal-t" : "sig"}>
+            ◆ {s.title}
+          </div>
+        ))}
+      </div>
+    );
+    const t0 = b.tenants[0] as Record<string, string | number | null> | undefined;
+    const tenantSum = t0
+      ? [
+          `${t0.name ?? "임차인"} ${t0.part ?? ""}`.trim(),
+          t0.move_in && `${t.moveIn} ${t0.move_in}`,
+          t0.claim && `${t.claim} ${t0.claim}`,
+        ]
+          .filter(Boolean)
+          .join(" · ") + (b.tenants.length > 1 ? ` ${P.more(b.tenants.length - 1)}` : "")
+      : b.status_report
+        ? t.tenantsNoneSeen
+        : t.tenantsNone;
+    const ft = d.failure_table ?? [];
+    const fc: Record<string, number> = {};
+    ft.forEach((r) => (fc[r.state] = (fc[r.state] ?? 0) + 1));
+    const hit = fc["걸림"] ?? 0;
     return (
       <>
-        {b.tenants.length === 0 && (
-          <p className="sub">{b.status_report ? t.tenantsNoneSeen : t.tenantsNone}</p>
-        )}
-        <Tenants list={b.tenants} />
-        <HoldDocLink />
+        {/* PC(11/22 디자인): 위험 신호를 맨 위 한 판에 */}
+        {pc && signalBox}
+        <Panel id="tenant" title={P.tenant} sum={tenantSum}>
+          {b.tenants.length === 0 && (
+            <p className="sub">{b.status_report ? t.tenantsNoneSeen : t.tenantsNone}</p>
+          )}
+          <Tenants list={b.tenants} />
+          <HoldDocLink />
+        </Panel>
         {d.failure_table ? (
           <FailMobile rows={d.failure_table} />
         ) : (
@@ -145,45 +234,32 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             </div>
           )
         )}
-        {d.failure_table && (
-          <div className="pc-only mt-12">
-            <div className="fw-6 fs-md mb-4">{t.failureTable}</div>
-            <table className="w-full fs-sm" style={{ borderCollapse: "collapse" }}>
+        {d.failure_table && pc && (
+          <Panel
+            id="fail"
+            title={P.fail(ft.length)}
+            sum={t.failFold(fc)}
+            tag={hit > 0 ? <span className="chip red">{P.hit(hit)}</span> : null}
+          >
+            {/* 상태는 꼬리표 색(11/22 디자인): 걸림 빨강 · 확인함 초록 · 대비됨 파랑 · 해당 없음 회색 */}
+            <table className="fail-table">
               <tbody>
                 {d.failure_table.map((r) => (
-                  <tr key={r.code} style={{}}>
-                    <td className="py-4 px-6 nowrap" style={{ opacity: 0.6 }}>
-                      {r.code}
+                  <tr key={r.code}>
+                    <td className="ft-code">{r.code}</td>
+                    <td className="ft-title">{r.title}</td>
+                    <td>
+                      <span className={`chip ${FAIL_CHIP[r.state] ?? "gray"}`}>{r.state}</span>
                     </td>
-                    <td className="py-4 px-6">{r.title}</td>
-                    <td
-                      className="py-4 px-6 nowrap"
-                      style={{
-                        fontWeight: r.state === "걸림" || r.state === "확인 필요" ? 600 : 400,
-                        color: t.failColor[r.state],
-                      }}
-                    >
-                      {r.state}
-                    </td>
-                    <td className="sub py-4 px-6">{r.why}</td>
+                    <td className="sub">{r.why}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <div className="sub mt-4">{t.failureTableNote}</div>
-          </div>
+          </Panel>
         )}
-        {b.signals
-          .filter((s: { status: string }) => s.status !== "모름")
-          .map((s: { rule_id: string; title: string; level: string }) => (
-            <div
-              key={s.rule_id}
-              className="fs-md py-6 px-0"
-              style={{ color: s.level === "fatal" ? "var(--red)" : "var(--amber)" }}
-            >
-              ◆ {s.title}
-            </div>
-          ))}
+        {!pc && signalBox}
         {!d.outcome?.closed && (
           <>
             <RegistryBox />
@@ -192,9 +268,28 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         )}
       </>
     );
+  }
+  // 실거래 · 매물 바로 가기 — PC 는 맨 위 한 줄(11/22 디자인), 휴대폰은 예전 자리
+  const worthLinks = q.key === "worth" && (
+    <div className="worth-links">
+      {/* 지난 실거래 요약이 있는 단지(11/21)는 국토부 사이트 대신 옥스 안 「실거래 전체 보기」 */}
+      {(b.history_n > 0 || b.nearby_ok) && (
+        <Link className="link fs-sm" href={`/item/${encodeURIComponent(d.item_id)}/trades`}>
+          {b.history_n > 0 ? copy.itemTrades.link : copy.itemTrades.nearLink}
+        </Link>
+      )}
+      <GoLinks
+        keys={
+          b.history_n > 0 ? ["naver", "valuemap", "disco"] : ["rt", "naver", "valuemap", "disco"]
+        }
+        d={d}
+      />
+    </div>
+  );
   if (q.key === "worth")
     return (
       <>
+        {pc && worthLinks}
         {d.court_bidders?.avg != null && (
           <Row
             label={copy.me.courtBidders}
@@ -268,18 +363,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             ))}
           </>
         )}
-        {/* 지난 실거래 요약이 있는 단지(11/21)는 국토부 사이트 대신 옥스 안 「실거래 전체 보기」 */}
-        {(b.history_n > 0 || b.nearby_ok) && (
-          <Link className="link fs-sm" href={`/item/${encodeURIComponent(d.item_id)}/trades`}>
-            {b.history_n > 0 ? copy.itemTrades.link : copy.itemTrades.nearLink}
-          </Link>
-        )}
-        <GoLinks
-          keys={
-            b.history_n > 0 ? ["naver", "valuemap", "disco"] : ["rt", "naver", "valuemap", "disco"]
-          }
-          d={d}
-        />
+        {!pc && worthLinks}
         {b.complex && <ComplexBlock cx={b.complex} />}
         <GoLinks keys={["kb", "kapt"]} d={d} />
       </>
@@ -287,13 +371,36 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   if (q.key === "cost")
     return (
       <>
-        <Row label={t.deposit} value={<b>{won(b.deposit_krw)}</b>} />
-        <p className="fs-md mt-8 mb-4 mx-0">{b.schedule_line}</p>
-        <div className="sub mt-8 mb-2 mx-0">{t.deadlines}</div>
-        {b.deadlines.map((x: { key: string; label: string; short: string }) => (
-          <Row key={x.key} label={x.label} value={x.short} />
-        ))}
-        {!d.outcome?.closed && <CalcBox id={d.item_id} />}
+        {pc ? (
+          <>
+            {/* PC(11/22 디자인): 놓치면 안 되는 날 세 칸 + 아래 한 줄(보증금은 머리 줄에 이미 있음) */}
+            <div className="cost-days">
+              {b.deadlines.map((x: { key: string; label: string; short: string }) => (
+                <div key={x.key}>
+                  <div className="sub m-0">{x.label}</div>
+                  <b>{x.short}</b>
+                </div>
+              ))}
+            </div>
+            <p className="sub mt-10 mb-0">
+              {b.schedule_line} · {t.deadlines}
+            </p>
+          </>
+        ) : (
+          <>
+            <Row label={t.deposit} value={<b>{won(b.deposit_krw)}</b>} />
+            <p className="fs-md mt-8 mb-4 mx-0">{b.schedule_line}</p>
+            <div className="sub mt-8 mb-2 mx-0">{t.deadlines}</div>
+            {b.deadlines.map((x: { key: string; label: string; short: string }) => (
+              <Row key={x.key} label={x.label} value={x.short} />
+            ))}
+          </>
+        )}
+        {!d.outcome?.closed && (
+          <div id="calc" className="cost-calc">
+            <CalcBox id={d.item_id} />
+          </div>
+        )}
         <GoLinks keys={["price"]} d={d} />
       </>
     );

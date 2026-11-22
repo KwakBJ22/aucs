@@ -89,6 +89,10 @@
   background: var(--blue-soft);
   color: var(--blue-text);
 }
+.chip.red {
+  background: var(--red-soft);
+  color: #c21f2e; /* 11/22 디자인 빨간 꼬리표 글자 */
+}
 /* 알림 판: 읽기만 하는 글이라 글자는 파랑이 아니라 --text(11/11 — 파란 글자는 누르는 것만) */
 .note.blue {
   padding: 10px 12px;
@@ -266,6 +270,23 @@ th.num {
   padding: 16px 0;
   color: var(--text);
   font-size: 15px;
+}
+/* PC 목록 줄(11/22 디자인): 줄 전체가 누르는 판 — 좌우로 12px 내밀고 둥글게, 올리면 연한 판 */
+@media (min-width: 1024px) {
+  .section a.menu-row {
+    margin: 0 -12px;
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+  .section a.menu-row:hover {
+    background: var(--soft);
+  }
+  .section a.menu-row:last-child {
+    padding-bottom: 14px;
+  }
+  .section a.menu-row .sub {
+    color: var(--faint);
+  }
 }
 
 /* 이름·값 한 줄(Row). 휴대폰은 양 끝, PC 본문(.kv-left 안)은 이름 옆에 값 */
@@ -552,7 +573,32 @@ th.num {
   font-size: var(--fs-xs);
   font-weight: 700;
 }
+/* 카드 글줄(11/22 — 도우미 클래스 대신 이름을 둬 PC 값을 한 곳에서 바꿈) */
+.pick-dd {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: var(--fs-xs);
+}
+.pick-name {
+  margin-top: 2px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.pick-price {
+  margin-top: 2px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+.pick-rate {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--muted);
+}
 .pick-why {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -562,9 +608,34 @@ th.num {
   .pick-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px 16px;
     overflow: visible;
-    margin: 12px 0 0;
+    margin: 20px 0 0;
     padding: 0;
+  }
+  /* 11/22 디자인: 사진 판 16 · 기일 13 · 이름 15 · 값 18 굵게 · 고른 까닭 13(두 줄) */
+  .pick-photo {
+    border-radius: 16px;
+  }
+  .pick-dd {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+  }
+  .pick-name {
+    font-size: 15px;
+  }
+  .pick-price {
+    font-size: var(--fs-lg);
+    font-weight: 800;
+  }
+  .pick-rate {
+    font-size: var(--fs-sm);
+    color: var(--faint);
+  }
+  .pick-why {
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--text-2);
   }
 }
 
@@ -576,7 +647,12 @@ th.num {
     margin: 20px 0;
   }
   .section h2 {
-    font-size: var(--fs-xl);
+    font-size: 21px; /* 11/22 디자인 */
+  }
+  .section h2 + .sub {
+    margin-top: -6px;
+    font-size: var(--fs-md);
+    color: var(--faint);
   }
 }
 
@@ -585,7 +661,7 @@ th.num {
   color: var(--muted);
 }
 .dd-soon {
-  color: var(--red);
+  color: var(--red-dday);
 }
 .dd-later {
   color: var(--amber);
@@ -722,9 +798,74 @@ button:disabled,
 .fold[aria-expanded="true"]::after {
   transform: rotate(-90deg);
 }
-/* 물건 카드: 오른쪽 위 하트 아래에 › */
+/* 물건 카드: 오른쪽 위 하트 아래에 › (PC 는 줄 전체가 누르는 판이라 뺌 — 11/22 디자인) */
 .card-go {
   position: relative;
+  padding: 12px 0;
+}
+/* 물건 카드 글줄(11/22 — PC 값은 아래 한 곳) */
+.ic-name {
+  margin-top: 2px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.ic-price {
+  margin-top: 2px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.ic-rate {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--muted);
+}
+.ic-note {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.ic-why {
+  margin-top: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+@media (min-width: 1024px) {
+  .card-go {
+    padding: 16px 12px;
+    border-radius: 16px;
+  }
+  .card-go:hover {
+    background: var(--soft);
+  }
+  .card-go .thumb {
+    border-radius: 14px;
+  }
+  .card-go > .f-1 > .sub {
+    color: var(--faint);
+  }
+  .ic-name {
+    font-size: 15px;
+  }
+  .ic-price {
+    font-size: 19px;
+    font-weight: 800;
+  }
+  .ic-rate {
+    font-size: var(--fs-sm);
+    color: var(--faint);
+  }
+  .ic-note {
+    font-size: var(--fs-sm);
+    color: var(--faint);
+  }
+  .ic-why {
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .card-go .fatal {
+    display: inline-block;
+    padding: 3px 10px;
+  }
 }
 .card-go::after {
   content: "›";
@@ -733,6 +874,11 @@ button:disabled,
   bottom: 12px;
   color: var(--faint);
   line-height: 1;
+}
+@media (min-width: 1024px) {
+  .card-go::after {
+    content: none;
+  }
 }
 
 /* ④ 고르는 칩 — 알약. 고른 것은 진한 바탕 + 밝은 글자(11/7 대표님이 정한 것 그대로) */

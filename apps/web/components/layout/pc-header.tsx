@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { NAV, activeNav } from "@/lib/nav";
+import { useUnread } from "@/lib/noti";
 
 const Lock = () => (
   <svg
@@ -30,6 +31,7 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
   const router = useRouter();
   const { session } = useSession();
   const [q, setQ] = useState("");
+  const unread = useUnread();
   const cur = admin ? undefined : activeNav(path);
   const guest = !session;
   const sub = cur && cur.sub.length > 1 ? cur.sub : [];
@@ -129,6 +131,7 @@ export function PcHeader({ admin = false }: { admin?: boolean }) {
               <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
               <path d="M10 20a2 2 0 0 0 4 0" />
             </svg>
+            {unread > 0 && <span className="ph-dot" aria-hidden="true" />}
           </Link>
         )}
         {!admin &&

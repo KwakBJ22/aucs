@@ -10,48 +10,63 @@ import { copy } from "@/lib/copy.ko";
 import { dday, todayKst, won } from "@/lib/format";
 import { PrintHead } from "@/components/print-head";
 import { useIsPc } from "@/lib/use-pc";
+import { copyText } from "@/lib/copy-text";
 
 const t = copy.proCases;
-const DOT = { high: "var(--red)", mid: "var(--orange)", low: "var(--faint)" } as const;
+const IMP_CHIP = { high: "red", mid: "gray", low: "gray" } as const;
 
-function Detail({ d }: { d: CaseDetail }) {
+// 사건 한 장(11/22 디자인): 머리(사건 · 이름 + 복사 · 보고서) → 숫자 네 칸 → 진행 판단 판 → 문건 표(중요한 것만 · 모두)
+function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
   const [all, setAll] = useState(false);
+  const [copied, setCopied] = useState(false);
   const ev = d.events.filter((e) => all || e.importance !== "low" || e.after_deadline);
+  const it = d.items[0];
   return (
     <div>
       <PrintHead title={t.printBrand} sub={`${d.court} ${d.case_no}`} date={todayKst()} />
-      <div className="sub">
-        {d.court} {d.dept}
+      <div className="d-flex jc-between ai-start gap-12">
+        <div className="minw-0">
+          <div className="sub">
+            {d.court} {d.case_no}
+            {d.dept ? ` · ${d.dept}` : ""}
+            {it?.sale_date ? ` · ${t.saleDate(it.sale_date.slice(5).replace("-", "/"))}` : ""}
+            {it ? ` · ${dday(it.d_day)}` : ""}
+          </div>
+          <h2 className="case-title">{place ?? d.case_no}</h2>
+        </div>
+        <div className="d-flex gap-8 no-print f-none">
+          <button
+            className="btn secondary sm"
+            onClick={() => void copyText(d.case_no).then(() => setCopied(true))}
+          >
+            {copied ? copy.item.pc.copied : copy.item.pc.copy}
+          </button>
+          <button className="btn secondary sm" onClick={() => window.print()}>
+            {t.report}
+          </button>
+        </div>
       </div>
-      <div className="d-flex jc-between ai-center gap-8">
-        <h2 className="mt-2 mb-6 mx-0">{d.case_no}</h2>
-        <button
-          className="btn primary no-print py-0 px-14 fs-md"
-          style={{ width: "auto", height: 36 }}
-          onClick={() => window.print()}
-        >
-          {t.report}
-        </button>
-      </div>
-      <div className="band-grid four mt-6 mb-12 mx-0">
-        {[
-          [t.cards.progress, d.progress ?? t.cards.normal],
-          [t.cards.docs, `${d.events.length}건`],
-          [t.cards.high, `${d.events.filter((e) => e.importance === "high").length}건`],
-          [t.cards.late, `${d.events.filter((e) => e.after_deadline).length}건`],
-        ].map(([k, v]) => (
-          <div key={k} className="bg-bg r-12 py-10 px-12">
+      <div className="case-tiles">
+        {(
+          [
+            [t.cards.progress, d.progress ?? t.cards.normal, Boolean(d.progress)],
+            [t.cards.docs, `${d.events.length}건`, false],
+            [t.cards.high, `${d.events.filter((e) => e.importance === "high").length}건`, false],
+            [t.cards.late, `${d.events.filter((e) => e.after_deadline).length}건`, false],
+          ] as [string, string, boolean][]
+        ).map(([k, v, warn]) => (
+          <div key={k}>
             <div className="sub m-0">{k}</div>
-            <div className="fs-base fw-7">{v}</div>
+            <b className={warn ? "c-orange" : ""}>{v}</b>
           </div>
         ))}
       </div>
       {d.progress && (
-        <div className="chip orange mb-8">
+        <div className="case-warn">
           ◆ {t.progress}: {d.progress}
         </div>
       )}
-      {d.claim_deadline && <div className="sub">{t.deadline(d.claim_deadline)}</div>}
+      {d.claim_deadline && <div className="sub mt-8">{t.deadline(d.claim_deadline)}</div>}
       {d.items.map((i) => (
         <Link
           key={i.item_id}
@@ -72,30 +87,46 @@ function Detail({ d }: { d: CaseDetail }) {
           </span>
         ))}
       </div>
-      <div className="d-flex jc-between ai-center">
-        <b className="fs-base">{t.flow}</b>
-        <button className="chip gray b-0 mh-30" onClick={() => setAll(!all)}>
-          {all ? t.importantOnly : t.showAll(d.events.length)}
-        </button>
+      <div className="d-flex jc-between ai-center mt-16">
+        <b className="case-flow">{t.flow}</b>
+        <span className="scope-seg no-print" role="group">
+          <button className={!all ? "on" : ""} onClick={() => setAll(false)}>
+            {t.importantOnly}
+          </button>
+          <button className={all ? "on" : ""} onClick={() => setAll(true)}>
+            {t.showAll(d.events.length)}
+          </button>
+        </span>
       </div>
-      {ev.map((e, i) => (
-        <div key={i} className="d-flex gap-8 py-6 px-0 fs-md">
-          <span className="sub nowrap" style={{ minWidth: 74 }}>
-            {e.event_date}
-          </span>
-          <span
-            className="r-4 mt-6 f-none"
-            style={{ width: 8, height: 8, background: DOT[e.importance] }}
-          />
-          <span>
-            <b>{e.category}</b>
-            {e.after_deadline && <span className="c-red"> · {t.late}</span>}
-            <span className="sub d-block">
-              {e.kind} {e.text_masked}
-            </span>
-          </span>
-        </div>
-      ))}
+      <div className="ox-auto mt-10">
+        <table className="pro-table case-table">
+          <thead>
+            <tr>
+              <th>{t.cols.date}</th>
+              <th>{t.cols.cat}</th>
+              <th>{t.cols.imp}</th>
+              <th>{t.cols.text}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ev.map((e, i) => (
+              <tr key={i}>
+                <td className="nowrap">{e.event_date}</td>
+                <td>{e.category}</td>
+                <td>
+                  <span className={`chip ${IMP_CHIP[e.importance]}`}>
+                    {t.imp[e.importance]}
+                    {e.after_deadline ? ` · ${t.lateTag}` : ""}
+                  </span>
+                </td>
+                <td className="case-text">
+                  {e.kind} {e.text_masked}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -190,25 +221,23 @@ function Cases() {
     );
 
   return (
-    <main className="page pro-page">
+    <main className="page wide pro-page">
       <PageHeader title={t.title} />
       <div className="sub mb-8 no-print">{t.sub}</div>
       <div className="d-flex gap-6 f-wrap mb-8 no-print">
         <button
-          className={`pill${!cat ? " on" : ""}`}
-
+          className={`pill pick-pill${!cat ? " on" : ""}`}
           onClick={() => go({ category: "" })}
         >
-          {t.all}
+          {!cat ? `✓ ${t.all}` : t.all}
         </button>
         {cats.map((c) => (
           <button
             key={c}
-            className={`pill${cat === c ? " on" : ""}`}
-
+            className={`pill pick-pill${cat === c ? " on" : ""}`}
             onClick={() => go({ category: c })}
           >
-            {c}
+            {cat === c ? `✓ ${c}` : c}
           </button>
         ))}
         <input
@@ -216,7 +245,7 @@ function Cases() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && go({ q })}
-          className="fs-md py-4 px-8 b-0 r-14 bg-panel c-text"
+          className="case-search"
         />
       </div>
       <div className="pc-grid g-26-74">
@@ -231,21 +260,24 @@ function Cases() {
             <button
               key={c.case_id}
               onClick={() => open(c.case_id)}
-              className="d-block w-full ta-left b-0 r-10 p-8"
-              style={{ background: c.case_id === id ? "var(--blue-soft)" : "none" }}
+              className={`case-row${c.case_id === id ? " on" : ""}`}
             >
               <div className="sub">
                 {c.court} {c.case_no} · {dday(c.d_day)}
               </div>
-              <div className="fs-md fw-6">{c.place}</div>
-              <div className="fs-xs c-orange">
+              <div className="case-row-t">{c.place}</div>
+              <div className="case-row-f">
                 {[...c.flags, ...(c.late > 0 ? [t.lateN(c.late)] : [])].join(" · ")}
               </div>
             </button>
           ))}
         </section>
         <section className="section m-0 print-area">
-          {d ? <Detail d={d} /> : <div className="sub">{t.pick}</div>}
+          {d ? (
+            <Detail d={d} place={list?.find((c) => c.case_id === id)?.place} />
+          ) : (
+            <div className="sub">{t.pick}</div>
+          )}
         </section>
       </div>
       <div className="sub mt-8 no-print">{t.note}</div>

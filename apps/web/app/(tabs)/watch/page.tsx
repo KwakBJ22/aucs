@@ -224,7 +224,7 @@ export default function Watch() {
   // PC: 단계 7칸 보드(또는 표) + 오른쪽 40% 작업 공간 전부
   if (pc)
     return (
-      <main className="page">
+      <main className="page wide">
         {header}
         {recentBox}
         {errorBox}
@@ -237,9 +237,15 @@ export default function Watch() {
             <section className="section mt-0">
               <div className="d-flex jc-between ai-center">
                 <h2>{t.boardTitle}</h2>
-                <button className="btn secondary sm" onClick={() => setAsTable(!asTable)}>
-                  {asTable ? t.asBoard : t.asTable}
-                </button>
+                {/* 보드 · 표(11/22 디자인 — 회색 판 안 흰 칸) */}
+                <span className="scope-seg" role="group">
+                  <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>
+                    {t.boardShort}
+                  </button>
+                  <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>
+                    {t.tableShort}
+                  </button>
+                </span>
               </div>
               {asTable ? (
                 <div className="ox-auto mt-8">

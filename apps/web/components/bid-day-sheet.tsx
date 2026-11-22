@@ -61,6 +61,70 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
       </span>
     </label>
   );
+  // PC 입찰표 아래 한 장(11/22 디자인): 날짜 한 줄 + 상태 꼬리표, 네 칸(법원 · 보증금 수표 · 챙길 것 · 출발 전 확인)
+  if (wide) {
+    const dt = d.sale_date ? new Date(`${d.sale_date}T00:00:00+09:00`) : null;
+    const today = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+    today.setHours(0, 0, 0, 0);
+    const left = dt ? Math.round((dt.getTime() - today.getTime()) / 864e5) : null;
+    return (
+      <>
+        <div className="d-flex jc-between ai-start gap-12 f-wrap">
+          <h2 className="bd-title">
+            {dt
+              ? t.dateLine(dt.getMonth() + 1, dt.getDate(), "일월화수목금토"[dt.getDay()] ?? "")
+              : t.timeUnknown}
+            {left === 0 ? ` · ${t.todayBid}` : left === 1 ? ` · ${t.tomorrowBid}` : ""}
+          </h2>
+          <span className={`chip ${d.state === "ok" || d.state === "soon" ? "green" : "red"}`}>
+            {d.state_line}
+            {d.checked_at ? ` · ${t.checked(d.checked_at)}` : ""}
+          </span>
+        </div>
+        <div className="bd-tiles">
+          <div>
+            <p className="sub m-0">{copy.bidSheet.f.court}</p>
+            <b className="bd-big">{d.court_full}</b>
+            <p className="fs-md mt-6 mb-0">
+              {d.place}
+              <br />
+              {d.time ? t.at(d.time) : t.timeUnknown}
+            </p>
+            <div className="d-flex gap-12 f-wrap">
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="link">
+                {t.map}
+              </a>
+              {d.tel && (
+                <a href={`tel:${d.tel}`} className="link">
+                  {t.call(d.tel)}
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="bd-dep">
+            <p className="m-0">{t.deposit}</p>
+            <b>{won(d.deposit_krw)}</b>
+            <p className="fs-md mt-6 mb-0">
+              {t.depositSub(d.deposit_rate_pct, won(d.min_price_krw), d.resale)}
+            </p>
+          </div>
+          <div>
+            <p className="sub m-0">{t.bring}</p>
+            {t.items.map(([k, label]) => (
+              <Check key={k} k={k} label={label} />
+            ))}
+          </div>
+          <div>
+            <p className="sub m-0">{t.recheck}</p>
+            {t.rechecks.map(([k, label]) => (
+              <Check key={k} k={k} label={label} />
+            ))}
+          </div>
+        </div>
+        <p className="sub mt-14 mb-0">{t.timeNote}</p>
+      </>
+    );
+  }
   return (
     <div className={wide ? "pc-grid g-5" : ""}>
       <section className="section">

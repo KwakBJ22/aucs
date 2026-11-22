@@ -19,6 +19,7 @@ import { copy } from "@/lib/copy.ko";
 import { PickPanel } from "@/components/pick-panel";
 import { useIsPc } from "@/lib/use-pc";
 import { dday, won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 
 const t = copy.pro;
 type ColKey = keyof typeof t.cols;
@@ -73,16 +74,14 @@ function cell(r: ProRow, k: ColKey): React.ReactNode {
     case "date":
       return (
         <>
-          {r.sale_date?.slice(5)} <span className="sub">{dday(r.d_day)}</span>
+          {r.sale_date?.slice(5)} <DDay d={r.d_day} />
         </>
       );
     case "market":
       return r.market_krw ? won(r.market_krw) : "";
     case "signal":
       return r.signal ? (
-        <span className="clamp2" style={{ color: r.fatal ? "var(--red)" : "var(--orange)" }}>
-          {r.signal}
-        </span>
+        <span className={`chip ${r.fatal ? "red" : "orange"} sig-chip`}>{r.signal}</span>
       ) : (
         ""
       );
@@ -155,25 +154,33 @@ function ProItems() {
   const pages = s ? Math.max(1, Math.ceil(s.n / (data?.limit ?? 50))) : 1;
   const sel = {
     fontSize: 14,
-    padding: "6px 8px",
+    padding: "0 12px",
+    height: 40,
     border: 0,
-    borderRadius: 14,
+    borderRadius: 12, // 11/22 디자인: 회색 판 40
     background: "var(--panel)",
     color: "var(--text)",
+    fontWeight: 600,
   };
 
   return (
-    <main className="page pro-page">
+    <main className="page wide pro-page">
       <PageHeader
         title={t.title}
         right={
-          <button
-            type="button"
-            onClick={() => void downloadProCsv(f).catch(() => {})}
-            className="chip gray mh-32"
-          >
-            {t.csv}
-          </button>
+          <span className="d-flex gap-16 ai-center">
+            <button
+              type="button"
+              onClick={() => void downloadProCsv(f).catch(() => {})}
+              className="link"
+            >
+              {t.csv}
+            </button>
+            {/* 지도로 보기(11/22 디자인) */}
+            <Link href="/pro/map" className="link nowrap">
+              {copy.mapView.open}
+            </Link>
+          </span>
         }
       />
 
@@ -242,10 +249,10 @@ function ProItems() {
           {Object.entries(t.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`pill${f.usage?.includes(k) ? " on" : ""}`}
+              className={`pill pick-pill${f.usage?.includes(k) ? " on" : ""}`}
               onClick={() => toggle("usage", k)}
             >
-              {v}
+              {f.usage?.includes(k) ? `✓ ${v}` : v}
             </button>
           ))}
         </div>
@@ -317,10 +324,10 @@ function ProItems() {
           {Object.entries(t.excludes).map(([k, v]) => (
             <button
               key={k}
-              className={`chip ${f.exclude?.includes(k) ? "orange" : "gray"} b-0 mh-30`}
+              className={`pill pick-pill${f.exclude?.includes(k) ? " on" : ""}`}
               onClick={() => toggle("exclude", k)}
             >
-              {v}
+              {f.exclude?.includes(k) ? `✓ ${v}` : v}
             </button>
           ))}
         </div>

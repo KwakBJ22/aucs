@@ -10,7 +10,8 @@ import { fetchItem, type ItemDetail } from "@/lib/api/items";
 import { meApi, type Workspace } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
-import { dday, won } from "@/lib/format";
+import { won } from "@/lib/format";
+import { DDay } from "@/components/dday";
 
 const t = copy.calcPage;
 
@@ -38,6 +39,10 @@ export default function CalcPage() {
   const market = worth?.body?.market as { price_krw: number; n: number } | undefined;
   return (
     <main className="page">
+      {/* PC 는 제목 위에 「‹ 물건 상세」(11/22 디자인) */}
+      <Link href={`/item/${eid}`} className="back-link pc-only">
+        ‹ {copy.itemTrades.backDetail}
+      </Link>
       <PageHeader
         title={t.title}
         back={`/item/${eid}`}
@@ -56,9 +61,16 @@ export default function CalcPage() {
             </section>
           )}
           {d && (
-            <section className="section mt-0">
+            <section className="section mt-0 num-card">
               <h2>{t.numbers}</h2>
-              <Row label={copy.item.pc.sale} value={`${dday(d.d_day)} ${d.sale_date ?? ""}`} />
+              <Row
+                label={copy.item.pc.sale}
+                value={
+                  <>
+                    <DDay d={d.d_day} /> {d.sale_date ?? ""}
+                  </>
+                }
+              />
               <Row label={copy.item.pc.appraisal} value={won(d.appraisal_krw)} />
               <Row label={copy.item.pc.min} value={`${won(d.min_price_krw)} (${d.min_rate}%)`} />
               {d.next_round.min_price_krw && (

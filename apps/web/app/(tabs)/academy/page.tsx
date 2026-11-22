@@ -19,6 +19,7 @@ import { TITLES, nextGoal, reached, streak, xpOf } from "@/lib/academy-game";
 import { fetchAcademyJudge, fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
+import { LevelIcon } from "@/components/level-icon";
 
 const t = copy.academy;
 
@@ -68,17 +69,19 @@ function Today({
         <h2 className="m-0">{title}</h2>
         <span className="sub fs-sm">{sub}</span>
       </div>
-      <p className="ac-b mt-8">{x.q}</p>
-      {x.options.map((o, i) => (
-        <button
-          key={o}
-          className={`ac-opt${pick === null ? "" : i === x.answer ? " right" : i === pick ? " wrong" : ""}`}
-          disabled={pick !== null}
-          onClick={() => choose(i)}
-        >
-          {o}
-        </button>
-      ))}
+      <p className="ac-b ac-q mt-8">{x.q}</p>
+      <div className="ac-opts">
+        {x.options.map((o, i) => (
+          <button
+            key={o}
+            className={`ac-opt${pick === null ? "" : i === x.answer ? " right" : i === pick ? " wrong" : ""}`}
+            disabled={pick !== null}
+            onClick={() => choose(i)}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
       {pick !== null && (
         <p className="ac-b mt-10">
           <b>{pick === x.answer ? t.right : t.wrong}</b> {x.why}{" "}
@@ -96,7 +99,7 @@ function Today({
 function Meter({ label, n, total }: { label: string; n: number; total: number }) {
   return (
     <div className="ac-meter">
-      <div className="d-flex jc-between fs-sm">
+      <div className="ac-meter-l">
         <span>{label}</span>
         <b>{t.of(n, total)}</b>
       </div>
@@ -151,23 +154,28 @@ export default function Academy() {
       <PageHeader title={t.title} back="/home" />
       <p className="sub fs-base mt-0">{t.sub}</p>
       {/* 11/18 대표님: 게임처럼 — 지금 레벨 · 칭호 · 경험치 · 연속 학습 · 다음 레벨까지 */}
+      {/* 11/22 디자인: PC 는 왼쪽 지금 레벨(선 그림) · 오른쪽 막대 셋, 아래 주 버튼 */}
       <section className="section ac-hero">
-        <div className="d-flex ai-center gap-12">
-          <div className="ac-lvbadge" aria-hidden="true">
-            {me ? TITLES[me.key].badge : "🌱"}
+        <div className="ac-hero-grid">
+          <div className="d-flex ai-center gap-12 ac-me">
+            <div className="ac-lvbadge" aria-hidden="true">
+              <LevelIcon level={me ? me.key : null} />
+            </div>
+            <div className="f-1 minw-0">
+              <p className="sub m-0">{me ? t.nowLevel(me.name) : t.nowNone}</p>
+              <h2 className="m-0">{me ? TITLES[me.key].title : t.nowNoneTitle}</h2>
+              <p className="sub fs-sm m-0">
+                {t.xpLine(xpOf(done))}
+                {days > 0 && ` · ${t.streakLine(days)}`}
+              </p>
+            </div>
           </div>
-          <div className="f-1 minw-0">
-            <p className="sub m-0">{me ? t.nowLevel(me.name) : t.nowNone}</p>
-            <h2 className="m-0">{me ? TITLES[me.key].title : t.nowNoneTitle}</h2>
-            <p className="sub fs-sm m-0">
-              {t.xpLine(xpOf(done))}
-              {days > 0 && ` · ${t.streakLine(days)}`}
-            </p>
+          <div className="ac-meters">
+            {goal && <Meter label={t.goalLine(goal.level.name)} n={goal.have} total={goal.total} />}
+            <Meter label={t.meterLesson} n={lessons.n} total={lessons.total} />
+            <Meter label={t.meterTask} n={tasks.n} total={tasks.total} />
           </div>
         </div>
-        {goal && <Meter label={t.goalLine(goal.level.name)} n={goal.have} total={goal.total} />}
-        <Meter label={t.meterLesson} n={lessons.n} total={lessons.total} />
-        <Meter label={t.meterTask} n={tasks.n} total={tasks.total} />
         {test ? (
           <Link href={`/academy/test/${test}`} className="btn primary mt-12">
             {t.testUp(LEVELS.find((x) => x.key === test)?.name ?? "")}
@@ -199,10 +207,7 @@ export default function Academy() {
           <section key={lv.key} className="section ac-level">
             <div className="d-flex jc-between ai-center gap-8">
               <h2 className="m-0">
-                <span className="chip blue">{lv.name}</span> {lv.title}{" "}
-                {done.includes(`test:${lv.key}`) && (
-                  <span aria-label={TITLES[lv.key].title}>{TITLES[lv.key].badge}</span>
-                )}
+                <span className="chip blue">{lv.name}</span> {lv.title}
               </h2>
               <span className="sub fs-sm">{t.of(c.n, c.total)}</span>
             </div>

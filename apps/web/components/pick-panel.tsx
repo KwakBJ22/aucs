@@ -12,14 +12,6 @@ import { won } from "@/lib/format";
 import { DDay } from "@/components/dday";
 
 const t = copy.find;
-const TONE: Record<string, string> = {
-  green: "var(--green)",
-  gray: "var(--faint)",
-  orange: "var(--amber)",
-  red: "var(--red)",
-  blue: "var(--blue)",
-};
-
 // PC 오른쪽(찾기·전체 물건): 고른 물건의 다섯 질문 한 줄씩 + 담기·비교·상세
 export function PickPanel({ id }: { id: string | null }) {
   const [d, setD] = useState<ItemDetail | OnbidDetail | null>(null);
@@ -74,40 +66,39 @@ export function PickPanel({ id }: { id: string | null }) {
         },
       ]
     : d.questions;
+  // 판정 한 줄 색(11/22 디자인): 빨간 신호가 있으면 빨강, 없으면 초록
+  const red = Boolean(d.fatal) || qs.some((q) => q.tone === "red");
   return (
-    <section className="section">
+    <section className="section pick-panel">
       <div className="sub m-0">
         <DDay d={d.d_day} /> · {d.sale_date} ·{" "}
         {isOnbid(d) ? copy.onbid.badge(d.kind_name ?? "") : d.court} {d.case_no}
       </div>
       <div className="d-flex jc-between gap-8">
-        <h2 className="mt-4">
+        <h2 className="mt-4 pp-title">
           {d.place} {(isOnbid(d) ? null : d.building) ?? d.usage}
         </h2>
         <HeartButton id={d.item_id} />
       </div>
-      <div className="fs-2xl fw-7">
+      <div className="pp-price">
         {won(d.min_price_krw)}{" "}
         <span className="sub">
           {d.appraisal_krw ? `${d.min_rate}% · 감정가 ${won(d.appraisal_krw)}` : ""}
         </span>
       </div>
       {d.fatal && <div className="fatal">{d.fatal}</div>}
-      <p className="fs-base fw-6 lh-15">{d.verdict}</p>
+      <p className={`pp-verdict${red ? " red" : " ok"}`}>{d.verdict}</p>
+      {/* 다섯 질문: 작은 질문 + 굵은 답 한 줄(11/22 디자인 — 색 점은 뺌) */}
       {qs.map((q) => (
-        <Link key={q.key} href={`/item/${eid}#q-${q.key}`} className="menu-row">
-          <span className="d-flex gap-8 ai-baseline minw-0">
-            <span className="toc-dot" style={{ background: TONE[q.tone] ?? "var(--faint)" }} />
-            <span>
-              <span className="sub d-block m-0 fs-xs">{q.title}</span>
-              {q.answer}
-            </span>
+        <Link key={q.key} href={`/item/${eid}#q-${q.key}`} className="menu-row go pp-q">
+          <span className="minw-0">
+            <span className="sub d-block m-0">{q.title}</span>
+            <b>{q.answer}</b>
           </span>
-          <span className="sub">›</span>
         </Link>
       ))}
-      <div className="d-flex gap-8 mt-12">
-        <Link prefetch={false} href={`/item/${eid}`} className="btn primary md" style={{ flex: 2 }}>
+      <div className="pp-btns">
+        <Link prefetch={false} href={`/item/${eid}`} className="btn primary md">
           {t.toDetail}
         </Link>
         {session && (

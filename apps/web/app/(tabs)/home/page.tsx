@@ -12,7 +12,7 @@ import { PickRow } from "@/components/pick-card";
 import { fetchHomeFeed, type HomeFeed, type ItemList, type PickCard } from "@/lib/api/items";
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
-import { isStale } from "@/lib/noti";
+import { isStale, setUnread } from "@/lib/noti";
 import { dday, won } from "@/lib/format";
 import { DDay } from "@/components/dday";
 import { loadProfile, type Profile } from "@/lib/profile";
@@ -73,6 +73,7 @@ export default function Home() {
       .then((h) => {
         setWatch(h.watch);
         setNotis(h.notifications);
+        setUnread(h.notifications.filter((n) => !n.read_at && !isStale(n)).length);
         setDropped(new Set(h.excluded));
       })
       .catch(() => {});
@@ -234,7 +235,7 @@ export default function Home() {
       key={c.item_id}
       prefetch={false}
       href={`/item/${encodeURIComponent(c.item_id)}`}
-      className="b-0 bg-panel r-14 p-12 c-inherit"
+      className="mini-card c-inherit"
     >
       <div className="fs-xs fw-7 c-red d-flex jc-between">
         <span>
@@ -246,7 +247,7 @@ export default function Home() {
           </span>
         )}
       </div>
-      <div className="fs-md fw-6 mt-6 d-flex go">{c.place}</div>
+      <div className="mini-title d-flex go">{c.place}</div>
       <div className="sub fs-xs nowrap" style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
         {c.building ?? c.usage}
       </div>
@@ -344,9 +345,7 @@ export default function Home() {
         </Delayed>
       )}
       <div className={pc ? "card-grid" : ""}>
-        {shown?.items.slice(0, pc ? 8 : 5).map((c) => (
-          <ItemCard key={c.item_id} c={c} />
-        ))}
+        {shown?.items.slice(0, pc ? 8 : 5).map((c) => <ItemCard key={c.item_id} c={c} />)}
       </div>
       {mine && mine.total > 5 && (
         <Link href="/find?source=all" className="link d-flex jc-center mt-4">
@@ -397,10 +396,10 @@ export default function Home() {
     }
     const cal = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
     return (
-      <main className="page">
+      <main className="page home-page">
         {/* 옥스아카데미 배너: 「오늘」 제목 줄 오른쪽, 아래 「이번 주·다음 주 입찰」 칸과 같은 폭(11/22 대표님) */}
         <div className="pc-grid g-64-36 ai-end">
-          <div>
+          <div className="home-head">
             <PageHeader title={t.pcTitle} sub={summary} />
           </div>
           <div className="ac-band-top">{academyBand}</div>
@@ -425,7 +424,8 @@ export default function Home() {
                 <div key={day} className="cal-day">
                   <div className="cal-date">{day.slice(5).replace("-", "/")}</div>
                   <div className="cal-list">
-                    {list.map((x) => (
+                    {/* 하루 11건까지 · 나머지는 「외 N건」(11/22 디자인) */}
+                    {list.slice(0, 11).map((x) => (
                       <Link
                         key={x.id}
                         prefetch={false}
@@ -436,6 +436,9 @@ export default function Home() {
                         {x.label}
                       </Link>
                     ))}
+                    {list.length > 11 && (
+                      <p className="sub mt-6 mb-0">{t.calMore(list.length - 11)}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -443,19 +446,25 @@ export default function Home() {
             {token && (
               <section className="section">
                 <h2>{copy.noti.title}</h2>
-                <div className="sub">{t.notiSummary(notis.length, unread)}</div>
-                <Link href="/notifications" className="menu-row">
-                  <span>{t.allNoti}</span>
-                  <span className="sub">›</span>
+                {/* 한 줄로: 알림 N개 · 안 읽은 것 M개(파랑) — 11/22 디자인 */}
+                <Link href="/notifications" className="menu-row go">
+                  <span>
+                    {t.notiCount(notis.length)}
+                    {unread > 0 && (
+                      <>
+                        {" · "}
+                        <b className="c-blue-text">{t.notiUnread(unread)}</b>
+                      </>
+                    )}
+                  </span>
                 </Link>
               </section>
             )}
             <section className="section">
               <h2>{t.myCond}</h2>
-              <div className="sub">{summary}</div>
-              <Link href="/start" className="menu-row">
-                <span>{t.changeAnswers}</span>
-                <span className="sub">›</span>
+              <p className="cond-text">{summary}</p>
+              <Link href="/start" className="link">
+                {t.changeAnswers}
               </Link>
             </section>
             {market && market.by_court.length > 0 && (
@@ -464,8 +473,8 @@ export default function Home() {
                 <div className="sub">{t.courtRateSub}</div>
                 {market.by_court.slice(0, 6).map((r) => (
                   <div key={r.court_code} className="court-rate">
-                    <div className="line-row fs-md">
-                      <span>{r.court}</span>
+                    <div className="line-row">
+                      <span className="c-text-2">{r.court}</span>
                       <span>
                         <b>{Math.round(r.p50)}%</b> <span className="sub">{r.n}건</span>
                       </span>
@@ -475,9 +484,8 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-                <Link href="/pro/market" className="menu-row">
-                  <span>{t.marketMore}</span>
-                  <span className="sub">›</span>
+                <Link href="/pro/market" className="link">
+                  {t.marketMore}
                 </Link>
               </section>
             )}

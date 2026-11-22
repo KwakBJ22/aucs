@@ -30,6 +30,12 @@ const man = (s: string) => {
   const n = num(s);
   return n ? n * 10_000 : null;
 };
+const OUT_CHIP: Record<string, string> = {
+  won: "green",
+  lost: "orange",
+  not_bid: "gray",
+  cancelled: "gray",
+};
 const md = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
 
 // 결과 기록(RESULT-01): 결과 하나 고르고, 숫자는 아는 것만.
@@ -90,11 +96,11 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
     </label>
   );
   return (
-    <div className="py-12 px-0">
+    <div className="py-12 px-0 rec-form">
       <div className="fw-6">
         {x.place} <span className="sub">· {md(x.sale_date)}</span>
       </div>
-      <div className="d-flex gap-6 f-wrap mt-8">
+      <div className="d-flex gap-6 f-wrap mt-8 rec-btns">
         {Object.entries(t.outcome).map(([k, v]) => (
           <button
             key={k}
@@ -213,7 +219,7 @@ export default function Me() {
   const box = (title: string, hint: string | null, children: React.ReactNode, show: boolean) =>
     show || pc ? (
       <section className="section">
-        <h2 className="fs-base m-0">{title}</h2>
+        <h2 className="m-0 me-h">{title}</h2>
         {hint && <p className="sub mt-4 mb-0 mx-0">{hint}</p>}
         {children}
       </section>
@@ -221,7 +227,7 @@ export default function Me() {
 
   const upcomingBox = box(
     t.upcoming,
-    null,
+    pc && upcoming.length > 0 ? t.count(upcoming.length) : null,
     upcoming.length === 0 ? (
       <p className="sub">{t.upcomingEmpty}</p>
     ) : (
@@ -253,6 +259,9 @@ export default function Me() {
     t.recordTitle,
     d && d.todo.length > 0 ? t.todoHint : null,
     <>
+      {pc && d.todo.length > 0 && (
+        <p className="c-blue-text fw-7 fs-md mt-8 mb-0">{t.todoN(d.todo.length)}</p>
+      )}
       {d?.todo.map((x) => (
         <div key={x.item_id} id={`rec-${x.item_id}`}>
           <RecordForm x={x} token={session.access_token} onSaved={load} />
@@ -298,7 +307,11 @@ export default function Me() {
               {d.history.map((b) => (
                 <tr key={b.bid_id}>
                   <td>{b.place}</td>
-                  <td>{t.outcome[b.outcome]}</td>
+                  <td>
+                    <span className={`chip ${OUT_CHIP[b.outcome] ?? "gray"}`}>
+                      {t.outcome[b.outcome]}
+                    </span>
+                  </td>
                   <td>{won(b.my_bid_krw)}</td>
                   <td>{won(b.winning_bid_krw)}</td>
                   <td>{won(b.second_bid_krw)}</td>
@@ -317,7 +330,16 @@ export default function Me() {
     copy.mock.notes,
     copy.mock.notesHint,
     <>
-      {mocks.length === 0 && <p className="sub">{t.mockEmpty}</p>}
+      {mocks.length === 0 && (
+        <p className="empty-box">
+          {t.mockEmpty}{" "}
+          {pc && (
+            <Link href="/find" className="link in">
+              {t.go}
+            </Link>
+          )}
+        </p>
+      )}
       {mocks.map((x) => (
         <div key={x.mock_id} className="py-10 px-0">
           <div className="d-flex jc-between gap-8">
@@ -368,12 +390,10 @@ export default function Me() {
 
   const wonBox = box(
     t.won,
-    null,
+    pc ? t.wonEmpty : null,
     <>
-      {d && d.won.length === 0 && <p className="sub">{t.wonEmpty}</p>}
-      {d?.won.map((b) => (
-        <WonCard key={b.bid_id} b={b} />
-      ))}
+      {d && d.won.length === 0 && <p className="empty-box">{pc ? t.none : t.wonEmpty}</p>}
+      {d?.won.map((b) => <WonCard key={b.bid_id} b={b} />)}
     </>,
     Boolean(d && d.won.length > 0),
   );
@@ -387,11 +407,16 @@ export default function Me() {
         </section>
       )}
       {pc ? (
+        // 두 줄기로 따로 쌓음(11/22 디자인 — 칸 높이가 달라 가운데가 비던 것)
         <div className="pc-grid g-2x2">
-          {upcomingBox}
-          {recordBox}
-          {mockBox}
-          {wonBox}
+          <div>
+            {upcomingBox}
+            {mockBox}
+          </div>
+          <div>
+            {recordBox}
+            {wonBox}
+          </div>
         </div>
       ) : (
         <>

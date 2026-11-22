@@ -17,17 +17,20 @@ import { Termed } from "@/components/term";
 const t = copy.item;
 
 // note: 값 아래 설명(범위·까닭) — 이름 아래 줄에 왼쪽부터 펼침(11/10 휴대폰에서 이름·설명이 좁은 칸에 접혀 깨졌음)
+// hl: 이 줄을 연파랑 판으로 돋움(11/22 디자인 — 실거래 목록의 매매 줄)
 export function Row({
   label,
   value,
   note,
+  hl,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   note?: React.ReactNode;
+  hl?: boolean;
 }) {
   return (
-    <div className={note ? "kv kv-has-note" : "kv"}>
+    <div className={`${note ? "kv kv-has-note" : "kv"}${hl ? " kv-hl" : ""}`}>
       <span className="sub m-0">{typeof label === "string" ? <Termed text={label} /> : label}</span>
       <span className="kv-v">{value}</span>
       {note && <span className="kv-note sub m-0 fs-xs">{note}</span>}
@@ -168,38 +171,43 @@ export function CalcBox({ id }: { id: string }) {
   const over = d?.cap_krw != null && s != null && s.bid_krw > d.cap_krw;
   const myCash = prof?.cash ?? null;
   return (
-    <div className="mt-12 pt-12">
-      <div className="fs-md fw-6">{c.homesQ}</div>
-      <div className="d-flex gap-6 mt-6 f-wrap">
-        {c.homes.map((label, i) => (
-          <button
-            key={label}
-            className={`seg-btn ${homes === i ? "on" : ""}`}
-            onClick={() => pickHomes(i)}
-          >
-            {label}
-          </button>
-        ))}
-        {homes === 0 && (
-          <label className="fs-sm d-flex ai-center gap-4">
-            <input
-              type="checkbox"
-              checked={first}
-              onChange={(e) => toggle("firstTime", e.target.checked)}
-            />
-            {c.firstTime}
-          </label>
-        )}
-        {homes === 1 && (
-          <label className="fs-sm d-flex ai-center gap-4">
-            <input
-              type="checkbox"
-              checked={selling}
-              onChange={(e) => toggle("selling", e.target.checked)}
-            />
-            {c.selling}
-          </label>
-        )}
+    <div className="mt-12 pt-12 calc-box">
+      {/* PC(11/22 디자인): 물음과 고르기를 한 줄에, 고르기는 회색 판 안 흰 칸 */}
+      <div className="homes-row">
+        <div className="fs-md fw-6">{c.homesQ}</div>
+        <div className="d-flex gap-6 mt-6 f-wrap ai-center">
+          <span className="homes-seg">
+            {c.homes.map((label, i) => (
+              <button
+                key={label}
+                className={`seg-btn ${homes === i ? "on" : ""}`}
+                onClick={() => pickHomes(i)}
+              >
+                {label}
+              </button>
+            ))}
+          </span>
+          {homes === 0 && (
+            <label className="fs-sm d-flex ai-center gap-4">
+              <input
+                type="checkbox"
+                checked={first}
+                onChange={(e) => toggle("firstTime", e.target.checked)}
+              />
+              {c.firstTime}
+            </label>
+          )}
+          {homes === 1 && (
+            <label className="fs-sm d-flex ai-center gap-4">
+              <input
+                type="checkbox"
+                checked={selling}
+                onChange={(e) => toggle("selling", e.target.checked)}
+              />
+              {c.selling}
+            </label>
+          )}
+        </div>
       </div>
       {homes === 1 && selling && <div className="sub mt-4 mb-0 mx-0 fs-xs">{c.sellingHint}</div>}
       {d?.assume?.risk && (

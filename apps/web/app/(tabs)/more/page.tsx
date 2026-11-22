@@ -27,6 +27,7 @@ export default function More() {
   const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   useEffect(() => setProfile(loadProfile()), []);
   const [inquiries, setInquiries] = useState<MyInquiry[]>([]);
+  const [tocOn, setTocOn] = useState(0);
   useEffect(() => {
     // 알림 조건·문의를 한 번에(11/3 — 예전 2번)
     if (session)
@@ -74,19 +75,19 @@ export default function More() {
         <>
           <div className="line-row">
             <span className="sub">{t.regions}</span>
-            <span>{profile.regions.join(" · ") || "-"}</span>
+            <b className="ta-right">{profile.regions.join(" · ") || "-"}</b>
           </div>
           <div className="line-row">
             <span className="sub">{t.cash}</span>
-            <span>{profile.cash ? won(profile.cash) : "-"}</span>
+            <b>{profile.cash ? won(profile.cash) : "-"}</b>
           </div>
           <div className="line-row">
             <span className="sub">{t.purpose}</span>
-            <span>{profile.purpose ? copy.home.purposeName[profile.purpose] : "-"}</span>
+            <b>{profile.purpose ? copy.home.purposeName[profile.purpose] : "-"}</b>
           </div>
           <div className="line-row">
             <span className="sub">{t.homes}</span>
-            <span>{profile.homes != null ? t.homesN(profile.homes) : "-"}</span>
+            <b>{profile.homes != null ? t.homesN(profile.homes) : "-"}</b>
           </div>
         </>
       ) : (
@@ -164,8 +165,14 @@ export default function More() {
         <PageHeader title={t.pcTitle} />
         <div className="pc-grid g-20-80">
           <nav className="section toc pc-sticky mt-0">
-            {t.toc.map(([label, href]) => (
-              <a key={href} href={href}>
+            {/* 고른 칸 표시(11/22 디자인) — 누른 것을 연한 판 · 굵게 */}
+            {t.toc.map(([label, href], i) => (
+              <a
+                key={href}
+                href={href}
+                className={i === tocOn ? "on" : ""}
+                onClick={() => setTocOn(i)}
+              >
                 {label}
               </a>
             ))}

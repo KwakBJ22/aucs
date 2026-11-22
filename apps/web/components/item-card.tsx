@@ -91,7 +91,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
     <Link
       prefetch={false} // 물건 화면의 틀은 모두 같음 — 카드마다 미리 받으면 목록 하나에 요청이 수십 번(11/14)
       href={`/item/${encodeURIComponent(c.item_id)}`}
-      className="card-go d-flex gap-12 py-12 px-0 c-inherit"
+      className="card-go d-flex gap-12 c-inherit"
     >
       <Thumb c={c} />
       <div className="f-1 minw-0">
@@ -105,26 +105,26 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
           </span>
           {onbid && <SourceBadge c={c} />}
         </div>
-        <div className="fs-md fw-6 mt-2 ellipsis">
+        <div className="ic-name ellipsis">
           {c.place} {c.building ?? c.usage} {c.area_m2 ? `${Math.round(c.area_m2)}㎡` : ""}
         </div>
-        <div className="fs-lg fw-7 mt-2 ellipsis">
+        <div className="ic-price ellipsis">
           {won(c.min_price_krw)}{" "}
-          <span className="fs-xs fw-5 c-muted">
+          <span className="ic-rate">
             {c.min_rate != null ? `${c.min_rate}%` : ""}
             {c.failed_count ? ` · ${t.failed(c.failed_count)}` : ""}
           </span>
         </div>
         <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>
         {c.station && (
-          <div className="fs-xs c-muted mt-4 ellipsis">
+          <div className="ic-note ellipsis">
             {copy.walk.card(c.station.name, c.station.walk_min)}
           </div>
         )}
-        {c.cash_notax && <div className="fs-xs c-muted mt-4 ellipsis">{t.cashNoTax}</div>}
-        {why && <div className="fs-xs fw-6 mt-6">{why}</div>}
+        {c.cash_notax && <div className="ic-note ellipsis">{t.cashNoTax}</div>}
+        {why && <div className="ic-why">{why}</div>}
         {!why && !onbid && c.below_appraisal_krw > 0 && (
-          <div className="fs-xs fw-6 mt-6">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
+          <div className="ic-why">{t.belowAppraisal(won(c.below_appraisal_krw))}</div>
         )}
       </div>
       <HeartButton id={c.item_id} />

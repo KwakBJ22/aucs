@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ItemCard } from "@/components/item-card";
 import { PickPanel } from "@/components/pick-panel";
-import { FindFilters, filterSummary } from "@/components/find-filters";
+import { FindChips, FindFilters, filterSummary } from "@/components/find-filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { dropPart, parseTalk, type Talk } from "@/lib/talk";
 import {
@@ -225,6 +225,71 @@ export default function Find() {
   };
   const empty = list && list.items.length === 0 && !(list.results ?? []).length;
 
+  // 최근 검색 창 · 알아들은 조건 줄 — 휴대폰 찾기 칸과 PC 찾기 줄이 같이 씀
+  const recentBox = focus && !q && recent.length > 0 && (
+    <div
+      className="pos-absolute bg-surface b-0 r-14 py-6 px-0 mt-4"
+      style={{
+        top: "100%",
+        left: 0,
+        right: 0,
+        zIndex: 5,
+        boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+      }}
+    >
+      <div className="sub mt-0 mb-4 mx-12 fs-xs">{t.recent}</div>
+      {recent.map((w) => (
+        <div key={w} className="d-flex ai-center">
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault(); // 칸에서 손을 떼기 전에 고른 말을 넣음(예전엔 150ms 기다렸음)
+              setQ(w);
+              setQuery(w);
+              setFocus(false);
+            }}
+            className="recent-word d-block ta-left py-12 px-12 fs-base"
+          >
+            {w}
+          </button>
+          <button
+            aria-label={t.recentRemove(w)}
+            onMouseDown={(e) => {
+              e.preventDefault(); // 칸을 닫지 않고 이 말만 지움
+              forget(w);
+            }}
+            className="icon-btn recent-x"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+  const talkRow = talk && (
+    <div className="d-flex gap-6 f-wrap ai-center mt-10" aria-label={t.talkLabel}>
+      <span className="sub m-0 fs-xs">{t.talkLabel}</span>
+      {talk.parts.map((p) => (
+        <button key={p.key} className="pill on" onClick={() => setTalk(dropPart(talk, p.key))}>
+          {p.label} ×
+        </button>
+      ))}
+    </div>
+  );
+  const inputProps = {
+    type: "search",
+    value: q,
+    placeholder: t.searchPlaceholder,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setQ(e.target.value),
+    onFocus: () => setFocus(true),
+    onBlur: () => setFocus(false),
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        setQuery(q.trim());
+        remember(q.trim());
+      }
+    },
+  };
+
   const searchBox = (
     <>
       <div className="d-flex gap-8 pos-relative">
@@ -255,56 +320,9 @@ export default function Find() {
             </option>
           ))}
         </select>
-        {focus && !q && recent.length > 0 && (
-          <div
-            className="pos-absolute bg-surface b-0 r-14 py-6 px-0 mt-4"
-            style={{
-              top: "100%",
-              left: 0,
-              right: 0,
-              zIndex: 5,
-              boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-            }}
-          >
-            <div className="sub mt-0 mb-4 mx-12 fs-xs">{t.recent}</div>
-            {recent.map((w) => (
-              <div key={w} className="d-flex ai-center">
-                <button
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // 칸에서 손을 떼기 전에 고른 말을 넣음(예전엔 150ms 기다렸음)
-                    setQ(w);
-                    setQuery(w);
-                    setFocus(false);
-                  }}
-                  className="recent-word d-block ta-left py-12 px-12 fs-base"
-                >
-                  {w}
-                </button>
-                <button
-                  aria-label={t.recentRemove(w)}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // 칸을 닫지 않고 이 말만 지움
-                    forget(w);
-                  }}
-                  className="icon-btn recent-x"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {recentBox}
       </div>
-      {talk && (
-        <div className="d-flex gap-6 f-wrap ai-center mt-10" aria-label={t.talkLabel}>
-          <span className="sub m-0 fs-xs">{t.talkLabel}</span>
-          {talk.parts.map((p) => (
-            <button key={p.key} className="pill on" onClick={() => setTalk(dropPart(talk, p.key))}>
-              {p.label} ×
-            </button>
-          ))}
-        </div>
-      )}
+      {talkRow}
       {status !== "sold" && status !== "withdrawn" && (
         <div className="pills mt-10" role="group" aria-label={t.sourceLabel}>
           {(["all", "court", "onbid"] as const).map((s) => (
@@ -360,9 +378,7 @@ export default function Find() {
           <SkCards n={6} />
         </Delayed>
       )}
-      {list?.items.map((c) => (
-        <ItemCard key={c.item_id} c={c} />
-      ))}
+      {list?.items.map((c) => <ItemCard key={c.item_id} c={c} />)}
       {(list?.results ?? []).map((r) => (
         <ResultRow key={r.result_id} r={r} />
       ))}
@@ -370,92 +386,134 @@ export default function Find() {
   );
 
   const mapLink = (
-    <Link href={mapHref} className="btn soft sm">
-      {copy.mapView.open}
+    <Link href={mapHref} className="btn soft sm nowrap">
+      {copy.mapView.open} ›
     </Link>
   );
 
+  // PC(11/22 디자인): 왼쪽 조건 칸을 없애고 넓은 찾기 줄 + 조건 칩 한 줄 → 목록 | 고른 물건
   if (pc)
     return (
-      <main className="page">
+      <main className="page wide">
         <PageHeader title={t.title} sub={regions.join(" · ")} right={mapLink} />
-        <div className="pc-grid g-18-34-48">
-          <section
-            className="section pc-sticky pc-filters mt-0 oy-auto quiet-scroll"
-            style={{ maxHeight: "calc(100dvh - 140px)" }}
+        <div className="find-bar pos-relative">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
           >
-            <h2>{t.cond}</h2>
-            {filters}
-          </section>
-          <section className="section mt-0">
-            {searchBox}
-            <div className="d-flex jc-between ai-center">
-              {countLine}
-              <div className="pills">
-                <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>
-                  {t.viewCard}
-                </button>
-                <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>
-                  {t.viewTable}
-                </button>
-              </div>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input {...inputProps} aria-label={t.searchPlaceholder} />
+          {recentBox}
+        </div>
+        {talkRow}
+        <FindChips
+          f={filter}
+          onChange={changeFilter}
+          onSave={saveCond}
+          saveMsg={saveMsg}
+          regions={talk?.sigungu ?? regions}
+          source={source}
+          onSource={pickSource}
+          status={status}
+          onStatus={pickStatus}
+        />
+        <div className="find-grid">
+          <div className="minw-0">
+            <div className="find-head">
+              {query ? (
+                <span className="sub">{t.searching}</span>
+              ) : (
+                <b>
+                  {list && status !== "sold" && status !== "withdrawn" ? t.total(list.total) : ""}
+                </b>
+              )}
+              <span className="d-flex ai-center gap-10">
+                {status !== "sold" && status !== "withdrawn" && (
+                  <select
+                    className="sort-sel"
+                    aria-label={t.sortLabel}
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as "deadline" | "rate")}
+                  >
+                    <option value="deadline">{t.sortDeadline}</option>
+                    <option value="rate">{t.sortRate}</option>
+                  </select>
+                )}
+                <span className="scope-seg" role="group">
+                  <button className={!asTable ? "on" : ""} onClick={() => setAsTable(false)}>
+                    {t.viewCard}
+                  </button>
+                  <button className={asTable ? "on" : ""} onClick={() => setAsTable(true)}>
+                    {t.viewTable}
+                  </button>
+                </span>
+              </span>
             </div>
-            {empty && <p className="sub">{t.noResult}</p>}
-            {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
-            {!failed && !list && (
-              <Delayed>{asTable ? <SkTable rows={10} cols={5} /> : <SkCards n={6} />}</Delayed>
-            )}
-            {asTable ? (
-              <div className="ox-auto">
-                <table className="pro-table">
-                  <thead>
-                    <tr>
-                      <th>{t.cols.date}</th>
-                      <th>{t.cols.place}</th>
-                      <th>{t.cols.min}</th>
-                      <th>{t.cols.rate}</th>
-                      <th>{t.cols.failed}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list?.items.map((c) => (
-                      <tr
-                        key={c.item_id}
-                        onClick={() => setPick(c.item_id)}
-                        className={`${pick === c.item_id ? "row-on" : ""} cur-pointer`}
-                      >
-                        <td>{dday(c.d_day)}</td>
-                        <td>
-                          {c.place} {c.building ?? c.usage}
-                        </td>
-                        <td>{won(c.min_price_krw)}</td>
-                        <td>{c.min_rate}</td>
-                        <td>{c.failed_count ?? 0}</td>
+            <section className="section mt-0 find-list">
+              {empty && <p className="sub">{t.noResult}</p>}
+              {failed && <LoadError onRetry={() => setTries((n) => n + 1)} />}
+              {!failed && !list && (
+                <Delayed>{asTable ? <SkTable rows={10} cols={5} /> : <SkCards n={6} />}</Delayed>
+              )}
+              {asTable ? (
+                <div className="ox-auto">
+                  <table className="pro-table">
+                    <thead>
+                      <tr>
+                        <th>{t.cols.date}</th>
+                        <th>{t.cols.place}</th>
+                        <th>{t.cols.min}</th>
+                        <th>{t.cols.rate}</th>
+                        <th>{t.cols.failed}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              list?.items.map((c) => (
-                <div
-                  key={c.item_id}
-                  className={pick === c.item_id ? "pick-on" : ""}
-                  onClickCapture={(e) => {
-                    if (pick !== c.item_id) {
-                      e.preventDefault();
-                      setPick(c.item_id);
-                    }
-                  }}
-                >
-                  <ItemCard c={c} />
+                    </thead>
+                    <tbody>
+                      {list?.items.map((c) => (
+                        <tr
+                          key={c.item_id}
+                          onClick={() => setPick(c.item_id)}
+                          className={`${pick === c.item_id ? "row-on" : ""} cur-pointer`}
+                        >
+                          <td>{dday(c.d_day)}</td>
+                          <td>
+                            {c.place} {c.building ?? c.usage}
+                          </td>
+                          <td>{won(c.min_price_krw)}</td>
+                          <td>{c.min_rate}</td>
+                          <td>{c.failed_count ?? 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))
-            )}
-            {(list?.results ?? []).map((r) => (
-              <ResultRow key={r.result_id} r={r} />
-            ))}
-          </section>
+              ) : (
+                list?.items.map((c) => (
+                  <div
+                    key={c.item_id}
+                    className={pick === c.item_id ? "pick-on" : ""}
+                    onClickCapture={(e) => {
+                      if (pick !== c.item_id) {
+                        e.preventDefault();
+                        setPick(c.item_id);
+                      }
+                    }}
+                  >
+                    <ItemCard c={c} />
+                  </div>
+                ))
+              )}
+              {(list?.results ?? []).map((r) => (
+                <ResultRow key={r.result_id} r={r} />
+              ))}
+            </section>
+          </div>
           <div
             className="pc-sticky oy-auto quiet-scroll"
             style={{ maxHeight: "calc(100dvh - 140px)" }}

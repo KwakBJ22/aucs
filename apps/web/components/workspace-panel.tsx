@@ -118,16 +118,15 @@ export function WorkspacePanel({
 
       <section className="section">
         <h2>{copy.watch.stepNow}</h2>
-        <div className="d-flex gap-6 f-wrap mt-8">
+        <div className="d-flex gap-6 f-wrap mt-8 step-pills">
           {(w.step === "result" ? (["result", "after"] as WatchStep[]) : MOVABLE).map((s) => (
             <button
               key={s}
               className={`pill${s === w.step ? " on" : ""}`}
-
               disabled={s === "result"}
               onClick={() => setStep(s)}
             >
-              {copy.watch.steps[s]}
+              {s === w.step ? `✓ ${copy.watch.steps[s]}` : copy.watch.steps[s]}
             </button>
           ))}
         </div>

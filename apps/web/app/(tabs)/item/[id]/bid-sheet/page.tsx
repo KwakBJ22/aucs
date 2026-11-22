@@ -48,6 +48,14 @@ function Sheet() {
   const [day, setDay] = useState<BidDay | null>(null);
   const [chk, setChk] = useState<BidCheck | null>(null);
   const [sure, setSure] = useState(false);
+  const [meOpen, setMeOpen] = useState(false);
+  const [mine, setMine] = useState({ name: "", tel: "", rrn: "", addr: "" });
+  // 인쇄가 끝나면 이 기기 화면에 적은 입찰자 정보를 지움(저장하지 않음)
+  useEffect(() => {
+    const clear = () => setMine({ name: "", tel: "", rrn: "", addr: "" });
+    window.addEventListener("afterprint", clear);
+    return () => window.removeEventListener("afterprint", clear);
+  }, []);
 
   useEffect(() => {
     fetchBidDay(id)
@@ -72,13 +80,54 @@ function Sheet() {
 
   const canPrint = chk && chk.level !== "block" && (chk.level === "ok" || sure);
   const dep = chk?.deposit_krw ?? day?.deposit_krw ?? null;
+  // 실수 막기 검사(11/22 디자인): 통과 ✓ 초록 · 확인할 것 ! 주황, 위에 「N개 중 M개 통과」
+  const checks: [boolean, string][] = [
+    [Boolean(chk), t.checks.korean],
+    [Boolean(chk) && (chk?.level === "ok" || sure), t.checks.double],
+    [Boolean(chk), chk?.resale ? t.checks.deposit20 : t.checks.deposit10],
+    [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
+    [true, t.checks.privacy],
+  ];
+  const passed = checks.filter(([ok]) => ok).length;
+  const me = (v: string) => v || t.f.mine;
+  const head = [
+    day ? `${day.court} ${day.case_no}` : null,
+    day?.sale_date ? t.dayLine(day.sale_date) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <main className="page">
+    <main className="page wide">
+      <div className="no-print">
+        {pc && (
+          <Link href={`/item/${encodeURIComponent(id)}`} className="back-link">
+            ‹ {t.back}
+          </Link>
+        )}
+        <PageHeader
+          title={t.title}
+          back={`/item/${encodeURIComponent(id)}`}
+          sub={head || undefined}
+        />
+      </div>
       <div className="pc-grid g-40-60">
         <div className="no-print">
-          <PageHeader title={t.title} back={`/item/${encodeURIComponent(id)}`} />
-          <section className="section">
+          <section className="section mt-0">
+            <h2>{t.inputTitle}</h2>
             <div className="sub">{t.hint}</div>
+            {day && (
+              <div className="bs-fields">
+                <div>
+                  <span className="sub">{t.f.court}</span>
+                  <b>{day.court_full}</b>
+                </div>
+                <div>
+                  <span className="sub">{t.f.caseNo}</span>
+                  <b>{day.case_no}</b>
+                </div>
+              </div>
+            )}
+            {day && <div className="sub mt-6">{t.f.itemNoLine(day.item_no)}</div>}
             <label className="d-block mt-10">
               <span className="sub">{t.amount}</span>
               <input
@@ -89,26 +138,23 @@ function Sheet() {
                   setText(v);
                   setBid(v ? Number(v) * 10_000 : null);
                 }}
-                className="f-input big"
+                className="f-input big bs-amount"
               />
             </label>
             {chk && (
               <div className="mt-10">
-                <div className="fs-lg fw-7">{chk.korean}</div>
-                <div
-                  className="fs-md mt-4"
-                  style={{
-                    color:
-                      chk.level === "block"
-                        ? "var(--red)"
-                        : chk.level === "stop"
-                          ? "var(--orange)"
-                          : "var(--muted)",
-                    fontWeight: chk.level === "ok" ? 400 : 700,
-                  }}
-                >
-                  {chk.message}
+                <div className={chk.level === "ok" ? "fs-md fw-7 c-green" : "fs-lg fw-7"}>
+                  {chk.korean}
+                  {chk.level === "ok" ? ` · ${t.koreanOk}` : ""}
                 </div>
+                {chk.level !== "ok" && (
+                  <div
+                    className="fs-md mt-4 fw-7"
+                    style={{ color: chk.level === "block" ? "var(--red)" : "var(--orange)" }}
+                  >
+                    {chk.message}
+                  </div>
+                )}
                 {chk.level === "stop" && (
                   <label className="big-confirm">
                     <input
@@ -122,90 +168,161 @@ function Sheet() {
                 <div className="sub mt-6">{t.deposit(won(chk.deposit_krw), chk.resale)}</div>
               </div>
             )}
-            <button
-              className="btn primary mt-12"
-              disabled={!canPrint}
-              onClick={() => window.print()}
-            >
-              {t.print}
-            </button>
-            <div className="sub mt-6">{t.printHint}</div>
+            {/* 입찰자 정보(11/22 디자인): 이 기기 화면에만 적고 서버로 보내지 않음 · 인쇄가 끝나면 지움 */}
+            <div className="bs-me">
+              <b>{t.meTitle}</b>
+              <p className="sub mt-4 mb-0">{t.meHint}</p>
+              {!meOpen ? (
+                <button className="btn soft sm mt-10" onClick={() => setMeOpen(true)}>
+                  {t.meOpen}
+                </button>
+              ) : (
+                <div className="bs-me-in">
+                  {(
+                    [
+                      ["name", t.f.name],
+                      ["tel", t.f.tel],
+                      ["rrn", t.f.rrn],
+                      ["addr", t.f.addr],
+                    ] as const
+                  ).map(([k, label]) => (
+                    <label key={k} className="d-block mt-8">
+                      <span className="sub">{label}</span>
+                      <input
+                        className="f-input"
+                        autoComplete="off"
+                        value={mine[k]}
+                        onChange={(e) => setMine({ ...mine, [k]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            {!pc && (
+              <button
+                className="btn primary mt-12"
+                disabled={!canPrint}
+                onClick={() => window.print()}
+              >
+                {t.print}
+              </button>
+            )}
           </section>
           <section className="section">
             <h2>{t.checkTitle}</h2>
-            {[
-              [Boolean(chk), t.checks.korean],
-              [Boolean(chk) && (chk?.level === "ok" || sure), t.checks.double],
-              [Boolean(chk), chk?.resale ? t.checks.deposit20 : t.checks.deposit10],
-              [Boolean(day?.item_no), t.checks.itemNo(day?.item_no ?? null)],
-              [true, t.checks.privacy],
-            ].map(([ok, label]) => (
-              <div key={String(label)} className="line-row fs-md">
-                <span>{label as string}</span>
-                <b style={{ color: ok ? "var(--green)" : "var(--faint)" }}>{ok ? "✓" : "—"}</b>
+            <div className="sub">{t.checkSum(checks.length, passed)}</div>
+            {checks.map(([ok, label]) => (
+              <div key={label} className="bs-check">
+                <span className={ok ? "bs-ok" : "bs-warn"} aria-hidden="true">
+                  {ok ? "✓" : "!"}
+                </span>
+                <span className={ok ? "" : "c-orange fw-7"}>{label}</span>
               </div>
             ))}
-            <Link href={`/item/${encodeURIComponent(id)}/bid-day`} className="menu-row">
-              <span>{copy.bidDay.title}</span>
-              <span className="sub">›</span>
-            </Link>
+            {!pc && (
+              <Link href={`/item/${encodeURIComponent(id)}/bid-day`} className="menu-row">
+                <span>{copy.bidDay.title}</span>
+                <span className="sub">›</span>
+              </Link>
+            )}
           </section>
         </div>
 
-        <section className="section print-area">
-          <PrintHead
-            title={t.printBrand}
-            sub={[day?.court_full, day?.case_no].filter(Boolean).join(" ")}
-            date={todayKst()}
-          />
-          <h2 className="ta-center fs-xl">{t.formTitle}</h2>
-          <table className="bid-form">
-            <tbody>
-              <tr>
-                <th>{t.f.court}</th>
-                <td>
-                  {day?.court_full} {day?.dept}
-                </td>
-                <th>{t.f.date}</th>
-                <td className="nowrap">{day?.sale_date}</td>
-              </tr>
-              <tr>
-                <th>{t.f.caseNo}</th>
-                <td className="nowrap">{day?.case_no}</td>
-                <th>{t.f.itemNo}</th>
-                <td>{day?.item_no}</td>
-              </tr>
-              <tr>
-                <th>{t.f.bidder}</th>
-                <td colSpan={3} className="handwrite">
-                  {t.f.bidderHint}
-                </td>
-              </tr>
-              <tr>
-                <th>{t.f.agent}</th>
-                <td colSpan={3} className="handwrite">
-                  {t.f.agentHint}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="sub mt-10">
-            {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
+        <section className="section mt-0 bs-preview">
+          <div className="d-flex jc-between ai-start gap-12 no-print">
+            <div>
+              <h2>{t.preview}</h2>
+              <div className="sub">{t.previewSub}</div>
+            </div>
+            {pc && (
+              <div className="d-flex gap-8">
+                <button
+                  className="btn secondary sm"
+                  disabled={!canPrint}
+                  onClick={() => window.print()}
+                >
+                  {t.savePdf}
+                </button>
+                <button
+                  className="btn primary sm"
+                  disabled={!canPrint}
+                  onClick={() => window.print()}
+                >
+                  {t.printOnly}
+                </button>
+              </div>
+            )}
           </div>
-          <Digits v={bid} />
-          <div className="sub mt-10">{t.f.deposit}</div>
-          <Digits v={dep} />
-          <div className="fs-md mt-10">{t.f.method}</div>
-          <div className="fs-md mt-16 ta-right">{t.f.sign}</div>
-          <div className="sub mt-12">{t.f.note}</div>
+          <div className="bs-paper-wrap">
+            <div className="print-area bs-paper">
+              <PrintHead
+                title={t.printBrand}
+                sub={[day?.court_full, day?.case_no].filter(Boolean).join(" ")}
+                date={todayKst()}
+              />
+              <h2 className="ta-center fs-xl">{t.formTitle}</h2>
+              <table className="bid-form">
+                <tbody>
+                  <tr>
+                    <th>{t.f.court}</th>
+                    <td>
+                      {day?.court_full} {day?.dept}
+                    </td>
+                    <th>{t.f.date}</th>
+                    <td className="nowrap">{day?.sale_date}</td>
+                  </tr>
+                  <tr>
+                    <th>{t.f.caseNo}</th>
+                    <td className="nowrap">{day?.case_no}</td>
+                    <th>{t.f.itemNo}</th>
+                    <td>{day?.item_no}</td>
+                  </tr>
+                  <tr>
+                    <th>{t.f.name}</th>
+                    <td className={mine.name ? "" : "handwrite"}>{me(mine.name)}</td>
+                    <th>{t.f.tel}</th>
+                    <td className={mine.tel ? "" : "handwrite"}>{me(mine.tel)}</td>
+                  </tr>
+                  <tr>
+                    <th>{t.f.rrn}</th>
+                    <td colSpan={3} className={mine.rrn ? "" : "handwrite"}>
+                      {mine.rrn || t.f.rrnHint}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>{t.f.addr}</th>
+                    <td colSpan={3} className={mine.addr ? "" : "handwrite"}>
+                      {me(mine.addr)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>{t.f.agent}</th>
+                    <td colSpan={3} className="handwrite">
+                      {t.f.agentHint}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="sub mt-10">
+                {t.f.price} {bid ? `· ${chk?.korean ?? ""}` : ""}
+              </div>
+              <Digits v={bid} />
+              <div className="sub mt-10">{t.f.deposit}</div>
+              <Digits v={dep} />
+              <div className="fs-md mt-10">{t.f.method}</div>
+              <div className="fs-md mt-16 ta-right">{t.f.sign}</div>
+              <div className="sub mt-12">{t.f.note}</div>
+            </div>
+          </div>
+          <div className="sub mt-10 no-print">{t.envelope}</div>
         </section>
       </div>
       {pc && (
-        <div className="no-print mt-20">
-          <h2 className="fs-xl">{copy.bidDay.title}</h2>
-          <div className="sub">{t.dayHint}</div>
+        <section className="section no-print mt-20">
+          <div className="sub m-0">{t.dayCard}</div>
           <BidDaySheet id={id} wide />
-        </div>
+        </section>
       )}
     </main>
   );

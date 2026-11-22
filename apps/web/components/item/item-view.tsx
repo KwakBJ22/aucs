@@ -42,6 +42,23 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
     if (moved) window.scrollBy(0, moved);
   }, [open]);
   const [copied, setCopied] = useState(false);
+  // PC 왼쪽 목차: 지금 보이는 질문(11/22 디자인 — 연파랑 판)
+  const [onQ, setOnQ] = useState(0);
+  useEffect(() => {
+    if (!pc) return;
+    const keys = [...d.questions.map((q) => `q-${q.key}`), "q-rounds"];
+    const pick = () => {
+      let cur = 0;
+      keys.forEach((k, i) => {
+        const el = document.getElementById(k);
+        if (el && el.getBoundingClientRect().top < 200) cur = i;
+      });
+      setOnQ(cur);
+    };
+    pick();
+    window.addEventListener("scroll", pick, { passive: true });
+    return () => window.removeEventListener("scroll", pick);
+  }, [pc, d.questions]);
   // 바로가기(/item/…#q-cost)로 들어오면 그 질문을 펼쳐 둠 — 접힌 채면 자리로 가도 내용이 안 보임
   useEffect(() => {
     const open1 = () => {
@@ -117,7 +134,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
   );
 
   return (
-    <main className="page">
+    <main className="page wide">
       <PageHeader
         title={pc ? title : ""}
         back="history"
@@ -135,6 +152,12 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
               >
                 {copied ? t.pc.copied : t.pc.copy}
               </button>
+              {/* 입찰일 아침(11/22 디자인 — 사건 줄 끝에) */}
+              {d.d_day != null && d.d_day >= 0 && d.d_day <= 1 && (
+                <Link href={`/item/${id}/bid-day`} className="chip-link">
+                  {copy.bidDay.title}
+                </Link>
+              )}
             </span>
           ) : undefined
         }
@@ -146,13 +169,13 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         }
       />
       {d.fatal && <div className="fatal">{d.fatal}</div>}
-      {d.d_day != null && d.d_day >= 0 && d.d_day <= 1 && (
+      {!pc && d.d_day != null && d.d_day >= 0 && d.d_day <= 1 && (
         <Link href={`/item/${id}/bid-day`} className="btn soft sm mt-8">
           {copy.bidDay.title}
         </Link>
       )}
 
-      <section className="section">
+      <section className="section item-top">
         {!pc && (
           <>
             <div className="sub">
@@ -163,8 +186,8 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         )}
         <div className="item-price">
           {won(d.min_price_krw)}{" "}
-          <span className="fs-md fw-5 c-muted d-inline-block">
-            {copy.card.ofAppraisal} {d.min_rate}%
+          <span className="item-price-sub">
+            {pc ? t.panel.priceLabel(d.min_rate) : `${copy.card.ofAppraisal} ${d.min_rate}%`}
             {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
           </span>
         </div>
@@ -173,12 +196,15 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
           {nums.map(([k, v]) => (
             <div key={k} className={k === t.nextRound ? "tile-wide" : undefined}>
               <div className="sub m-0">{k}</div>
-              <div className="fs-base fw-7 mt-2">{v}</div>
+              <div className="tile-v">{v}</div>
             </div>
           ))}
         </div>
         <OutcomeBand d={d} />
-        <p className="fs-base fw-6 lh-15 mt-14 mb-0 mx-0">{d.verdict}</p>
+        <Verdict
+          text={d.verdict}
+          tone={pc ? d.questions.find((q) => q.key === "hold")?.tone : undefined}
+        />
         {!closed && d.court_interest && d.court_interest.n > 0 && (
           <div className="sub fs-sm mt-6">
             {copy.interest.court(d.court_interest.n, d.court_interest.at)}
@@ -202,24 +228,49 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             itemId={closed ? undefined : d.item_id}
             compact
           />
+          {pc && <span className="sub">{t.panel.legend}</span>}
         </div>
       </section>
       {!closed && <PointsBand id={d.item_id} reg={reg} pdf={d.appraisal?.pdf_url} />}
 
       <div className="pc-grid g-14-62-24">
         {pc && (
-          <nav className="section pc-sticky toc" aria-label={t.pc.toc}>
-            {d.questions.map((q) => (
-              <a key={q.key} href={`#q-${q.key}`}>
-                <span className="toc-dot" style={{ background: DOT[q.tone] }} />
-                {q.title}
+          <div className="pc-sticky item-nav">
+            {/* 11/22 디자인: 질문 이름 아래 답 한 줄 · 지금 보는 질문은 연파랑 판 */}
+            <nav className="section toc q-toc" aria-label={t.pc.toc}>
+              {d.questions.map((q, i) => (
+                <a key={q.key} href={`#q-${q.key}`} className={i === onQ ? "on" : ""}>
+                  <span className="q-toc-t">
+                    <span className="toc-dot" style={{ background: DOT[q.tone] }} />
+                    {q.title}
+                  </span>
+                  <span className="q-toc-a">{answerOf(q, reg.u)}</span>
+                </a>
+              ))}
+              <a href="#q-rounds" className={onQ === d.questions.length ? "on" : ""}>
+                <span className="q-toc-t">
+                  <span className="toc-dot bg-faint" />
+                  {t.rounds}
+                </span>
+                {d.rounds[0] && (
+                  <span className="q-toc-a">
+                    {d.rounds[d.rounds.length - 1]?.sale_date.slice(5).replace("-", "/")}{" "}
+                    {d.rounds[d.rounds.length - 1]?.result}
+                  </span>
+                )}
               </a>
-            ))}
-            <a href="#q-rounds">
-              <span className="toc-dot bg-faint" />
-              {t.rounds}
-            </a>
-          </nav>
+            </nav>
+            <div className="section q-jump">
+              <p className="q-jump-t">{t.panel.jump}</p>
+              <div className="d-flex f-wrap gap-6">
+                {t.panel.jumps.map(([k, label]) => (
+                  <a key={k} href={`#${k}`}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
         <div className="kv-left">
           {d.questions.map((q) => {
@@ -240,7 +291,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                 >
                   <span className="toc-dot mt-6" style={{ background: DOT[q.tone] }} />
                   <span className="f-1">
-                    <span className="sub d-block m-0 fs-sm">{q.title}</span>
+                    <span className="q-label">{q.title}</span>
                     <span className="q-answer">{answerOf(q, reg.u)}</span>
                   </span>
                 </button>
@@ -253,7 +304,19 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             );
           })}
           <section id="q-rounds" className="section q-sec">
-            <h2>{t.rounds}</h2>
+            <h2 className={pc ? "q-label" : undefined}>{t.rounds}</h2>
+            {/* PC(11/22 디자인): 이번 기일 · 최저가 · 결과를 큰 한 줄로 */}
+            {pc && d.rounds.length > 0 && (
+              <p className="q-answer d-block mt-4 mb-0">
+                {[
+                  d.rounds[d.rounds.length - 1]?.sale_date,
+                  won(d.rounds[d.rounds.length - 1]?.min_price_krw ?? null),
+                  d.rounds[d.rounds.length - 1]?.result,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
             <table className="pro-table mt-8">
               <thead>
                 <tr>
@@ -267,7 +330,13 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                   <tr key={r.sale_date}>
                     <td className="num">{r.sale_date}</td>
                     <td className="num">{won(r.min_price_krw)}</td>
-                    <td>{r.result}</td>
+                    <td>
+                      {pc ? (
+                        <span className={`chip ${ROUND_CHIP[r.result] ?? "gray"}`}>{r.result}</span>
+                      ) : (
+                        r.result
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -288,6 +357,20 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         </div>
       )}
     </main>
+  );
+}
+
+const ROUND_CHIP: Record<string, string> = { 예정: "blue", 유찰: "gray", 매각: "green" };
+
+// 판정 한 줄(11/22 디자인): 「신호 — 설명 · 확인할 것 N가지」면 앞 신호를 ◆ 주황(빨강)으로
+function Verdict({ text, tone }: { text: string; tone?: string }) {
+  const i = text.lastIndexOf(" · ");
+  if ((tone !== "orange" && tone !== "red") || i < 0) return <p className="item-verdict">{text}</p>;
+  return (
+    <p className="item-verdict">
+      <span className={tone === "red" ? "c-red" : "c-orange"}>◆ {text.slice(0, i)}</span>
+      {text.slice(i)}
+    </p>
   );
 }
 

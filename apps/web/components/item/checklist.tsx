@@ -6,7 +6,8 @@ import { Termed } from "@/components/term";
 import type { DocKind, Question } from "@/lib/api/items";
 import type { RegistryUpload } from "@/lib/api/me";
 import { RegCtx } from "@/components/item/registry";
-import { t, DocCtx } from "@/components/item/shared";
+import { Panel, t, DocCtx } from "@/components/item/shared";
+import { useIsPc } from "@/lib/use-pc";
 
 export type CheckItem = {
   key: string;
@@ -82,6 +83,7 @@ export function flowDate(d: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CheckBody({ b }: { b: Record<string, any> }) {
   const [showDone, setShowDone] = useState(false);
+  const pc = useIsPc();
   const reg = useContext(RegCtx);
   const openDoc = useContext(DocCtx);
   const list = withMyRegistry(b.checklist as CheckItem[], reg?.u);
@@ -142,7 +144,8 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
           </div>
         </div>
       ))}
-      {done.length > 0 && (
+      {/* PC(11/22 디자인): 끝난 확인 · 사건 문건은 접힌 회색 칸 */}
+      {done.length > 0 && !pc && (
         <button
           onClick={() => setShowDone(!showDone)}
           aria-expanded={showDone}
@@ -151,31 +154,48 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
           ✓ {t.doneFold(done.length)}
         </button>
       )}
-      {showDone &&
-        done.map((x) => (
-          <div key={x.key} className="fs-sm py-4 px-0">
-            <span className="c-green">✓</span> {x.label}
-            <span className="sub m-0">
-              {" "}
-              · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
-              {x.note ? ` · ${x.note}` : ""}
-            </span>
-            {(x.key === "status_report" || x.key === "deliveries" || x.key === "spec_sheet") && (
-              <button onClick={() => openDoc(x.key as DocKind)} className="link in ml-6">
-                {t.doc.open}
-              </button>
-            )}
-          </div>
-        ))}
-      {b.events.length > 0 && <div className="fs-md fw-6 mt-10">{t.events}</div>}
-      {b.events
-        .slice(0, 6)
-        .map((e: { date: string; category: string; after_deadline: boolean }, i: number) => (
-          <div key={i} className="fs-sm py-4 px-0">
-            <span className="sub m-0">{e.date}</span> {e.category}
-            {e.after_deadline && <b className="c-amber"> · {t.afterDeadline}</b>}
-          </div>
-        ))}
+      {done.length > 0 && (
+        <Panel title={t.panel.done} sum={t.panel.doneN(done.length)} open={false}>
+          {(showDone || pc) &&
+            done.map((x) => (
+              <div key={x.key} className="fs-sm py-4 px-0">
+                <span className="c-green">✓</span> {x.label}
+                <span className="sub m-0">
+                  {" "}
+                  · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
+                  {x.note ? ` · ${x.note}` : ""}
+                </span>
+                {(x.key === "status_report" ||
+                  x.key === "deliveries" ||
+                  x.key === "spec_sheet") && (
+                  <button onClick={() => openDoc(x.key as DocKind)} className="link in ml-6">
+                    {t.doc.open}
+                  </button>
+                )}
+              </div>
+            ))}
+        </Panel>
+      )}
+      {b.events.length > 0 && !pc && <div className="fs-md fw-6 mt-10">{t.events}</div>}
+      {b.events.length > 0 && (
+        <Panel
+          title={t.panel.events}
+          sum={(b.events as { date: string; category: string }[])
+            .slice(0, 2)
+            .map((e) => `${e.date} ${e.category}`)
+            .join(" · ")}
+          open={false}
+        >
+          {b.events
+            .slice(0, 6)
+            .map((e: { date: string; category: string; after_deadline: boolean }, i: number) => (
+              <div key={i} className="fs-sm py-4 px-0">
+                <span className="sub m-0">{e.date}</span> {e.category}
+                {e.after_deadline && <b className="c-amber"> · {t.afterDeadline}</b>}
+              </div>
+            ))}
+        </Panel>
+      )}
     </>
   );
 }

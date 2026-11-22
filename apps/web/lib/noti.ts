@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { parseTime } from "./format";
 
 // 알림이 지났는지(11/1): 「오늘 입찰일」 알림이 12일 뒤에도 「할 일·마감」 맨 위에 있었음.
@@ -22,4 +23,23 @@ export function isStale(
   const made = parseTime(n.created_at);
   const until = new Date(made.getFullYear(), made.getMonth(), made.getDate() + rule[1]);
   return dayKey(now) > dayKey(until);
+}
+
+// 안 읽은 알림 수(11/22 디자인 — PC 머리 종에 빨간 점). 서버를 따로 부르지 않고, 홈·알림함이 받은 목록으로 셈해 적어 둠
+let unreadN = 0;
+const subs = new Set<() => void>();
+export function setUnread(n: number): void {
+  if (n === unreadN) return;
+  unreadN = n;
+  subs.forEach((f) => f());
+}
+export function useUnread(): number {
+  return useSyncExternalStore(
+    (f) => {
+      subs.add(f);
+      return () => subs.delete(f);
+    },
+    () => unreadN,
+    () => 0,
+  );
 }

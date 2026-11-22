@@ -10,7 +10,18 @@ import { NeedLogin } from "@/components/need-login";
 import { meApi, type Noti } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
-import { isStale } from "@/lib/noti";
+import { isStale, setUnread } from "@/lib/noti";
+
+// 「이전 → 지금」 알림은 지금 값을 굵게(11/22 디자인)
+function arrowBody(b: string): React.ReactNode {
+  const i = b.lastIndexOf("→");
+  if (i < 0) return b;
+  return (
+    <>
+      {b.slice(0, i + 1)} <b>{b.slice(i + 1).trim()}</b>
+    </>
+  );
+}
 
 export default function Notifications() {
   const { session, ready } = useSession();
@@ -23,7 +34,10 @@ export default function Notifications() {
     setFailed(false);
     meApi
       .notifications(session.access_token)
-      .then(setList)
+      .then((l) => {
+        setList(l);
+        setUnread(l.filter((n) => !n.read_at && !isStale(n)).length);
+      })
       .catch(() => setFailed(true));
   }, [session, tries, fresh]);
   if (!ready)
@@ -60,20 +74,20 @@ export default function Notifications() {
           <p className="sub">{copy.noti.empty}</p>
         </section>
       )}
-      <div className="pc-grid g-3">
+      <div className="pc-grid g-3 noti-grid">
         {groups
           .filter((x) => x.rows.length > 0)
           .map(({ g, rows }) => (
             <section key={g} className="section">
               <h2>
-                {copy.noti.groups[g]} <span className="sub">{rows.length}</span>
+                {copy.noti.groups[g]} <span className="noti-n">{rows.length}</span>
               </h2>
               <div className="sub">{copy.noti.groupSub[g]}</div>
               {rows.map((n) => (
                 <Link key={n.noti_id} href={n.link ?? "/home"} className="menu-row go">
                   <span className="minw-0">
-                    <div style={{ fontWeight: n.read_at ? 400 : 600 }}>{n.title}</div>
-                    {n.body && <div className="sub">{n.body}</div>}
+                    <div className={n.read_at ? "noti-t read" : "noti-t"}>{n.title}</div>
+                    {n.body && <div className="sub">{arrowBody(n.body)}</div>}
                     <div className="sub fs-xs">
                       {n.created_at.slice(5, 16).replace("T", " ").replace("-", "/")}
                     </div>

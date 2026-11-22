@@ -204,6 +204,7 @@ const PATHS = [
     login: false,
     run: async (page, hit) => {
       await page.goto(`${BASE}/login`);
+      await page.getByRole("button", { name: "이메일로 계속하기" }).click(); // 11/22 디자인: 누르면 칸이 열림
       await page.locator('input[type="email"]').fill(EMAIL);
       await page.getByRole("button", { name: "로그인 링크 받기" }).click();
       await seen(page, "메일함에서 링크를 누르면 로그인돼요");

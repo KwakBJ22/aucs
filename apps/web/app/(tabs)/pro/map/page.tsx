@@ -258,7 +258,7 @@ export default function MapPage() {
   };
 
   return (
-    <main className="page">
+    <main className="page wide">
       <PageHeader title={t.title} back="/find" />
       {failed ? (
         <p className="sub">{t.noMap}</p>
@@ -275,7 +275,7 @@ export default function MapPage() {
                     aria-pressed={narrow.includes(k)}
                     onClick={() => toggleNarrow(k)}
                   >
-                    {t.narrow[k]}
+                    {narrow.includes(k) ? `✓ ${t.narrow[k]}` : t.narrow[k]}
                   </button>
                 ))}
               </div>
@@ -294,7 +294,7 @@ export default function MapPage() {
                 <div className="pills" role="group" aria-label={t.walkLabel}>
                   {WALKS.map((n) => (
                     <button key={n} className={walk === n ? "on" : ""} onClick={() => pickWalk(n)}>
-                      {t.walkMin(n)}
+                      {walk === n ? `✓ ${t.walkMin(n)}` : t.walkMin(n)}
                     </button>
                   ))}
                 </div>
@@ -314,7 +314,7 @@ export default function MapPage() {
                     aria-pressed={color === c}
                     onClick={() => pickColor(c)}
                   >
-                    {t.color[c]}
+                    {color === c ? `✓ ${t.color[c]}` : t.color[c]}
                   </button>
                 ))}
               </div>

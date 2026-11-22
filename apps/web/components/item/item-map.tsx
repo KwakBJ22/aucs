@@ -84,9 +84,12 @@ function walkHref(
 }
 
 // 입지(11/13): 한 줄 → 가까운 역 세 곳(등급 · 도보 어림 WALK-01 · 네이버 지도 길찾기) → 주요 업무지구 → 가까운 정비사업
+// part(11/22 디자인 PC): "head" = 한 줄 · 정비구역 안(지도 옆 칸), "list" = 역 · 업무지구 · 가까운 정비사업(「가까운 역」 칸)
 export function Stations({
   d,
+  part,
 }: {
+  part?: "head" | "list";
   d: {
     lat: number | null;
     lon: number | null;
@@ -98,10 +101,12 @@ export function Stations({
   if (!d.stations?.length || d.lat == null || d.lon == null) return null;
   const from = { lat: d.lat, lon: d.lon };
   const loc = d.location;
+  const head = part !== "list";
+  const list = part !== "head";
   return (
-    <div className="mt-10">
-      {loc?.line && <p className="fw-6 m-0 mb-8">{loc.line}</p>}
-      {loc?.inside && (
+    <div className={part ? "" : "mt-10"}>
+      {head && loc?.line && <p className="fw-6 m-0 mb-8">{loc.line}</p>}
+      {head && loc?.inside && (
         <p className="m-0 mb-8">
           <span className="chip orange">{loc.inside.label}</span>{" "}
           <span className="fs-sm">
@@ -110,31 +115,34 @@ export function Stations({
           <span className="sub fs-xs d-block mt-4">{w.insideNote[loc.inside.kind]}</span>
         </p>
       )}
-      <div className="sub m-0">
-        {w.title} {loc?.grade && <span className="chip blue">{loc.grade}</span>}
-      </div>
-      {d.stations.map((s) => (
-        <div key={s.name} className="d-flex jc-between ai-center gap-8 mt-6">
-          <span className="minw-0">
-            <b className="fs-md">{s.name}</b>{" "}
-            <span className="fs-xs c-muted">{s.lines.join(" · ")}</span>
-            <span className="d-block fs-sm">{w.line(s.walk_min, s.walk_m)}</span>
-          </span>
-          <a
-            className="link fs-sm nowrap"
-            href="https://map.naver.com"
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => {
-              e.currentTarget.href = walkHref(from, s);
-            }}
-          >
-            {w.route}
-          </a>
+      {list && !part && (
+        <div className="sub m-0">
+          {w.title} {loc?.grade && <span className="chip blue">{loc.grade}</span>}
         </div>
-      ))}
-      <p className="sub fs-xs mt-6 mb-0">{w.note}</p>
-      {!!loc?.hubs.length && (
+      )}
+      {list &&
+        d.stations.map((s) => (
+          <div key={s.name} className="d-flex jc-between ai-center gap-8 mt-6">
+            <span className="minw-0">
+              <b className="fs-md">{s.name}</b>{" "}
+              <span className="fs-xs c-muted">{s.lines.join(" · ")}</span>
+              <span className="d-block fs-sm">{w.line(s.walk_min, s.walk_m)}</span>
+            </span>
+            <a
+              className="link fs-sm nowrap"
+              href="https://map.naver.com"
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => {
+                e.currentTarget.href = walkHref(from, s);
+              }}
+            >
+              {w.route}
+            </a>
+          </div>
+        ))}
+      {list && <p className="sub fs-xs mt-6 mb-0">{w.note}</p>}
+      {list && !!loc?.hubs.length && (
         <>
           <div className="sub mt-14 mb-0">{w.hubs}</div>
           {loc.hubs.map((h) => (
@@ -147,7 +155,7 @@ export function Stations({
           ))}
         </>
       )}
-      {!!loc?.redev.length && (
+      {list && !!loc?.redev.length && (
         <>
           <div className="sub mt-14 mb-0">{w.redev}</div>
           {loc.redev.map((z) => (

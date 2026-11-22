@@ -55,22 +55,27 @@ function ProMarket() {
   };
   const sc = m?.scorecard;
   return (
-    <main className="page pro-page">
-      <PageHeader title={t.title} />
+    <main className="page wide pro-page">
+      {/* 경매 · 공매: 제목 줄 오른쪽 작은 판(11/22 디자인) */}
+      <PageHeader
+        title={t.title}
+        right={
+          <span className="scope-seg" role="group">
+            {(["court", "onbid"] as const).map((k) => (
+              <button
+                key={k}
+                className={(k === "onbid") === onbid ? "on" : ""}
+                onClick={() =>
+                  router.replace(k === "onbid" ? "/pro/market?source=onbid" : "/pro/market")
+                }
+              >
+                {copy.find.source[k]}
+              </button>
+            ))}
+          </span>
+        }
+      />
       {failed && !onbid && <LoadError onRetry={() => setTries((n) => n + 1)} />}
-      <div className="pills mb-8" role="group">
-        {(["court", "onbid"] as const).map((k) => (
-          <button
-            key={k}
-            className={(k === "onbid") === onbid ? "on" : ""}
-            onClick={() =>
-              router.replace(k === "onbid" ? "/pro/market?source=onbid" : "/pro/market")
-            }
-          >
-            {copy.find.source[k]}
-          </button>
-        ))}
-      </div>
       {!onbid && (
         <nav className="seg mb-4 pc-none">
           <a href="#region">{t.tabRegion}</a>
@@ -113,12 +118,12 @@ function ProMarket() {
           {Object.entries(copy.pro.usages).map(([k, v]) => (
             <button
               key={k}
-              className={`pill${usage.includes(k) ? " on" : ""}`}
+              className={`pill pick-pill${usage.includes(k) ? " on" : ""}`}
               onClick={() =>
                 setUsage(usage.includes(k) ? usage.filter((x) => x !== k) : [...usage, k])
               }
             >
-              {v}
+              {usage.includes(k) ? `✓ ${v}` : v}
             </button>
           ))}
         </div>
@@ -129,7 +134,7 @@ function ProMarket() {
       ) : (
         <>
           <section className="section q-sec" id="score">
-            <h2 className="fs-base">{t.score}</h2>
+            <h2 className="score-label">{t.score}</h2>
             {!sc ? (
               <Delayed>
                 <SkLines n={3} />
@@ -137,15 +142,24 @@ function ProMarket() {
             ) : sc.n < MIN_SCORE ? (
               <div className="sub">{t.scoreWait(sc.n, MIN_SCORE)}</div>
             ) : (
-              <div className="fs-base">
-                {t.scoreLine(Math.round((sc.inside * 100) / sc.n), sc.n)}{" "}
-                <span className="sub">
-                  {t.scoreSplit(
-                    Math.round((sc.below * 100) / sc.n),
-                    Math.round((sc.above * 100) / sc.n),
-                  )}
-                </span>
-              </div>
+              <>
+                {/* 11/22 디자인: 큰 한 줄(범위 안 % 파랑) + 낮게 · 범위 안 · 높게 막대 */}
+                <p className="score-h">
+                  {t.scoreHead}{" "}
+                  <b className="c-blue-text">{Math.round((sc.inside * 100) / sc.n)}%</b>{" "}
+                  <span className="sub">({t.nCount(sc.n)})</span>
+                </p>
+                <div className="score-bar" aria-hidden="true">
+                  <i className="lo" style={{ width: `${(sc.below * 100) / sc.n}%` }} />
+                  <i className="in" style={{ width: `${(sc.inside * 100) / sc.n}%` }} />
+                  <i className="hi" style={{ width: `${(sc.above * 100) / sc.n}%` }} />
+                </div>
+                <div className="score-legend">
+                  <span>{t.below(Math.round((sc.below * 100) / sc.n))}</span>
+                  <b className="c-blue-text">{t.inside(Math.round((sc.inside * 100) / sc.n))}</b>
+                  <span>{t.above(Math.round((sc.above * 100) / sc.n))}</span>
+                </div>
+              </>
             )}
             <div className="sub mt-4">{t.scoreNote}</div>
             {m && m.misses.length > 0 && (
@@ -165,8 +179,11 @@ function ProMarket() {
                         {r.sale_date.slice(5)} · {r.address}
                       </span>
                     </span>
-                    <span>
-                      {t.missLine(Math.round(r.p25), Math.round(r.p75), Math.round(r.sale_rate))}
+                    <span className="nowrap">
+                      {t.missRange(Math.round(r.p25), Math.round(r.p75))}{" "}
+                      <b className={r.sale_rate > r.p75 ? "c-red" : "c-blue-text"}>
+                        {t.missReal(Math.round(r.sale_rate))}
+                      </b>
                     </span>
                   </div>
                 ))}
@@ -175,26 +192,31 @@ function ProMarket() {
           </section>
 
           {m && (
+            // 두 줄기로 따로 쌓음(11/22 디자인 — 법원별이 길어 왼쪽 아래가 비던 것)
             <div className="pc-grid g-2x2 q-sec" id="region" style={{ rowGap: 12 }}>
-              <StatTable
-                title={t.byUsage}
-                rows={m.by_usage.map((r) => ({
-                  ...r,
-                  label: copy.pro.usages[r.usage as keyof typeof copy.pro.usages] ?? t.etc,
-                }))}
-              />
-              <StatTable
-                title={t.byCourt}
-                rows={m.by_court.map((r) => ({ ...r, label: r.court }))}
-              />
-              <StatTable
-                title={t.byFailed}
-                rows={m.by_failed.map((r) => ({ ...r, label: t.failed(r.failed) }))}
-              />
-              <StatTable
-                title={t.byMonth}
-                rows={m.by_month.map((r) => ({ ...r, label: r.month }))}
-              />
+              <div>
+                <StatTable
+                  title={t.byUsage}
+                  rows={m.by_usage.map((r) => ({
+                    ...r,
+                    label: copy.pro.usages[r.usage as keyof typeof copy.pro.usages] ?? t.etc,
+                  }))}
+                />
+                <StatTable
+                  title={t.byFailed}
+                  rows={m.by_failed.map((r) => ({ ...r, label: t.failed(r.failed) }))}
+                />
+              </div>
+              <div>
+                <StatTable
+                  title={t.byCourt}
+                  rows={m.by_court.map((r) => ({ ...r, label: r.court }))}
+                />
+                <StatTable
+                  title={t.byMonth}
+                  rows={m.by_month.map((r) => ({ ...r, label: r.month }))}
+                />
+              </div>
             </div>
           )}
 

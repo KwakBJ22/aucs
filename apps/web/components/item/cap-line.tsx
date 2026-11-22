@@ -41,11 +41,9 @@ export function CapLine({ id, minPrice }: { id: string; minPrice: number | null 
   const p = d.cap_parts;
   const under = minPrice != null && d.cap_krw < minPrice;
   return (
-    <div className="bg-panel r-14 p-12 mt-12">
+    <div className={`cap-box${under ? " under" : ""}`}>
       <div className="sub m-0 fs-sm">{c.title}</div>
-      <div className={`fs-lg fw-7 mt-2 ${under ? "c-red" : ""}`}>
-        {under ? c.none : won(d.cap_krw)}
-      </div>
+      <div className={`cap-v ${under ? "c-red" : ""}`}>{under ? c.none : won(d.cap_krw)}</div>
       {p && (
         <div className="sub m-0 fs-xs mt-4">
           {c.parts(
