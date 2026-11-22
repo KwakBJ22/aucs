@@ -1660,6 +1660,9 @@ a.col-chip span {
   color: rgba(255, 255, 255, 0.88);
   font-weight: 500;
 }
+.ac-band-top .ac-band {
+  margin-top: 0;
+}
 .ac-band .pt-band-go {
   padding: 8px 14px;
   border-radius: 999px;

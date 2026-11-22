@@ -398,14 +398,19 @@ export default function Home() {
     const cal = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
     return (
       <main className="page">
-        <PageHeader title={t.pcTitle} sub={summary} />
+        {/* 옥스아카데미 배너: 「오늘」 제목 줄 오른쪽, 아래 「이번 주·다음 주 입찰」 칸과 같은 폭(11/22 대표님) */}
+        <div className="pc-grid g-64-36 ai-end">
+          <div>
+            <PageHeader title={t.pcTitle} sub={summary} />
+          </div>
+          <div className="ac-band-top">{academyBand}</div>
+        </div>
         <NoticeLine notices={notices} />
         {recordLine}
         {loginBanner}
         <div className="pc-grid g-64-36">
           <div>
             {todayBlock}
-            {academyBand}
             {picksBlock}
             {collectBlock}
             {soonBlock}
