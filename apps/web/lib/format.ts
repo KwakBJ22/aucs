@@ -42,6 +42,13 @@ export function todayKst(): string {
 }
 
 // 입찰일 색(11/8 한 곳): 지남 · 7일 안(급함) · 그 뒤. 카드·상세·관심·내 경매가 모두 이 기준
+// 「11/23 (월)」 — 날짜(YYYY-MM-DD) 한 줄(휴대폰 홈 입찰 일정, 11/23)
+export function dayLabel(ymd: string): string {
+  const [y, m, d] = ymd.slice(0, 10).split("-").map(Number);
+  const wd = "일월화수목금토"[new Date(y!, m! - 1, d!).getDay()] ?? "";
+  return `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")} (${wd})`;
+}
+
 export const SOON_DAYS = 7;
 export function ddayTone(d: number | null | undefined): "past" | "soon" | "later" {
   if (d == null) return "later";

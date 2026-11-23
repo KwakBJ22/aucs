@@ -204,7 +204,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #f04452;
+    background: var(--dot);
   }
   .ph-kakao {
     height: 40px;

@@ -25,8 +25,20 @@
     top: 0;
     z-index: 15;
     margin: 0 calc(-1 * var(--page-x));
-    padding: 4px calc(4px + var(--page-x));
-    background: var(--bg);
+    min-height: var(--head-h);
+    padding: 0 12px 0 var(--page-x);
+    gap: 8px;
+    background: var(--surface);
+  }
+  /* 들어간 화면: 뒤로 · 제목(17 · 700) 왼쪽 정렬 · 오른쪽 하트(11/23 M-Parts) */
+  .page > .topbar .brand {
+    font-size: var(--fs-head);
+  }
+  .page > .topbar .tb-back {
+    margin-left: -8px;
+  }
+  .page > .topbar .logo img {
+    height: 26px;
   }
 }
 .brand {
@@ -229,7 +241,7 @@ th.num {
   /* 아이폰 홈 막대 자리만큼 아래를 띄움(11/8) */
   height: calc(62px + max(14px, env(safe-area-inset-bottom)));
   background: var(--surface);
-  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -1px 0 var(--line); /* 11/23 M-Parts: 번진 그림자 대신 선 한 줄 */
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   padding-bottom: max(14px, env(safe-area-inset-bottom));
@@ -241,8 +253,9 @@ th.num {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  color: var(--faint);
-  font-size: 11px;
+  color: var(--hint);
+  font-size: var(--fs-2xs);
+  font-weight: 500;
   line-height: 1.3;
   min-height: 44px;
   min-width: 0;
@@ -797,7 +810,7 @@ button:disabled,
 .fold[aria-expanded="true"]::after {
   transform: rotate(-90deg);
 }
-/* 물건 카드: 오른쪽 위 하트 아래에 › (PC 는 줄 전체가 누르는 판이라 뺌 — 11/22 디자인) */
+/* 물건 카드: 오른쪽 위 하트(끝 › 는 11/23 휴대폰 디자인에서 뺌) */
 .card-go {
   position: relative;
   padding: 12px 0;
@@ -866,17 +879,45 @@ button:disabled,
     padding: 3px 10px;
   }
 }
-.card-go::after {
-  content: "›";
-  position: absolute;
-  right: 10px;
-  bottom: 12px;
-  color: var(--faint);
-  line-height: 1;
-}
-@media (min-width: 1024px) {
-  .card-go::after {
-    content: none;
+/* 휴대폰 물건 줄(11/23 M-Parts): 사진 48 · 이름 15(두 줄까지 접힘) · 값 18 굵게 · 끝 › 없음 */
+@media (max-width: 1023px) {
+  .card-go {
+    padding: 14px 0;
+  }
+  .card-go .thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--r-md);
+  }
+  .card-go > .f-1 > .sub {
+    font-size: var(--fs-xs);
+    color: var(--faint);
+  }
+  .ic-name {
+    font-size: var(--fs-body);
+    line-height: 1.4;
+  }
+  .ic-name.ellipsis {
+    white-space: normal;
+  }
+  .ic-price {
+    font-weight: 800;
+  }
+  .ic-rate {
+    color: var(--faint);
+  }
+  .ic-note {
+    font-size: var(--fs-sm);
+    color: var(--faint);
+  }
+  .ic-why {
+    margin-top: 5px;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .card-go .fatal {
+    display: inline-block;
+    padding: 3px 8px;
   }
 }
 
@@ -930,16 +971,35 @@ button:disabled,
   font-size: var(--fs-base);
 }
 
-/* 머리 오른쪽 끝 단추 묶음(종 · 내 정보, 11/12 대표님): 앞 단추를 종 크기(22)만큼 오른쪽으로 붙임 */
+/* 머리 오른쪽 끝 단추(종 · 내 정보) — 휴대폰 디자인(11/23 M-Parts): 40 칸 · 그림 22 · 회색 선 */
 .tb-tools {
   gap: 0;
 }
-.tb-tools > :not(:last-child) {
-  margin-right: -14px; /* 원래 틈 8 을 빼고 14 를 더 당겨 모두 22 */
+.tb-icon,
+.tb-icon.m-only {
+  display: inline-flex;
+  position: relative;
+  min-width: 40px;
+  min-height: 40px;
+  color: var(--muted);
 }
-/* 머리 「전문가로」 · 「기본으로」 — 면 버튼이라 아이콘처럼 당기지 않음(11/17) */
-.tb-tools > .tb-pro {
-  margin-right: 6px;
+.tb-dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+/* 「전문가로」 · 「기본으로」 — 로고 바로 옆 작은 연파랑 판(11/23 M-Parts) */
+.topbar > .tb-pro {
+  min-height: 0;
+  padding: 6px 9px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-weight: 700;
 }
 /* 전문가 탭 화면(비교함 · 지도 분석)의 뒤로는 PC 에서만 — 휴대폰은 탭 첫 화면(11/17) */
 @media (max-width: 1023px) {
@@ -1158,5 +1218,52 @@ input.f-input[type="search"]::-webkit-search-cancel-button {
 @media (min-width: 1024px) {
   .item-map {
     height: 280px;
+  }
+}
+
+/* 홈 추천 · 마감 임박 카드(11/23 M-Home): 휴대폰은 폭 150 · 사진 높이 112 · 값 16 굵게 */
+@media (max-width: 1023px) {
+  .pick-card {
+    flex: 0 0 150px;
+  }
+  .pick-photo {
+    aspect-ratio: auto;
+    height: 112px;
+    background: var(--line-map);
+    font-size: var(--fs-2xs);
+    font-weight: 400;
+  }
+  .pick-tag {
+    padding: 2px 6px;
+    font-size: var(--fs-2xs);
+  }
+  .pick-dd {
+    font-weight: 700;
+  }
+  .pick-dd.go::after {
+    content: none;
+  }
+  .pick-price {
+    font-weight: 800;
+  }
+  .pick-rate {
+    font-size: var(--fs-2xs);
+    color: var(--faint);
+  }
+  .pick-why {
+    font-weight: 400;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+}
+/* 휴대폰 버튼(11/23 M-Parts 「아래 고정 버튼」 · 모든 화면): 높이 48 · 둥글기 14 · 글자 15. 작은 꼴(.sm · .md)은 그대로 */
+@media (max-width: 1023px) {
+  .btn:not(.sm):not(.md) {
+    min-height: 48px;
+    border-radius: var(--r-btn);
+    font-size: var(--fs-body);
+  }
+  .btn.soft:not(.sm) {
+    font-weight: 600;
   }
 }

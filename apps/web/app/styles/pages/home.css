@@ -9,18 +9,52 @@
   color: var(--blue-text);
   font-size: var(--fs-md);
 }
-/* 홈 「이번 주 마감 공매」 작은 칸(11/22 디자인: PC 는 흰 카드 안 더 연한 판 · 제목 15 굵게) */
+/* 홈 「이번 주 마감 공매」 작은 칸(11/22 디자인: PC 는 흰 카드 안 더 연한 판 · 제목 15 굵게)
+   휴대폰(11/23 M-Home): 폭 160 칸을 옆으로 넘김 · 연한 판 · 값 16 굵게 */
+.mini-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 calc(-1 * var(--sec-x, 20px));
+  padding: 0 var(--sec-x, 20px);
+}
+.mini-row > .mini-card {
+  flex: 0 0 160px;
+  min-width: 0;
+}
 .mini-card {
   padding: 12px;
   border-radius: 14px;
-  background: var(--panel);
+  background: var(--soft);
+}
+.mini-card .go::after {
+  content: none;
+}
+.mini-card .fs-base {
+  margin-top: 4px;
+  font-weight: 800;
 }
 .mini-title {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: var(--fs-md);
-  font-weight: 600;
+  font-weight: 700;
 }
 @media (min-width: 1024px) {
+  .mini-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .mini-card .go::after {
+    content: "›";
+  }
+  .mini-card .fs-base {
+    margin-top: 8px;
+    font-weight: 700;
+  }
   .mini-card {
     padding: 14px;
     border-radius: 16px;
@@ -241,5 +275,162 @@ a.col-chip span {
   .record-line {
     padding: 14px 18px;
     border-radius: 14px;
+  }
+}
+
+/* ══ 휴대폰 홈(11/23 디자인 M-Home) ══ */
+/* 제목 옆 건수: 휴대폰 파랑 · PC 회색 */
+.h-count {
+  color: var(--blue-text);
+}
+@media (min-width: 1024px) {
+  .h-count {
+    color: var(--muted);
+  }
+}
+/* 내 조건 한 줄 + 「조건 바꾸기 ›」 */
+.cond-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.cond-line > .ellipsis {
+  flex: 1;
+  min-width: 0;
+}
+.cond-line-go {
+  flex: none;
+  color: var(--blue-text);
+  font-weight: 600;
+}
+/* 이번 주·다음 주 입찰 — 접힌 한 칸, 펼치면 가까운 3일 */
+.cal-fold {
+  padding: 0;
+}
+.cal-fold summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  list-style: none;
+  cursor: pointer;
+}
+.cal-fold summary::-webkit-details-marker {
+  display: none;
+}
+.cal-fold summary b {
+  font-size: var(--fs-lg);
+}
+.cal-fold summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-right: 2px solid var(--hint);
+  border-bottom: 2px solid var(--hint);
+  transform: rotate(45deg);
+}
+.cal-fold[open] summary::after {
+  transform: rotate(225deg);
+}
+.cal-fold-day {
+  padding: 0 20px 12px;
+}
+.cal-fold-day:last-child {
+  padding-bottom: 16px;
+}
+.cal-fold-date {
+  margin: 0 0 4px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.cal-fold-item {
+  display: block;
+  font-size: var(--fs-md);
+  line-height: 2;
+  color: var(--text);
+}
+.cal-fold-item .chip {
+  margin-right: 5px;
+  padding: 1px 5px;
+  font-size: var(--fs-2xs);
+}
+@media (max-width: 1023px) {
+  /* 입찰일 지난 관심 물건 한 줄: 판 없이 회색 글 */
+  .record-line {
+    min-height: 0;
+    margin-top: 12px;
+    padding: 4px;
+    background: none;
+    font-size: var(--fs-sm);
+  }
+  .record-line > span:last-child {
+    color: var(--hint);
+  }
+  /* 다가오는 입찰 줄: 제목 15 · 600 */
+  .todo-sec > .menu-row {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    min-height: 0;
+    padding: 12px 0;
+  }
+  .todo-sec > .menu-row .sub {
+    font-weight: 400;
+  }
+  /* 모아 보기: 두 칸 격자 · 그림 32 · 이름만 */
+  .home-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  a.col-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    padding: 12px;
+    border-radius: var(--r-btn);
+    background: var(--soft);
+  }
+  a.col-chip .col-ico {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-radius: var(--r-sm);
+    background: var(--surface);
+  }
+  a.col-chip b {
+    font-size: var(--fs-sm);
+    line-height: 1.35;
+  }
+  a.col-chip b::after,
+  a.col-chip > span:not(.col-ico) {
+    display: none;
+  }
+  /* 옥스아카데미 띠: 낮게 · 제목 16 · 설명 12 */
+  .ac-band {
+    padding: 16px 18px;
+    border-radius: var(--r-lg);
+  }
+  .ac-band b {
+    font-size: var(--fs-base);
+  }
+  .ac-band .pt-band-sub {
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--blue-soft);
+  }
+  .ac-band .pt-band-go {
+    padding: 7px 12px;
   }
 }

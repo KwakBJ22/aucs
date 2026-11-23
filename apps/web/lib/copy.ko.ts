@@ -225,6 +225,7 @@ export const copy = {
     notiCount: (n: number) => `알림 ${n}개`,
     notiUnread: (u: number) => `안 읽은 것 ${u}개`,
     calMore: (n: number) => `외 ${n}건`,
+    calFoldSub: (n: number) => `관심 ${n} · 가까운 3일만 펼쳐 보여요`,
     myCond: "내 조건",
     courtRate: "법원별 낙찰가율",
     courtRateSub: "최근 석 달 · 가운데값",

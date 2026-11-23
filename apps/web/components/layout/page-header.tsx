@@ -28,14 +28,14 @@ export function PageHeader({
   // 첫 화면들(뒤로 없음)은 오른쪽 끝에 「내 정보」 — 아래 탭 다섯째 칸을 포인트 벌기에 내줌(11/12 대표님)
   const menu =
     first && !path.startsWith("/more") ? (
-      <Link href="/more" aria-label="내 정보" className="icon-btn m-only d-flex jc-end">
+      <Link href="/more" aria-label="내 정보" className="icon-btn tb-icon m-only">
         <svg
-          width="26"
-          height="26"
+          width="22"
+          height="22"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           aria-hidden="true"
         >
           <path d="M4 6h16M4 12h16M4 18h16" />
@@ -86,10 +86,10 @@ export function PageHeader({
           </Link>
         ) : null}
         {title ? <h1 className="brand">{title}</h1> : null}
+        {toggle}
         <span className="f-1" />
-        {right || menu || toggle ? (
+        {right || menu ? (
           <span className={`d-flex ai-center ${menu ? "tb-tools" : "gap-8"}`}>
-            {toggle}
             {right}
             {menu}
           </span>

@@ -13,7 +13,7 @@ import { fetchHomeFeed, type HomeFeed, type ItemList, type PickCard } from "@/li
 import { condSummary } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { isStale, setUnread } from "@/lib/noti";
-import { dday, won } from "@/lib/format";
+import { dayLabel, dday, won } from "@/lib/format";
 import { DDay } from "@/components/dday";
 import { loadProfile, type Profile } from "@/lib/profile";
 import { meApi, type Noti, type WatchCard } from "@/lib/api/me";
@@ -162,22 +162,19 @@ export default function Home() {
   const unread = fresh.filter((n) => !n.read_at).length;
 
   const bell = token ? (
-    <Link
-      href="/notifications"
-      aria-label={copy.noti.title}
-      className="icon-btn m-only d-flex jc-end"
-    >
+    <Link href="/notifications" aria-label={copy.noti.title} className="icon-btn tb-icon m-only">
       <svg
         width="22"
         height="22"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
         aria-hidden="true"
       >
         <path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0" />
       </svg>
+      {unread > 0 && <span className="tb-dot" aria-hidden="true" />}
     </Link>
   ) : (
     <Link href="/login" className="link m-only d-flex">
@@ -204,9 +201,9 @@ export default function Home() {
     </Link>
   );
   const todayBlock = token && todo.length > 0 && (
-    <section className="section">
+    <section className="section todo-sec">
       <h2>
-        {t.today} <span className="c-muted">{todo.length}</span>
+        {t.today} <span className="h-count">{todo.length}</span>
       </h2>
       {todo.map((w) => (
         <Link
@@ -282,7 +279,7 @@ export default function Home() {
           {t.allLink}
         </Link>
       </div>
-      <div className="col-chips quiet-scroll">
+      <div className="col-chips home-col quiet-scroll">
         {copy.collections.list.map(([k, name, hint]) => (
           <Link key={k} href={`/collections?key=${k}`} className="col-chip c-inherit">
             <CollectionIcon k={k} />
@@ -315,10 +312,8 @@ export default function Home() {
           {t.onbidAll}
         </Link>
       </div>
-      <div className="d-grid gap-10" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-        {onbidClosing.map(smallCard)}
-      </div>
-      <div className="sub fs-xs mt-10">{t.onbidClosingSub}</div>
+      <div className="mini-row quiet-scroll">{onbidClosing.map(smallCard)}</div>
+      <div className="sub fs-xs mt-10 pc-only">{t.onbidClosingSub}</div>
     </section>
   );
 
@@ -326,7 +321,7 @@ export default function Home() {
     <section className="section">
       <div className="d-flex jc-between ai-baseline">
         <h2>
-          {t.forMe} <span className="c-muted">{mine?.total ?? ""}</span>
+          {t.forMe} <span className="h-count">{mine?.total ?? ""}</span>
         </h2>
         <Link href="/start" className="link">
           {t.changeAnswers}
@@ -345,7 +340,9 @@ export default function Home() {
         </Delayed>
       )}
       <div className={pc ? "card-grid" : ""}>
-        {shown?.items.slice(0, pc ? 8 : 5).map((c) => <ItemCard key={c.item_id} c={c} />)}
+        {shown?.items.slice(0, pc ? 8 : 5).map((c) => (
+          <ItemCard key={c.item_id} c={c} />
+        ))}
       </div>
       {mine && mine.total > 5 && (
         <Link href="/find?source=all" className="link d-flex jc-center mt-4">
@@ -379,22 +376,77 @@ export default function Home() {
     </Link>
   );
 
+  // 이번 주·다음 주 입찰 일정: 관심 물건 + 마감 임박(PC 오른쪽 칸 · 휴대폰 접힌 한 칸)
+  const days = new Map<string, { id: string; label: string; mine: boolean }[]>();
+  const seen = new Set<string>();
+  for (const [c, mineFlag] of [
+    ...watch.map((w) => [w, true] as const),
+    ...(shown?.items ?? []).map((c) => [c, false] as const),
+  ]) {
+    if (!c.sale_date || c.d_day == null || c.d_day < 0 || c.d_day > 13 || seen.has(c.item_id))
+      continue;
+    seen.add(c.item_id);
+    const l = days.get(c.sale_date) ?? [];
+    l.push({ id: c.item_id, label: `${c.place} ${c.building ?? c.usage ?? ""}`, mine: mineFlag });
+    days.set(c.sale_date, l);
+  }
+  const cal = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
+  // 내 조건 한 줄 + 「조건 바꾸기 ›」 — 휴대폰 추천 위(11/23 M-Home)
+  const condLine = profile && (
+    <Link href="/start" className="cond-line">
+      <span className="ellipsis">
+        <b>{t.myCond}</b> {summary}
+      </span>
+      <span className="cond-line-go">{t.changeAnswers} ›</span>
+    </Link>
+  );
+  const calFold = cal.length > 0 && (
+    <details className="section cal-fold">
+      <summary>
+        <span className="f-1">
+          <b className="d-block">
+            {t.calendar}{" "}
+            <span className="h-count">{cal.reduce((n, [, l]) => n + l.length, 0)}</span>
+          </b>
+          <span className="sub">
+            {t.calFoldSub(watch.filter((w) => seen.has(w.item_id)).length)}
+          </span>
+        </span>
+      </summary>
+      {cal.slice(0, 3).map(([day, list]) => {
+        const rest = list.filter((x) => !x.mine);
+        return (
+          <div key={day} className="cal-fold-day">
+            <p className="cal-fold-date">{dayLabel(day)}</p>
+            {list
+              .filter((x) => x.mine)
+              .map((x) => (
+                <Link
+                  key={x.id}
+                  prefetch={false}
+                  href={`/item/${encodeURIComponent(x.id)}`}
+                  className="cal-fold-item"
+                >
+                  <span className="chip green">{t.mine}</span>
+                  {x.label}
+                </Link>
+              ))}
+            {rest.length > 0 && (
+              <p className="sub fs-md m-0">
+                {rest
+                  .slice(0, 2)
+                  .map((x) => x.label)
+                  .join(" · ")}
+                {rest.length > 2 && ` ${t.calMore(rest.length - 2)}`}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </details>
+  );
+
   if (pc) {
-    // 이번 주·다음 주 입찰 일정: 관심 물건 + 마감 임박
-    const days = new Map<string, { id: string; label: string; mine: boolean }[]>();
-    const seen = new Set<string>();
-    for (const [c, mineFlag] of [
-      ...watch.map((w) => [w, true] as const),
-      ...(shown?.items ?? []).map((c) => [c, false] as const),
-    ]) {
-      if (!c.sale_date || c.d_day == null || c.d_day < 0 || c.d_day > 13 || seen.has(c.item_id))
-        continue;
-      seen.add(c.item_id);
-      const l = days.get(c.sale_date) ?? [];
-      l.push({ id: c.item_id, label: `${c.place} ${c.building ?? c.usage ?? ""}`, mine: mineFlag });
-      days.set(c.sale_date, l);
-    }
-    const cal = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
     return (
       <main className="page home-page">
         {/* 옥스아카데미 배너: 「오늘」 제목 줄 오른쪽, 아래 「이번 주·다음 주 입찰」 칸과 같은 폭(11/22 대표님) */}
@@ -502,8 +554,10 @@ export default function Home() {
       <PageHeader title={<Logo />} right={bell} />
       <NoticeLine notices={notices} />
       {recordLine}
+      {condLine}
       {loginBanner}
       {todayBlock}
+      {calFold}
       {picksBlock}
       {academyBand}
       {collectBlock}
