@@ -41,7 +41,8 @@ def get_screen(
     if menu == "review":
         return _together(review=(admin_ops.review,), hidden=(admin_ops.hidden_items,))
     if menu == "members":
-        out = _together(users=(admin_ops.users, q), inquiries=(admin_ops.inquiries, True),
+        out = _together(users=(admin_ops.users, q), summary=(admin_ops.member_summary,),
+                        inquiries=(admin_ops.inquiries, True),
                         refunds=(billing.refund_requests, True))  # fmt: skip
         for r in out["refunds"]:
             r["email"] = admin_ops.mask(r["email"])
@@ -199,8 +200,15 @@ def get_hidden(_: Any_) -> list[dict[str, Any]]:
 
 # 4 회원
 @router.get("/users")
-def get_users(_: Any_, q: str = Query(default="", max_length=60)) -> list[dict[str, Any]]:
-    return admin_ops.users(q)
+def get_users(
+    _: Any_,
+    q: str = Query(default="", max_length=60),
+    f: Literal["all", "paid", "limited", "admin", "away"] = "all",
+    sort: Literal["joined", "login"] = "joined",
+    offset: int = Query(default=0, ge=0, le=100_000),
+) -> dict[str, Any]:
+    """회원 목록 한 쪽(50명) — f 거르기 · sort 가입 순/최근 로그인 순 · offset 더 보기."""
+    return admin_ops.users(q, f, sort, offset)
 
 
 @router.get("/users/{uid}")

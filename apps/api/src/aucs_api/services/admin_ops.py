@@ -11,7 +11,7 @@ from aucs_workers.ops_watch import DB_LIMIT, red_lights
 from psycopg import errors as pg_errors
 from psycopg.types.json import Jsonb
 
-from aucs_api.db import connect
+from aucs_api.db import batch, connect
 
 REQUESTABLE = {
     "daily": "아침 묶음 전체", "results": "법원 매각결과", "items": "법원 경매 물건", "docs": "사건 서류",
@@ -71,6 +71,8 @@ def _todo(red: list[dict[str, str]], n: dict[str, Any], tmp: list[str]) -> list[
         ("reports_open", "제보 {}건", "review"),
         ("inq_open", "답 안 한 문의 {}건", "members"),
         ("refunds_wait", "환불 요청 {}건", "members"),
+        ("renew_failed", "매달 자동결제 실패 {}건 · 회원 카드 확인", "plans"),
+        ("pay_waiting", "입금 기다리는 주문 {}건", "plans"),
         ("view_capped", "오늘 상세 열람 한도에 닿은 회원 {}명 · 자동 수집인지 확인", "members"),
     ):
         if n.get(key):
@@ -100,6 +102,8 @@ def today() -> dict[str, Any]:
                 (select count(*) from app.value_reports where status = 'open') as reports_open,
                 (select count(*) from app.inquiries where answered_at is null) as inq_open,
                 (select count(*) from app.refund_requests where status = 'waiting') as refunds_wait,
+                (select count(*) from app.pay_orders where status = 'waiting') as pay_waiting,
+                (select count(*) from app.payments where auto_renew and renew_fails > 0) as renew_failed,
                 (select count(*) from app.contrib_uploads where kind = 'appraisal' and status = 'review'
                    and note in ('ocr_none', 'ocr_other')) as review_wait,
                 (select count(distinct user_id) from app.academy_progress) as academy_users,
@@ -471,56 +475,108 @@ def decide_signal(actor: str | None, item_id: str, rule_id: str, status: str) ->
 # ── 4 회원 ────────────────────────────────────────────
 
 
-def users(q: str = "", limit: int = 100) -> list[dict[str, Any]]:
-    like = f"%{q.strip()}%"
+# 회원 목록 거르기(11/23): 전체 · 유료 · 제한 · 관리자 · 30일 넘게 안 들어옴
+MEMBER_FILTER = {
+    "all": "true",
+    "paid": "x.paid_until is not null",
+    "limited": "x.limited",
+    "admin": "x.admin_role is not null",
+    "away": "coalesce(x.last_seen, x.last_sign_in_at, x.created_at) < now() - interval '30 days'",
+}
+MEMBER_SORT = {"joined": "x.created_at desc", "login": "x.last_sign_in_at desc nulls last"}
+MEMBER_PAGE = 50
+_MEMBER_COLS = """x.user_id, x.email, x.nickname, x.created_at, x.last_sign_in_at, x.last_seen, x.provider,
+    x.confirmed, x.plan, x.paid_plan, x.paid_until, x.watch_n, x.limited, x.admin_role"""
+_MEMBER_SQL = """select u.id as user_id, u.email, u.created_at, u.last_sign_in_at, p.nickname,
+      coalesce(u.raw_app_meta_data->>'provider', 'email') as provider,
+      u.email_confirmed_at is not null as confirmed,
+      (select max(e.at) from app.events e where e.user_id = u.id) as last_seen,
+      (select plan || ' · ' || max(until_date) from app.grants g where g.user_id = u.id and g.until_date >= current_date group by plan order by max(until_date) desc limit 1) as plan,
+      (select pa.plan from app.payments pa where pa.user_id = u.id and pa.status in ('paid', 'part_refunded') and pa.valid_to >= current_date order by pa.valid_to desc limit 1) as paid_plan,
+      (select max(pa.valid_to) from app.payments pa where pa.user_id = u.id and pa.status in ('paid', 'part_refunded') and pa.valid_to >= current_date) as paid_until,
+      (select count(*) from app.watch_items w where w.user_id = u.id) as watch_n,
+      exists (select 1 from app.user_limits l where l.user_id = u.id) as limited,
+      (select role from app.admins a where a.user_id = u.id) as admin_role
+   from auth.users u left join app.profiles p on p.user_id = u.id
+   where %(q)s = '' or u.email ilike %(like)s or p.nickname ilike %(like)s"""
+
+
+def users(q: str = "", f: str = "all", sort: str = "joined", offset: int = 0) -> dict[str, Any]:
+    """회원 목록 한 쪽(50명) + 더 있는지. 메일은 가림."""
+    where = MEMBER_FILTER.get(f, "true")
+    order = MEMBER_SORT.get(sort, MEMBER_SORT["joined"])
     with connect() as c:
         rows = c.execute(
-            """select u.id as user_id, u.email, u.created_at, u.last_sign_in_at, p.nickname,
-                      (select plan || ' · ' || max(until_date) from app.grants g where g.user_id = u.id and g.until_date >= current_date group by plan order by max(until_date) desc limit 1) as plan,
-                      (select count(*) from app.watch_items w where w.user_id = u.id) as watch_n,
-                      exists (select 1 from app.user_limits l where l.user_id = u.id) as limited,
-                      (select role from app.admins a where a.user_id = u.id) as admin_role
-               from auth.users u left join app.profiles p on p.user_id = u.id
-               where %s = '' or u.email ilike %s or p.nickname ilike %s
-               order by u.created_at desc limit %s""",
-            (q.strip(), like, like, limit),
+            f"select {_MEMBER_COLS} from ({_MEMBER_SQL}) x where {where} order by {order} "
+            "limit %(n)s offset %(off)s",
+            {"q": q.strip(), "like": f"%{q.strip()}%", "n": MEMBER_PAGE + 1, "off": offset},
         ).fetchall()
     for r in rows:
         r["email"] = mask(r["email"])
-    return rows
+    return {"rows": rows[:MEMBER_PAGE], "more": len(rows) > MEMBER_PAGE}
+
+
+def member_summary() -> dict[str, Any]:
+    """회원 화면 맨 위 숫자(걸러 보기 단추와 같은 기준)."""
+    with connect() as c:
+        return c.execute(
+            f"""select count(*) as total,
+                  count(*) filter (where u.created_at >= {KST_DAY}) as today,
+                  count(*) filter (where u.created_at >= now() - interval '7 days') as week_new,
+                  count(*) filter (where u.last_sign_in_at >= now() - interval '7 days') as active7,
+                  count(*) filter (where coalesce((select max(e.at) from app.events e where e.user_id = u.id),
+                                                  u.last_sign_in_at, u.created_at) < now() - interval '30 days') as away,
+                  (select count(distinct user_id) from app.payments where status in ('paid', 'part_refunded')
+                     and valid_to >= current_date) as paid,
+                  (select count(*) from app.user_limits) as limited,
+                  (select count(*) from app.admins) as admin
+               from auth.users u"""
+        ).fetchone()  # fmt: skip
 
 
 def user_detail(uid: str) -> dict[str, Any] | None:
+    """회원 한 명: 등록 정보 · 접속 · 활동 수 · 이용권 · 결제 · 카드 · 포인트 · 최근 활동 · 문의(DB 왕복 1번)."""
     with connect() as c:
-        u = c.execute(
-            """select u.id as user_id, u.email, u.created_at, u.last_sign_in_at, p.nickname, p.interest_regions, p.purpose,
+        q_u, q_pt, q_gr, q_inq, q_pay, q_led, q_ev = batch(c, [
+            ("""select u.id as user_id, u.email, u.created_at, u.last_sign_in_at, u.email_confirmed_at,
+                      coalesce(u.raw_app_meta_data->>'provider', 'email') as provider,
+                      p.nickname, p.interest_regions, p.purpose, p.cash_krw, p.homes, p.first_time, p.updated_at as profile_at,
+                      (select max(at) from app.events where user_id = u.id) as last_seen,
+                      (select count(*) from app.events where user_id = u.id and kind = 'login') as login_n,
+                      (select count(*) from app.detail_views where user_id = u.id) as view_n,
                       (select count(*) from app.watch_items where user_id = u.id) as watch_n,
                       (select count(*) from app.saved_searches where user_id = u.id) as search_n,
                       (select count(*) from app.notifications where user_id = u.id) as noti_n,
                       (select count(*) from app.bid_results where user_id = u.id) as bid_n,
                       (select count(*) from app.uploaded_registries where user_id = u.id) as registry_n,
                       (select count(*) from app.mock_bids where user_id = u.id) as mock_n,
-                      (select reason from app.user_limits where user_id = u.id) as limit_reason
-               from auth.users u left join app.profiles p on p.user_id = u.id where u.id = %s""",
-            (uid,),
-        ).fetchone()
+                      (select count(*) from app.academy_progress where user_id = u.id and key not like 'task:%%') as academy_n,
+                      (select count(*) from app.push_subscriptions where user_id = u.id) as push_n,
+                      (select card_label from app.billing_cards where user_id = u.id) as card,
+                      (select reason from app.user_limits where user_id = u.id) as limit_reason,
+                      (select role from app.admins where user_id = u.id) as admin_role
+               from auth.users u left join app.profiles p on p.user_id = u.id where u.id = %s""", (uid,)),
+            ("""select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
+                      + coalesce(sum(delta) filter (where delta < 0), 0) as b from app.point_ledger where user_id = %s""", (uid,)),
+            ("select plan, until_date, reason, created_at from app.grants where user_id = %s order by created_at desc", (uid,)),
+            ("select inquiry_id, body, answer, created_at, answered_at from app.inquiries where user_id = %s order by created_at desc limit 20", (uid,)),
+            ("""select payment_id, plan, period, amount_krw, refunded_krw, points_used, status, auto_renew, renew_fails,
+                      method_note, paid_at, valid_from, valid_to
+               from app.payments where user_id = %s order by paid_at desc nulls last limit 20""", (uid,)),
+            ("select delta, reason, item_id, created_at from app.point_ledger where user_id = %s order by created_at desc limit 20", (uid,)),
+            ("select at, kind, path, item_id from app.events where user_id = %s order by at desc limit 20", (uid,)),
+        ])  # fmt: skip
+        u = q_u.fetchone()
         if not u:
             return None
+        b = q_pt.fetchone()
         u["email"] = mask(u["email"])
-        b = c.execute(
-            """select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
-                      + coalesce(sum(delta) filter (where delta < 0), 0) as b from app.point_ledger where user_id = %s""",
-            (uid,),
-        ).fetchone()  # fmt: skip
         u["points"] = max(0, int(b["b"])) if b else 0
-        u["grants"] = c.execute(
-            "select plan, until_date, reason, created_at from app.grants where user_id = %s order by created_at desc",
-            (uid,),
-        ).fetchall()
-        u["inquiries"] = c.execute(
-            "select inquiry_id, body, answer, created_at, answered_at from app.inquiries where user_id = %s order by created_at desc limit 20",
-            (uid,),
-        ).fetchall()
+        u["grants"] = q_gr.fetchall()
+        u["inquiries"] = q_inq.fetchall()
+        u["payments"] = q_pay.fetchall()
+        u["ledger"] = q_led.fetchall()
+        u["events"] = q_ev.fetchall()
     return u
 
 

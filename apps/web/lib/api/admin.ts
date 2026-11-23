@@ -125,10 +125,28 @@ export type UserRow = {
   nickname: string | null;
   created_at: string;
   last_sign_in_at: string | null;
-  plan: string | null;
+  last_seen: string | null;
+  provider: string;
+  confirmed: boolean;
+  plan: string | null; // 관리자가 준 이용권
+  paid_plan: string | null; // 결제한 이용권
+  paid_until: string | null;
   watch_n: number;
   limited: boolean;
   admin_role: Role | null;
+};
+export type UserPage = { rows: UserRow[]; more: boolean };
+export type MemberFilter = "all" | "paid" | "limited" | "admin" | "away";
+export type MemberSort = "joined" | "login";
+export type MemberSummary = {
+  total: number;
+  today: number;
+  week_new: number;
+  active7: number;
+  away: number;
+  paid: number;
+  limited: number;
+  admin: number;
 };
 export type Inquiry = {
   inquiry_id: number;
@@ -140,8 +158,35 @@ export type Inquiry = {
   answered_at: string | null;
 };
 export type UserDetail = UserRow & {
+  email_confirmed_at: string | null;
   interest_regions: string[] | null;
   purpose: string | null;
+  cash_krw: number | null;
+  homes: number | null;
+  first_time: boolean | null;
+  profile_at: string | null;
+  login_n: number;
+  view_n: number;
+  academy_n: number;
+  push_n: number;
+  card: string | null;
+  payments: {
+    payment_id: number;
+    plan: string;
+    period: string;
+    amount_krw: number;
+    refunded_krw: number;
+    points_used: number;
+    status: string;
+    auto_renew: boolean;
+    renew_fails: number;
+    method_note: string | null;
+    paid_at: string | null;
+    valid_from: string;
+    valid_to: string;
+  }[];
+  ledger: { delta: number; reason: string; item_id: string | null; created_at: string }[];
+  events: { at: string; kind: string; path: string | null; item_id: string | null }[];
   search_n: number;
   noti_n: number;
   bid_n: number;
@@ -287,7 +332,12 @@ export type Screens = {
     review: Review;
     hidden: { item_id: string; address: string | null; sale_date: string | null }[];
   };
-  members: { users: UserRow[]; inquiries: Inquiry[]; refunds: RefundReq[] };
+  members: {
+    users: UserPage;
+    summary: MemberSummary;
+    inquiries: Inquiry[];
+    refunds: RefundReq[];
+  };
   stats: { status: { metrics?: Metrics }; stats: Stats };
   plans: PlansScreen;
   predict: PredictScreen;
@@ -336,6 +386,23 @@ export type PlansScreen = {
     reason: string;
     item_id: string | null;
     created_at: string;
+    email: string;
+  }[];
+  orders: {
+    order_id: string;
+    order_name: string;
+    amount_krw: number;
+    method: string | null;
+    status: string;
+    fail_msg: string | null;
+    created_at: string;
+    email: string;
+  }[];
+  renew_failed: {
+    payment_id: number;
+    plan: string;
+    valid_to: string;
+    renew_fails: number;
     email: string;
   }[];
 };
@@ -408,7 +475,8 @@ export const adminApi = {
   refunds: (t: string) => call<RefundReq[]>(t, "/refunds"),
   decideRefund: (t: string, id: number, ok: boolean, answer: string, amount_krw?: number) =>
     call(t, `/refunds/${id}`, "PUT", { ok, answer, amount_krw: amount_krw ?? null }),
-  users: (t: string, q: string) => call<UserRow[]>(t, `/users?q=${enc(q)}`),
+  users: (t: string, q: string, f: MemberFilter = "all", sort: MemberSort = "joined", offset = 0) =>
+    call<UserPage>(t, `/users?q=${enc(q)}&f=${f}&sort=${sort}&offset=${offset}`),
   user: (t: string, id: string) => call<UserDetail>(t, `/users/${id}`),
   revealEmail: (t: string, id: string) => call<{ email: string }>(t, `/users/${id}/email`, "POST"),
   grant: (t: string, id: string, plan: string, days: number, reason: string) =>

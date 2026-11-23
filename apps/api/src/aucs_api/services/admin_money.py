@@ -16,7 +16,7 @@ _PRICE_SQL = """select valid_from, value, basis, reviewed_at from ref.rule_table
 def screen() -> dict[str, Any]:
     """이용권·포인트 한 화면 자료 한 번에."""
     with connect() as c:
-        q_price, q_plan, q_pay, q_month, q_pt, q_kind, q_top, q_led = batch(c, [
+        q_price, q_plan, q_pay, q_month, q_pt, q_kind, q_top, q_led, q_ord, q_ren = batch(c, [
             (_PRICE_SQL, None),
             # 지금 쓰는 이용권: 관리자가 준 것(grants) + 결제한 것(payments)
             ("""select plan, 'grant' as src, count(distinct user_id) as n from app.grants
@@ -44,6 +44,15 @@ def screen() -> dict[str, Any]:
                 where l.delta > 0 group by l.user_id, u.email order by earned desc limit 10""", None),
             ("""select l.entry_id, l.delta, l.reason, l.item_id, l.created_at, u.email from app.point_ledger l
                 left join auth.users u on u.id = l.user_id order by l.entry_id desc limit 40""", None),
+            # 결제 주문(11/23): 끝나지 않은 것(입금 기다림 · 실패 · 그만둠) — 최근 30일
+            ("""select o.order_id, o.order_name, o.amount_krw, o.method, o.status, o.fail_msg, o.created_at, u.email
+                from app.pay_orders o left join auth.users u on u.id = o.user_id
+                where o.status <> 'paid' and o.created_at > now() - interval '30 days'
+                order by o.created_at desc limit 30""", None),
+            # 매달 자동결제가 실패한 이용권
+            ("""select p.payment_id, p.plan, p.valid_to, p.renew_fails, u.email from app.payments p
+                left join auth.users u on u.id = p.user_id
+                where p.auto_renew and p.renew_fails > 0 order by p.valid_to""", None),
         ])  # fmt: skip
         price_rows = q_price.fetchall()
         plans: dict[str, dict[str, int]] = {}
@@ -55,7 +64,9 @@ def screen() -> dict[str, Any]:
         kinds = q_kind.fetchall()
         top = q_top.fetchall()
         led = q_led.fetchall()
-    for rows in (pays, top, led):
+        orders = q_ord.fetchall()
+        renew = q_ren.fetchall()
+    for rows in (pays, top, led, orders, renew):
         for r in rows:
             r["email"] = mask(r.get("email"))
     return {
@@ -73,6 +84,8 @@ def screen() -> dict[str, Any]:
         "uploads": kinds,
         "top": top,
         "ledger": led,
+        "orders": orders,
+        "renew_failed": renew,
     }
 
 
