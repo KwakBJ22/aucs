@@ -35,6 +35,8 @@ from aucs_workers.collectors.store import save_raw
 from aucs_workers.db import connect
 from aucs_workers.jobs.runlog import run
 
+# 11/23 대표님: 전국 보관 중 막힘(서산지원) → 아침 묶음에서 빼 오후 매시 작업으로, 요청 간격 2.5 → 5초
+NATIONWIDE_GAP_SEC = 5.0
 CODES_FILE = Path(__file__).resolve().parents[4] / "logs" / "court_codes.json"
 CODE_RE = re.compile(r"^B\d{6}$")
 MIN_COURTS = 30  # 전국 법원이 이보다 적게 잡히면 목록을 잘못 읽은 것으로 봄
@@ -134,7 +136,7 @@ def main() -> None:
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
-    polite = Polite(hourly=False)
+    polite = Polite(hourly=False, gap=NATIONWIDE_GAP_SEC)
     d0 = date.today()
     d_from, d_to = f"{d0:%Y%m%d}", f"{d0 + timedelta(weeks=a.weeks):%Y%m%d}"
     with connect() as conn, run(conn, "court_nationwide", "전국 매각결과 · 물건 목록 보관") as job:

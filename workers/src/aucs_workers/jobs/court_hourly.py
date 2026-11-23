@@ -153,6 +153,20 @@ def busy() -> bool:
     return False
 
 
+# 11/23 대표님: 전국 보관을 아침 묶음에서 빼 오후로 — 14시 뒤 첫 매시 차례가 하루 한 번, 그 시간은 다른 단계를 쉼(천천히 약 70분)
+NATIONWIDE_FROM = 14
+NATIONWIDE_DONE = LOCK.parent / "court_nationwide.done"
+
+
+def nationwide_due(now: datetime) -> bool:
+    if now.hour < NATIONWIDE_FROM:
+        return False
+    try:
+        return NATIONWIDE_DONE.read_text(encoding="utf-8").strip() != now.date().isoformat()
+    except OSError:
+        return True
+
+
 def main() -> None:
     if datetime.now().hour not in SERVICE:
         print("법원 서비스 시간이 아니에요 — 쉼")
@@ -166,6 +180,14 @@ def main() -> None:
         evening_probe()
         if probe_reserved():
             print(f"저녁 목록 시험 몫({PROBE_RESERVE}번)을 남겨 두려고 이번 시간은 쉼", flush=True)
+            return
+        if nationwide_due(datetime.now()):
+            print("── 전국 매각결과 · 물건 목록 보관(하루 한 번, 다른 단계 쉼)", flush=True)
+            NATIONWIDE_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
+            cmd = [sys.executable, "-m", "aucs_workers.collectors.court_nationwide"]
+            code = subprocess.call(cmd)
+            if code != 0:
+                print(f"   전국 보관 멈춤({code}) — 내일 다시", flush=True)
             return
         share = hour_share(_cap())
         # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)

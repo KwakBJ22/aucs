@@ -18,6 +18,7 @@ import json
 import math
 import os
 import random
+import sys
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
@@ -30,6 +31,9 @@ RETRIES = 3
 # 11/21 · 11/22: 법원 요청이 「Failed to fetch」(연결 끊김)로 죽어 전국 보관 · 서류 보관 단계가 통째로 빠졌음
 # → 연결 끊김만 1분 · 2분 쉬고 다시(모든 법원 수집기 공통). 막힘 · 한도는 그대로.
 FETCH_TRIES, FETCH_WAIT_SEC = 3, 60.0
+# 11/23 대표님: 한 시간에 모든 수집기 합이 이보다 많으면 다음 시간까지 기다림 — 막히지 않은 11/22 의 가장 많은 시간(07시)
+# 매시 작업은 원래 시간 몫(하루 한도 ÷ 18)이 있으므로 이것은 아침 묶음 · 전국 보관처럼 몫 없이 도는 것에 걸림
+HOUR_MAX_ALL = 861
 SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집기 합) — 사건 하나에 6~7번
 CAP_MIN, CAP_MAX = 800, 20000
 # 11/18 대표님: 무사한 날 7일 → 3일마다 20% 올림(막힘은 요청 속도 탓이었음 — 간격은 그대로)
@@ -103,6 +107,21 @@ def pause_hours(blocks_today: int) -> int:
     return min(BLOCK_MAX_HOURS, BLOCK_BASE_HOURS * 2 ** max(0, blocks_today - 1))
 
 
+# 이 수집기 이름(단계별 요청 수) — 「court_docs --archive」처럼 모듈 이름과 -- 옵션
+STEP = " ".join([Path(sys.argv[0]).stem] + [a for a in sys.argv[1:] if a.startswith("--")])
+
+
+def _keep_history(site: str, b: dict[str, Any]) -> None:
+    """날이 바뀔 때 어제 장부를 한 줄 남김(11/23 — 장부는 날마다 새로 써서 지난날 시간별 수를 몰랐음).
+    여러 수집기가 같이 바꾸면 같은 날이 두 줄 남을 수 있음 — 읽을 때 날짜로 하나만."""
+    try:
+        LOGS.mkdir(exist_ok=True)
+        with (LOGS / f"{site}_budget_history.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(b, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def _save(f: Path, b: dict[str, Any]) -> None:
     """한 번에 바꿔 씀(임시 파일 → 바꿔치기) — 쓰는 도중 다른 수집기가 빈 파일을 읽지 않게."""
     LOGS.mkdir(exist_ok=True)
@@ -130,7 +149,10 @@ class Polite:
         site: str | None = "court",
         jitter: bool = True,
         hourly: bool = True,
+        gap: float | None = None,
     ):
+        # 요청 간격(초) — 전국 보관은 천천히(11/23, 2.5 → 5초)
+        self.gap = max(REQUEST_GAP_SEC, gap or 0.0)
         self.daily_limit = daily_limit
         self.count = 0
         self._sleep = sleep
@@ -181,7 +203,11 @@ class Polite:
                 break
             except Exception:  # noqa: BLE001
                 time.sleep(0.2)
-        return f, roll(b, now_kst().date().isoformat(), SITE_DAY_MAX.get(self.site or "", 0))
+        today = now_kst().date().isoformat()
+        new = roll(b, today, SITE_DAY_MAX.get(self.site or "", 0))
+        if b.get("date") and str(b["date"]) < today and new.get("date") == today:
+            _keep_history(self.site or "", b)
+        return f, new
 
     def _spend(self) -> None:
         """사이트 전체 하루 한도와 이번 시간 몫(수집기 여럿이 함께 씀)."""
@@ -189,7 +215,7 @@ class Polite:
             return
         f, b = self._load()
         # 수집기 여럿이 동시에 돌아도(매시 작업 + 5분마다 손님 요청) 법원 쪽에서 보면 간격이 지켜지게
-        wait = REQUEST_GAP_SEC - (time.time() - float(b.get("last_ts") or 0))
+        wait = self.gap - (time.time() - float(b.get("last_ts") or 0))
         if wait > 0:
             self._sleep(wait)
             f, b = self._load()
@@ -197,12 +223,24 @@ class Polite:
         if b["count"] >= cap:
             raise DailyLimitReached(f"{self.site} 하루 전체 한도 {cap}번")
         hh = f"{now_kst():%H}"
+        while not self.hourly and b["hours"].get(hh, 0) >= HOUR_MAX_ALL:
+            n = now_kst()
+            left = 3600 - n.minute * 60 - n.second + 5
+            print(
+                f"   {self.site} 이번 시간 {HOUR_MAX_ALL}번 다 씀 — {left // 60}분 쉬고 이어서",
+                flush=True,
+            )
+            self._sleep(left)
+            f, b = self._load()
+            hh = f"{now_kst():%H}"
         if self.hourly and b["hours"].get(hh, 0) >= hour_share(cap):
             raise DailyLimitReached(
                 f"{self.site} 이번 시간 몫 {hour_share(cap)}번 — 다음 시간에 이어서"
             )
         b["count"] += 1
         b["hours"][hh] = b["hours"].get(hh, 0) + 1
+        by = b.setdefault("by", {})  # 11/23: 단계별 요청 수(날마다 history 에 남음)
+        by[STEP] = by.get(STEP, 0) + 1
         b["last_ts"] = time.time()
         _save(f, b)
 
@@ -240,7 +278,7 @@ class Polite:
             raise DailyLimitReached(f"이 단계 몫 {self.step_max}번 — 다음 단계로")
         res: dict[str, Any] = {}
         for attempt in range(RETRIES):
-            gap = REQUEST_GAP_SEC + self._j(1.0) - (time.monotonic() - self._last)
+            gap = self.gap + self._j(1.0) - (time.monotonic() - self._last)
             if gap > 0:
                 self._sleep(gap)
             self._spend()

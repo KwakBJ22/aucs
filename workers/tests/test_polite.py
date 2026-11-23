@@ -135,3 +135,43 @@ def test_hour_key_is_korea_time(tmp_path, monkeypatch) -> None:  # type: ignore[
     b = json.loads((tmp_path / "court_budget.json").read_text(encoding="utf-8"))
     k = datetime.now(timezone(timedelta(hours=9)))
     assert b["date"] == k.date().isoformat() and list(b["hours"]) == [f"{k:%H}"]
+
+
+def test_hour_max_all_waits_next_hour(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # 11/23: 몫 없이 도는 수집(아침 묶음 · 전국 보관)도 한 시간 861번(11/22 07시)을 넘지 않게 기다림
+    import json
+
+    from aucs_workers.collectors import polite as m
+
+    monkeypatch.setattr(m, "LOGS", tmp_path)
+    monkeypatch.setattr(m, "REQUEST_GAP_SEC", 0)
+    monkeypatch.setattr(m, "HOUR_MAX_ALL", 1)
+    slept: list[float] = []
+
+    def sleep(s: float) -> None:
+        slept.append(s)
+        if s > 60:  # 다음 시간이 된 것처럼
+            f = tmp_path / "court_budget.json"
+            b = json.loads(f.read_text(encoding="utf-8"))
+            b["hours"] = {}
+            f.write_text(json.dumps(b), encoding="utf-8")
+
+    p = Polite(sleep=sleep, jitter=False, hourly=False)
+    p.call(lambda: {"ok": True}, "1")
+    p.call(lambda: {"ok": True}, "2")
+    assert any(s > 60 for s in slept)
+    b = json.loads((tmp_path / "court_budget.json").read_text(encoding="utf-8"))
+    assert sum(b["by"].values()) == 2
+
+
+def test_history_kept_when_day_changes(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import json
+
+    from aucs_workers.collectors import polite as m
+
+    monkeypatch.setattr(m, "LOGS", tmp_path)
+    old = {"date": "2026-11-22", "count": 9, "hours": {"07": 9}, "cap": 8640, "ok_days": 1}
+    (tmp_path / "court_budget.json").write_text(json.dumps(old), encoding="utf-8")
+    Polite(sleep=lambda s: None, jitter=False)._load()
+    lines = (tmp_path / "court_budget_history.jsonl").read_text(encoding="utf-8").splitlines()
+    assert json.loads(lines[0])["date"] == "2026-11-22"

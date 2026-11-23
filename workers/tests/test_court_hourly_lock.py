@@ -21,3 +21,14 @@ def test_dead_lock_does_not_block(tmp_path, monkeypatch) -> None:  # type: ignor
 
 def test_alive() -> None:
     assert m.alive(os.getpid()) and not m.alive(0)
+
+
+def test_nationwide_once_a_day_from_14(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from datetime import datetime
+
+    monkeypatch.setattr(m, "NATIONWIDE_DONE", tmp_path / "done")
+    assert not m.nationwide_due(datetime(2026, 11, 23, 13, 10))
+    assert m.nationwide_due(datetime(2026, 11, 23, 14, 10))
+    (tmp_path / "done").write_text("2026-11-23", encoding="utf-8")
+    assert not m.nationwide_due(datetime(2026, 11, 23, 16, 10))
+    assert m.nationwide_due(datetime(2026, 11, 24, 14, 10))
