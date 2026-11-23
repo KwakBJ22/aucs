@@ -243,6 +243,10 @@ def _customer_key(uid: str) -> str:
 # ---------- 결제 후 ----------
 
 
+# 주문에서 읽는 칸(select * 쓰지 않음 — 공통 지침 2-5)
+_O = "order_id, user_id, plan, period, item_id, amount_krw, order_name, status, payment_key, deposit_secret, vbank, fail_msg, payment_id"
+
+
 def _result(o: dict[str, Any]) -> dict[str, Any]:
     """화면에 돌려줄 주문 결과(완료 · 입금 기다림 · 실패)."""
     out: dict[str, Any] = {
@@ -263,7 +267,7 @@ def _grant(order_id: str, toss: dict[str, Any], auto_renew: bool = False, start:
     """승인된 결제 → 이용권 한 줄. 두 번 불려도 한 번만(주문에 payment_id 가 있으면 그대로)."""
     with connect() as c:
         o = c.execute(
-            "select * from app.pay_orders where order_id = %s for update", (order_id,)
+            "select " + _O + " from app.pay_orders where order_id = %s for update", (order_id,)
         ).fetchone()
         if not o:
             raise HTTPException(404, "주문을 찾지 못했어요")
@@ -286,7 +290,8 @@ def _grant(order_id: str, toss: dict[str, Any], auto_renew: bool = False, start:
         ).fetchone()  # fmt: skip
         o = c.execute(
             """update app.pay_orders set status = 'paid', payment_key = %s, payment_id = %s, done_at = now()
-               where order_id = %s returning *""",
+               where order_id = %s returning """
+            + _O,
             (toss.get("paymentKey"), pay["payment_id"], order_id),
         ).fetchone()
         if o["user_id"]:
@@ -303,12 +308,12 @@ def _mark(order_id: str, status: str, **cols: Any) -> dict[str, Any]:
     with connect() as c:
         o = c.execute(
             f"update app.pay_orders set status = %(status)s{', ' + sets if sets else ''} "
-            "where order_id = %(oid)s and payment_id is null returning *",
+            "where order_id = %(oid)s and payment_id is null returning " + _O,
             {"status": status, "oid": order_id, **cols},
         ).fetchone()
         if not o:
             o = c.execute(
-                "select * from app.pay_orders where order_id = %s", (order_id,)
+                "select " + _O + " from app.pay_orders where order_id = %s", (order_id,)
             ).fetchone()
     return dict(o)
 
@@ -335,7 +340,9 @@ def confirm(uid: str, payment_key: str, order_id: str, amount: int) -> dict[str,
     """결제창에서 돌아온 뒤: 금액을 주문과 맞춰 보고 승인 → 이용권."""
     _need_open()
     with connect() as c:
-        o = c.execute("select * from app.pay_orders where order_id = %s", (order_id,)).fetchone()
+        o = c.execute(
+            "select " + _O + " from app.pay_orders where order_id = %s", (order_id,)
+        ).fetchone()
     if not o or str(o["user_id"]) != uid:
         raise HTTPException(404, "주문을 찾지 못했어요")
     if o["payment_id"] or o["status"] not in ("ready", "failed"):
@@ -357,7 +364,9 @@ def confirm(uid: str, payment_key: str, order_id: str, amount: int) -> dict[str,
 
 def order_status(uid: str, order_id: str) -> dict[str, Any]:
     with connect() as c:
-        o = c.execute("select * from app.pay_orders where order_id = %s", (order_id,)).fetchone()
+        o = c.execute(
+            "select " + _O + " from app.pay_orders where order_id = %s", (order_id,)
+        ).fetchone()
     if not o or str(o["user_id"]) != uid:
         raise HTTPException(404, "주문을 찾지 못했어요")
     return _result(dict(o))
@@ -497,6 +506,7 @@ def renew_due() -> dict[str, Any]:
                  and not exists (select 1 from app.pay_orders o where o.renew_of = p.payment_id and o.status = 'paid')
                order by p.valid_to limit 200"""
         ).fetchall()
+    # 한 사람씩: 카드마다 토스에 따로 결제를 보내야 하고, 한 사람 실패가 다음 사람을 막지 않게(반복 안 쿼리 — 일부러)
     for p in due:
         try:
             if not p["billing_key"]:

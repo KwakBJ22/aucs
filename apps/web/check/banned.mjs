@@ -35,10 +35,10 @@ function walk(d) {
 for (const d of ["app", "components", "lib", "public"]) walk(join(web, d));
 
 // ── 스타일 정리 지키기(11/23 대표님 「새로 더하기 전에 있는 것부터」) ──
-// ① 토큰 밖 숫자(글자 크기 px · 둥글기 px · 색 #)가 아래 기준보다 늘면 멈춤 — 값은 tokens.css 토큰으로.
+// ① !important 와 토큰 밖 숫자(글자 크기 px · 둥글기 px · 색 #)가 아래 기준보다 늘면 멈춤 — 값은 tokens.css 토큰으로.
 //    줄었으면 기준 숫자를 그만큼 낮춰 적어 둠(다시 늘지 않게).
 // ② CSS 에만 있고 화면 코드 어디에도 안 나오는 클래스 이름이 생기면 멈춤(안 쓰는 규칙은 지움).
-const STYLE_MAX = { 글자크기px: 104, 둥글기px: 156, 색: 36 };
+const STYLE_MAX = { important: 196, 글자크기px: 104, 둥글기px: 156, 색: 36 };
 const DYNAMIC = ["k-", "dd-", "logo-"]; // 화면이 `k-${…}` 처럼 이어 붙여 쓰는 이름
 const cssFiles = [];
 (function css(d) {
@@ -48,10 +48,11 @@ const cssFiles = [];
     else if (n.endsWith(".css")) cssFiles.push(p);
   }
 })(join(web, "app"));
-const count = { 글자크기px: 0, 둥글기px: 0, 색: 0 };
+const count = { important: 0, 글자크기px: 0, 둥글기px: 0, 색: 0 };
 const cssClasses = new Set();
 for (const p of cssFiles) {
   const t = readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  count.important += (t.match(/!important/g) ?? []).length;
   if (!p.endsWith("tokens.css")) {
     count.글자크기px += (t.match(/font-size:\s*[\d.]+px/g) ?? []).length;
     count.둥글기px += (t.match(/border-radius:\s*[\d.]+px/g) ?? []).length;
@@ -63,7 +64,9 @@ for (const p of cssFiles) {
 }
 for (const k of Object.keys(STYLE_MAX))
   if (count[k] > STYLE_MAX[k])
-    bad.push(`스타일 ${k} ${count[k]}곳(기준 ${STYLE_MAX[k]}) — 숫자 대신 tokens.css 토큰을 쓰세요`);
+    bad.push(
+      `스타일 ${k} ${count[k]}곳(기준 ${STYLE_MAX[k]}) — 숫자 대신 tokens.css 토큰을, !important 대신 덮는 규칙을 고치세요`,
+    );
 let code = "";
 (function src(d) {
   for (const n of readdirSync(d)) {
@@ -74,11 +77,16 @@ let code = "";
   }
 })(web);
 const words = new Set(code.match(/[A-Za-z][\w-]*/g) ?? []);
-const unused = [...cssClasses].filter((c) => !words.has(c) && !DYNAMIC.some((x) => c.startsWith(x)));
-if (unused.length) bad.push(`안 쓰는 스타일 이름 ${unused.length}개(지우세요): ${unused.join(", ")}`);
+const unused = [...cssClasses].filter(
+  (c) => !words.has(c) && !DYNAMIC.some((x) => c.startsWith(x)),
+);
+if (unused.length)
+  bad.push(`안 쓰는 스타일 이름 ${unused.length}개(지우세요): ${unused.join(", ")}`);
 const lower = Object.keys(STYLE_MAX).filter((k) => count[k] < STYLE_MAX[k]);
 if (lower.length)
-  console.log(`스타일 기준을 낮춰 적어 주세요: ${lower.map((k) => `${k} ${STYLE_MAX[k]} → ${count[k]}`).join(" · ")}`);
+  console.log(
+    `스타일 기준을 낮춰 적어 주세요: ${lower.map((k) => `${k} ${STYLE_MAX[k]} → ${count[k]}`).join(" · ")}`,
+  );
 
 if (bad.length) {
   console.log("금지 꼴:\n" + bad.join("\n"));
