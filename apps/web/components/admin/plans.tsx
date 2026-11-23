@@ -149,6 +149,41 @@ export function PlansView() {
         ))}
       </section>
 
+      {(d.renew_failed ?? []).length > 0 && (
+        <section className="section">
+          <h2>
+            {t.renewFailed} {d.renew_failed.length}
+          </h2>
+          {d.renew_failed.map((x) => (
+            <div key={x.payment_id} className="adm-row">
+              <span className="ellipsis">{x.email}</span>
+              <span className="sub">
+                {t.renewLine(m.planName[x.plan] ?? x.plan, x.valid_to, x.renew_fails)}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {(d.orders ?? []).length > 0 && (
+        <section className="section">
+          <h2>
+            {t.orders} {d.orders.length}
+          </h2>
+          {d.orders.map((x) => (
+            <div key={x.order_id} className="adm-row">
+              <span className="ellipsis">
+                {when(x.created_at)} · {x.email} · {x.order_name}
+              </span>
+              <span className="sub">
+                {x.amount_krw.toLocaleString()}원 · {t.orderStatus[x.status] ?? x.status}
+                {x.fail_msg ? ` · ${x.fail_msg}` : ""}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
+
       <section className="section">
         <h2>{m.points}</h2>
         <p>{m.pointsLine(d.points.earned, d.points.spent, d.points.left, d.points.people)}</p>
