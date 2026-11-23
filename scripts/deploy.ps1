@@ -5,6 +5,8 @@
 #  5 API 무대 배포(주소만, 손님 주소는 그대로) + /health → 6 웹 무대 배포 + 목숨줄 검사
 #  7 모두 초록이면 API → 웹 순서로 손님 주소에 올림 → 8 aucs.co.kr 확인, 실패하면 바로 되돌림 → 9 배포 기록
 #  10 성공했을 때만 GitHub에 보관(커밋·올리기) — 실패하면 올리지 않음
+#  11/23 빠르게: 단계마다 지난 시간(+N초) · .env 에 VERCEL_TOKEN 이 있으면 API·웹 무대 배포를 동시에(토큰은 로그인 파일을
+#        건드리지 않아 11/4 꼬임이 없음, 없으면 예전처럼 차례로) · 「배포 완료」를 GitHub 보관 앞에 알림
 # 비밀값은 화면·기록에 찍지 않습니다(.env 에서 읽기만).
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
@@ -42,7 +44,10 @@ function Stop-Deploy([string]$why) {
   exit 1
 }
 
-function Step([string]$title) { Write-Host ""; Write-Host "▶ $title" -ForegroundColor Cyan }
+function Step([string]$title) {
+  $s = [int]((Get-Date) - $started).TotalSeconds
+  Write-Host ""; Write-Host "▶ $title  (+${s}초)" -ForegroundColor Cyan
+}
 
 # Vercel CLI 는 안내 글을 오류 통로(stderr)로 내보냄 → PowerShell 5 가 「Stop」 설정에서 오류로 보고 멈춤(11/4).
 # 대표가 로그인한 것과 같은 판(npx vercel)을 씀 — 최신판(@latest)은 로그인 정보를 다른 곳에서 찾아 「로그인 안 됨」(11/4).
@@ -77,21 +82,27 @@ function Vercel([string]$dir, [string[]]$argv) {
 # 무대 배포를 뒤에서 시작(검사와 함께 돎). 손님 주소는 건드리지 않음(--skip-domain).
 # 11/4 — vercel 을 여러 개 동시에 부르면 로그인 정보 파일을 서로 고쳐 쓰다 「No existing credentials」가 났음.
 #        그래서 vercel 은 한 번에 하나만: 뒤의 작업 하나가 API → 웹 차례로 올리고, 그동안 앞에서는 vercel 을 부르지 않는 검사만.
-function Start-Stage([string[]]$dirs) {
+# 11/23: 토큰이 있으면 폴더마다 작업 하나씩 동시에(--token 은 로그인 파일을 쓰지 않음). 토큰은 작업 인자로만 넘기고 찍지 않음.
+function Start-Stage([string[]]$dirs, [string]$token) {
   $cmd = @(Vercel-Cmd)   # 하나짜리 배열은 함수에서 글자로 풀려 나옴 → 다시 배열로(11/4 「C」 오류)
-  Start-Job -ArgumentList $cmd, $dirs -ScriptBlock {
-    param($cmd, $dirs)
+  $block = {
+    param($cmd, $dirs, $token)
     $cmd = @($cmd); $dirs = @($dirs)
     $exe = $cmd[0]; $pre = @($cmd | Select-Object -Skip 1)
+    $tok = @(); if ($token) { $tok = @('--token', $token) }
     $ErrorActionPreference = 'Continue'
     $res = @{}
     foreach ($dir in $dirs) {
-      $out = & $exe @pre deploy --prod --skip-domain --yes --cwd $dir 2>&1 | ForEach-Object { "$_" }
+      $out = & $exe @pre deploy --prod --skip-domain --yes --cwd $dir @tok 2>&1 | ForEach-Object { "$_" }
       $res[$dir] = @{ code = $LASTEXITCODE; text = ($out | Out-String) }
       if ($LASTEXITCODE) { break }
     }
     $res
   }
+  if ($token -and $dirs.Count -gt 1) {
+    return @($dirs | ForEach-Object { Start-Job -ArgumentList $cmd, @($_), $token -ScriptBlock $block })
+  }
+  return @(Start-Job -ArgumentList $cmd, $dirs, $token -ScriptBlock $block)
 }
 function Stage-Url($res, [string]$dir, [string]$name) {
   $r = $res[$dir]
@@ -186,8 +197,10 @@ else { if ($doApi -and $doWeb) { Set-Content $envStamp (Get-Date -Format o) }; W
 # 1b ── 무대 배포를 뒤에서 시작(손님 주소는 아직 그대로) — 그동안 아래 검사
 Step "1b 무대 배포 시작(뒤에서)"
 $dirs = @(); if ($doApi) { $dirs += $apiDir }; if ($doWeb) { $dirs += $webDir }
-$job = Start-Stage $dirs
-Write-Host "  시작함 — 검사가 하나라도 빨강이면 손님 주소에 올리지 않습니다"
+$vToken = Read-Env 'VERCEL_TOKEN'
+$jobs = Start-Stage $dirs $vToken
+$how = if ($vToken -and $dirs.Count -gt 1) { "API·웹 동시에" } else { "차례로" }
+Write-Host "  시작함($how) — 검사가 하나라도 빨강이면 손님 주소에 올리지 않습니다"
 
 # 2 ── 문법 검사(바뀐 쪽)
 Step "2 문법 검사"
@@ -218,8 +231,11 @@ Write-Host "  이주 모두 적용됨"
 
 # 5 ── 무대 배포 받기 + 확인
 Step "5 무대 배포 확인"
-$res = Receive-Job -Job $job -Wait -AutoRemoveJob
-if ($res -is [array]) { $res = $res[-1] }
+# 작업마다 받은 결과(폴더 → 결과)를 하나로 합침. 표가 아닌 줄(작업이 흘린 글)은 버림.
+$res = @{}
+foreach ($o in @(Receive-Job -Job $jobs -Wait -AutoRemoveJob)) {
+  if ($o -is [hashtable]) { foreach ($k in $o.Keys) { $res[$k] = $o[$k] } }
+}
 if ($doApi) {
   $state.api = Stage-Url $res $apiDir "API"
   Write-Host "  API $($state.api)"
@@ -265,8 +281,11 @@ Write-Host "  aucs.co.kr · api.aucs.co.kr 정상"
 
 # 9 ── 기록
 $sec = [int]((Get-Date) - $started).TotalSeconds
-$msg = "배포 완료 ${sec}초($what) · 커밋 안 된 파일 $($dirty.Count)개 · API $($state.api) · 웹 $($state.web)"
+$msg = "배포 완료 ${sec}초($what · 무대 $how) · 커밋 안 된 파일 $($dirty.Count)개 · API $($state.api) · 웹 $($state.web)"
 Save-Run 'ok' $msg
+# 손님 주소는 이미 바뀜 — 완료를 먼저 알리고 GitHub 보관은 그 뒤(11/23)
+Write-Host ""
+Write-Host $msg -ForegroundColor Green
 
 # 10 ── GitHub 보관(배포가 성공한 판만). 여기서 실패해도 배포는 이미 끝났으니 알림만.
 Step "10 GitHub 보관"
@@ -283,7 +302,5 @@ try {
 } finally { $ErrorActionPreference = $old }
 # 다음 배포가 「바뀐 쪽」을 가릴 기준(이번에 올린 판)
 try { Set-Content $lastFile (git rev-parse HEAD) } catch { }
-Write-Host ""
-Write-Host $msg -ForegroundColor Green
 Stop-Transcript | Out-Null
 exit 0

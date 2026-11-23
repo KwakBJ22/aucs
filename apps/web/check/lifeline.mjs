@@ -319,8 +319,11 @@ const headers = process.env.LIFELINE_BYPASS
     }
   : undefined;
 
-const fails = [];
-for (const p of PATHS) {
+// 11/23: 길마다 따로 창(컨텍스트)이라 서로 안 섞임 → 3개씩 동시에 돌리고 결과는 원래 차례로 찍음(LIFELINE_POOL=1 이면 예전처럼 하나씩)
+const POOL = Math.max(1, Number(process.env.LIFELINE_POOL ?? 3));
+const lines = new Array(PATHS.length);
+const failed = new Array(PATHS.length).fill(false);
+async function runOne(p, i) {
   const ctx = await browser.newContext({ ...p.dev, locale: "ko-KR", extraHTTPHeaders: headers });
   const hit = {};
   await wire(ctx, hit);
@@ -352,14 +355,25 @@ for (const p of PATHS) {
   }
   const sec = ((Date.now() - t0) / 1000).toFixed(1);
   if (why) {
-    fails.push(p.name);
+    failed[i] = true;
     mkdirSync(FAILED, { recursive: true });
     await page.screenshot({ path: path.join(FAILED, `${p.name}.png`) }).catch(() => {});
-    console.log(`  ✗ ${p.name} (${sec}초) — ${why}`);
-  } else console.log(`  ✓ ${p.name} (${sec}초)`);
+    lines[i] = `  ✗ ${p.name} (${sec}초) — ${why}`;
+  } else lines[i] = `  ✓ ${p.name} (${sec}초)`;
   await ctx.close();
 }
+let next = 0;
+await Promise.all(
+  Array.from({ length: Math.min(POOL, PATHS.length) }, async () => {
+    while (next < PATHS.length) {
+      const i = next++;
+      await runOne(PATHS[i], i);
+    }
+  }),
+);
 await browser.close();
+for (const l of lines) console.log(l);
+const fails = PATHS.filter((_, i) => failed[i]).map((p) => p.name);
 
 const total = ((Date.now() - started) / 1000).toFixed(1);
 if (fails.length) {
