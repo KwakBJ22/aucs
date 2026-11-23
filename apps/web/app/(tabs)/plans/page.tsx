@@ -67,7 +67,7 @@ export default function Plans() {
         }
       />
       {!pc && (
-        <div className="seg plan-seg" role="tablist">
+        <div className="seg plan-seg track" role="tablist">
           {tabs}
         </div>
       )}

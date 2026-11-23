@@ -432,15 +432,6 @@
 
 /* ══ 휴대폰 이용권(11/23 M-Plans) ══ */
 @media (max-width: 1023px) {
-  /* 매달 · 1년: 회색 판 안 흰 칸 */
-  .plan-seg {
-    background: var(--line);
-  }
-  .plan-seg button.on {
-    background: var(--surface);
-    color: var(--text);
-    font-weight: 700;
-  }
   .plan-price {
     font-size: var(--fs-price);
     font-weight: 800;

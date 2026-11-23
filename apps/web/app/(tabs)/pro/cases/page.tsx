@@ -153,7 +153,35 @@ function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
           </button>
         </span>
       </div>
-      <div className="ox-auto mt-10">
+      {/* 휴대폰: 표 대신 카드(11/23 M-Case — 「내용」 칸이 화면 밖으로 잘렸음) */}
+      <div className="m-block mt-10">
+        {ev.map((e, i) => {
+          const group = !all && e.category === TAX && taxes.length > 1;
+          return (
+            <div key={i} className="case-card">
+              <div className="d-flex jc-between ai-start gap-8">
+                <b>{group ? t.taxGroup(taxes.length) : e.category}</b>
+                <span className={`chip ${IMP_CHIP[e.importance]} f-none`}>
+                  {t.imp[e.importance]}
+                  {e.after_deadline ? ` · ${t.lateTag}` : ""}
+                </span>
+              </div>
+              <p className="sub fs-xs m-0">{group ? taxRange : e.event_date}</p>
+              {(e.after_deadline || t.meaning[e.category]) && (
+                <p className="case-card-mean">
+                  {t.meanCol} · {e.after_deadline ? t.lateMeaning : t.meaning[e.category]}
+                </p>
+              )}
+              {!group && (e.kind || e.text_masked) && (
+                <p className="case-card-text">
+                  {e.kind ?? ""} {e.text_masked ?? ""}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ox-auto mt-10 pc-only">
         <table className="pro-table case-table">
           <thead>
             <tr>
@@ -266,11 +294,8 @@ function Cases() {
   if (!pc && id)
     return (
       <main className="page pro-page">
-        <PageHeader title={t.title} />
-        <button type="button" className="link mb-8 no-print" onClick={close}>
-          {t.backList}
-        </button>
-        <section className="section m-0 print-area">
+        <PageHeader title={t.title} back="history" onBack={close} />
+        <section className="section print-area">
           {d ? (
             <Detail d={d} />
           ) : (
@@ -286,7 +311,7 @@ function Cases() {
     <main className="page wide pro-page">
       <PageHeader title={t.title} />
       <div className="sub mb-8 no-print">{t.sub}</div>
-      <div className="d-flex gap-6 f-wrap mb-8 no-print">
+      <div className="case-cats no-print">
         <button
           className={`pill pick-pill${!cat ? " on" : ""}`}
           onClick={() => go({ category: "" })}
@@ -334,13 +359,16 @@ function Cases() {
             </button>
           ))}
         </section>
-        <section className="section m-0 print-area">
-          {d ? (
-            <Detail d={d} place={list?.find((c) => c.case_id === id)?.place} />
-          ) : (
-            <div className="sub">{t.pick}</div>
-          )}
-        </section>
+        {/* 오른쪽 사건 한 장은 PC 만 — 휴대폰은 줄을 누르면 따로 한 장(11/23: 「왼쪽에서 고르세요」 빈 칸이 보였음) */}
+        {pc && (
+          <section className="section m-0 print-area">
+            {d ? (
+              <Detail d={d} place={list?.find((c) => c.case_id === id)?.place} />
+            ) : (
+              <div className="sub">{t.pick}</div>
+            )}
+          </section>
+        )}
       </div>
       <div className="sub mt-8 no-print">{t.note}</div>
     </main>

@@ -3,6 +3,7 @@
 import { Delayed, SkLines } from "@/components/skeleton";
 import { LoadError } from "@/components/load-error";
 import { PageHeader } from "@/components/layout/page-header";
+import { useIsPc } from "@/lib/use-pc";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
@@ -18,6 +19,7 @@ const MIN_SCORE = 20; // 이보다 적으면 성적을 말하지 않음
 function ProMarket() {
   const sp = useSearchParams();
   const router = useRouter();
+  const pc = useIsPc();
   const onbid = sp.get("source") === "onbid";
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
@@ -54,27 +56,24 @@ function ProMarket() {
     color: "var(--text)",
   };
   const sc = m?.scorecard;
+  const srcSeg = (cls: string) => (
+    <span className={cls} role="group">
+      {(["court", "onbid"] as const).map((k) => (
+        <button
+          key={k}
+          className={(k === "onbid") === onbid ? "on" : ""}
+          onClick={() => router.replace(k === "onbid" ? "/pro/market?source=onbid" : "/pro/market")}
+        >
+          {copy.find.source[k]}
+        </button>
+      ))}
+    </span>
+  );
   return (
     <main className="page wide pro-page">
-      {/* 경매 · 공매: 제목 줄 오른쪽 작은 판(11/22 디자인) */}
-      <PageHeader
-        title={t.title}
-        right={
-          <span className="scope-seg" role="group">
-            {(["court", "onbid"] as const).map((k) => (
-              <button
-                key={k}
-                className={(k === "onbid") === onbid ? "on" : ""}
-                onClick={() =>
-                  router.replace(k === "onbid" ? "/pro/market?source=onbid" : "/pro/market")
-                }
-              >
-                {copy.find.source[k]}
-              </button>
-            ))}
-          </span>
-        }
-      />
+      {/* 경매 · 공매: PC 는 제목 줄 오른쪽 작은 판(11/22 디자인) · 휴대폰은 머리 아래 폭 가득(11/23 M-Market) */}
+      <PageHeader title={pc ? t.title : t.mTitle} right={pc && srcSeg("scope-seg")} />
+      {!pc && srcSeg("seg track")}
       {failed && !onbid && <LoadError onRetry={() => setTries((n) => n + 1)} />}
       {!onbid && (
         <nav className="seg mb-4 pc-none">

@@ -669,7 +669,7 @@ export const copy = {
     none: "없음",
     checked: (n: number) => `${n}개 확인`,
     addMore: "관심에서 더 넣기",
-    more: "기준 6줄 더 보기",
+    more: (n: number) => `기준 ${n}줄 더 보기`,
     less: "접기",
     atBid: (x: string) => `${x}에 낙찰되면`,
     note: "필요한 현금은 「얼마가 드나」에서 고른 집 수 기준이에요",
@@ -1184,6 +1184,7 @@ export const copy = {
   },
   proMarket: {
     title: "낙찰 사례와 시장 분석",
+    mTitle: "시장 분석", // 휴대폰 머리(11/23 M-Market — 긴 제목이 두 줄로 꺾였음)
     months: (x: number) => `최근 ${x}개월`,
     score: "낙찰가 성적표",
     scoreWait: (n: number, min: number) =>

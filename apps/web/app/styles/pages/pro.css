@@ -240,14 +240,11 @@
   align-items: center;
   gap: 6px;
 }
+/* 휴대폰 카드(11/23 M-Search): 선 없이 여백만 · 이름 15/700 · 값 18/800 · 신호 꼬리표 */
 .pro-card {
   display: block;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
   color: var(--text);
-}
-.pro-card:last-child {
-  border-bottom: 0;
 }
 .pro-card .pc-top {
   display: flex;
@@ -257,12 +254,16 @@
   color: var(--muted);
 }
 .pro-card .pc-addr {
-  font-weight: 600;
   margin: 4px 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+.pro-card .pc-price b {
+  font-size: var(--fs-lg);
+  font-weight: 800;
 }
 .pro-card .pc-sig {
-  font-size: var(--fs-sm);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 @media (max-width: 1023px) {
   .pro-summary {
@@ -579,4 +580,90 @@
   font-size: var(--fs-sm);
   font-weight: 800;
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+
+/* ══ 휴대폰 통합검색(11/23 M-Search): 조건은 접힌 한 줄 · 숫자는 두 칸(건수 · 감정가 합계)만 ══ */
+@media (max-width: 1023px) {
+  .pro-page > .cond-row {
+    margin-top: 12px;
+  }
+  .pro-page > .cond-row .sub {
+    min-width: 0;
+    margin-left: auto;
+  }
+  .pro-summary > div:nth-child(n + 3) {
+    display: none;
+  }
+}
+.pro-card .pc-sig.fatal {
+  display: inline-block;
+}
+
+/* ══ 휴대폰 사건 한 장(11/23 M-Case) ══ */
+.case-title {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.case-card {
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: var(--r-btn);
+  background: var(--soft);
+}
+.case-card-mean {
+  margin: 8px 0 0;
+  color: var(--blue-text);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+.case-card-text {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+@media (max-width: 1023px) {
+  /* 사건번호 복사 · 보고서 PDF: 제목 아래 두 칸 */
+  .case-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .case-head > :first-child {
+    flex: none;
+  }
+  .case-head > .d-flex > .btn {
+    flex: 1;
+    min-height: 48px;
+  }
+}
+/* 시장 분석 「크게 빗나간 사례」(11/23 M-Market): 휴대폰은 사건 · 날짜·주소 · 예상→실제를 세 줄로(가로로 넘쳐 「실제 %」가 안 보였음) */
+@media (max-width: 1023px) {
+  .miss-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 0;
+  }
+  .miss-row .sub {
+    display: block;
+  }
+}
+/* 사건·문건 분류 칩: PC 는 접혀 여러 줄 · 휴대폰은 한 줄로 옆으로 넘김 + 찾기 칸은 아래 줄(11/23 M-Cases) */
+.case-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+@media (max-width: 1023px) {
+  .case-cats {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(-1 * var(--page-x)) 8px;
+    padding: 0 var(--page-x);
+    scrollbar-width: none;
+  }
+  .case-cats > .case-search {
+    flex: 0 0 200px;
+  }
 }

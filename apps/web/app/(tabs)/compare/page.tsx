@@ -167,7 +167,6 @@ export default function ComparePage() {
       label: t.rows.market,
       cell: (c) => (marketRatio(c) != null ? `${marketRatio(c)}%` : t.unknown),
       best: best(marketRatio),
-      pcOnly: true,
     },
     {
       label: t.rows.unknown,
@@ -179,7 +178,6 @@ export default function ComparePage() {
       label: t.rows.fail,
       cell: (c) => (failHit(c) != null ? `${failHit(c)}개` : "-"),
       best: best(failHit),
-      pcOnly: true,
     },
     {
       label: t.rows.field,
@@ -307,7 +305,7 @@ export default function ComparePage() {
       )}
       {cols.length > 0 && !pc && (
         <button className="cond-row fold" aria-expanded={more} onClick={() => setMore(!more)}>
-          <span>{more ? t.less : t.more}</span>
+          <span>{more ? t.less : t.more(rows.filter((r) => r.pcOnly).length)}</span>
         </button>
       )}
       {cols.length > 0 && !pc && <div className="sub">{t.note}</div>}

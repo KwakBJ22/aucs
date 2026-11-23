@@ -278,3 +278,15 @@
     transform: scale(1);
   }
 }
+/* 회색 판 안 흰 칸 탭(휴대폰 11/23 — 이용권 매달·1년 · 시장 분석 경매·공매) */
+@media (max-width: 1023px) {
+  .seg.track {
+    display: grid;
+    background: var(--line);
+  }
+  .seg.track button.on {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+  }
+}

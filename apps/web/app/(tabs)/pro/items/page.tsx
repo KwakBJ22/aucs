@@ -96,6 +96,8 @@ function ProItems() {
   const [regions, setRegions] = useState<RegionRow[]>([]);
   const [cols, setCols] = useState<ColKey[]>(DEFAULT_COLS);
   const [colOpen, setColOpen] = useState(false);
+  // 휴대폰: 조건 칸은 접힌 한 줄로 시작(11/23 M-Search — 첫 화면을 조건이 다 차지했음)
+  const [condOpen, setCondOpen] = useState(false);
   const [qText, setQText] = useState(f.q ?? "");
   const [pick, setPick] = useState<string | null>(null);
   const pc = useIsPc();
@@ -168,170 +170,192 @@ function ProItems() {
       <PageHeader
         title={t.title}
         right={
-          <span className="d-flex gap-16 ai-center">
-            <button
-              type="button"
-              onClick={() => void downloadProCsv(f).catch(() => {})}
-              className="link"
-            >
-              {t.csv}
-            </button>
-            {/* 지도로 보기(11/22 디자인) */}
-            <Link href="/pro/map" className="link nowrap">
-              {copy.mapView.open}
-            </Link>
-          </span>
+          pc && (
+            <span className="d-flex gap-16 ai-center">
+              <button
+                type="button"
+                onClick={() => void downloadProCsv(f).catch(() => {})}
+                className="link"
+              >
+                {t.csv}
+              </button>
+              {/* 지도로 보기(11/22 디자인) */}
+              <Link href="/pro/map" className="link nowrap">
+                {copy.mapView.open}
+              </Link>
+            </span>
+          )
         }
       />
 
-      <section className="section pro-filters">
-        <div className="pro-row">
-          <select
-            value={f.source ?? "all"}
-            onChange={(e) =>
-              set({
-                source:
-                  e.target.value === "all" ? undefined : (e.target.value as "court" | "onbid"),
-              })
-            }
-            style={sel}
-            aria-label={copy.find.sourceLabel}
-          >
-            {(["all", "court", "onbid"] as const).map((k) => (
-              <option key={k} value={k}>
-                {copy.find.source[k]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={f.sido ?? ""}
-            onChange={(e) => set({ sido: e.target.value || undefined, sigungu: undefined })}
-            style={sel}
-          >
-            <option value="">{t.allSido}</option>
-            <option value="서울특별시">서울</option>
-            <option value="경기도">경기</option>
-            <option value="인천광역시">인천</option>
-          </select>
-          <select
-            value={f.sigungu ?? ""}
-            onChange={(e) => set({ sigungu: e.target.value || undefined })}
-            style={sel}
-          >
-            <option value="">{t.allSigungu}</option>
-            {sigungus.map((r) => (
-              <option key={`${r.sido}${r.sigungu}`} value={r.sigungu}>
-                {r.sigungu} ({r.items})
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder={t.search}
-            value={qText}
-            onChange={(e) => setQText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && set({ q: qText || undefined })}
-            style={{ ...sel, minWidth: 180 }}
-          />
-          <select
-            value={f.sort ?? "deadline"}
-            onChange={(e) => set({ sort: e.target.value })}
-            style={sel}
-          >
-            {Object.entries(t.sorts).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="pro-row">
-          <span className="sub">{t.usage}</span>
-          {Object.entries(t.usages).map(([k, v]) => (
-            <button
-              key={k}
-              className={`pill pick-pill${f.usage?.includes(k) ? " on" : ""}`}
-              onClick={() => toggle("usage", k)}
-            >
-              {f.usage?.includes(k) ? `✓ ${v}` : v}
-            </button>
-          ))}
-        </div>
-        <div className="pro-row">
-          <span className="pro-range">
-            <span className="sub">{t.failed}</span>
-            <input
-              type="number"
-              min={0}
-              value={f.failed_min ?? ""}
-              onChange={(e) => set({ failed_min: num(e.target.value) })}
-              style={{ ...sel, width: 64 }}
-            />
-            ~
-            <input
-              type="number"
-              min={0}
-              value={f.failed_max ?? ""}
-              onChange={(e) => set({ failed_max: num(e.target.value) })}
-              style={{ ...sel, width: 64 }}
-            />
+      {!pc && (
+        <button
+          className="cond-row fold bg-surface"
+          aria-expanded={condOpen}
+          onClick={() => setCondOpen(!condOpen)}
+        >
+          <b>{copy.find.cond}</b>
+          <span className="sub ellipsis">
+            {[
+              f.sigungu ?? (f.sido ? f.sido.slice(0, 2) : t.allSido),
+              copy.find.source[f.source ?? "all"],
+              f.exclude?.length ? `${t.exclude} ${f.exclude.length}` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
-          <span className="pro-range">
-            <span className="sub">{t.appraisal}</span>
-            <input
-              type="number"
-              min={0}
-              value={f.app_min ?? ""}
-              onChange={(e) => set({ app_min: num(e.target.value) })}
-              style={{ ...sel, width: 72 }}
-            />
-            ~
-            <input
-              type="number"
-              min={0}
-              value={f.app_max ?? ""}
-              onChange={(e) => set({ app_max: num(e.target.value) })}
-              style={{ ...sel, width: 72 }}
-            />
-            <span className="sub">{t.eok}</span>
-          </span>
-          <select
-            value={f.rate_max ?? ""}
-            onChange={(e) => set({ rate_max: num(e.target.value) })}
-            style={sel}
-          >
-            <option value="">{t.rateAny}</option>
-            {[80, 70, 60, 50, 40].map((x) => (
-              <option key={x} value={x}>
-                {t.rateMax(x)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={f.days_max ?? ""}
-            onChange={(e) => set({ days_max: num(e.target.value) })}
-            style={sel}
-          >
-            <option value="">{t.daysAny}</option>
-            {[3, 7, 14, 30].map((x) => (
-              <option key={x} value={x}>
-                {t.daysMax(x)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="pro-row">
-          <span className="sub">{t.exclude}</span>
-          {Object.entries(t.excludes).map(([k, v]) => (
-            <button
-              key={k}
-              className={`pill pick-pill${f.exclude?.includes(k) ? " on" : ""}`}
-              onClick={() => toggle("exclude", k)}
+        </button>
+      )}
+      {(pc || condOpen) && (
+        <section className="section pro-filters">
+          <div className="pro-row">
+            <select
+              value={f.source ?? "all"}
+              onChange={(e) =>
+                set({
+                  source:
+                    e.target.value === "all" ? undefined : (e.target.value as "court" | "onbid"),
+                })
+              }
+              style={sel}
+              aria-label={copy.find.sourceLabel}
             >
-              {f.exclude?.includes(k) ? `✓ ${v}` : v}
-            </button>
-          ))}
-        </div>
-      </section>
+              {(["all", "court", "onbid"] as const).map((k) => (
+                <option key={k} value={k}>
+                  {copy.find.source[k]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={f.sido ?? ""}
+              onChange={(e) => set({ sido: e.target.value || undefined, sigungu: undefined })}
+              style={sel}
+            >
+              <option value="">{t.allSido}</option>
+              <option value="서울특별시">서울</option>
+              <option value="경기도">경기</option>
+              <option value="인천광역시">인천</option>
+            </select>
+            <select
+              value={f.sigungu ?? ""}
+              onChange={(e) => set({ sigungu: e.target.value || undefined })}
+              style={sel}
+            >
+              <option value="">{t.allSigungu}</option>
+              {sigungus.map((r) => (
+                <option key={`${r.sido}${r.sigungu}`} value={r.sigungu}>
+                  {r.sigungu} ({r.items})
+                </option>
+              ))}
+            </select>
+            <input
+              placeholder={t.search}
+              value={qText}
+              onChange={(e) => setQText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && set({ q: qText || undefined })}
+              style={{ ...sel, minWidth: 180 }}
+            />
+            <select
+              value={f.sort ?? "deadline"}
+              onChange={(e) => set({ sort: e.target.value })}
+              style={sel}
+            >
+              {Object.entries(t.sorts).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="pro-row">
+            <span className="sub">{t.usage}</span>
+            {Object.entries(t.usages).map(([k, v]) => (
+              <button
+                key={k}
+                className={`pill pick-pill${f.usage?.includes(k) ? " on" : ""}`}
+                onClick={() => toggle("usage", k)}
+              >
+                {f.usage?.includes(k) ? `✓ ${v}` : v}
+              </button>
+            ))}
+          </div>
+          <div className="pro-row">
+            <span className="pro-range">
+              <span className="sub">{t.failed}</span>
+              <input
+                type="number"
+                min={0}
+                value={f.failed_min ?? ""}
+                onChange={(e) => set({ failed_min: num(e.target.value) })}
+                style={{ ...sel, width: 64 }}
+              />
+              ~
+              <input
+                type="number"
+                min={0}
+                value={f.failed_max ?? ""}
+                onChange={(e) => set({ failed_max: num(e.target.value) })}
+                style={{ ...sel, width: 64 }}
+              />
+            </span>
+            <span className="pro-range">
+              <span className="sub">{t.appraisal}</span>
+              <input
+                type="number"
+                min={0}
+                value={f.app_min ?? ""}
+                onChange={(e) => set({ app_min: num(e.target.value) })}
+                style={{ ...sel, width: 72 }}
+              />
+              ~
+              <input
+                type="number"
+                min={0}
+                value={f.app_max ?? ""}
+                onChange={(e) => set({ app_max: num(e.target.value) })}
+                style={{ ...sel, width: 72 }}
+              />
+              <span className="sub">{t.eok}</span>
+            </span>
+            <select
+              value={f.rate_max ?? ""}
+              onChange={(e) => set({ rate_max: num(e.target.value) })}
+              style={sel}
+            >
+              <option value="">{t.rateAny}</option>
+              {[80, 70, 60, 50, 40].map((x) => (
+                <option key={x} value={x}>
+                  {t.rateMax(x)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={f.days_max ?? ""}
+              onChange={(e) => set({ days_max: num(e.target.value) })}
+              style={sel}
+            >
+              <option value="">{t.daysAny}</option>
+              {[3, 7, 14, 30].map((x) => (
+                <option key={x} value={x}>
+                  {t.daysMax(x)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="pro-row">
+            <span className="sub">{t.exclude}</span>
+            {Object.entries(t.excludes).map(([k, v]) => (
+              <button
+                key={k}
+                className={`pill pick-pill${f.exclude?.includes(k) ? " on" : ""}`}
+                onClick={() => toggle("exclude", k)}
+              >
+                {f.exclude?.includes(k) ? `✓ ${v}` : v}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {s && (
         <div className="pro-summary">
@@ -363,6 +387,15 @@ function ProItems() {
       )}
 
       <div className="d-flex jc-between ai-center my-8 mx-0">
+        {!pc && (
+          <button
+            type="button"
+            onClick={() => void downloadProCsv(f).catch(() => {})}
+            className="link"
+          >
+            {t.csv}
+          </button>
+        )}
         <div className="pos-relative pc-only">
           <button className="chip gray b-0 mh-30" onClick={() => setColOpen(!colOpen)}>
             {t.colPick} ›
@@ -426,9 +459,9 @@ function ProItems() {
                   {r.court} {r.case_no}
                   {r.item_no > 1 ? `-${r.item_no}` : ""} · {r.usage}
                 </span>
-                <span className="nowrap">
+                <DDay d={r.d_day} className="nowrap">
                   {dday(r.d_day)} · {r.sale_date?.slice(5)}
-                </span>
+                </DDay>
               </div>
               <div className="pc-addr clamp2">
                 {(r.address ?? "").replace(/^(서울특별시|경기도)\s+/, "")}
@@ -442,11 +475,8 @@ function ProItems() {
                 </span>
               </div>
               {r.signal && (
-                <div
-                  className="pc-sig clamp2"
-                  style={{ color: r.fatal ? "var(--red)" : "var(--orange)" }}
-                >
-                  {r.signal}
+                <div className={`pc-sig ${r.fatal ? "fatal" : "chip orange"}`}>
+                  {r.fatal ? r.signal : `◆ ${r.signal}`}
                 </div>
               )}
             </Link>

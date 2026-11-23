@@ -13,9 +13,11 @@ export function PageHeader({
   back,
   right,
   sub,
+  onBack,
 }: {
   title: React.ReactNode;
   back?: string;
+  onBack?: () => void; // back="history" 일 때 뒤로 대신 부를 것(주소로 바로 들어온 경우 목록으로 등)
   right?: React.ReactNode;
   sub?: React.ReactNode;
 }) {
@@ -76,7 +78,7 @@ export function PageHeader({
           <button
             aria-label="뒤로"
             className={`tb-back ${back && first ? "pc-back" : ""}`}
-            onClick={() => router.back()}
+            onClick={() => (onBack ? onBack() : router.back())}
           >
             {arrow}
           </button>
