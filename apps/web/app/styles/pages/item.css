@@ -214,9 +214,26 @@
 .tr-chart {
   max-width: 520px;
 }
-/* 입찰가 계산 상자(상세 · 계산 화면 같은 부품) PC(11/22 디자인) */
+/* 입찰가 계산 상자(상세 · 계산 화면 같은 부품) — 집 몇 채: 회색 판 안 흰 칸(PC 11/22 · 휴대폰 11/23 M-Calc 폭 가득) */
 .homes-seg {
-  display: contents;
+  display: flex;
+  width: 100%;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--line);
+}
+.homes-seg .seg-btn {
+  flex: 1;
+  min-height: 36px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.homes-seg .seg-btn.on {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
 }
 @media (min-width: 1024px) {
   .homes-row {
@@ -231,21 +248,12 @@
   }
   .homes-seg {
     display: inline-flex;
-    padding: 3px;
+    width: auto;
     border-radius: 10px;
-    background: var(--line);
   }
   .homes-seg .seg-btn {
-    min-height: 36px;
+    flex: none;
     border-radius: 8px;
-    background: transparent;
-    color: var(--muted);
-    font-weight: 600;
-  }
-  .homes-seg .seg-btn.on {
-    background: var(--surface);
-    color: var(--text);
-    font-weight: 700;
   }
   .kv-left .calc-box .kv,
   .calc-box .kv {
@@ -632,4 +640,150 @@
   color: var(--blue-text);
   font-size: var(--fs-sm);
   font-weight: 700;
+}
+
+/* ══ 휴대폰 물건 상세 위 칸(11/23 M-Detail) ══ */
+.bd-chip {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 7px 11px;
+  border-radius: var(--r-xs);
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.item-title {
+  margin: 4px 0 0;
+  font-size: var(--fs-title);
+  font-weight: 800;
+  line-height: 1.35;
+}
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.q-jump-m {
+  margin-top: 12px;
+}
+.q-jump-m .q-jump-t {
+  margin: 4px 4px 8px;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.q-jump-m .m-chips {
+  margin-top: 0;
+}
+@media (max-width: 1023px) {
+  .item-top.section {
+    border-radius: var(--r-hero);
+  }
+  .item-price-sub {
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--faint);
+  }
+  .item-top .band-grid.tiles {
+    gap: 8px;
+  }
+  .item-top .band-grid.tiles > div {
+    padding: 12px 14px;
+    border-radius: var(--r-btn);
+    background: var(--soft);
+  }
+  .item-top .band-grid.tiles .sub {
+    margin-bottom: 4px;
+    font-size: var(--fs-xs);
+    color: var(--faint);
+  }
+  .tile-v {
+    font-weight: 800;
+  }
+  /* 판정 한 줄: 색 판(빨강 · 주황 · 초록) */
+  .item-verdict {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: var(--r-btn);
+    font-size: var(--fs-body);
+    font-weight: 700;
+  }
+  .item-verdict.v-green {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .item-verdict.v-orange {
+    background: var(--orange-soft);
+    color: var(--orange);
+  }
+  .item-verdict.v-red {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+  .item-verdict .c-orange,
+  .item-verdict .c-red {
+    color: inherit;
+  }
+  /* 서류 꼬리표: 한 줄로 옆으로 넘김 · 12 굵게 */
+  .item-tags {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 12px -20px 0;
+    padding: 0 20px;
+    scrollbar-width: none;
+  }
+  .item-tags > * {
+    flex: none;
+  }
+  .item-tags .chip {
+    padding: 5px 9px;
+    border-radius: var(--r-xs);
+    font-weight: 700;
+  }
+  /* 사진: 120 × 96 */
+  .item-top .photo-thumb img {
+    height: 96px;
+    border-radius: var(--r-btn);
+  }
+  /* 머리 관심 하트: 40 칸 · 그림 22 */
+  .topbar:has(~ .item-top) .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+@media (max-width: 1023px) {
+  /* 서류 채우고 포인트 받기 띠: 연파랑 판 · 동그라미 30 */
+  .pt-band:not(.ac-band) {
+    background: var(--blue-soft);
+  }
+  .pt-band-coin {
+    width: 30px;
+    height: 30px;
+  }
+}
+@media (max-width: 1023px) {
+  .pt-band:not(.ac-band) b {
+    font-size: var(--fs-md);
+  }
+  .pt-band:not(.ac-band) .pt-band-sub {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+}
+/* 휴대폰 질문 머리(11/23 M-DetailQ): 작은 이름 12 굵게 · 답 17 · 800 */
+@media (max-width: 1023px) {
+  .q-sec .q-label {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+  }
+  .q-sec .q-answer {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--fs-head);
+    font-weight: 800;
+    line-height: 1.4;
+  }
 }

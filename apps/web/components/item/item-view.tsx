@@ -42,6 +42,18 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
     if (moved) window.scrollBy(0, moved);
   }, [open]);
   const [copied, setCopied] = useState(false);
+  const verdict = (
+    <Verdict text={d.verdict} tone={d.questions.find((q) => q.key === "hold")?.tone} />
+  );
+  // 휴대폰 「바로 꺼내 보기」(11/23 M-Detail): 칩을 누르면 그 칸이 든 질문을 펼치고, 그려진 뒤 그 칸으로
+  const [jump, setJump] = useState<string | null>(null);
+  useEffect(() => {
+    if (!jump) return;
+    const el = document.getElementById(jump);
+    if (el instanceof HTMLDetailsElement) el.open = true;
+    el?.scrollIntoView({ block: "start" });
+    setJump(null);
+  }, [jump, open]);
   // PC 왼쪽 목차: 지금 보이는 질문(11/22 디자인 — 연파랑 판)
   const [onQ, setOnQ] = useState(0);
   useEffect(() => {
@@ -170,7 +182,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
       />
       {d.fatal && <div className="fatal">{d.fatal}</div>}
       {!pc && d.d_day != null && d.d_day >= 0 && d.d_day <= 1 && (
-        <Link href={`/item/${id}/bid-day`} className="btn soft sm mt-8">
+        <Link href={`/item/${id}/bid-day`} className="bd-chip">
           {copy.bidDay.title}
         </Link>
       )}
@@ -181,7 +193,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             <div className="sub">
               <DDay d={d.d_day} /> · {d.sale_date} · {d.court} {d.case_no}
             </div>
-            <h1 className="fs-base fw-6 mt-4 mb-0">{title}</h1>
+            <h1 className="item-title">{title}</h1>
           </>
         )}
         <div className="item-price">
@@ -192,6 +204,8 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
           </span>
         </div>
         {!closed && <CapLine id={d.item_id} minPrice={d.min_price_krw} />}
+        {/* 휴대폰(11/23 M-Detail): 판정 판을 값 바로 아래 · PC 는 숫자 칸 아래 그대로 */}
+        {!pc && verdict}
         <div className="band-grid tiles mt-14">
           {nums.map(([k, v]) => (
             <div key={k} className={k === t.nextRound ? "tile-wide" : undefined}>
@@ -201,10 +215,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
           ))}
         </div>
         <OutcomeBand d={d} />
-        <Verdict
-          text={d.verdict}
-          tone={pc ? d.questions.find((q) => q.key === "hold")?.tone : undefined}
-        />
+        {pc && verdict}
         {!closed && d.court_interest && d.court_interest.n > 0 && (
           <div className="sub fs-sm mt-6">
             {copy.interest.court(d.court_interest.n, d.court_interest.at)}
@@ -214,7 +225,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         <SameHouse list={d.same_house} />
         {!closed && <SameBuilding v={d.same_building} />}
         <ItemPhotos list={d.photos} />
-        <div className="d-flex gap-6 f-wrap ai-center mt-10">
+        <div className="item-tags">
           {d.tags.map((x) => (
             <span key={x.label} className={`chip ${x.ok ? "green" : "gray"}`}>
               {x.label}
@@ -232,6 +243,26 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
         </div>
       </section>
       {!closed && <PointsBand id={d.item_id} reg={reg} pdf={d.appraisal?.pdf_url} />}
+      {!pc && (
+        <div className="q-jump-m">
+          <p className="q-jump-t">{t.panel.jump}</p>
+          <div className="m-chips quiet-scroll">
+            {t.panel.jumps.map(([k, label]) => (
+              <button
+                key={k}
+                className="fc-chip"
+                onClick={() => {
+                  const q = JUMP_Q[k];
+                  if (q && d.questions.some((x) => x.key === q)) setOpen(q);
+                  setJump(k);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="pc-grid g-14-62-24">
         {pc && (
@@ -361,13 +392,25 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
 }
 
 const ROUND_CHIP: Record<string, string> = { 예정: "blue", 유찰: "gray", 매각: "green" };
+// 「바로 꺼내 보기」 칸 → 그 칸이 든 질문(휴대폰은 질문이 접혀 있어 먼저 펼침)
+const JUMP_Q: Record<string, string> = {
+  station: "buy",
+  building: "buy",
+  tenant: "hold",
+  fail: "hold",
+  calc: "cost",
+  "q-check": "check",
+};
 
 // 판정 한 줄(11/22 디자인): 「신호 — 설명 · 확인할 것 N가지」면 앞 신호를 ◆ 주황(빨강)으로
 function Verdict({ text, tone }: { text: string; tone?: string }) {
   const i = text.lastIndexOf(" · ");
-  if ((tone !== "orange" && tone !== "red") || i < 0) return <p className="item-verdict">{text}</p>;
+  // 휴대폰(11/23 M-Detail): 판정 한 줄을 색 판에 — 빨강 · 주황 · 그 밖은 초록
+  const box = tone === "red" ? "v-red" : tone === "orange" ? "v-orange" : "v-green";
+  if ((tone !== "orange" && tone !== "red") || i < 0)
+    return <p className={`item-verdict ${box}`}>{text}</p>;
   return (
-    <p className="item-verdict">
+    <p className={`item-verdict ${box}`}>
       <span className={tone === "red" ? "c-red" : "c-orange"}>◆ {text.slice(0, i)}</span>
       {text.slice(i)}
     </p>

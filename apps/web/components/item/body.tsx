@@ -225,8 +225,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
     const hit = fc["걸림"] ?? 0;
     return (
       <>
-        {/* PC(11/22 디자인): 위험 신호를 맨 위 한 판에 */}
-        {pc && signalBox}
+        {/* 위험 신호를 맨 위 한 판에(PC 11/22 · 휴대폰 11/23 디자인) */}
+        {signalBox}
         <Panel id="tenant" title={P.tenant} sum={tenantSum}>
           {b.tenants.length === 0 && (
             <p className="sub">{b.status_report ? t.tenantsNoneSeen : t.tenantsNone}</p>
@@ -268,7 +268,6 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             <div className="sub mt-4">{t.failureTableNote}</div>
           </Panel>
         )}
-        {!pc && signalBox}
         {!d.outcome?.closed && (
           <>
             <RegistryBox />
@@ -298,7 +297,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
   if (q.key === "worth")
     return (
       <>
-        {pc && worthLinks}
+        {/* 실거래 · 시세 링크를 맨 위 한 줄로(PC 11/22 · 휴대폰 11/23) */}
+        {worthLinks}
         {d.court_bidders?.avg != null && (
           <Row
             label={copy.me.courtBidders}
@@ -372,7 +372,6 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
             ))}
           </>
         )}
-        {!pc && worthLinks}
         {b.complex && <ComplexBlock cx={b.complex} />}
         <GoLinks keys={["kb", "kapt"]} d={d} />
       </>

@@ -67,7 +67,7 @@ function Chart({ d, wide }: { d: ItemTrades; wide?: boolean }) {
             fill="var(--muted)"
             textAnchor="middle"
           >
-            {String(x.y).slice(2)}
+            {x.y}
           </text>
         ))}
       </svg>
@@ -161,7 +161,7 @@ export default function TradesPage() {
       ) : (
         <>
           <section className="section">
-            <div className="fs-base fw-6">{t.head(d.name, d.built)}</div>
+            <div className={pc ? "fs-base fw-6" : "fs-lg fw-7"}>{t.head(d.name, d.built)}</div>
             <div className="pills mt-8 area-pick" role="group" aria-label={t.areaNote}>
               {d.areas.map((a) => (
                 <button
@@ -172,7 +172,7 @@ export default function TradesPage() {
                     setArea(a.area);
                   }}
                 >
-                  {a.area === d.area && pc ? "✓ " : ""}
+                  {a.area === d.area ? "✓ " : ""}
                   {t.area(a.area)}
                 </button>
               ))}

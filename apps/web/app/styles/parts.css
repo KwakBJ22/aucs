@@ -459,14 +459,19 @@ th.num {
 }
 
 /* 화면 아래에 붙는 주 버튼(휴대폰, 아래 탭 바로 위) */
+/* 11/23 M-Detail: 아래 탭 바로 위 · 그림자 대신 바탕색으로 흐려지는 띠(뒤 글이 버튼 밑으로 비치지 않게) */
 .cta-bar {
   position: sticky;
-  bottom: calc(88px + env(safe-area-inset-bottom));
+  bottom: calc(62px + max(14px, env(safe-area-inset-bottom)));
   z-index: 5;
-  margin-top: 8px;
+  margin: 8px calc(-1 * var(--page-x)) 0;
+  padding: 10px var(--page-x) 12px;
+  background: linear-gradient(rgba(242, 244, 246, 0), var(--bg) 30%);
 }
 .cta-bar .btn {
-  box-shadow: 0 6px 20px rgba(31, 94, 234, 0.25);
+  min-height: 54px;
+  border-radius: var(--r-panel);
+  font-size: var(--fs-base);
 }
 
 /* 스켈레톤(11/4): 자료를 기다리는 동안 그 화면 모양 그대로 연한 판을 깔아 둠 — 선 없이 면만, 은은하게 밝아졌다 어두워짐 */
