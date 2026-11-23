@@ -761,6 +761,33 @@
   height: 20px;
   margin-top: 2px;
 }
+/* 휴대폰에서 이름 칸이 한 글자씩 세로로 꺾이고 값이 화면 밖으로 넘치던 것(11/23 — 내 정보 관심 지역 · 결제 포함):
+   이름(.sub)은 줄지 않게, 값은 남은 폭 안에서 줄바꿈 */
+.line-row > .sub:first-child {
+  flex-shrink: 0;
+}
+.line-row > .sub:first-child + * {
+  flex: 0 1 auto; /* .line-row > b 의 「줄지 않음 · 줄바꿈 안 함」보다 앞섬 — 짧은 값은 그대로 한 줄 */
+  min-width: 0;
+  white-space: normal;
+  text-align: right;
+}
+/* 시장 분석 「크게 빗나간 사례」: 좁으면 예상·실제 줄을 아래로(11/23 — 실제 %가 화면 밖으로 넘침) */
+.miss-row {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.miss-row > :first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+/* 사건 한 장 머리: 좁으면 단추를 아래 줄로(11/23 — 제목 「2021타경2 442」가 끊김) */
+.case-head {
+  flex-wrap: wrap;
+}
+.case-head > :first-child {
+  flex: 1 1 220px;
+}
 .line-row {
   display: flex;
   justify-content: space-between;

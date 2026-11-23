@@ -78,7 +78,7 @@ function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
   return (
     <div>
       <PrintHead title={t.printBrand} sub={`${d.court} ${d.case_no}`} date={todayKst()} />
-      <div className="d-flex jc-between ai-start gap-12">
+      <div className="d-flex jc-between ai-start gap-12 case-head">
         <div className="minw-0">
           <div className="sub">
             {d.court} {d.case_no}

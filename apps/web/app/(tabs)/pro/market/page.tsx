@@ -166,7 +166,10 @@ function ProMarket() {
               <>
                 <div className="fs-md fw-7 mt-12">{t.misses}</div>
                 {m.misses.map((r) => (
-                  <div key={`${r.court}${r.case_no}${r.sale_date}`} className="line-row fs-md">
+                  <div
+                    key={`${r.court}${r.case_no}${r.sale_date}`}
+                    className="line-row fs-md miss-row"
+                  >
                     <span>
                       {r.item_id ? (
                         <Link prefetch={false} href={`/item/${encodeURIComponent(r.item_id)}`}>

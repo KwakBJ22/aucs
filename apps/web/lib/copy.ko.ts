@@ -1781,7 +1781,9 @@ export const copy = {
     cardSaved: (x: string) => `등록된 카드 · ${x}`,
     payCard: (price: string) => `카드 등록하고 ${price} 결제`,
     opening: "결제창을 여는 중…",
-    until: (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}까지`,
+    // 올해가 아니면 연도도(11/23 — 1년권 「11/22까지」가 올해로 읽힘)
+    until: (d: string) =>
+      `${Number(d.slice(0, 4)) !== new Date().getFullYear() ? `${d.slice(0, 4)}년 ` : ""}${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}까지`,
     done: {
       checking: "결제를 확인하고 있어요…",
       paid: "결제를 마쳤어요",
