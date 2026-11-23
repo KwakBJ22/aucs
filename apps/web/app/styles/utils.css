@@ -204,18 +204,14 @@
 .p-14 {
   padding: 14px !important;
 }
-.p-20 {
-  padding: 20px !important;
-}
+
 .p-24 {
   padding: 24px !important;
 }
 .p-4 {
   padding: 4px !important;
 }
-.p-8 {
-  padding: 8px !important;
-}
+
 .pb-0 {
   padding-bottom: 0 !important;
 }
@@ -234,9 +230,7 @@
 .pb-32 {
   padding-bottom: 32px !important;
 }
-.pb-4 {
-  padding-bottom: 4px !important;
-}
+
 .pb-6 {
   padding-bottom: 6px !important;
 }
@@ -249,9 +243,7 @@
 .pl-48 {
   padding-left: 48px !important;
 }
-.pl-6 {
-  padding-left: 6px !important;
-}
+
 .pr-0 {
   padding-right: 0 !important;
 }
@@ -277,10 +269,7 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
-.px-10 {
-  padding-left: 10px !important;
-  padding-right: 10px !important;
-}
+
 .px-12 {
   padding-left: 12px !important;
   padding-right: 12px !important;
@@ -301,10 +290,7 @@
   padding-left: 20px !important;
   padding-right: 20px !important;
 }
-.px-4 {
-  padding-left: 4px !important;
-  padding-right: 4px !important;
-}
+
 .px-6 {
   padding-left: 6px !important;
   padding-right: 6px !important;
@@ -313,10 +299,7 @@
   padding-left: 8px !important;
   padding-right: 8px !important;
 }
-.py-0 {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
+
 .py-10 {
   padding-top: 10px !important;
   padding-bottom: 10px !important;
@@ -333,14 +316,7 @@
   padding-top: 2px !important;
   padding-bottom: 2px !important;
 }
-.py-24 {
-  padding-top: 24px !important;
-  padding-bottom: 24px !important;
-}
-.py-28 {
-  padding-top: 28px !important;
-  padding-bottom: 28px !important;
-}
+
 .py-32 {
   padding-top: 32px !important;
   padding-bottom: 32px !important;
@@ -378,9 +354,7 @@
 .bg-line {
   background: var(--line) !important;
 }
-.bg-none {
-  background: none !important;
-}
+
 .bg-orange-soft {
   background: var(--orange-soft) !important;
 }
@@ -393,9 +367,7 @@
 .c-amber {
   color: var(--amber) !important;
 }
-.c-blue {
-  color: var(--blue) !important;
-}
+
 .c-blue-text {
   color: var(--blue-text) !important;
 }
@@ -417,9 +389,7 @@
 .c-red {
   color: var(--red) !important;
 }
-.c-text {
-  color: var(--text) !important;
-}
+
 .cur-pointer {
   cursor: pointer !important;
 }
@@ -465,21 +435,11 @@
 .lh-16 {
   line-height: 1.6 !important;
 }
-.mh-28 {
-  min-height: 28px !important;
-}
+
 .mh-30 {
   min-height: 30px !important;
 }
-.mh-32 {
-  min-height: 32px !important;
-}
-.mh-36 {
-  min-height: 36px !important;
-}
-.mh-40 {
-  min-height: 40px !important;
-}
+
 .mh-44 {
   min-height: 44px !important;
 }
@@ -501,18 +461,14 @@
 .r-10 {
   border-radius: 10px !important;
 }
-.r-12 {
-  border-radius: 12px !important;
-}
+
 .r-14 {
   border-radius: 14px !important;
 }
 .r-16 {
   border-radius: 16px !important;
 }
-.r-20 {
-  border-radius: 20px !important;
-}
+
 .r-4 {
   border-radius: 4px !important;
 }
@@ -528,10 +484,10 @@
 .ta-right {
   text-align: right !important;
 }
-.td-none {
-  text-decoration: none !important;
-}
+
 .w-full {
   width: 100% !important;
 }
-.pos-fixed { position: fixed !important; }
+.pos-fixed {
+  position: fixed !important;
+}

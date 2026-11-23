@@ -257,8 +257,7 @@ th.num {
 /* 줄 안 칸은 좁아지면 접힘(min-width:0) — 긴 글이 줄을 화면 밖으로 밀지 않음(11/11) */
 .menu-row > *,
 .line-row > *,
-.cond-row > *,
-.switch-row > * {
+.cond-row > * {
   min-width: 0;
 }
 .menu-row {

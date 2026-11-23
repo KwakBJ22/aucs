@@ -1,0 +1,393 @@
+/* 결제(11/22 디자인): 가운데 560 · 금액 파랑 · 수단 세 칸 두 줄(고른 것 연파랑 테두리) */
+.co-title {
+  margin: 4px 0 8px;
+}
+.co-row {
+  font-size: 15px;
+}
+.co-total {
+  margin-top: 8px;
+  /* 디자인(11/22)은 위 여백 14였으나 공통 .line-row(10)가 덮어 실제로는 10 — 11/23 정리 때 보이는 그대로 둠(2단계에서 다시 정함) */
+}
+.co-price {
+  color: var(--blue-text);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+}
+.co-methods {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.co-methods button {
+  min-height: 56px;
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.co-methods button.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.co-refund {
+  margin: 12px 4px;
+}
+@media (min-width: 1024px) {
+  .page.narrow.checkout {
+    max-width: 560px;
+  }
+  .co-price {
+    font-size: 28px;
+  }
+}
+/* 로그인(11/22 디자인) */
+.login-card.section {
+  padding: 48px 24px 32px;
+  text-align: center;
+}
+.login-brand {
+  color: var(--blue);
+  font-size: 26px;
+  font-weight: 800;
+}
+.login-title {
+  margin: 14px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+.login-body {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+@media (min-width: 1024px) {
+  .page.narrow:has(.login-card) {
+    max-width: 460px;
+  }
+  .login-card.section {
+    padding: 52px 40px 36px;
+  }
+}
+/* 알림함(11/22 디자인): 건수 파랑 · 제목 굵게(읽은 것은 보통) · PC 칸 사이 16 */
+.noti-n {
+  color: var(--blue-text);
+  font-size: var(--fs-base);
+}
+.noti-t {
+  font-weight: 700;
+  line-height: 1.45;
+}
+.noti-t.read {
+  font-weight: 500;
+}
+@media (min-width: 1024px) {
+  .noti-grid {
+    gap: 16px;
+  }
+  .noti-grid > .section {
+    padding: 24px;
+    border-radius: 20px;
+  }
+  .noti-grid .section h2 {
+    font-size: var(--fs-xl);
+  }
+}
+/* 고객센터·약관(11/7): 접는 질문 줄, 조항 */
+.faq {
+  padding: 6px 0;
+}
+.faq + .faq {
+  box-shadow: inset 0 1px 0 var(--panel);
+}
+.faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: "›";
+  color: var(--faint);
+  transform: rotate(90deg);
+}
+.faq[open] summary::after {
+  transform: rotate(-90deg);
+}
+.faq p {
+  margin: 10px 0 0;
+  font-size: var(--fs-md);
+  color: var(--gray-text);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.legal-item + .legal-item {
+  margin-top: 24px;
+}
+.legal h2,
+.legal-item h2 {
+  font-size: var(--fs-base);
+  margin: 0 0 8px;
+}
+.legal-item p,
+.legal-item li {
+  margin: 0;
+  font-size: var(--fs-md);
+  color: var(--gray-text);
+  line-height: 1.7;
+}
+.legal-item ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.legal-item li + li {
+  margin-top: 6px;
+}
+/* 이용권(11/22 디자인): 고른 칸 파란 테두리 · 값 32 · 항목 15 · 환불 규칙 14 */
+.plan-seg {
+  max-width: 420px;
+}
+.plan-card.on {
+  outline: 2px solid var(--blue);
+}
+.plan-price {
+  margin-top: 4px;
+  font-size: var(--fs-3xl);
+  font-weight: 700;
+}
+.plan-line {
+  font-size: var(--fs-md);
+}
+.plan-rule {
+  margin: 0;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+@media (min-width: 1024px) {
+  .plan-price {
+    margin: 14px 0 4px;
+    font-size: 32px;
+    font-weight: 800;
+  }
+  .plan-what {
+    margin-bottom: 10px;
+    color: var(--faint);
+  }
+  .plan-line {
+    padding: 11px 0;
+    font-size: 15px;
+  }
+  .plan-rule {
+    padding: 7px 0;
+    color: var(--text-2);
+    font-size: var(--fs-md);
+  }
+}
+/* ══ 포인트 벌기 맨 위(11/12 대표님 — 취지·혜택을 짧게, 너무 썰렁하지 않게) */
+.pt-hero {
+  position: relative;
+  overflow: hidden;
+  margin-top: 8px;
+  padding: 24px 20px 20px;
+  border-radius: var(--r-card);
+  background: linear-gradient(135deg, var(--blue-soft) 0%, var(--surface) 70%);
+}
+.pt-coin {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 112px;
+  height: 112px;
+  opacity: 0.18;
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pt-hero-title {
+  position: relative;
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.35;
+  white-space: pre-line;
+}
+.pt-hero-body {
+  position: relative;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+.pt-perks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.pt-perks > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+.pt-perks span {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.pt-perks b {
+  color: var(--blue-text);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+.pt-hero-pay {
+  margin: 10px 0 0;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.pt-steps {
+  display: flex;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pt;
+}
+.pt-steps li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: center;
+  counter-increment: pt;
+}
+.pt-steps li::before {
+  content: counter(pt);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--on-strong);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+}
+/* 포인트 UP! 목록 줄(11/22 디자인): 이름 · 사건 왼쪽, 단추 오른쪽(휴대폰은 아래로) */
+.pt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 14px;
+}
+.pt-row-name {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pt-row-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pt-row-open {
+  flex-basis: 100%;
+}
+@media (min-width: 1024px) {
+  .pt-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+    gap: 32px;
+    align-items: center;
+    padding: 36px 32px;
+    border-radius: var(--r-card-pc);
+    background: var(--surface);
+  }
+  .pt-coin {
+    display: none; /* PC 는 오른쪽 두 칸이 대신(11/22 디자인) */
+  }
+  .pt-hero-title {
+    font-size: 26px;
+  }
+  .pt-hero-body {
+    margin: 10px 0 18px;
+    font-size: 15px;
+  }
+  .pt-steps li {
+    font-size: var(--fs-md);
+  }
+  .pt-steps li::before {
+    width: 32px;
+    height: 32px;
+  }
+  .pt-perks {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 0;
+  }
+  .pt-perks > div {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px;
+    border-radius: 18px;
+    background: var(--panel);
+  }
+  .pt-perks > div:first-child {
+    background: var(--blue-soft);
+  }
+  .pt-perks span {
+    color: var(--text);
+    font-size: var(--fs-base);
+    font-weight: 600;
+  }
+  .pt-perks b {
+    color: var(--text-2);
+    font-size: 28px;
+  }
+  .pt-perks > div:first-child b {
+    color: var(--blue-text);
+  }
+  .pt-hero-pay {
+    margin: 14px 4px 0;
+  }
+  .pt-balance {
+    font-size: 36px;
+  }
+  .pt-row {
+    margin: 0 -12px;
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+  .pt-row:hover {
+    background: var(--soft);
+  }
+  .pt-row-name b {
+    font-size: var(--fs-base);
+    font-weight: 600;
+  }
+}

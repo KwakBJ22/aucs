@@ -1,0 +1,635 @@
+@media (min-width: 1024px) {
+  .sig-chip {
+    white-space: normal;
+  }
+}
+/* 감정평가서 한 줄 주황 판(11/23 — 11/22 디자인 DetailTypes) */
+.appr-line {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-size: var(--fs-md);
+}
+.band-grid.tiles > .tile-wide {
+  grid-column: 1 / -1;
+}
+@media (min-width: 1024px) {
+  .band-grid.tiles > .tile-wide {
+    grid-column: auto;
+  }
+}
+/* PC 물건 상세 */
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 1024px) {
+  .band-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 2%;
+  }
+}
+.pc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pc-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 4px 12px;
+  line-height: 1.3;
+  border-radius: 14px;
+  border: 0;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .pc-act:hover {
+    background: var(--band);
+  }
+}
+/* PC 물건 상세 핵심 숫자(11/7 토스풍): 숫자마다 연한 판 */
+.band-grid.tiles > div {
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+@media (min-width: 1024px) {
+  .band-grid.tiles {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+}
+/* 입찰가 계산(11/7 토스풍): 집 수 고르기·낮게/보통/높게·큰 금액 */
+.tier-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12px 6px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--gray-text);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.tier-btn.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  box-shadow: inset 0 0 0 2px var(--blue);
+}
+.tier-btn.on .sub {
+  color: var(--blue-text);
+}
+.calc-range {
+  width: 100%;
+  margin-top: 20px;
+  accent-color: var(--blue);
+}
+.cash-total {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+@media (min-width: 1024px) {
+  .cash-total {
+    font-size: 26px;
+  }
+}
+/* 같은 단지 분기별 거래 막대(11/7): 막대 위 금액, 맨 끝(최근)만 진하게, 0부터 그림 */
+.q-chart {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel);
+}
+.q-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 140px;
+  margin-top: 8px;
+}
+.q-col {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+.q-val {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--gray-text);
+  white-space: nowrap;
+}
+.q-bar {
+  width: 100%;
+  max-width: 44px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--blue-soft);
+}
+.q-bar.last {
+  background: var(--blue);
+}
+.q-lbl {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.q-track {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* ── 물건 상세 PC(11/22 디자인) ── */
+/* 「여기까지 쓰면 싸게 사요」 칸: 최저가로도 비싸면 연한 빨강 판 */
+.cap-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.cap-box.under {
+  background: var(--red-soft);
+}
+.cap-v {
+  margin-top: 2px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+@media (min-width: 1024px) {
+  .cap-box {
+    padding: 16px 20px;
+    border-radius: 16px;
+  }
+  .cap-v {
+    font-size: 19px;
+    font-weight: 800;
+  }
+}
+.tile-v {
+  margin-top: 2px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+.item-price-sub {
+  display: inline-block;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.item-verdict {
+  margin: 14px 0 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.q-label {
+  display: block;
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+.hold-sigs .sig {
+  padding: 6px 0;
+  color: var(--amber);
+  font-size: var(--fs-md);
+}
+.hold-sigs .sig.fatal-t {
+  color: var(--red);
+}
+.tr-chart {
+  max-width: 520px;
+}
+/* 입찰가 계산 상자(상세 · 계산 화면 같은 부품) PC(11/22 디자인) */
+.homes-seg {
+  display: contents;
+}
+@media (min-width: 1024px) {
+  .homes-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+  }
+  .homes-row > .d-flex {
+    margin-top: 0;
+    gap: 14px;
+  }
+  .homes-seg {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--line);
+  }
+  .homes-seg .seg-btn {
+    min-height: 36px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .homes-seg .seg-btn.on {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .kv-left .calc-box .kv,
+  .calc-box .kv {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-size: 15px;
+  }
+  .calc-box .kv > :first-child {
+    color: var(--text);
+    font-size: 15px;
+  }
+  .calc-box .kv-v {
+    font-weight: 700;
+    text-align: right;
+  }
+  .calc-box .cash-total {
+    color: var(--blue-text);
+    font-size: 32px;
+    font-weight: 800;
+  }
+  .num-card .kv {
+    padding: 9px 0;
+    font-size: 15px;
+  }
+  .num-card .kv > :first-child {
+    color: var(--text-2);
+    font-size: 15px;
+  }
+  .num-card .kv-v {
+    font-weight: 700;
+  }
+  .tr-chart {
+    max-width: none;
+    margin-top: 20px;
+  }
+  /* 면적 고르기: 고른 것은 연파랑 + ✓(11/22 — 검색 조건 칩과 같은 꼴), 나머지는 글자만 */
+  .area-pick button {
+    background: transparent;
+    color: var(--text-2);
+    font-weight: 600;
+  }
+  .area-pick button.on {
+    background: var(--blue-soft);
+    color: var(--blue-text);
+  }
+  .kv-hl {
+    margin: 0 -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 12px;
+    background: var(--blue-soft);
+  }
+}
+.go-inline {
+  margin-left: 6px;
+  font-weight: 600;
+}
+.go-inline a {
+  margin-right: 8px;
+}
+.worth-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+}
+@media (min-width: 1024px) {
+  .item-top.section {
+    padding: 28px 32px;
+  }
+  /* 관심 하트: 흰 네모 48(11/22 디자인) */
+  .topbar:has(~ .item-top) .icon-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  .topbar:has(~ .item-top) .brand {
+    font-size: 30px;
+  }
+  .item-top .item-price {
+    font-size: 36px;
+  }
+  .item-price-sub {
+    margin-left: 4px;
+    color: var(--faint);
+    font-size: 15px;
+    font-weight: 400;
+  }
+  .item-top .band-grid.tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .item-top .band-grid.tiles > div {
+    padding: 16px 18px;
+    background: var(--soft);
+  }
+  .item-top .band-grid.tiles .sub {
+    margin-bottom: 6px;
+    color: var(--faint);
+  }
+  .tile-v {
+    font-size: var(--fs-lg);
+    font-weight: 800;
+  }
+  .item-verdict {
+    font-weight: 700;
+  }
+  .item-top .chip {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+  /* 왼쪽 목차 210 | 가운데 | 오른쪽 할 일 280 */
+  .item-top ~ .pc-grid.g-14-62-24 {
+    grid-template-columns: 210px minmax(0, 1fr) 280px;
+  }
+  .item-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .item-nav .section {
+    margin: 0;
+  }
+  .q-toc.section {
+    padding: 8px;
+    border-radius: 20px;
+  }
+  .q-toc a {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+  .q-toc a.on {
+    background: var(--blue-soft);
+    font-weight: 400;
+  }
+  .q-toc-t {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--faint);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+  }
+  .q-toc a.on .q-toc-t {
+    color: var(--blue-text);
+  }
+  .q-toc-a {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text);
+  }
+  .q-jump.section {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .q-jump-t {
+    margin: 0 0 10px;
+    color: var(--faint);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+  }
+  .q-jump a {
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+  .q-sec.section {
+    padding: 28px;
+    border-radius: 20px;
+  }
+  .q-sec .q-label {
+    font-size: var(--fs-md);
+    font-weight: 700;
+  }
+  .q-sec .q-answer {
+    display: block;
+    margin-top: 6px;
+    font-size: var(--fs-2xl);
+    font-weight: 800;
+    line-height: 1.35;
+  }
+  /* 묶음 칸: 회색 판 · 머리 줄 16 굵게 + 요약 14 · 접힘 표시 */
+  .q-panel {
+    margin-top: 14px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .q-panel > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    list-style: none;
+    cursor: pointer;
+  }
+  .q-panel > summary::-webkit-details-marker {
+    display: none;
+  }
+  .q-panel > summary b {
+    flex: none;
+    font-size: var(--fs-base);
+  }
+  .qp-sum {
+    flex: 1;
+    min-width: 0;
+    color: var(--muted);
+    font-size: var(--fs-md);
+  }
+  .q-panel > summary::after {
+    content: "›";
+    color: var(--faint);
+    transform: rotate(90deg);
+  }
+  .q-panel[open] > summary::after {
+    transform: rotate(-90deg);
+  }
+  .qp-body {
+    padding: 0 18px 18px;
+  }
+  /* 무엇을 사나: 지도 | 입지 칸 */
+  .buy-top {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .buy-top:not(:has(.buy-loc)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .buy-loc {
+    padding: 18px;
+    border-radius: 16px;
+    background: var(--soft);
+    font-size: var(--fs-md);
+  }
+  .hold-sigs {
+    margin-top: 14px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .hold-sigs .sig {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--orange);
+  }
+  .fail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-md);
+  }
+  .fail-table td {
+    padding: 10px 6px;
+    vertical-align: middle;
+  }
+  .fail-table .ft-code {
+    width: 40px;
+    color: var(--faint);
+  }
+  .fail-table .ft-title {
+    width: 150px;
+  }
+  .worth-links {
+    margin: 10px 0 4px;
+  }
+  .cost-days {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .cost-days > div {
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .cost-days b {
+    display: block;
+    margin-top: 6px;
+    font-size: var(--fs-lg);
+    font-weight: 800;
+  }
+  .cost-calc {
+    margin-top: 16px;
+    padding: 22px;
+    border-radius: 20px;
+    background: var(--soft);
+  }
+  /* 이름 · 값 줄: 이름 120 옅게, 값 15 굵게 */
+  .kv-left .kv {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 2px 16px;
+    padding: 9px 0;
+  }
+  .kv-left .kv > :first-child {
+    color: var(--faint);
+    font-size: var(--fs-md);
+  }
+  .kv-left .kv-v {
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+/* 물건 상세 한 벌(11/8): 질문 머리(휴대폰은 눌러 펼침, PC는 늘 펼침) · 큰 최저가 · 할 일 칸 */
+.q-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.q-head:disabled {
+  cursor: default;
+  color: inherit;
+  opacity: 1;
+}
+.q-answer {
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+.item-price {
+  margin-top: 6px;
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+@media (min-width: 1024px) {
+  .q-answer {
+    font-size: var(--fs-xl);
+    font-weight: 700;
+  }
+  .item-price {
+    margin-top: 0;
+    font-size: 34px;
+  }
+  .pc-actions .btn {
+    min-height: 46px;
+  }
+}
+/* 물건 상세 맨 위 「서류 채우고 포인트 받기」 띠(11/12) */
+.pt-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-panel);
+  background: linear-gradient(135deg, var(--blue-soft) 0%, var(--surface) 90%);
+  color: var(--text);
+  text-decoration: none;
+}
+.pt-band-coin {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pt-band-sub {
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.pt-band-go {
+  flex: none;
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}

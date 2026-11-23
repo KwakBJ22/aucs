@@ -1,0 +1,129 @@
+/* 현장 체크 사진 */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+.field-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--gray-chip);
+}
+.field-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.field-item button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+/* 사진 지우기: 보이는 크기는 28, 누르는 자리는 44 */
+.field-item button::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.field-voice {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.field-voice audio {
+  flex: 1;
+  min-width: 0;
+}
+/* PC 관심 보드(11/22 디자인: 칸 176 · 둥글기 16 · 빈 칸도 같은 폭) */
+.board {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  overflow-x: auto;
+}
+.board-col {
+  flex: 0 0 176px;
+  min-width: 176px;
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 10px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.board-head {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  padding: 4px 4px 6px;
+  white-space: nowrap;
+}
+/* 관심 작업 공간 단계: 고른 단계는 연파랑 + ✓(11/22 디자인) */
+.step-pills .pill {
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.step-pills .pill.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.board-card {
+  text-align: left;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 10px;
+  color: var(--text);
+}
+.board-card.on {
+  outline: 2px solid var(--blue);
+}
+/* 내 경매(11/22 디자인): 소제목 · 결과 적기 판(단추 네 칸) · 빈 칸 판 */
+.me-h {
+  font-size: var(--fs-base);
+}
+@media (min-width: 1024px) {
+  .me-h {
+    font-size: var(--fs-xl);
+  }
+  .rec-form {
+    margin-top: 10px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .rec-btns {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .rec-btns .pill {
+    background: var(--surface);
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .rec-btns .pill.on {
+    background: var(--text);
+    color: var(--surface);
+  }
+}
+/* 현장 체크(11/22 디자인): 물어볼 말 판 · 확인한 줄은 줄 긋기 */
+.field-ask {
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--soft);
+}
+.field-done {
+  color: var(--faint);
+  text-decoration: line-through;
+}

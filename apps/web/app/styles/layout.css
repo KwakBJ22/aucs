@@ -83,7 +83,6 @@
   }
   .topbar {
     height: auto;
-    padding: 4px 0 8px;
     gap: 12px;
   }
   .topbar .brand {
@@ -361,9 +360,7 @@
   .pc-grid.g-20-80 {
     grid-template-columns: 20fr 80fr;
   }
-  .pc-grid.g-18-34-48 {
-    grid-template-columns: 18fr 34fr 48fr;
-  }
+
   .pc-grid.g-14-62-24 {
     grid-template-columns: 14fr 62fr 24fr;
   }
@@ -373,16 +370,12 @@
   .pc-grid.g-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .pc-grid.g-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px 2%;
-  }
+
   .pc-grid.g-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px 1.5%;
   }
-  .pc-grid.g-5 > .section,
-  .pc-grid.g-4 > .section {
+  .pc-grid.g-5 > .section {
     margin: 0;
   }
   .pc-grid.g-2x2 {
@@ -405,12 +398,6 @@
   }
 }
 @media (min-width: 1024px) and (max-width: 1279px) {
-  .pc-grid.g-18-34-48 {
-    grid-template-columns: 26fr 74fr;
-  }
-  .pc-grid.g-18-34-48 > :nth-child(3) {
-    grid-column: 1 / -1;
-  }
   .pc-grid.g-14-62-24 {
     grid-template-columns: 70fr 30fr;
   }

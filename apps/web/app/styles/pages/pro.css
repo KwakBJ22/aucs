@@ -1,0 +1,582 @@
+/* 한 화면에서만 쓰는 것(비교함·전체 물건 표·입찰표·현장 체크·PC 상세·작업 공간·보드·찾기·한 장 보고서) */
+/* 비교함 표: 휴대폰은 옆으로 밀어 보기, PC는 넓게 */
+.compare-table {
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 100%;
+}
+.compare-table th,
+.compare-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 12px;
+  min-width: 180px;
+}
+/* 물건 이름 칸은 접힘 — 첫 칸(이름표)은 낱말 단위로만 접히고 옆으로 넘겨도 제자리(11/11) */
+.compare-table thead th {
+  white-space: normal;
+}
+.compare-table th:first-child,
+.compare-table td:first-child {
+  min-width: 7em;
+  max-width: 8em;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+/* PC 전문가: 전체 물건 표 */
+.pro-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.pro-row:last-child {
+  margin-bottom: 0;
+}
+.pro-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.pro-summary > div {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.pro-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+.pro-table th,
+.pro-table td {
+  text-align: left;
+  padding: 8px 10px;
+
+  white-space: nowrap;
+}
+.pro-table th {
+  color: var(--muted);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+@media (min-width: 1024px) {
+  .pro-table {
+    font-size: var(--fs-md);
+  }
+  .pro-table th,
+  .pro-table td {
+    padding: 11px 12px;
+    vertical-align: middle;
+  }
+  .pro-table thead th {
+    background: var(--panel);
+    color: var(--gray-text);
+  }
+  .pro-table thead th:first-child {
+    border-radius: 10px 0 0 10px;
+  }
+  .pro-table thead th:last-child {
+    border-radius: 0 10px 10px 0;
+  }
+  .pro-table tbody tr:nth-child(even) td {
+    background: var(--soft);
+  }
+  .pro-table tbody tr.row-on td {
+    background: var(--blue-soft);
+  }
+  .pro-filters.section {
+    padding: 24px;
+  }
+  .pro-filters .pro-row {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+}
+/* 낙찰가 성적표(11/22 디자인) */
+.score-label.score-label {
+  margin: 0 0 6px;
+  color: var(--faint);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.score-h {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+}
+.score-h b {
+  font-size: 1.15em;
+}
+.score-bar {
+  display: flex;
+  height: 12px;
+  margin-top: 14px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.score-bar i {
+  display: block;
+  height: 100%;
+}
+.score-bar .lo {
+  background: #90c2ff;
+}
+.score-bar .in {
+  background: var(--blue);
+}
+.score-bar .hi {
+  background: #ffb763;
+}
+.score-legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+@media (min-width: 1024px) {
+  .score-h {
+    font-size: var(--fs-2xl);
+  }
+}
+/* 사건·문건(11/22 디자인): 목록 줄 · 고른 줄 연파랑 · 숫자 네 칸 · 진행 판단 판 · 문건 표 */
+.case-search {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+}
+.case-row {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  text-align: left;
+}
+.case-row.on {
+  background: var(--blue-soft);
+}
+.case-row-t {
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+.case-row-f {
+  color: var(--orange);
+  font-size: var(--fs-sm);
+}
+.case-title {
+  margin: 4px 0 0;
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+}
+.case-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 12px;
+}
+.case-tiles > div {
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--soft);
+}
+.case-tiles b {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+.case-warn {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+.case-flow {
+  font-size: var(--fs-lg);
+}
+/* 사건 한 장 요약 다섯 줄 · 「무슨 뜻인가」 칸(11/23 — 11/22 디자인) */
+.case-sum {
+  padding: 6px 14px 10px;
+  border-radius: 12px;
+  background: var(--band);
+}
+.case-table .case-mean {
+  min-width: 200px;
+  font-size: var(--fs-md);
+}
+.case-table .case-text {
+  white-space: normal;
+}
+@media (min-width: 1024px) {
+  .case-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .case-tiles b {
+    font-size: 22px;
+  }
+}
+/* 전체 물건 표: 3번째 칸(소재지)만 줄바꿈 */
+.items-table td:nth-child(3) {
+  white-space: normal;
+  min-width: 220px;
+}
+/* 11/20 휴대폰 통합검색: 범위 칸(유찰 ~ · 감정가 ~ 억)은 한 덩어리로, 요약은 두 칸 · 숫자는 한 줄로, 결과는 카드 */
+.pro-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pro-card {
+  display: block;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.pro-card:last-child {
+  border-bottom: 0;
+}
+.pro-card .pc-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.pro-card .pc-addr {
+  font-weight: 600;
+  margin: 4px 0;
+}
+.pro-card .pc-sig {
+  font-size: var(--fs-sm);
+  margin-top: 2px;
+}
+@media (max-width: 1023px) {
+  .pro-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pro-summary b {
+    white-space: nowrap;
+    font-size: 15px;
+  }
+}
+@media (min-width: 1024px) {
+  .pro-summary {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .pro-summary > div {
+    padding: 16px 18px;
+    border-radius: 16px;
+  }
+  .pro-summary b {
+    font-size: 19px;
+    font-weight: 800;
+  }
+}
+/* 시장 분석 「크게 빗나간 사례」: 좁으면 예상·실제 줄을 아래로(11/23 — 실제 %가 화면 밖으로 넘침) */
+.miss-row {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.miss-row > :first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+/* 사건 한 장 머리: 좁으면 단추를 아래 줄로(11/23 — 제목 「2021타경2 442」가 끊김) */
+.case-head {
+  flex-wrap: wrap;
+}
+.case-head > :first-child {
+  flex: 1 1 220px;
+}
+.compare-table td.best {
+  background: var(--green-soft);
+}
+@media (min-width: 1024px) {
+  .compare-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  /* 11/22 디자인: 칸마다 연한 판 · 칸 사이 띄움 · 물건 머리는 연파랑 · 빈 자리는 「+ 관심에서 더 넣기」 판 */
+  .cmp-box.section {
+    padding: 14px;
+  }
+  .compare-table {
+    border-collapse: separate;
+    border-spacing: 12px;
+    font-size: 15px;
+  }
+  .compare-table td,
+  .compare-table thead th {
+    padding: 12px 12px;
+    border-radius: 12px;
+    background: var(--soft);
+  }
+  .compare-table th:first-child,
+  .compare-table td:first-child {
+    background: none;
+    color: var(--faint);
+  }
+  .compare-table thead th:not(:first-child):not(.cmp-add) {
+    background: var(--blue-soft);
+  }
+  .compare-table .cmp-add {
+    text-align: center;
+    vertical-align: middle;
+  }
+  .compare-table tbody tr:last-child td {
+    background: none;
+  }
+  .compare-table th:first-child,
+  .compare-table td:first-child {
+    width: 14%;
+  }
+}
+/* 선 대신 줄무늬(08-look) */
+.compare-table tbody tr:nth-child(even) > *,
+.pro-table tbody tr:nth-child(even) td {
+  background: var(--panel);
+}
+/* 전체 물건 표: 주소는 넓게 두 줄까지 */
+.pro-table td.td-addr {
+  min-width: 200px;
+  max-width: 360px;
+}
+.pro-table td.td-sig {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 200px;
+}
+/* 시장 분석 낙찰 사례 표: 주소 칸은 줄을 바꿔 표가 카드 폭 안에 들어오게(11/7) */
+.market-cases .pro-table {
+  width: 100%;
+}
+.market-cases .pro-table td:nth-child(4) {
+  white-space: normal;
+  min-width: 220px;
+}
+@media (min-width: 1024px) {
+  #q-rounds .pro-table thead th {
+    background: var(--panel);
+  }
+}
+/* PC 찾기 왼쪽 조건(11/21 대표님 — 너무 길어 촘촘하게): PC 에서만 칩 · 칸 · 틈을 줄임 */
+
+/* ══ 지도 분석(11/12) — 휴대폰: 지도 위 · 목록 아래 / PC: 지도 왼쪽 64 · 목록 오른쪽 36 */
+.mv-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 지도 분석 고르기(11/22 디자인): 고른 것은 연파랑 + ✓, 나머지는 글자만 */
+.mv-tools .pills button {
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 600;
+}
+.mv-tools .pills button.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.mv-map {
+  /* 11/20: 지도 안 로고(NAVER)가 휴대폰 아래 탭 위로 그려졌음 — 지도 칸 안에서만 쌓이게(position 은 주지 않음) */
+  isolation: isolate;
+  width: 100%;
+  height: 60vh;
+  border: 1px solid var(--line-map);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+  background: var(--panel);
+}
+.mv-side {
+  min-width: 0;
+}
+.mv-pick {
+  margin-top: 8px;
+  padding: 0 12px;
+  border-radius: var(--r-panel);
+  background: var(--blue-soft);
+}
+@media (min-width: 1024px) {
+  .mv-wrap {
+    display: grid;
+    grid-template-columns: 64fr 36fr;
+    gap: 20px;
+  }
+  /* 붙어 다니는 것은 겉 상자 — 네이버 지도가 지도 칸에 position: relative 를 직접 넣어, 칸에 top 을 주면 120px 아래로 밀렸음(11/13) */
+  .mv-mapbox {
+    position: sticky;
+    top: 120px;
+    align-self: start;
+  }
+  .mv-map {
+    height: calc(100dvh - 160px);
+    border: 0;
+    border-radius: 20px;
+  }
+}
+.mv-pin {
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--on-strong);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+.mv-pin.blue {
+  background: var(--blue);
+}
+.mv-pin.orange {
+  background: var(--orange);
+}
+.mv-pin.red {
+  background: var(--red);
+}
+.mv-pin.green {
+  background: var(--green);
+}
+.mv-pin.gray {
+  background: var(--muted);
+}
+/* 지도 위 고르는 상자(11/14): 좁히기 · 겹쳐 보기 · 점 색 — 줄마다 이름표 하나. 역은 이름 + 물건 수, 낙찰 사례는 흰 바탕 작은 표 */
+.mv-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+@media (min-width: 1024px) {
+  .mv-tools {
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 20px 24px;
+    border-radius: var(--r-card-pc);
+  }
+}
+.mv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  min-height: 44px;
+}
+.mv-label {
+  flex: 0 0 64px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.mv-tools .pills {
+  --chip-bg: var(--panel);
+}
+.mv-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 600;
+}
+.mv-check input {
+  width: 20px;
+  height: 20px;
+}
+.mv-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.mv-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.mv-dot.blue {
+  background: var(--blue);
+}
+.mv-dot.orange {
+  background: var(--orange);
+}
+.mv-dot.red {
+  background: var(--red);
+}
+.mv-dot.green {
+  background: var(--green);
+}
+.mv-dot.gray {
+  background: var(--muted);
+}
+.mv-station {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+.mv-station b {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--on-strong);
+  text-align: center;
+}
+.mv-station.on {
+  border-color: var(--blue);
+}
+.mv-station.on b {
+  background: var(--blue);
+}
+.mv-sold {
+  padding: 2px 6px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mv-pick-sold {
+  padding: 12px;
+  background: var(--gray-chip);
+}
+.mv-group {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--on-strong);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}

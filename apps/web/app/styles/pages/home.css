@@ -1,0 +1,245 @@
+/* 공지 한 줄(홈 맨 위) */
+.notice-line {
+  display: block;
+  min-height: 44px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-size: var(--fs-md);
+}
+/* 홈 「이번 주 마감 공매」 작은 칸(11/22 디자인: PC 는 흰 카드 안 더 연한 판 · 제목 15 굵게) */
+.mini-card {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--panel);
+}
+.mini-title {
+  margin-top: 6px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+@media (min-width: 1024px) {
+  .mini-card {
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--soft);
+  }
+  .mini-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+/* 홈: 입찰일이 지나 결과를 안 적은 관심 물건 한 줄(11/4) — 공지 줄과 같은 자리·크기, 회색 */
+.record-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+/* 홈 PC(11/7 토스풍): 이번 주 입찰 — 왼쪽 날짜 칸, 오른쪽 물건 */
+.cal-day {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 0 10px;
+  padding: 10px 0;
+}
+.cal-date {
+  padding-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+/* 11/22 디자인: 줄마다 누르는 판(바탕이 바뀜) · 15 · 날짜 사이 선 없음 */
+.cal-item {
+  display: block;
+  margin: 0 -8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.cal-item .chip {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+@media (hover: hover) {
+  .cal-item:hover {
+    background: var(--soft);
+  }
+}
+/* 법원별 낙찰가율 막대 */
+.court-rate {
+  padding: 7px 0;
+  font-size: 15px;
+}
+.rate-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.rate-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--blue);
+}
+.cal-list {
+  min-width: 0;
+}
+.court-rate .line-row {
+  min-height: 0;
+  padding: 4px 0 8px;
+}
+/* 모아 보기(11/7): 모음 칩 — 휴대폰은 옆으로 넘기고 PC는 여섯 칸 */
+.col-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 16px calc(-1 * var(--sec-x, var(--page-x, 20px))) 4px;
+  padding: 0 var(--sec-x, var(--page-x, 20px)) 4px;
+  scroll-padding-inline: var(--sec-x, var(--page-x, 20px));
+}
+.col-chip {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 132px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--chip-bg); /* 흰 구역 안에서는 회색 판, 바탕 위에서는 흰 판 */
+  color: var(--text);
+  text-align: left;
+}
+.col-chip b {
+  font-size: var(--fs-md);
+}
+/* 모음 그림(11/11) — 연한 판 위 파란 선 그림, 고른 칩에서는 흰 판 */
+.col-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+.col-chip.on .col-ico {
+  background: var(--surface);
+}
+.col-chip span {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.col-chip.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.col-chip.on span {
+  color: var(--blue-text);
+}
+/* 홈 바로가기 칩은 눌러서 가는 카드 — 제목 끝에 › */
+a.col-chip b {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+a.col-chip b::after {
+  content: "›";
+  color: var(--faint);
+  font-weight: 400;
+}
+@media (min-width: 1024px) {
+  .col-chips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); /* PC 는 가로 3 · 세로 2 (11/11 대표님) */
+    gap: 12px;
+    margin: 20px 0 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .col-chip {
+    min-width: 0;
+  }
+  /* 11/22 디자인: 흰 카드 안 더 연한 판 · 그림 칸 흰 바탕 · 이름 15 · 설명 13 */
+  a.col-chip {
+    gap: 6px;
+    padding: 18px;
+    border-radius: 18px;
+    background: var(--soft);
+  }
+  a.col-chip .col-ico {
+    border-radius: 11px;
+    background: var(--surface);
+  }
+  a.col-chip b {
+    font-size: 15px;
+  }
+  a.col-chip span {
+    color: var(--faint);
+  }
+  .col-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+  button.col-chip {
+    gap: 4px;
+    padding: 20px;
+    border-radius: 20px;
+  }
+  button.col-chip .col-ico {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+    background: var(--panel);
+    color: var(--muted);
+  }
+  button.col-chip.on .col-ico {
+    background: var(--surface);
+    color: var(--blue);
+  }
+  button.col-chip b {
+    font-size: var(--fs-base);
+  }
+  button.col-chip span {
+    font-size: var(--fs-md);
+    color: var(--faint);
+  }
+  button.col-chip.on span {
+    color: var(--blue-text);
+  }
+}
+/* 홈 바로가기 칩은 설명까지 두 줄로(11/7) */
+a.col-chip {
+  width: 168px;
+  min-width: 0;
+}
+a.col-chip span {
+  line-height: 1.45;
+}
+@media (min-width: 1024px) {
+  a.col-chip {
+    width: auto;
+  }
+  .record-line {
+    padding: 14px 18px;
+    border-radius: 14px;
+  }
+}

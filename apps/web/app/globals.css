@@ -3,5 +3,14 @@
 @import "./styles/base.css";
 @import "./styles/parts.css";
 @import "./styles/layout.css";
-@import "./styles/pages.css";
+@import "./styles/pages/shared.css";
+@import "./styles/pages/home.css";
+@import "./styles/pages/find.css";
+@import "./styles/pages/item.css";
+@import "./styles/pages/watch.css";
+@import "./styles/pages/pro.css";
+@import "./styles/pages/bid.css";
+@import "./styles/pages/account.css";
+@import "./styles/pages/academy.css";
+@import "./styles/pages/admin.css";
 @import "./styles/utils.css";

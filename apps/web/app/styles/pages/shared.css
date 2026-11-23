@@ -1,0 +1,280 @@
+/* 여러 화면이 같이 쓰는 화면 모양(부품은 parts.css) — 11/23 pages.css 를 화면별로 나눔 */
+.big-confirm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-weight: 700;
+}
+.big-confirm input {
+  width: 22px;
+  height: 22px;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page,
+  .shell .page {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .section {
+    background: #fff !important;
+    color: #000 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .pc-grid {
+    display: block !important;
+  }
+}
+.toc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+}
+.toc a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+@media (hover: hover) {
+  .toc a:hover {
+    background: var(--bg);
+  }
+}
+@media (min-width: 1024px) {
+  .toc {
+    padding: 10px;
+  }
+  .toc a {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+  .toc a.on {
+    background: var(--panel);
+    font-weight: 700;
+  }
+}
+.toc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+/* 작업 공간 */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 12px 0 0;
+  border-radius: 14px;
+  background: var(--chip-bg);
+}
+/* 탭: 누르는 자리 44(판 안쪽 여백 4 + 40). 고른 것은 연파랑(11/11 누를 것 표시) */
+.seg button {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  position: relative;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--gray-text);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.seg a {
+  min-height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .seg a:hover {
+    background: var(--surface);
+  }
+}
+.seg button.on {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-weight: 700;
+}
+.check-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 0;
+  min-height: 48px;
+}
+.check-row input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+/* 휴대폰에서 이름 칸이 한 글자씩 세로로 꺾이고 값이 화면 밖으로 넘치던 것(11/23 — 내 정보 관심 지역 · 결제 포함):
+   이름(.sub)은 줄지 않게, 값은 남은 폭 안에서 줄바꿈 */
+.line-row > .sub:first-child {
+  flex-shrink: 0;
+}
+.line-row > .sub:first-child + * {
+  flex: 0 1 auto; /* .line-row > b 의 「줄지 않음 · 줄바꿈 안 함」보다 앞섬 — 짧은 값은 그대로 한 줄 */
+  min-width: 0;
+  white-space: normal;
+  text-align: right;
+}
+.line-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 0;
+}
+.row-on td {
+  background: var(--blue-soft);
+}
+/* 찾기 조건 */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.f-label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin: 20px 0 8px;
+  display: block;
+}
+.f-label:first-child {
+  margin-top: 12px;
+}
+.sort-sel {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+.clamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}
+/* 표 첫 칸(물건 이름)은 줄을 바꿔 카드 폭 안에 들어오게(11/7 내 경매) */
+.wrap-first td:first-child {
+  white-space: normal;
+  min-width: 160px;
+}
+/* 둘 중 하나 고르는 작은 판(11/22 디자인 — 모아 보기 「내 조건 · 전체 지역」): 회색 판 안 흰 칸 */
+.scope-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--line);
+}
+.scope-seg button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.scope-seg button.on {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.chip-link {
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.empty-box {
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--fs-md);
+}
+.back-link {
+  color: var(--muted);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+.pc-only-flex {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .pc-only-flex {
+    display: flex;
+  }
+}
+@keyframes ac-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(420px) rotate(540deg);
+  }
+}
+@keyframes ac-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
