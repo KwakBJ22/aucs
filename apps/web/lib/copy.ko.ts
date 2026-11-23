@@ -371,6 +371,8 @@ export const copy = {
     sortDeadline: "마감 가까운 순",
     sortRate: "최저가율 낮은 순",
     sortLabel: "줄 세우기",
+    seeN: (n: number) => `${n.toLocaleString("ko-KR")}건 보기`,
+    seeAll: "결과 보기",
     total: (n: number) => `${n.toLocaleString("ko-KR")}건`,
     searchPlaceholder: "지역·평형·가격으로 찾아요",
     talkLabel: "알아들은 조건",

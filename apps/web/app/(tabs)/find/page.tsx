@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ItemCard } from "@/components/item-card";
 import { PickPanel } from "@/components/pick-panel";
-import { FindChips, FindFilters, filterSummary } from "@/components/find-filters";
+import { BottomSheet } from "@/components/bottom-sheet";
+import { FcChip, FindChips, FindFilters } from "@/components/find-filters";
 import { PageHeader } from "@/components/layout/page-header";
 import { dropPart, parseTalk, type Talk } from "@/lib/talk";
 import {
@@ -90,7 +91,7 @@ export default function Find() {
   const [regionNames, setRegionNames] = useState<string[]>([]);
   const [talk, setTalk] = useState<Talk | null>(null); // 말로 찾기로 알아들은 조건(칩)
   const [filter, setFilter] = useState<FindFilter>({});
-  const [condOpen, setCondOpen] = useState(false);
+  const [sheet, setSheet] = useState<"source" | "sort" | "cond" | "status" | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
   const [pick, setPick] = useState<string | null>(null);
   const [asTable, setAsTable] = useState(false);
@@ -290,73 +291,148 @@ export default function Find() {
     },
   };
 
+  // 휴대폰(11/23 M-Find): 찾기 칸 + 칩 한 줄(경매·공매 · 지역 · 줄 세우기 · 조건 · 진행 상태), 누르면 아래 창
+  const searchIcon = (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+  const closed = status === "sold" || status === "withdrawn";
+  const condN = Object.values(filter).filter(
+    (v) => v != null && (!Array.isArray(v) || v.length > 0),
+  ).length;
+  const regionsShown = talk?.sigungu ?? regions;
   const searchBox = (
     <>
-      <div className="d-flex gap-8 pos-relative">
-        <input
-          type="search"
-          value={q}
-          placeholder={t.searchPlaceholder}
-          onChange={(e) => setQ(e.target.value)}
-          onFocus={() => setFocus(true)}
-          onBlur={() => setFocus(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setQuery(q.trim());
-              remember(q.trim());
-            }
-          }}
-          className="f-input f-1"
-        />
-        <select
-          value={status}
-          onChange={(e) => pickStatus(e.target.value as FindStatus)}
-          aria-label="상태"
-          className="f-input fit"
-        >
-          {Object.entries(t.status).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
+      <div className="find-bar pos-relative">
+        {searchIcon}
+        <input {...inputProps} aria-label={t.searchPlaceholder} />
         {recentBox}
       </div>
       {talkRow}
-      {status !== "sold" && status !== "withdrawn" && (
-        <div className="pills mt-10" role="group" aria-label={t.sourceLabel}>
-          {(["all", "court", "onbid"] as const).map((s) => (
-            <button key={s} className={source === s ? "on" : ""} onClick={() => pickSource(s)}>
-              {t.source[s]}
-            </button>
-          ))}
-        </div>
-      )}
-      {!query && (
-        <div className="d-flex gap-8 f-wrap ai-center mt-10">
-          {(talk?.sigungu ? [] : regions).map((r) => (
-            <span key={r} className="chip gray">
-              {r}
-            </span>
-          ))}
-          {status !== "sold" &&
-            status !== "withdrawn" &&
-            (["deadline", "rate"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSort(s)}
-                className={`pill${sort === s ? " on" : ""}`}
-              >
-                {s === "deadline" ? t.sortDeadline : t.sortRate}
-              </button>
-            ))}
-        </div>
-      )}
+      <div className="m-chips quiet-scroll">
+        {!closed && (
+          <FcChip
+            on={source !== "all"}
+            label={t.source[source] ?? ""}
+            onClick={() => setSheet("source")}
+          />
+        )}
+        {!query && (
+          <FcChip
+            on={regionsShown.length > 0}
+            label={
+              regionsShown.length > 1
+                ? t.chip.more(regionsShown[0]!, regionsShown.length - 1)
+                : (regionsShown[0] ?? t.chip.region)
+            }
+            onClick={() => router.push("/start")}
+          />
+        )}
+        {!query && !closed && (
+          <FcChip
+            on={false}
+            label={sort === "deadline" ? t.sortDeadline : t.sortRate}
+            onClick={() => setSheet("sort")}
+          />
+        )}
+        <FcChip
+          on={condN > 0}
+          label={condN > 0 ? `${t.cond} ${condN}` : t.cond}
+          onClick={() => setSheet("cond")}
+        />
+        <FcChip on={false} label={t.status[status] ?? ""} onClick={() => setSheet("status")} />
+      </div>
     </>
   );
+  // 하나 고르는 아래 창(경매·공매 · 줄 세우기 · 진행 상태)
+  const one = <K extends string>(
+    title: string,
+    opts: [K, string][],
+    v: K,
+    pick: (k: K) => void,
+  ) => (
+    <BottomSheet label={title} onClose={() => setSheet(null)}>
+      <b className="fs-lg">{title}</b>
+      <div className="pills mt-12">
+        {opts.map(([k, name]) => (
+          <button
+            key={k}
+            className={v === k ? "on" : ""}
+            onClick={() => {
+              pick(k);
+              setSheet(null);
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </BottomSheet>
+  );
+  const sheetBox =
+    sheet === "source"
+      ? one(
+          t.sourceLabel,
+          (["all", "court", "onbid"] as const).map(
+            (k) => [k, t.source[k] ?? ""] as [Source, string],
+          ),
+          source,
+          pickSource,
+        )
+      : sheet === "sort"
+        ? one(
+            t.sortLabel,
+            [
+              ["deadline", t.sortDeadline],
+              ["rate", t.sortRate],
+            ],
+            sort,
+            setSort,
+          )
+        : sheet === "status"
+          ? one(
+              t.chip.status,
+              Object.entries(t.status) as [FindStatus, string][],
+              status,
+              pickStatus,
+            )
+          : sheet === "cond" && (
+              <BottomSheet
+                label={t.cond}
+                onClose={() => setSheet(null)}
+                foot={
+                  <>
+                    <button className="btn secondary" onClick={saveCond}>
+                      {t.saveCond}
+                    </button>
+                    <button className="btn primary" onClick={() => setSheet(null)}>
+                      {list ? t.seeN(list.total) : t.seeAll}
+                    </button>
+                  </>
+                }
+              >
+                <div className="d-flex jc-between ai-center mb-12">
+                  <b className="fs-lg">{t.cond}</b>
+                  <button className="fc-text" onClick={() => changeFilter({})}>
+                    {t.condReset}
+                  </button>
+                </div>
+                <FindFilters f={filter} onChange={changeFilter} saveMsg={saveMsg} sheet />
+              </BottomSheet>
+            );
   const countLine = (
     <>
-      <p className="sub">
+      <p className="find-count">
         {query
           ? t.searching
           : list && status !== "sold" && status !== "withdrawn"
@@ -364,10 +440,6 @@ export default function Find() {
             : ""}
       </p>
     </>
-  );
-  const condSummary = filterSummary(filter);
-  const filters = (
-    <FindFilters f={filter} onChange={changeFilter} onSave={saveCond} saveMsg={saveMsg} />
   );
   const results = (
     <>
@@ -378,7 +450,9 @@ export default function Find() {
           <SkCards n={6} />
         </Delayed>
       )}
-      {list?.items.map((c) => <ItemCard key={c.item_id} c={c} />)}
+      {list?.items.map((c) => (
+        <ItemCard key={c.item_id} c={c} />
+      ))}
       {(list?.results ?? []).map((r) => (
         <ResultRow key={r.result_id} r={r} />
       ))}
@@ -526,20 +600,18 @@ export default function Find() {
 
   return (
     <main className="page">
-      <PageHeader title={t.title} right={mapLink} />
+      <PageHeader
+        title={t.title}
+        right={
+          <Link href={mapHref} className="link fs-sm px-6">
+            {copy.mapView.open}
+          </Link>
+        }
+      />
       {searchBox}
-      <button
-        className="cond-row fold"
-        aria-expanded={condOpen}
-        onClick={() => setCondOpen(!condOpen)}
-      >
-        <span>
-          <b>{t.cond}</b> <span className="sub">{condSummary || t.condOpen}</span>
-        </span>
-      </button>
-      {condOpen && <section className="section">{filters}</section>}
       {countLine}
-      <section className="section pt-6 pb-6">{results}</section>
+      <section className="section find-list">{results}</section>
+      {sheetBox}
     </main>
   );
 }

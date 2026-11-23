@@ -200,3 +200,38 @@
   color: var(--muted);
   font-size: var(--fs-lg);
 }
+
+/* ══ 휴대폰 찾기(11/23 M-Find · M-FindSheet) ══ */
+.m-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 12px calc(-1 * var(--page-x)) 0;
+  padding: 0 var(--page-x);
+}
+.m-chips > .fc-chip {
+  flex: none;
+  height: 36px;
+  padding: 0 12px;
+  gap: 3px;
+}
+.find-count {
+  margin: 12px 4px 0;
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+@media (max-width: 1023px) {
+  .find-bar {
+    gap: 8px;
+    height: 48px;
+    margin-top: 12px;
+    padding: 0 14px;
+    border-radius: var(--r-btn);
+  }
+  .find-bar input {
+    font-size: var(--fs-body);
+  }
+  .find-list {
+    padding: 4px var(--sec-x);
+  }
+}

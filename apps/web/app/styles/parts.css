@@ -191,6 +191,39 @@
   background: var(--band);
   margin: 0 auto 14px;
 }
+/* 공통 아래 창 틀(components/bottom-sheet.tsx) */
+.sheet-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.35);
+}
+.sheet-box {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 560px;
+  margin: 0 auto;
+}
+/* 창 맨 아래 단추 줄 — 길게 내려도 아래에 붙어 있음(11/23 M-FindSheet) */
+.sheet-foot {
+  position: sticky;
+  bottom: calc(-28px - env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+  margin: 16px -20px calc(-28px - env(safe-area-inset-bottom));
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface);
+}
+.sheet-foot > * {
+  flex: 1 1 0;
+}
+.sheet-foot > .btn.secondary {
+  flex: none;
+  padding: 0 14px;
+  white-space: nowrap;
+}
 .toast {
   position: fixed;
   left: 50%;
@@ -954,6 +987,21 @@ button:disabled,
   flex-wrap: wrap;
   gap: 8px;
 }
+/* 휴대폰(11/23 M-Parts 「칩」): 고른 것은 연한 파랑 — 진한 바탕 대신(PC 는 11/22 디자인 자리마다) */
+@media (max-width: 1023px) {
+  .pill,
+  .pills button,
+  .seg-btn {
+    color: var(--text-2);
+    font-weight: 600;
+  }
+  .pill.on,
+  .pills button.on,
+  .seg-btn.on {
+    background: var(--blue-soft);
+    color: var(--blue-text);
+  }
+}
 
 /* 아이콘만 있는 버튼(하트·닫기) — 누르는 자리 44 */
 .icon-btn {
@@ -1095,10 +1143,6 @@ input.f-input[type="search"]::-webkit-search-cancel-button {
   height: 56px;
   font-size: var(--fs-2xl);
   font-weight: 700;
-}
-.f-input.fit {
-  width: auto;
-  flex: none;
 }
 
 /* 법원 현장 사진(11/11 대표님): 줄 양끝 꺽쇠 · 크게 보기(좌우 가운데 꺽쇠 + 아래 「‹ 1/12 ›」) */

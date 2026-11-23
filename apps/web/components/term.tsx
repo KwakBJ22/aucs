@@ -1,45 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { copy } from "@/lib/copy.ko";
+import { BottomSheet } from "@/components/bottom-sheet";
 
 // 용어 설명 창(할 일 5): 어려운 말에 점선 밑줄 → 누르면 아래에서 설명이 올라옴(바텀시트). 화면 이동 없음.
 const TERMS: [string, string][] = [...copy.guide.words, ...copy.terms.extra];
 const NAMES = TERMS.map(([w]) => w).sort((a, b) => b.length - a.length); // 긴 말부터(「배당요구 종기」 > 「배당」)
 
 function Sheet({ word, text, onClose }: { word: string; text: string; onClose: () => void }) {
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
-  }, [onClose]);
   return (
-    <div
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.35)" }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={word}
-        onClick={(e) => e.stopPropagation()}
-        className="term-sheet sheet pos-absolute my-0 mx-auto"
-        style={{ left: 0, right: 0, bottom: 0, maxWidth: 560 }}
-      >
-        <div className="sheet-handle" />
-        <div className="d-flex jc-between ai-center">
-          <b className="fs-lg">{word}</b>
-          <button onClick={onClose} className="btn secondary sm">
-            {copy.terms.close}
-          </button>
-        </div>
-        <p className="fs-base lh-16 mt-6 mb-12 mx-0">{text}</p>
-        <Link href="/academy" className="link" onClick={onClose}>
-          {copy.terms.more}
-        </Link>
+    <BottomSheet label={word} onClose={onClose} className="term-sheet">
+      <div className="d-flex jc-between ai-center">
+        <b className="fs-lg">{word}</b>
+        <button onClick={onClose} className="btn secondary sm">
+          {copy.terms.close}
+        </button>
       </div>
-    </div>
+      <p className="fs-base lh-16 mt-6 mb-12 mx-0">{text}</p>
+      <Link href="/academy" className="link" onClick={onClose}>
+        {copy.terms.more}
+      </Link>
+    </BottomSheet>
   );
 }
 

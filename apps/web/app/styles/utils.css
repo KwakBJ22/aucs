@@ -231,9 +231,6 @@
   padding-bottom: 32px !important;
 }
 
-.pb-6 {
-  padding-bottom: 6px !important;
-}
 .pl-18 {
   padding-left: 18px !important;
 }
@@ -261,9 +258,6 @@
 }
 .pt-4 {
   padding-top: 4px !important;
-}
-.pt-6 {
-  padding-top: 6px !important;
 }
 .px-0 {
   padding-left: 0 !important;
@@ -487,7 +481,4 @@
 
 .w-full {
   width: 100% !important;
-}
-.pos-fixed {
-  position: fixed !important;
 }

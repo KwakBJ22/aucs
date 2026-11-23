@@ -37,11 +37,13 @@ export function FindFilters({
   onChange,
   onSave,
   saveMsg,
+  sheet,
 }: {
   f: FindFilter;
   onChange: (f: FindFilter) => void;
   onSave?: () => void;
   saveMsg?: string;
+  sheet?: boolean; // 휴대폰 아래 창 안(11/23 M-FindSheet): 안전 모드를 펼친 채 · 초기화 · 저장은 창 머리/바닥에
 }) {
   const ex = new Set(f.exclude ?? []);
   const allPicked = AVOID_KEYS.every((k) => ex.has(k));
@@ -150,20 +152,26 @@ export function FindFilters({
         />
       </div>
       <div className="f-block">
-        <button
-          className="line-row fold w-full ta-left"
-          aria-expanded={safeOpen}
-          onClick={toggleSafeOpen}
-        >
-          <span>
-            <b>{t.safe}</b>
-            {ex.size > 0 && <span className="sub ml-6">{t.safePicked(ex.size)}</span>}
-          </span>
-        </button>
-        {safeOpen && (
+        {sheet ? (
+          <div className="f-label">
+            {t.safe} <span className="sub fw-4">{t.safeHint}</span>
+          </div>
+        ) : (
+          <button
+            className="line-row fold w-full ta-left"
+            aria-expanded={safeOpen}
+            onClick={toggleSafeOpen}
+          >
+            <span>
+              <b>{t.safe}</b>
+              {ex.size > 0 && <span className="sub ml-6">{t.safePicked(ex.size)}</span>}
+            </span>
+          </button>
+        )}
+        {(sheet || safeOpen) && (
           <>
             <div className="d-flex jc-between ai-center gap-8">
-              <span className="sub">{t.safeHint}</span>
+              {!sheet && <span className="sub">{t.safeHint}</span>}
               <button
                 className="btn secondary sm"
                 onClick={() => set({ exclude: allPicked ? [] : AVOID_KEYS })}
@@ -186,16 +194,18 @@ export function FindFilters({
           </>
         )}
       </div>
-      <div className="d-flex gap-8 f-wrap">
-        <button className="btn secondary sm" onClick={() => onChange({})}>
-          {t.condReset}
-        </button>
-        {onSave && (
-          <button className="btn soft sm" onClick={onSave}>
-            {t.saveCond}
+      {!sheet && (
+        <div className="d-flex gap-8 f-wrap">
+          <button className="btn secondary sm" onClick={() => onChange({})}>
+            {t.condReset}
           </button>
-        )}
-      </div>
+          {onSave && (
+            <button className="btn soft sm" onClick={onSave}>
+              {t.saveCond}
+            </button>
+          )}
+        </div>
+      )}
       {saveMsg && <div className="sub">{saveMsg}</div>}
     </div>
   );
@@ -219,16 +229,7 @@ export function filterSummary(f: FindFilter): string {
 // 왼쪽 조건 칸 대신 칩 한 줄: 누르면 칩 아래 작은 창(안의 내용은 휴대폰 조건 칸과 같음).
 // 고른 값이 있는 칩은 연한 파랑 + ✓ + 값(11/22 대표님 — 진한 바탕은 무거움). 한 번에 창 하나만.
 type ChipKey =
-  | "region"
-  | "usage"
-  | "price"
-  | "area"
-  | "days"
-  | "failed"
-  | "rate"
-  | "source"
-  | "status"
-  | "safe";
+  "region" | "usage" | "price" | "area" | "days" | "failed" | "rate" | "source" | "status" | "safe";
 
 const Down = ({ up }: { up?: boolean }) => (
   <svg
@@ -245,6 +246,45 @@ const Down = ({ up }: { up?: boolean }) => (
     <path d={up ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} />
   </svg>
 );
+
+// 조건 칩 하나(PC 칩 줄 · 휴대폰 찾기 칩 줄이 같이 씀): 고른 값이 있으면 연파랑 + ✓, 끝에 ⌄
+export function FcChip({
+  on,
+  open,
+  label,
+  onClick,
+}: {
+  on: boolean;
+  open?: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`fc-chip${on ? " on" : ""}${open ? " open" : ""}`}
+      aria-expanded={open}
+      onClick={onClick}
+    >
+      {on && (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m5 12 5 5 9-10" />
+        </svg>
+      )}
+      {label}
+      <Down up={open} />
+    </button>
+  );
+}
 
 export function FindChips({
   f,
@@ -467,32 +507,15 @@ export function FindChips({
     <div className="find-chips" ref={box}>
       {chips.map(([k, name, val]) => (
         <div key={k} className="fc-wrap">
-          <button
-            className={`fc-chip${val ? " on" : ""}${open === k ? " open" : ""}`}
-            aria-expanded={open === k}
+          <FcChip
+            on={!!val}
+            open={open === k}
+            label={val ?? name}
             onClick={() => {
               if (open !== k && k === "safe") academyHit("safe"); // 아카데미 과제 「초보자 안전 모드」(11/18)
               setOpen(open === k ? null : k);
             }}
-          >
-            {val && (
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m5 12 5 5 9-10" />
-              </svg>
-            )}
-            {val ?? name}
-            <Down up={open === k} />
-          </button>
+          />
           {open === k && (
             <div className="fc-pop" role="dialog" aria-label={name}>
               <div className="fc-pop-title">{name}</div>

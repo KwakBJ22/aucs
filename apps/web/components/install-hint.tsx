@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { copy } from "@/lib/copy.ko";
+import { BottomSheet } from "@/components/bottom-sheet";
 import { canPrompt, isStandalone, platform, promptInstall } from "@/lib/install";
 
 const t = copy.install;
@@ -35,40 +36,26 @@ export function InstallHint({ onClose }: { onClose: () => void }) {
     void promptInstall().finally(onClose);
   };
   return (
-    <div
-      onClick={onClose}
-      className="pos-fixed"
-      style={{ inset: 0, zIndex: 60, background: "rgba(0,0,0,0.35)" }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t.title}
-        onClick={(e) => e.stopPropagation()}
-        className="sheet pos-absolute"
-        style={{ left: 0, right: 0, bottom: 0, maxWidth: 560, margin: "0 auto" }}
-      >
-        <div className="sheet-handle" />
-        <div className="fs-lg fw-7">{t.title}</div>
-        <p className="sub fs-md mt-6">{t.why}</p>
-        {ios || !can ? (
-          <div className="bg-panel r-14 p-12 mt-12 fs-md lh-16">{ios ? t.ios : t.other}</div>
-        ) : null}
-        <div className="btn-pair mt-16">
-          <button className="btn secondary" onClick={onClose}>
-            {t.later}
+    <BottomSheet label={t.title} onClose={onClose}>
+      <div className="fs-lg fw-7">{t.title}</div>
+      <p className="sub fs-md mt-6">{t.why}</p>
+      {ios || !can ? (
+        <div className="bg-panel r-14 p-12 mt-12 fs-md lh-16">{ios ? t.ios : t.other}</div>
+      ) : null}
+      <div className="btn-pair mt-16">
+        <button className="btn secondary" onClick={onClose}>
+          {t.later}
+        </button>
+        {!ios && can ? (
+          <button className="btn primary" onClick={install}>
+            {t.add}
           </button>
-          {!ios && can ? (
-            <button className="btn primary" onClick={install}>
-              {t.add}
-            </button>
-          ) : (
-            <button className="btn primary" onClick={onClose}>
-              {t.ok}
-            </button>
-          )}
-        </div>
+        ) : (
+          <button className="btn primary" onClick={onClose}>
+            {t.ok}
+          </button>
+        )}
       </div>
-    </div>
+    </BottomSheet>
   );
 }
