@@ -5,15 +5,17 @@
 .co-row {
   font-size: 15px;
 }
-/* 「포함」처럼 긴 값: 이름표 위 · 값 아래(11/23 M-Checkout) */
-.co-row.co-stack {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-.co-row.co-stack > b {
-  font-weight: 400;
-  text-align: left;
+/* 「포함」처럼 긴 값: 휴대폰은 이름표 위 · 값 아래(11/23 M-Checkout) */
+@media (max-width: 1023px) {
+  .co-row.co-stack {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .co-row.co-stack > b {
+    font-weight: 400;
+    text-align: left;
+  }
 }
 .co-total {
   margin-top: 8px;
