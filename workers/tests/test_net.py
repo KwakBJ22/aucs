@@ -30,11 +30,12 @@ def test_gives_up_after_three() -> None:
     assert len(calls) == 3
 
 
-def test_nationwide_retries_failed_to_fetch_only() -> None:
-    from aucs_workers.collectors.court_nationwide import call_retry
+def test_court_call_retries_failed_to_fetch_only() -> None:
+    # 11/21 전국 보관 · 11/22 21:15 서류 보관이 「Failed to fetch」 한 번에 단계 전체가 실패했던 것
     from aucs_workers.collectors.polite import Polite
 
-    p = Polite(sleep=lambda s: None, site=None, jitter=False)
+    waits: list[float] = []
+    p = Polite(sleep=waits.append, site=None, jitter=False)
     n: list[int] = []
 
     def flaky() -> dict:
@@ -43,8 +44,16 @@ def test_nationwide_retries_failed_to_fetch_only() -> None:
             raise RuntimeError("Page.evaluate: TypeError: Failed to fetch")
         return {"ok": True, "rows": []}
 
-    assert call_retry(p, flaky, "시험", sleep=lambda s: None)["ok"] and len(n) == 2
+    assert p.call(flaky, "시험")["ok"] and len(n) == 2 and 60.0 in waits
+
+    def other() -> dict:
+        raise ValueError("다른 오류")
+
     with pytest.raises(ValueError):
-        call_retry(
-            p, lambda: (_ for _ in ()).throw(ValueError("다른 오류")), "시험", sleep=lambda s: None
-        )
+        p.call(other, "시험")
+
+    def always() -> dict:
+        raise RuntimeError("Failed to fetch")
+
+    with pytest.raises(RuntimeError):
+        p.call(always, "시험")

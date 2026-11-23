@@ -15,8 +15,7 @@
 import argparse
 import json
 import re
-import time
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -102,31 +101,6 @@ def fetch_codes(page: Any, polite: Polite) -> dict[str, str]:
     return load_codes()
 
 
-FETCH_TRIES, FETCH_WAIT_SEC = 3, 60.0
-
-
-def call_retry(
-    polite: Polite,
-    fn: Callable[[], dict[str, Any]],
-    what: str,
-    sleep: Callable[[float], None] = time.sleep,
-) -> dict[str, Any]:
-    """11/21: 법원 요청 하나가 「Failed to fetch」(연결 끊김)로 죽어 그날 전국 물건 목록이 통째로 빠졌음 →
-    연결 끊김만 1분 · 2분 쉬고 다시. 막힘(Blocked) · 한도는 그대로 위로."""
-    for n in range(1, FETCH_TRIES + 1):
-        try:
-            return polite.call(fn, what)
-        except Exception as e:  # noqa: BLE001 — 플레이라이트 오류는 모양이 여럿
-            if n == FETCH_TRIES or "Failed to fetch" not in str(e):
-                raise
-            print(
-                f"   {what} 연결 끊김 — {FETCH_WAIT_SEC * n:.0f}초 뒤 다시({n}/{FETCH_TRIES - 1})",
-                flush=True,
-            )
-            sleep(FETCH_WAIT_SEC * n)
-    raise AssertionError("닿지 않음")
-
-
 def pages(
     page: Any, polite: Polite, courts: dict[str, str], *, results: bool, d_from: str, d_to: str
 ) -> Iterator[tuple[str, list[dict[str, Any]]]]:
@@ -140,7 +114,7 @@ def pages(
                     return dict(page.evaluate(JS_RESULTS, [cd, pg, PAGE_SIZE]))
                 return dict(page.evaluate(JS_ITEMS, [cd, pg, PAGE_SIZE, d_from, d_to]))
 
-            res = call_retry(polite, one, f"{name} {pg}쪽")
+            res = polite.call(one, f"{name} {pg}쪽")  # 연결 끊김 다시 시도는 polite 가 함
             rows: list[dict[str, Any]] = res["rows"]
             yield cd, rows
             got += len(rows)

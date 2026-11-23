@@ -27,6 +27,9 @@ from typing import Any
 REQUEST_GAP_SEC = 2.5
 CASE_GAP_SEC = 6.0
 RETRIES = 3
+# 11/21 · 11/22: 법원 요청이 「Failed to fetch」(연결 끊김)로 죽어 전국 보관 · 서류 보관 단계가 통째로 빠졌음
+# → 연결 끊김만 1분 · 2분 쉬고 다시(모든 법원 수집기 공통). 막힘 · 한도는 그대로.
+FETCH_TRIES, FETCH_WAIT_SEC = 3, 60.0
 SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집기 합) — 사건 하나에 6~7번
 CAP_MIN, CAP_MAX = 800, 20000
 # 11/18 대표님: 무사한 날 7일 → 3일마다 20% 올림(막힘은 요청 속도 탓이었음 — 간격은 그대로)
@@ -212,6 +215,21 @@ class Polite:
                  blocks=int(b.get("blocks") or 0) + 1)  # fmt: skip
         _save(f, b)
 
+    def _run(self, fn: Callable[[], dict[str, Any]], what: str) -> dict[str, Any]:
+        for n in range(1, FETCH_TRIES + 1):
+            try:
+                return fn()
+            except Exception as e:  # noqa: BLE001 — 플레이라이트 오류는 모양이 여럿
+                if n == FETCH_TRIES or "Failed to fetch" not in str(e):
+                    raise
+                print(
+                    f"   {what} 연결 끊김 — {FETCH_WAIT_SEC * n:.0f}초 뒤 다시({n}/{FETCH_TRIES - 1})",
+                    flush=True,
+                )
+                self._sleep(FETCH_WAIT_SEC * n)
+                self._spend()
+        raise AssertionError("닿지 않음")
+
     def call(self, fn: Callable[[], dict[str, Any]], what: str) -> dict[str, Any]:
         """fn 은 {"ok": bool, ...} 을 돌려주는 요청 한 번."""
         if self.daily_limit is not None and self.count >= self.daily_limit:
@@ -226,7 +244,7 @@ class Polite:
             if gap > 0:
                 self._sleep(gap)
             self._spend()
-            res = fn()
+            res = self._run(fn, what)
             self._last = time.monotonic()
             self.count += 1
             if res.get("ok"):
