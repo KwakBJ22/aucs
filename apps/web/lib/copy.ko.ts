@@ -2469,6 +2469,69 @@ export const copy = {
     limitGo: "이용 제한",
     limitAsk: "저장·삭제를 막고 회원에게 알릴까요?",
     unlimit: "제한 풀기",
+    // 회원 화면 보강(11/23)
+    memberFilter: {
+      all: "전체",
+      paid: "유료",
+      limited: "제한",
+      admin: "관리자",
+      away: "30일 넘게 안 옴",
+    } as Record<string, string>,
+    memberSum: (s: { today: number; week_new: number; active7: number }) =>
+      `오늘 가입 ${s.today} · 7일 새 회원 ${s.week_new} · 7일 안 로그인 ${s.active7}`,
+    sortName: { joined: "가입 순", login: "최근 로그인 순" } as Record<string, string>,
+    more: "더 보기",
+    provider: { email: "메일", kakao: "카카오", google: "구글" } as Record<string, string>,
+    unconfirmed: "메일 미인증",
+    paidUntil: (plan: string, until: string) => `${plan} 결제 · ${until}까지`,
+    rowDates: (joined: string, login: string) => `가입 ${joined} · 로그인 ${login}`,
+    info: "등록 정보",
+    access: "접속",
+    activity: "활동",
+    pays: "결제",
+    ledger: "포인트 내역",
+    recent: "최근 활동",
+    lastSignIn: "마지막 로그인",
+    lastSeen: "마지막 방문",
+    loginN: (n: number) => `로그인 ${n}번`,
+    viewN: (n: number) => `물건 상세 ${n}번`,
+    academyN: (n: number) => `아카데미 수업 ${n}개`,
+    push: (n: number) => (n ? `휴대폰 알림 켬(${n}대)` : "휴대폰 알림 안 켬"),
+    cash: (krw: number | null) =>
+      `쓸 수 있는 돈 ${krw ? `${Math.round(krw / 1e6).toLocaleString()}백만 원` : "-"}`,
+    homes: (n: number | null, first: boolean | null) =>
+      `집 ${n ?? "-"}채${first ? " · 생애 첫 집" : ""}`,
+    card: (label: string | null) => (label ? `등록 카드 ${label}` : "등록 카드 없음"),
+    profileAt: "조건 바꾼 때",
+    payLine: (p: {
+      plan: string;
+      period: string;
+      amount_krw: number;
+      refunded_krw: number;
+      status: string;
+      valid_to: string;
+    }) =>
+      `${p.plan} ${p.period} · ${p.amount_krw.toLocaleString()}원${p.refunded_krw ? ` (환불 ${p.refunded_krw.toLocaleString()}원)` : ""} · ${p.status} · ${p.valid_to}까지`,
+    autoRenew: (fails: number) => (fails ? `자동결제 실패 ${fails}번` : "매달 자동결제"),
+    eventName: {
+      login: "로그인",
+      view: "화면",
+      item_view: "물건 상세",
+      calc: "입찰가 계산",
+      watch_add: "관심 담기",
+      alert_on: "알림 켬",
+      start_done: "시작 설정",
+    } as Record<string, string>,
+    orders: "끝나지 않은 결제 주문(30일)",
+    orderStatus: {
+      ready: "결제창 열림",
+      waiting: "입금 기다림",
+      failed: "실패",
+      cancelled: "취소",
+      expired: "기한 지남",
+    } as Record<string, string>,
+    renewFailed: "매달 자동결제 실패",
+    renewLine: (plan: string, until: string, n: number) => `${plan} · ${until}까지 · ${n}번 실패`,
     notices: "공지",
     noticeNew: "공지 쓰기",
     noticeEdit: "공지 고치기",

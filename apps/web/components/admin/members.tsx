@@ -5,21 +5,39 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   adminApi,
   type Inquiry,
+  type MemberFilter,
+  type MemberSort,
+  type MemberSummary,
   type RefundReq,
   type UserDetail,
   type UserRow,
 } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
+import { parseTime } from "@/lib/format";
 import { Confirm, errText, useAdmin, when } from "./ctx";
 
 const t = copy.admin;
 const m = copy.admin.money;
 
-// 4 회원: 문의(답 안 한 것) + 회원 목록 → 상세(이용권 주기·이용 제한·메일 보기)
+const FILTERS: MemberFilter[] = ["all", "paid", "limited", "admin", "away"];
+const day = (s: string | null | undefined) =>
+  s
+    ? parseTime(s).toLocaleDateString("ko-KR", {
+        year: "2-digit",
+        month: "numeric",
+        day: "numeric",
+      })
+    : "-";
+
+// 4 회원: 문의(답 안 한 것) + 회원 목록(숫자 · 거르기 · 정렬 · 더 보기) → 상세(등록 정보 · 접속 · 결제 · 활동 · 이용권 주기 · 이용 제한 · 메일 보기)
 export function MembersView() {
   const { token, say, can } = useAdmin();
   const [q, setQ] = useState("");
+  const [f, setF] = useState<MemberFilter>("all");
+  const [sort, setSort] = useState<MemberSort>("joined");
   const [rows, setRows] = useState<UserRow[]>([]);
+  const [more, setMore] = useState(false);
+  const [sum, setSum] = useState<MemberSummary | null>(null);
   const [inq, setInq] = useState<Inquiry[]>([]);
   const [ans, setAns] = useState<Record<number, string>>({});
   const [open, setOpen] = useState<string | null>(null);
@@ -29,26 +47,36 @@ export function MembersView() {
     adminApi
       .screen(token, "members")
       .then((x) => {
-        setRows(x.users);
+        setRows(x.users.rows);
+        setMore(x.users.more);
+        setSum(x.summary);
         setInq(x.inquiries);
         setRefunds(x.refunds);
       })
       .catch((e) => say(errText(e)));
   }, [token, say]);
   useEffect(load, [load]);
-  // 찾기 칸을 고칠 때는 회원 목록만 다시
-  const lastQ = useRef(q);
-  useEffect(() => {
-    if (lastQ.current === q) return; // 처음 목록은 위에서 받음(개발 모드에서 두 번 돌아도 안전)
-    lastQ.current = q;
-    const h = window.setTimeout(() => {
+  // 찾기 · 거르기 · 정렬을 바꿀 때는 회원 목록만 다시(찾기 칸은 멈춘 뒤 한 번)
+  const page = useCallback(
+    (offset: number) =>
       adminApi
-        .users(token, q)
-        .then(setRows)
-        .catch((e) => say(errText(e)));
-    }, 300);
+        .users(token, q, f, sort, offset)
+        .then((x) => {
+          setRows((r) => (offset ? [...r, ...x.rows] : x.rows));
+          setMore(x.more);
+        })
+        .catch((e) => say(errText(e))),
+    [token, q, f, sort, say],
+  );
+  const last = useRef(`${q}|${f}|${sort}`);
+  useEffect(() => {
+    const key = `${q}|${f}|${sort}`;
+    if (last.current === key) return; // 처음 목록은 위에서 받음(개발 모드에서 두 번 돌아도 안전)
+    const typed = last.current.split("|")[0] !== q;
+    last.current = key;
+    const h = window.setTimeout(() => void page(0), typed ? 300 : 0);
     return () => window.clearTimeout(h);
-  }, [token, q, say]);
+  }, [q, f, sort, page]);
   return (
     <>
       {refunds.length > 0 && (
@@ -151,8 +179,29 @@ export function MembersView() {
       </section>
       <section className="section">
         <h2>
-          {t.members} {rows.length}
+          {t.members} {sum?.total ?? rows.length}
         </h2>
+        {sum && <p className="sub">{t.memberSum(sum)}</p>}
+        <div className="adm-line">
+          <div className="adm-tabs f-wrap">
+            {FILTERS.map((k) => (
+              <button key={k} className={f === k ? "on" : ""} onClick={() => setF(k)}>
+                {t.memberFilter[k]} {k === "all" ? (sum?.total ?? "") : (sum?.[k] ?? "")}
+              </button>
+            ))}
+          </div>
+          <select
+            className="adm-input"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as MemberSort)}
+          >
+            {(["joined", "login"] as const).map((k) => (
+              <option key={k} value={k}>
+                {t.sortName[k]}
+              </option>
+            ))}
+          </select>
+        </div>
         <input
           className="adm-input w-full"
           placeholder={t.memberSearch}
@@ -167,15 +216,26 @@ export function MembersView() {
             >
               <span>
                 {u.email}
+                <span className="sub ml-6">{t.provider[u.provider] ?? u.provider}</span>
                 {u.admin_role && <span className="chip blue ml-6">{t.roleName[u.admin_role]}</span>}
                 {u.limited && <span className="chip orange ml-6">{t.limited}</span>}
+                {!u.confirmed && <span className="chip orange ml-6">{t.unconfirmed}</span>}
               </span>
-              <span className="sub">{u.plan ?? t.free}</span>
-              <span className="sub">{when(u.last_sign_in_at)}</span>
+              <span className="sub">
+                {u.paid_plan && u.paid_until
+                  ? t.paidUntil(u.paid_plan, u.paid_until)
+                  : (u.plan ?? t.free)}
+              </span>
+              <span className="sub">{t.rowDates(day(u.created_at), when(u.last_sign_in_at))}</span>
             </button>
             {open === u.user_id && <Detail id={u.user_id} reload={load} />}
           </div>
         ))}
+        {more && (
+          <button className="adm-btn w-full" onClick={() => void page(rows.length)}>
+            {t.more}
+          </button>
+        )}
       </section>
     </>
   );
@@ -211,13 +271,59 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
   };
   return (
     <div className="adm-detail">
+      <b>{t.info}</b>
       <p className="sub">
-        {t.joined} {when(u.created_at)} · {t.purposeName[u.purpose ?? ""] ?? "-"} ·{" "}
-        {(u.interest_regions ?? []).join(", ") || "-"}
+        {u.nickname ?? "-"} · {t.provider[u.provider] ?? u.provider}
+        {!u.email_confirmed_at && ` · ${t.unconfirmed}`} · {t.joined} {when(u.created_at)}
       </p>
       <p className="sub">
-        {t.counts(u)} · {m.memberPoints(u.points)}
+        {t.purposeName[u.purpose ?? ""] ?? "-"} · {(u.interest_regions ?? []).join(", ") || "-"} ·{" "}
+        {t.cash(u.cash_krw)} · {t.homes(u.homes, u.first_time)} · {t.profileAt} {when(u.profile_at)}
       </p>
+      <b>{t.access}</b>
+      <p className="sub">
+        {t.lastSignIn} {when(u.last_sign_in_at)} · {t.lastSeen} {when(u.last_seen)} ·{" "}
+        {t.loginN(u.login_n)} · {t.push(u.push_n)}
+      </p>
+      <b>{t.activity}</b>
+      <p className="sub">
+        {t.counts(u)} · {t.viewN(u.view_n)} · {t.academyN(u.academy_n)} · {m.memberPoints(u.points)}
+      </p>
+      <b>{t.pays}</b>
+      <p className="sub">{t.card(u.card)}</p>
+      {u.payments.length === 0 && <p className="sub">{t.none}</p>}
+      {u.payments.map((p) => (
+        <p key={p.payment_id} className="sub">
+          {day(p.paid_at)} · {t.payLine(p)}
+          {p.auto_renew && ` · ${t.autoRenew(p.renew_fails)}`}
+        </p>
+      ))}
+      {u.ledger.length > 0 && (
+        <details>
+          <summary className="sub">
+            {t.ledger} {u.ledger.length}
+          </summary>
+          {u.ledger.map((l, i) => (
+            <p key={i} className="sub">
+              {when(l.created_at)} · {l.delta > 0 ? "+" : ""}
+              {l.delta.toLocaleString()}P · {l.reason}
+            </p>
+          ))}
+        </details>
+      )}
+      {u.events.length > 0 && (
+        <details>
+          <summary className="sub">
+            {t.recent} {u.events.length}
+          </summary>
+          {u.events.map((e, i) => (
+            <p key={i} className="sub">
+              {when(e.at)} · {t.eventName[e.kind] ?? e.kind}
+              {e.path ? ` · ${decodeURIComponent(e.path)}` : ""}
+            </p>
+          ))}
+        </details>
+      )}
       {can("owner") && (
         <p>
           {email || (
