@@ -73,9 +73,16 @@ export default function More() {
       <h2>{t.cond}</h2>
       {profile ? (
         <>
-          <div className="line-row">
-            <span className="sub">{t.regions}</span>
-            <b className="ta-right">{profile.regions.join(" · ") || "-"}</b>
+          {/* 관심 지역은 칩으로(11/23 M-Me — 길면 한 줄 값이 화면 밖으로 넘쳤음) */}
+          <p className="sub mt-4 mb-8">{t.regions}</p>
+          <div className="d-flex f-wrap gap-6 mb-4">
+            {profile.regions.length
+              ? profile.regions.map((r) => (
+                  <span key={r} className="chip gray fw-6">
+                    {r}
+                  </span>
+                ))
+              : "-"}
           </div>
           <div className="line-row">
             <span className="sub">{t.cash}</span>

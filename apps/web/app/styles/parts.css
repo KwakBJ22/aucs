@@ -257,12 +257,21 @@ th.num {
   text-align: right;
 }
 /* 줄 끝의 금액·수치는 통째로 */
-.line-row > b,
-.menu-row > b,
 .line-row > .num,
 .menu-row > .num {
   flex: none;
   white-space: nowrap;
+}
+/* 이름표 + 굵은 값 줄(11/23 — 내 정보 「관심 지역」 · 결제 「포함」이 세로로 한 글자씩 꺾이고 값이 화면 밖으로):
+   이름표는 접지 않고, 값은 남은 폭에서 접히며 오른쪽 맞춤. 짧은 값(금액)은 한 줄 그대로 */
+.line-row > .sub:first-child {
+  flex: none;
+  white-space: nowrap;
+}
+.line-row > b,
+.menu-row > b {
+  flex: 0 1 auto;
+  text-align: right;
 }
 .btn.kakao {
   background: var(--kakao);
@@ -471,6 +480,14 @@ th.num {
   margin: 8px calc(-1 * var(--page-x)) 0;
   padding: 10px var(--page-x) 12px;
   background: linear-gradient(rgba(242, 244, 246, 0), var(--bg) 30%);
+}
+@media (min-width: 1024px) {
+  .cta-bar {
+    position: static;
+    margin: 8px 0 0;
+    padding: 0;
+    background: none;
+  }
 }
 .cta-bar .btn {
   min-height: 54px;
@@ -1318,5 +1335,15 @@ input.f-input[type="search"]::-webkit-search-cancel-button {
   }
   .btn.soft:not(.sm) {
     font-weight: 600;
+  }
+}
+/* 휴대폰 목록 줄(11/23 M-Me): 글 15 · 600 */
+@media (max-width: 1023px) {
+  .menu-row {
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+  .menu-row .sub {
+    font-weight: 400;
   }
 }

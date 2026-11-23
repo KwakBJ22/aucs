@@ -119,7 +119,7 @@ function Checkout() {
               : t.planMonth}
         </h2>
         {rows.map(([k, v]) => (
-          <div key={k} className="line-row co-row">
+          <div key={k} className={`line-row co-row${k === t.includes ? " co-stack" : ""}`}>
             <span className="sub">{k}</span>
             <b>{v}</b>
           </div>
@@ -150,11 +150,14 @@ function Checkout() {
         </p>
       </section>
       <p className="sub co-refund">{plan === "one" ? t.refundOne : t.refundPlan}</p>
-      <button className="btn primary" disabled={!open || busy} onClick={() => void pay()}>
-        {busy ? t.opening : monthly ? t.payCard(price) : t.pay(price)}
-      </button>
-      {err && <p className="sub c-red ta-center mt-8">{err}</p>}
-      {q && !q.open && <p className="sub ta-center mt-8">{P.payLater}</p>}
+      {/* 휴대폰: 결제 단추는 아래 탭 위에 붙음(11/23 M-Checkout — 아래 탭에 가렸음) */}
+      <div className="cta-bar">
+        {q && !q.open && <p className="sub ta-center mt-0 mb-8">{P.payLater}</p>}
+        <button className="btn primary" disabled={!open || busy} onClick={() => void pay()}>
+          {busy ? t.opening : monthly ? t.payCard(price) : t.pay(price)}
+        </button>
+        {err && <p className="sub c-red ta-center mt-8 mb-0">{err}</p>}
+      </div>
     </main>
   );
 }

@@ -65,7 +65,7 @@ function Today({
   if (!x) return null;
   return (
     <section className="section">
-      <div className="d-flex jc-between ai-center gap-8">
+      <div className="ac-today-h">
         <h2 className="m-0">{title}</h2>
         <span className="sub fs-sm">{sub}</span>
       </div>

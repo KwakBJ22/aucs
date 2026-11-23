@@ -5,6 +5,16 @@
 .co-row {
   font-size: 15px;
 }
+/* 「포함」처럼 긴 값: 이름표 위 · 값 아래(11/23 M-Checkout) */
+.co-row.co-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.co-row.co-stack > b {
+  font-weight: 400;
+  text-align: left;
+}
 .co-total {
   margin-top: 8px;
   /* 디자인(11/22)은 위 여백 14였으나 공통 .line-row(10)가 덮어 실제로는 10 — 11/23 정리 때 보이는 그대로 둠(2단계에서 다시 정함) */
@@ -390,4 +400,58 @@
     font-size: var(--fs-base);
     font-weight: 600;
   }
+}
+
+/* ══ 휴대폰 포인트 UP(11/23 M-Points) ══ */
+@media (max-width: 1023px) {
+  /* 위 칸: 흰 판 · 큰 P 그림 없음 · 등기부 연파랑 · 감정평가서 회색 */
+  .pt-hero {
+    background: var(--surface);
+  }
+  .pt-coin {
+    display: none;
+  }
+  .pt-perks > div {
+    background: var(--panel);
+  }
+  .pt-perks > div:first-child {
+    background: var(--blue-soft);
+  }
+  .pt-perks > div:not(:first-child) b {
+    color: var(--text);
+  }
+  /* 목록 줄: 이름은 파란 글자 링크 */
+  .pt-row-name > b {
+    color: var(--blue-text);
+    font-size: var(--fs-base);
+  }
+  .pt-row-name > b::after {
+    content: " ›";
+  }
+}
+
+/* ══ 휴대폰 이용권(11/23 M-Plans) ══ */
+@media (max-width: 1023px) {
+  /* 매달 · 1년: 회색 판 안 흰 칸 */
+  .plan-seg {
+    background: var(--line);
+  }
+  .plan-seg button.on {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .plan-price {
+    font-size: var(--fs-price);
+    font-weight: 800;
+  }
+  .plan-line {
+    min-height: 0;
+    padding: 8px 0;
+    font-size: var(--fs-md);
+  }
+}
+/* 「포인트 UP!」 줄 같은 구역 한 줄 링크: 목록 줄 여백(16 0)이 구역 좌우 여백을 덮던 것(11/23) */
+.section.menu-row {
+  padding: 16px var(--sec-x);
 }

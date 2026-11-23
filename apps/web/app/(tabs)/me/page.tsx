@@ -39,7 +39,19 @@ const OUT_CHIP: Record<string, string> = {
 const md = (iso: string) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
 
 // 결과 기록(RESULT-01): 결과 하나 고르고, 숫자는 아는 것만.
-function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; token: string }) {
+// fold: 휴대폰은 줄마다 「결과 적기」 단추 하나 — 누르면 고르는 단추가 펼쳐짐(11/23 M-My, 네 칸이 줄마다 되풀이돼 길었음)
+function RecordForm({
+  x,
+  onSaved,
+  token,
+  fold = false,
+}: {
+  x: BidTodo;
+  onSaved: () => void;
+  token: string;
+  fold?: boolean;
+}) {
+  const [opened, setOpened] = useState(!fold);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [f, setF] = useState({ my: "", win: "", second: "", n: "", pay: "" });
   const [done, setDone] = useState<CourtBidders | null>(null);
@@ -95,6 +107,18 @@ function RecordForm({ x, onSaved, token }: { x: BidTodo; onSaved: () => void; to
       />
     </label>
   );
+  if (!opened)
+    return (
+      <div className="line-row py-12 px-0">
+        <span className="minw-0">
+          <b className="d-block">{x.place}</b>
+          <span className="sub fs-xs">{t.bidOn(md(x.sale_date))}</span>
+        </span>
+        <button className="btn soft sm" onClick={() => setOpened(true)}>
+          {t.recordGo}
+        </button>
+      </div>
+    );
   return (
     <div className="py-12 px-0 rec-form">
       <div className="fw-6">
@@ -216,7 +240,12 @@ export default function Me() {
   const upcoming = watch
     .filter((w) => w.d_day != null && w.d_day >= 0 && w.step !== "result" && w.step !== "after")
     .sort((x, y) => (x.d_day ?? 99) - (y.d_day ?? 99));
-  const box = (title: string, hint: string | null, children: React.ReactNode, show: boolean) =>
+  const box = (
+    title: React.ReactNode,
+    hint: string | null,
+    children: React.ReactNode,
+    show: boolean,
+  ) =>
     show || pc ? (
       <section className="section">
         <h2 className="m-0 me-h">{title}</h2>
@@ -226,7 +255,14 @@ export default function Me() {
     ) : null;
 
   const upcomingBox = box(
-    t.upcoming,
+    // 휴대폰은 제목 옆 건수(11/23 M-My) · PC 는 제목 아래 한 줄
+    pc || upcoming.length === 0 ? (
+      t.upcoming
+    ) : (
+      <>
+        {t.upcoming} <span className="h-count">{upcoming.length}</span>
+      </>
+    ),
     pc && upcoming.length > 0 ? t.count(upcoming.length) : null,
     upcoming.length === 0 ? (
       <p className="sub">{t.upcomingEmpty}</p>
@@ -256,7 +292,13 @@ export default function Me() {
   );
 
   const recordBox = box(
-    t.recordTitle,
+    !pc && d && d.todo.length > 0 ? (
+      <>
+        {t.todoTitle} <span className="h-count">{d.todo.length}</span>
+      </>
+    ) : (
+      t.recordTitle
+    ),
     d && d.todo.length > 0 ? t.todoHint : null,
     <>
       {pc && d.todo.length > 0 && (
@@ -264,7 +306,7 @@ export default function Me() {
       )}
       {d?.todo.map((x) => (
         <div key={x.item_id} id={`rec-${x.item_id}`}>
-          <RecordForm x={x} token={session.access_token} onSaved={load} />
+          <RecordForm x={x} token={session.access_token} onSaved={load} fold={!pc} />
         </div>
       ))}
       {d && d.todo.length === 0 && d.history.length === 0 && <p className="sub">{t.recordEmpty}</p>}
@@ -393,7 +435,9 @@ export default function Me() {
     pc ? t.wonEmpty : null,
     <>
       {d && d.won.length === 0 && <p className="empty-box">{pc ? t.none : t.wonEmpty}</p>}
-      {d?.won.map((b) => <WonCard key={b.bid_id} b={b} />)}
+      {d?.won.map((b) => (
+        <WonCard key={b.bid_id} b={b} />
+      ))}
     </>,
     Boolean(d && d.won.length > 0),
   );
