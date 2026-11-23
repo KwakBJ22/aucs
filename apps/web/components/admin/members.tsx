@@ -311,6 +311,20 @@ function Detail({ id, reload }: { id: string; reload: () => void }) {
           ))}
         </details>
       )}
+      {u.inquiries.length > 0 && (
+        <details>
+          <summary className="sub">
+            {t.inquiries} {u.inquiries.length}
+          </summary>
+          {u.inquiries.map((x) => (
+            <div key={x.inquiry_id} className="adm-card">
+              <span className="sub">{when(x.created_at)}</span>
+              <span className="adm-msg">{x.body}</span>
+              {x.answer && <span className="sub adm-msg">↳ {x.answer}</span>}
+            </div>
+          ))}
+        </details>
+      )}
       {u.events.length > 0 && (
         <details>
           <summary className="sub">
