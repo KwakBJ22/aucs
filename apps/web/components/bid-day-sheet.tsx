@@ -42,7 +42,6 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
       </Delayed>
     );
 
-  const color = d.state === "ok" || d.state === "soon" ? "var(--green)" : "var(--red)";
   const mapUrl = `https://map.kakao.com/?q=${encodeURIComponent(d.court_full)}`;
   const Check = ({ k, label, sub }: { k: string; label: string; sub?: string }) => (
     <label className="d-flex gap-10 py-10 px-0 mh-44">
@@ -127,13 +126,12 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
   }
   return (
     <div className={wide ? "pc-grid g-5" : ""}>
-      <section className="section">
-        <div style={{ color, fontWeight: 700 }}>
-          {d.state === "ok" || d.state === "soon" ? "● " : "◆ "}
-          {d.state_line}
-        </div>
-        {d.checked_at && <div className="sub">{t.checked(d.checked_at)}</div>}
-      </section>
+      {/* 진행 상태(11/23 M-Morning): 색 판 한 줄 + 아래 작은 확인 시각 */}
+      <div className={`bd-state ${d.state === "ok" || d.state === "soon" ? "ok" : "bad"}`}>
+        {d.state === "ok" || d.state === "soon" ? "● " : "◆ "}
+        {d.state_line}
+      </div>
+      {d.checked_at && <p className="sub fs-xs mt-6 mb-0 mx-4">{t.checked(d.checked_at)}</p>}
       <section className="section">
         <div className="sub">
           {d.court} {d.case_no}
@@ -156,8 +154,8 @@ export function BidDaySheet({ id, wide = false }: { id: string; wide?: boolean }
         <div className="sub mt-8">{t.timeNote}</div>
       </section>
       <section className="section">
-        <h2>{t.deposit}</h2>
-        <div className="fs-3xl fw-7">{won(d.deposit_krw)}</div>
+        <p className="sub m-0">{t.deposit}</p>
+        <div className="bd-dep-v">{won(d.deposit_krw)}</div>
         <div className="sub">
           {t.depositSub(d.deposit_rate_pct, won(d.min_price_krw), d.resale)}
         </div>

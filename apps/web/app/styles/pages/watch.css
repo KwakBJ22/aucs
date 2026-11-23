@@ -127,3 +127,70 @@
   color: var(--faint);
   text-decoration: line-through;
 }
+
+/* ══ 휴대폰 작업 공간(11/23 M-Workspace) ══ */
+@media (max-width: 1023px) {
+  /* 단계: 회색 판 · 고른 것 연파랑 ✓ */
+  .step-pills .pill {
+    background: var(--panel);
+  }
+  .step-pills .pill.on {
+    background: var(--blue-soft);
+  }
+  /* 탭 4개: 흰 판 위 밑줄 탭 · 아래 내용 칸과 한 판으로 붙음 */
+  .ws-tabs {
+    gap: 0;
+    margin-top: 12px;
+    padding: 0;
+    border-radius: var(--r-card) var(--r-card) 0 0;
+    background: var(--surface);
+  }
+  .ws-tabs button {
+    min-height: 44px;
+    border-radius: 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+    color: var(--faint);
+    font-size: var(--fs-body);
+  }
+  .ws-tabs button.on {
+    background: transparent;
+    color: var(--text);
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 var(--text);
+  }
+  .ws-tabs + .section {
+    margin-top: 0;
+    border-radius: 0 0 var(--r-card) var(--r-card);
+  }
+}
+/* 현장 「여러 곳 도는 순서」 줄(11/23 M-Field): 파란 네모 확인 · 검은 동그라미 차례 · 이름 15 굵게 */
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+.route-row input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+.route-no {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--on-strong);
+  font-size: var(--fs-xs);
+}
+.route-name {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: 700;
+}

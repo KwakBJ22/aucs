@@ -40,6 +40,10 @@
   .page > .topbar .logo img {
     height: 26px;
   }
+  /* 머리 바로 아래 첫 줄은 12 띄움(디자인 main 위 여백 12) — 구역(.section)은 제 여백 12 가 있음 */
+  .page > .topbar + :not(.section) {
+    margin-top: 12px;
+  }
 }
 .brand {
   font-size: 18px;

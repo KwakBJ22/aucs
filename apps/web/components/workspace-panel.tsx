@@ -137,7 +137,7 @@ export function WorkspacePanel({
       </section>
 
       {!all && (
-        <div className="seg" role="tablist">
+        <div className="seg ws-tabs" role="tablist">
           {(["memo", "checks", "calcs", "history"] as Tab[]).map((k) => (
             <button
               key={k}

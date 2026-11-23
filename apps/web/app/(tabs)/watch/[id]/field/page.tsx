@@ -227,11 +227,11 @@ export default function FieldPage() {
               <h2>{T.title}</h2>
               <p className="sub mt-0">{pos ? T.fromHere : T.fromFirst}</p>
               {route.map((x, i) => (
-                <label key={x.id} className="d-flex gap-8 ai-center py-6 px-0">
+                <label key={x.id} className="route-row">
                   <input type="checkbox" checked onChange={() => flip(x.id)} />
-                  <b className="c-blue-text">{i + 1}</b>
+                  <b className="route-no">{i + 1}</b>
                   <span className="minw-0">
-                    <span className="d-block fs-md">{x.name}</span>
+                    <span className="route-name">{x.name}</span>
                     {i > 0 && (
                       <span className="sub fs-xs">
                         {T.gap(km(meters([route[i - 1]!.lat, route[i - 1]!.lon], [x.lat, x.lon])))}
@@ -241,7 +241,7 @@ export default function FieldPage() {
                 </label>
               ))}
               {rest.map((x) => (
-                <label key={x.id} className="d-flex gap-8 ai-center py-6 px-0 sub">
+                <label key={x.id} className="route-row sub">
                   <input
                     type="checkbox"
                     checked={false}

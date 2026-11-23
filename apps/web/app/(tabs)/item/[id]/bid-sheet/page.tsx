@@ -96,6 +96,40 @@ function Sheet() {
   ]
     .filter(Boolean)
     .join(" · ");
+  // 입찰자 정보(11/22 디자인): 이 기기 화면에만 적고 서버로 보내지 않음 · 인쇄가 끝나면 지움.
+  // PC 는 입력 칸 안, 휴대폰은 따로 한 칸(11/23 M-Bid)
+  const bsMe = (
+    <div className="bs-me">
+      <b>{t.meTitle}</b>
+      <p className="sub mt-4 mb-0">{t.meHint}</p>
+      {!meOpen ? (
+        <button className="btn soft sm mt-10" onClick={() => setMeOpen(true)}>
+          {t.meOpen}
+        </button>
+      ) : (
+        <div className="bs-me-in">
+          {(
+            [
+              ["name", t.f.name],
+              ["tel", t.f.tel],
+              ["rrn", t.f.rrn],
+              ["addr", t.f.addr],
+            ] as const
+          ).map(([k, label]) => (
+            <label key={k} className="d-block mt-8">
+              <span className="sub">{label}</span>
+              <input
+                className="f-input"
+                autoComplete="off"
+                value={mine[k]}
+                onChange={(e) => setMine({ ...mine, [k]: e.target.value })}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
   return (
     <main className="page wide">
       <div className="no-print">
@@ -168,47 +202,9 @@ function Sheet() {
                 <div className="sub mt-6">{t.deposit(won(chk.deposit_krw), chk.resale)}</div>
               </div>
             )}
-            {/* 입찰자 정보(11/22 디자인): 이 기기 화면에만 적고 서버로 보내지 않음 · 인쇄가 끝나면 지움 */}
-            <div className="bs-me">
-              <b>{t.meTitle}</b>
-              <p className="sub mt-4 mb-0">{t.meHint}</p>
-              {!meOpen ? (
-                <button className="btn soft sm mt-10" onClick={() => setMeOpen(true)}>
-                  {t.meOpen}
-                </button>
-              ) : (
-                <div className="bs-me-in">
-                  {(
-                    [
-                      ["name", t.f.name],
-                      ["tel", t.f.tel],
-                      ["rrn", t.f.rrn],
-                      ["addr", t.f.addr],
-                    ] as const
-                  ).map(([k, label]) => (
-                    <label key={k} className="d-block mt-8">
-                      <span className="sub">{label}</span>
-                      <input
-                        className="f-input"
-                        autoComplete="off"
-                        value={mine[k]}
-                        onChange={(e) => setMine({ ...mine, [k]: e.target.value })}
-                      />
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            {!pc && (
-              <button
-                className="btn primary mt-12"
-                disabled={!canPrint}
-                onClick={() => window.print()}
-              >
-                {t.print}
-              </button>
-            )}
+            {pc && bsMe}
           </section>
+          {!pc && <section className="section">{bsMe}</section>}
           <section className="section">
             <h2>{t.checkTitle}</h2>
             <div className="sub">{t.checkSum(checks.length, passed)}</div>
@@ -323,6 +319,14 @@ function Sheet() {
           <div className="sub m-0">{t.dayCard}</div>
           <BidDaySheet id={id} wide />
         </section>
+      )}
+      {/* 휴대폰: 인쇄 단추는 아래 탭 위에 붙음(11/23 M-Bid) */}
+      {!pc && (
+        <div className="cta-bar no-print">
+          <button className="btn primary" disabled={!canPrint} onClick={() => window.print()}>
+            {t.print}
+          </button>
+        </div>
       )}
     </main>
   );

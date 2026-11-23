@@ -351,3 +351,42 @@
     border: 0;
   }
 }
+/* 휴대폰 입찰표(11/23 M-Bid): 입찰자 정보는 따로 한 칸 — 안쪽 판 없이 */
+@media (max-width: 1023px) {
+  .section > .bs-me {
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+  .section > .bs-me > b {
+    font-size: var(--fs-lg);
+  }
+  .section > .bs-me .btn.sm {
+    width: 100%;
+    min-height: 48px;
+    border-radius: var(--r-btn);
+    font-size: var(--fs-body);
+  }
+}
+/* 입찰일 아침(11/23 M-Morning): 진행 상태 색 판 · 보증금 수표 값 파랑 크게 */
+.bd-state {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: var(--r-btn);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+.bd-state.ok {
+  background: var(--green-soft);
+  color: var(--green);
+}
+.bd-state.bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+.bd-dep-v {
+  margin-top: 4px;
+  color: var(--blue-text);
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+}
