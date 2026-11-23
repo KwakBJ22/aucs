@@ -396,7 +396,7 @@
     animation: none;
   }
 }
-/* 오늘의 물건 문제 머리(11/23 M-Academy): 휴대폰은 제목 위 · 설명 아래(좁게 두 칸으로 갈라졌음), PC 는 한 줄 양끝 */
+/* 실제 물건 문제 머리(11/23 M-Academy): 휴대폰은 제목 위 · 설명 아래(좁게 두 칸으로 갈라졌음), PC 는 한 줄 양끝 */
 .ac-today-h {
   display: flex;
   flex-direction: column;

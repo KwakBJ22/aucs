@@ -217,9 +217,9 @@ export function fetchCollections(opts: {
 export type PublicNotice = { notice_id: number; title: string; body: string; start_at: string };
 export const fetchNotices = () => getJson<PublicNotice[]>("/notices");
 
-// 아카데미 오늘의 물건 문제(11/17) — 실제 물건 · 낙찰 결과로 하루 한 문제(공개)
+// 아카데미 실제 물건 문제 한 개(레벨4 판정). 「오늘의 물건 문제」(산수만 하는 문제)는 11/23 뺌
 export type AcademyToday = {
-  kind: "rate" | "start" | "judge";
+  kind: "judge";
   q: string;
   options: string[];
   answer: number;
@@ -227,7 +227,6 @@ export type AcademyToday = {
   item_id: string | null;
   from: string;
 };
-export const fetchAcademyToday = () => getJson<AcademyToday | null>("/academy/today", 10 * 60_000);
 // 레벨4 실제 물건 판정(11/17) — 명세서 원문이라 로그인 회원만
 export const fetchAcademyJudge = () => getGated<AcademyToday | null>("/academy/judge");
 

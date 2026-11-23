@@ -16,14 +16,14 @@ import {
   taskCount,
 } from "@/lib/academy";
 import { TITLES, nextGoal, reached, streak, xpOf } from "@/lib/academy-game";
-import { fetchAcademyJudge, fetchAcademyToday, type AcademyToday } from "@/lib/api/items";
+import { fetchAcademyJudge, type AcademyToday } from "@/lib/api/items";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { LevelIcon } from "@/components/level-icon";
 
 const t = copy.academy;
 
-// 오늘의 물건 문제(11/17): 실제 물건 · 낙찰 결과로 하루 한 문제 — 정답은 계산으로만 나오는 것.
+// 실제 물건 문제 한 칸(레벨4 판정, 11/17) — 법원 명세서 원문으로 하루 한 문제. 정답은 법원이 쓴 말에서만.
 // 레벨4가 열리면 「실제 물건 판정」(명세서 원문 한 줄 → 떠안나?)도 같은 모양으로 — 로그인 회원만.
 function Today({
   load,
@@ -189,7 +189,6 @@ export default function Academy() {
         )}
       </section>
 
-      <Today load={fetchAcademyToday} title={t.today} sub={t.todaySub} />
       {token && l4Open && <Today load={fetchAcademyJudge} title={t.judge} sub={t.judgeSub} />}
 
       {LEVELS.map((lv) => {

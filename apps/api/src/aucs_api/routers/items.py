@@ -214,12 +214,6 @@ def post_guest_inquiry(body: GuestAskIn) -> dict[str, int]:
     return {"inquiry_id": n}
 
 
-@router.get("/academy/today")
-def get_academy_today() -> dict[str, Any] | None:
-    """아카데미 오늘의 물건 문제(11/17, 공개 — 목록에 나오는 값만 씀)."""
-    return academy_live.today()
-
-
 @router.get("/academy/judge")
 def get_academy_judge(authorization: str = Header(default="")) -> dict[str, Any] | None:
     """레벨4 실제 물건 판정(11/17) — 명세서 원문을 보여 주므로 로그인한 회원만."""
