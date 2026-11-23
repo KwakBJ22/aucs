@@ -289,6 +289,25 @@
 .case-flow {
   font-size: var(--fs-lg);
 }
+/* 감정평가서 한 줄 주황 판(11/23 — 11/22 디자인 DetailTypes) */
+.appr-line {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  font-size: var(--fs-md);
+}
+/* 사건 한 장 요약 다섯 줄 · 「무슨 뜻인가」 칸(11/23 — 11/22 디자인) */
+.case-sum {
+  padding: 6px 14px 10px;
+  border-radius: 12px;
+  background: var(--band);
+}
+.case-table .case-mean {
+  min-width: 200px;
+  font-size: var(--fs-md);
+}
 .case-table .case-text {
   white-space: normal;
 }

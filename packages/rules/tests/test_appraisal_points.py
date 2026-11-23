@@ -120,3 +120,23 @@ def test_illegal_building_from_appraisal_text() -> None:
     no = parse_points([_e("00083014", "건축물대장상 위반건축물로 등재되어 있으나 본건과 관련 없음.")])
     assert appraisal_facts(yes).value.get("illegal_building") is True
     assert "illegal_building" not in appraisal_facts(no).value
+
+
+def test_no_diff_text_is_not_a_difference() -> None:
+    """11/23: 「서류와 다른 점」에 차이가 없다고 적은 글은 칸도 신호(T10 확인 필요)도 없음 · 차이를 적은 글은 남김."""
+    none = [
+        "없습니다.",
+        "해당사항 없습니다.",
+        "특이사항 없음.",
+        "공부와의 차이는 없습니다.",
+        "○ 해당사항 없음",
+        "[본건#1-7]은 현장조사시 포착된 특이사항은 없었습니다.",
+        "물적 동일성이 인정됨.",
+    ]
+    for t in none:
+        assert parse_points([_e("00083014", t)]) == [], t
+        assert "doc_diff_text" not in appraisal_facts(parse_points([_e("00083014", t)])).value
+    diff = "기호(1,2)의 공부상 지목이 답이나 현황 전임."
+    pts = parse_points([_e("00083014", diff)])
+    assert pts and pts[0]["label"] == "서류와 다른 점"
+    assert appraisal_facts(pts).value["doc_diff_text"] is True

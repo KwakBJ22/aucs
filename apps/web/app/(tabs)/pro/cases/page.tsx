@@ -15,11 +15,65 @@ import { copyText } from "@/lib/copy-text";
 const t = copy.proCases;
 const IMP_CHIP = { high: "red", mid: "gray", low: "gray" } as const;
 
-// 사건 한 장(11/22 디자인): 머리(사건 · 이름 + 복사 · 보고서) → 숫자 네 칸 → 진행 판단 판 → 문건 표(중요한 것만 · 모두)
+const TAX = "세금 교부청구";
+const dot = (iso: string | null) => (iso ? iso.replace(/-0?/g, ".") : "");
+
+// 요약 다섯 줄(11/22 디자인) — 문건 분류(core.case_events.category)로 셈. 없으면 「문건에 없음」.
+function Summary({ d }: { d: CaseDetail }) {
+  const S = t.sum;
+  const of = (cat: string) => d.events.filter((e) => e.category === cat);
+  const last = (l: CaseDetail["events"]) =>
+    l
+      .map((e) => e.event_date)
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null;
+  const rehab = of("회생·파산");
+  const late = d.events.filter((e) => e.after_deadline);
+  const tax = of(TAX);
+  const cred = of("채권자 바뀜");
+  const lien = of("유치권 신고").length;
+  const share = of("공유자 우선매수").length;
+  const rows: [string, string | null, string | null, boolean][] = [
+    [S.rehab, rehab.length ? S.yes : null, dot(last(rehab)), true],
+    [
+      S.late,
+      late.length ? S.n(late.length) : null,
+      d.claim_deadline ? S.deadline(dot(d.claim_deadline)) : null,
+      true,
+    ],
+    [S.tax, tax.length ? S.n(tax.length) : null, tax.length ? S.taxSub : null, false],
+    [S.creditor, cred.length ? S.yes : null, dot(last(cred)), false],
+    [S.hold, lien + share ? S.yes : null, S.holdSub(lien, share) || null, true],
+  ];
+  return (
+    <div className="case-sum mt-12">
+      {rows.map(([k, v, sub, warn]) => (
+        <div key={k} className="line-row py-6 px-0">
+          <span className="sub">{k}</span>
+          <span className="ta-right">
+            <b className={v && warn ? "c-orange" : v ? "" : "sub"}>{v ?? S.none}</b>
+            {v && sub && <span className="sub d-block fs-xs">{sub}</span>}
+          </span>
+        </div>
+      ))}
+      <p className="sub fs-xs mt-4 mb-0">{S.note}</p>
+    </div>
+  );
+}
+
+// 사건 한 장(11/22 디자인): 머리(사건 · 이름 + 복사 · 보고서) → 숫자 네 칸 → 진행 판단 판 → 요약 다섯 줄
+// → 문건 표(중요한 것만 · 모두, 「무슨 뜻인가」). 중요한 것만 볼 때 세금 교부청구는 한 줄로 묶음.
 function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
   const [all, setAll] = useState(false);
   const [copied, setCopied] = useState(false);
-  const ev = d.events.filter((e) => all || e.importance !== "low" || e.after_deadline);
+  const picked = d.events.filter((e) => all || e.importance !== "low" || e.after_deadline);
+  const taxes = picked.filter((e) => e.category === TAX);
+  const ev =
+    all || taxes.length < 2 ? picked : picked.filter((e) => e.category !== TAX || e === taxes[0]);
+  const taxRange = taxes.length
+    ? `${dot(taxes[0]!.event_date)} ~ ${dot(taxes[taxes.length - 1]!.event_date)}`
+    : "";
   const it = d.items[0];
   return (
     <div>
@@ -67,6 +121,7 @@ function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
         </div>
       )}
       {d.claim_deadline && <div className="sub mt-8">{t.deadline(d.claim_deadline)}</div>}
+      <Summary d={d} />
       {d.items.map((i) => (
         <Link
           key={i.item_id}
@@ -105,25 +160,32 @@ function Detail({ d, place }: { d: CaseDetail; place?: string | null }) {
               <th>{t.cols.date}</th>
               <th>{t.cols.cat}</th>
               <th>{t.cols.imp}</th>
+              <th>{t.meanCol}</th>
               <th>{t.cols.text}</th>
             </tr>
           </thead>
           <tbody>
-            {ev.map((e, i) => (
-              <tr key={i}>
-                <td className="nowrap">{e.event_date}</td>
-                <td>{e.category}</td>
-                <td>
-                  <span className={`chip ${IMP_CHIP[e.importance]}`}>
-                    {t.imp[e.importance]}
-                    {e.after_deadline ? ` · ${t.lateTag}` : ""}
-                  </span>
-                </td>
-                <td className="case-text">
-                  {e.kind} {e.text_masked}
-                </td>
-              </tr>
-            ))}
+            {ev.map((e, i) => {
+              const group = !all && e.category === TAX && taxes.length > 1;
+              return (
+                <tr key={i}>
+                  <td className="nowrap">{group ? taxRange : e.event_date}</td>
+                  <td>{group ? t.taxGroup(taxes.length) : e.category}</td>
+                  <td>
+                    <span className={`chip ${IMP_CHIP[e.importance]}`}>
+                      {t.imp[e.importance]}
+                      {e.after_deadline ? ` · ${t.lateTag}` : ""}
+                    </span>
+                  </td>
+                  <td className="case-mean">
+                    {e.after_deadline ? t.lateMeaning : (t.meaning[e.category] ?? "")}
+                  </td>
+                  <td className="case-text">
+                    {group ? "" : `${e.kind ?? ""} ${e.text_masked ?? ""}`}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

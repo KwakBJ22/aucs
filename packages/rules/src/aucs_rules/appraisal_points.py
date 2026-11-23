@@ -34,7 +34,11 @@ LABELS: dict[str, str] = {
 ORDER = list(dict.fromkeys(LABELS.values()))
 MAX_CHARS = 600  # 임대관계 칸은 임차인 열 명분이 들어오기도 함 — 화면에는 앞부분만
 
-_EMPTY = re.compile(r"^[\s\-.·:()]*((해당\s*사항\s*)?없\s*음|해당\s*없음|무)?[\s\-.·:()]*$")
+_EMPTY = re.compile(r"^[\s\-.·:()○ㅡ]*((해당\s*사항\s*)?없\s*음|해당\s*없음|무)?[\s\-.·:()○ㅡ]*$")
+# 「서류와 다른 점」이 차이가 없다는 글(11/23 — 「없습니다.」「공부와의 차이는 없습니다.」「특이사항은 없었습니다.」
+# 「물적 동일성이 인정됨.」 등이 차이 있음(T10 확인 필요)으로 잡히던 것). 「…이나 …다름」처럼 차이를 적은 글은 남김.
+_NO_DIFF = re.compile(r"(없\s*(음|습\s*니\s*다|었\s*습\s*니\s*다|다)|동일성이\s*인정\s*됨?)[\s.]*$")
+_HAS_DIFF = re.compile(r"다름|다르|상이|차이가\s*있|불일치|이나\s|으나\s|이나,|으나,")
 _ATTACH_ONLY = re.compile(r"^\s*(별첨|후면|첨부)[^.]*참조\.?\s*$")
 
 
@@ -61,6 +65,8 @@ def parse_points(lst: list[dict[str, Any]] | None) -> list[dict[str, str]]:
         label = LABELS.get(str(e.get("aeeWevlMnpntItmCd") or ""))
         t = clean(e.get("aeeWevlMnpntCtt"))
         if not label or not t or _EMPTY.match(t) or _ATTACH_ONLY.match(t):
+            continue
+        if label == "서류와 다른 점" and _NO_DIFF.search(t) and not _HAS_DIFF.search(t):
             continue
         if t not in by_label.setdefault(label, []):
             by_label[label].append(t)

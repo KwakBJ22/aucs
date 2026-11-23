@@ -74,8 +74,17 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
     const area = b.area_m2
       ? `${b.area_m2.toFixed(1)}㎡ (${Math.round(b.area_m2 / 3.3058)}평)`
       : null;
+    // 감정평가서 한 줄(11/22 디자인 · 11/23): 요항 「서류와 다른 점」 원문 — 11가지 경우 T10 「확인 필요」를 만든 그 글
+    const diff = d.appraisal?.points.find((p) => p.label === "서류와 다른 점");
     return (
       <>
+        {diff && (
+          <div className="appr-line">
+            <div className="fs-sm fw-7">{t.apprLine}</div>
+            <p className="m-0 mt-4">{diff.text}</p>
+            <div className="fs-xs mt-4">{t.apprLineSrc(d.appraisal?.firm ?? null)}</div>
+          </div>
+        )}
         <Row label="주소" value={b.address ?? "-"} />
         {/* PC(11/22 디자인): 지도 | 입지 한 줄 · 정비구역 안 — 아래로 「가까운 역」 · 「건물과 땅」 칸 */}
         <div className="buy-top">
