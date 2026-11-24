@@ -13,6 +13,7 @@ import { RegistryBox, HoldDocLink } from "@/components/item/registry";
 import { Panel, t } from "@/components/item/shared";
 import { useIsPc } from "@/lib/use-pc";
 import { GoLinks } from "@/components/item/go-links";
+import { WorthTradesChart } from "@/components/item/trades-chart";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -288,7 +289,12 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         d={d}
         lead={
           (b.history_n > 0 || b.nearby_ok) && (
-            <Link className="link fs-sm" href={`/item/${encodeURIComponent(d.item_id)}/trades`}>
+            <Link
+              className="link fs-sm"
+              href={`/item/${encodeURIComponent(d.item_id)}/trades`}
+              target="_blank"
+              rel="noopener"
+            >
               {b.history_n > 0 ? copy.itemTrades.link : copy.itemTrades.nearLink}
             </Link>
           )
@@ -301,6 +307,8 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
       <>
         {/* 실거래 · 시세 링크를 맨 위 한 줄로(PC 11/22 · 휴대폰 11/23) */}
         {worthLinks}
+        {/* 실거래 그래프를 밖으로 — 한눈에 거래 금액(11/24 대표님), 전체는 「실거래 전체 보기」 새 창 */}
+        {b.history_n > 0 && <WorthTradesChart id={d.item_id} />}
         {d.court_bidders?.avg != null && (
           <Row
             label={copy.me.courtBidders}
