@@ -125,8 +125,11 @@ def build_detail(
         events=events, claim_deadline=r["claim_deadline"], rounds=rounds, sale_date=r["sale_date"],
         schedule_rows=sched["rows"], today=today, failed_count=r.get("failed_count"),
     )  # fmt: skip
+    # 보증기관 말소동의 임차권등기(info)는 「임차인 없어요」보다 먼저 — 임차권자가 있는 물건이라(11/24)
+    released = next((s for s in signals if s.get("rule_id") == "risk.lease_reg_released"), None)
     hold_ans = (
         warn[0]["title"] if warn
+        else released["title"] if released
         else f"임차인 {len(tenants)}명 · 등기부는 아직 안 봤어요" if tenants
         else "현황조사서에 임차인이 없어요 · 등기부는 아직 안 봤어요" if ds.get("status_report") in ("extracted", "verified")
         else "임차인 자료가 없어요 · 등기부는 아직 안 봤어요"

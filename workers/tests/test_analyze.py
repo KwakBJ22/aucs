@@ -68,5 +68,8 @@ def test_doc_tenants_from_deliveries():
         }
     )
     assert doc_tenants(ev) == {"n": 2, "lease_only": False}
+    ev.append({"text": "주택임차권자 이OO(OOOO) 매각기일 및 매각결정기일통지서 발송", "category": "매각기일 통지",
+               "event_date": None, "after_deadline": False})  # fmt: skip
+    assert doc_tenants(ev)["n"] == 2
     assert build_facts({}, ev, [], True)["doc_tenants"]["n"] == 2
     assert "doc_tenants" not in build_facts({}, ev, [{"move_in_date": None}], True)

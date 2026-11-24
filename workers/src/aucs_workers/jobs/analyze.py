@@ -375,7 +375,8 @@ def build_facts(
     }
 
 
-_DOC_TENANT = re.compile(r"^\s*(?:주택|상가)?임차(권자|인)\s+(\S+)")
+# 이름 뒤 괄호(「한OO(OO)」 — 같은 사람)는 떼고 셈(11/24 인천 2025타경513908: 2명을 3명으로 셌음)
+_DOC_TENANT = re.compile(r"^\s*(?:주택|상가)?임차(권자|인)\s+([^\s(]+)")
 
 
 def doc_tenants(events: list[dict[str, Any]]) -> dict[str, Any] | None:
