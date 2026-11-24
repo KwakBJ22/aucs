@@ -787,3 +787,7 @@
     line-height: 1.4;
   }
 }
+/* 매각기일 표 「다시 시작」 까닭 줄은 꺾음 — 표 칸은 한 줄(nowrap)이라 360 폭에서 표가 451px 로 넓어졌음(11/24) */
+.pro-table td.round-note {
+  white-space: normal;
+}

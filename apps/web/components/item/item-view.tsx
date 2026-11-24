@@ -376,7 +376,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                     {/* 최저가가 다시 올라간 회차의 까닭(11/24 — 57221 10/19) */}
                     {r.note && (
                       <tr>
-                        <td colSpan={3} className="fs-xs c-amber">
+                        <td colSpan={3} className="fs-xs c-amber round-note">
                           ◆ {r.note}
                           {r.note_doc && (
                             <button onClick={() => openDoc(r.note_doc!)} className="link in ml-6">
