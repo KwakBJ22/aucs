@@ -21,7 +21,9 @@ STEPS = [
     ("토지이용계획", ["aucs_workers.collectors.land_use", "--cap", "3000"]),  # 11/14 — 정비구역 안인지
     ("상가 주변 가게", ["aucs_workers.collectors.stores"]),  # 11/16 — 반경 300m 업종
     ("공매", ["aucs_workers.collectors.onbid"]),
-    ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"]),
+    # 11/24 대표님 「빠뜨리지 않게」: 아침 분석은 날마다 전체(약 20분) — 물건이 그대로여도 새 실거래 · 새 낙찰 사례가
+    #   예상 낙찰가 · 주변 시세에 그날 들어가게(전엔 월요일만 전체라 최대 일주일 늦었음). 낮에는 매시 --stale 그대로
+    ("분석(전체)", ["aucs_workers.jobs.analyze"]),
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),
     ("알림", ["aucs_workers.jobs.notify"]),
     ("올린 등기부 원본 지우기", ["aucs_workers.jobs.purge"]),
@@ -33,10 +35,8 @@ STEPS = [
 
 
 def steps_for(today: date) -> list[tuple[str, list[str]]]:
-    """월요일에는 마지막 분석을 전체로(낙찰 사례가 쌓여 범위가 바뀌므로)."""
-    if today.weekday() != 0:
-        return STEPS
-    return [(n, ["aucs_workers.jobs.analyze"] if n == "분석(새 서류)" else m) for n, m in STEPS]
+    """아침 묶음 단계(11/24 — 날마다 같음. 전엔 월요일만 분석이 전체였음)."""
+    return STEPS
 
 
 def main() -> None:
