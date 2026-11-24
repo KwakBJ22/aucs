@@ -1,7 +1,7 @@
 "use client";
 
 import { parseTime } from "@/lib/format";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { Termed } from "@/components/term";
 import type { DocKind, Question } from "@/lib/api/items";
 import type { RegistryUpload } from "@/lib/api/me";
@@ -79,16 +79,19 @@ export function flowDate(d: string): string {
   return d.slice(0, 4) === String(new Date().getFullYear()) ? md : `${d.slice(0, 4)}/${md}`;
 }
 
+const DOC_KEYS: DocKind[] = ["status_report", "deliveries", "spec_sheet"];
+
 // ITEM-06: 사건 흐름 막대 + 체크리스트(끝난 것은 접음) + 사건 문건
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CheckBody({ b }: { b: Record<string, any> }) {
-  const [showDone, setShowDone] = useState(false);
   const pc = useIsPc();
   const reg = useContext(RegCtx);
   const openDoc = useContext(DocCtx);
   const list = withMyRegistry(b.checklist as CheckItem[], reg?.u);
   const todo = list.filter((x) => x.state !== "확인 완료");
-  const done = list.filter((x) => x.state === "확인 완료");
+  const docs = list
+    .filter((x) => x.state === "확인 완료" && DOC_KEYS.includes(x.key as DocKind))
+    .map((x) => x.key as DocKind);
   const flow = b.flow as FlowStep[];
   return (
     <>
@@ -144,37 +147,16 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
           </div>
         </div>
       ))}
-      {/* PC(11/22 디자인): 끝난 확인 · 사건 문건은 접힌 회색 칸 */}
-      {done.length > 0 && !pc && (
-        <button
-          onClick={() => setShowDone(!showDone)}
-          aria-expanded={showDone}
-          className="link fold"
-        >
-          ✓ {t.doneFold(done.length)}
-        </button>
-      )}
-      {done.length > 0 && (
-        <Panel title={t.panel.done} sum={t.panel.doneN(done.length)} open={false}>
-          {(showDone || pc) &&
-            done.map((x) => (
-              <div key={x.key} className="fs-sm py-4 px-0">
-                <span className="c-green">✓</span> {x.label}
-                <span className="sub m-0">
-                  {" "}
-                  · {x.evidence ? t.gotAt(x.evidence.doc, x.evidence.fetched_at) : ""}
-                  {x.note ? ` · ${x.note}` : ""}
-                </span>
-                {(x.key === "status_report" ||
-                  x.key === "deliveries" ||
-                  x.key === "spec_sheet") && (
-                  <button onClick={() => openDoc(x.key as DocKind)} className="link in ml-6">
-                    {t.doc.open}
-                  </button>
-                )}
-              </div>
-            ))}
-        </Panel>
+      {/* 끝난 확인 목록은 손님이 궁금해하지 않아 빼고, 받은 원문만 한 줄로(11/24 대표님) */}
+      {docs.length > 0 && (
+        <div className="d-flex f-wrap gap-12 mt-10 fs-sm">
+          <span className="sub m-0">{t.doc.open}</span>
+          {docs.map((k) => (
+            <button key={k} onClick={() => openDoc(k)} className="link in">
+              {t.doc.names[k]}
+            </button>
+          ))}
+        </div>
       )}
       {b.events.length > 0 && !pc && <div className="fs-md fw-6 mt-10">{t.events}</div>}
       {b.events.length > 0 && (

@@ -296,3 +296,16 @@ def test_outcome_sold_within_expected() -> None:
         None,
     )
     assert failed and not failed["closed"]
+
+
+def test_restart_note():
+    """최저가가 다시 올라간 회차의 까닭(11/24 서울동부 2024타경57221 10/19)."""
+    from aucs_api.services.item_detail import restart_note
+
+    assert restart_note({"restarted": False}) is None
+    why = {"date": "2026-10-12", "text": "채권자 주OOOOOOO 대항력 포기 확약서 제출"}
+    assert restart_note({"restarted": True, "reappraised": False, "why": why}) == (
+        "10/12 대항력 포기 확약서 제출 — 매각조건이 바뀌어 감정가부터 다시 시작했어요"
+    )
+    assert restart_note({"restarted": True, "reappraised": True}).startswith("감정을 다시 해")
+    assert "까닭이 없어요" in restart_note({"restarted": True, "reappraised": False, "why": None})

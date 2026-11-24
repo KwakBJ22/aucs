@@ -1,5 +1,6 @@
 """물건 상세(ITEM-01 다섯 질문). DB에서 모으는 부분과 화면 묶음을 만드는 부분(순수 함수)을 나눴습니다."""
 
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -195,6 +196,7 @@ def build_detail(
                 "sale_date": x["sale_date"].isoformat(),
                 "min_price_krw": x["min_price_krw"],
                 "result": RESULT_KO.get(x["result"], x["result"]),
+                "note": restart_note(x),
             }
             for x in rounds
         ],  # fmt: skip
@@ -220,6 +222,23 @@ def build_detail(
 
 
 _CASE = "(select case_id from core.items where item_id = %s)"
+
+_PLEDGE_KIND = re.compile(r"(대항력\s*포기|인수조건\s*변경|말소\s*동의)?\s*확약서")
+
+
+def restart_note(x: dict[str, Any]) -> str | None:
+    """최저가가 앞 회차보다 올라간 회차의 까닭(11/24 대표님 — 57221 10/19). 문건에 없으면 지어내지 않음."""
+    if not x.get("restarted"):
+        return None
+    if x.get("reappraised"):
+        return "감정을 다시 해 새 감정가부터 시작했어요"
+    why = x.get("why")
+    if why:
+        m = _PLEDGE_KIND.search(why.get("text") or "")
+        kind = re.sub(r"\s+", " ", m.group(0).strip()) if m else "확약서"
+        d = str(why.get("date") or "")[5:].replace("-", "/")
+        return f"{d} {kind} 제출 — 매각조건이 바뀌어 감정가부터 다시 시작했어요"
+    return "감정가부터 다시 시작했어요 · 받은 문건에 까닭이 없어요(매각물건명세서 확인)"
 
 
 def _man(v: int) -> int:
@@ -264,13 +283,27 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         with c.pipeline():
             q_item = c.execute(_ITEM_SQL, {"id": item_id, "vehicles": VEHICLES})
             # 매각기일: 우리가 받은 회차 + 그 전 매각결과(11/1 — 유찰 12번 물건이 1줄만 보였음)
+            # 최저가가 앞 회차보다 올라간 회차(감정가부터 다시 — 11/24 57221)는 그 사이 문건의 확약서 · 재감정을 같이
             q_rounds = c.execute(
-                """select sale_date, min_price_krw, result from core.rounds where item_id = %(id)s
-                   union all
-                   select s.sale_date, s.min_price_krw, s.result from core.sale_results s
-                   where s.item_id = %(id)s and not exists (select 1 from core.rounds r
-                         where r.item_id = s.item_id and r.sale_date = s.sale_date)
-                   order by sale_date""",
+                """with x as (
+                     select sale_date, min_price_krw, appraisal_krw, result from core.rounds where item_id = %(id)s
+                     union all
+                     select s.sale_date, s.min_price_krw, s.appraisal_krw, s.result from core.sale_results s
+                     where s.item_id = %(id)s and not exists (select 1 from core.rounds r
+                           where r.item_id = s.item_id and r.sale_date = s.sale_date)),
+                   y as (select x.*, lag(min_price_krw) over w as prev_min, lag(sale_date) over w as prev_date,
+                                lag(appraisal_krw) over w as prev_app
+                         from x window w as (order by sale_date))
+                   select sale_date, min_price_krw, result,
+                          min_price_krw > prev_min as restarted,
+                          coalesce(appraisal_krw <> prev_app, false) as reappraised,
+                          case when min_price_krw > prev_min then (
+                            select jsonb_build_object('date', e.event_date, 'text', e.text_masked)
+                            from core.case_events e
+                            where e.case_id = (select case_id from core.items where item_id = %(id)s)
+                              and e.event_date between prev_date and sale_date and e.text_masked ~ '확약서'
+                            order by e.event_date desc limit 1) end as why
+                   from y order by sale_date""",
                 {"id": item_id},
             )
             q_events = c.execute(

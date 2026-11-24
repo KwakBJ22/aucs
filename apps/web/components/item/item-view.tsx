@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DDay } from "@/components/dday";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -358,17 +358,29 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
               </thead>
               <tbody>
                 {d.rounds.map((r) => (
-                  <tr key={r.sale_date}>
-                    <td className="num">{r.sale_date}</td>
-                    <td className="num">{won(r.min_price_krw)}</td>
-                    <td>
-                      {pc ? (
-                        <span className={`chip ${ROUND_CHIP[r.result] ?? "gray"}`}>{r.result}</span>
-                      ) : (
-                        r.result
-                      )}
-                    </td>
-                  </tr>
+                  <Fragment key={r.sale_date}>
+                    <tr>
+                      <td className="num">{r.sale_date}</td>
+                      <td className="num">{won(r.min_price_krw)}</td>
+                      <td>
+                        {pc ? (
+                          <span className={`chip ${ROUND_CHIP[r.result] ?? "gray"}`}>
+                            {r.result}
+                          </span>
+                        ) : (
+                          r.result
+                        )}
+                      </td>
+                    </tr>
+                    {/* 최저가가 다시 올라간 회차의 까닭(11/24 — 57221 10/19) */}
+                    {r.note && (
+                      <tr>
+                        <td colSpan={3} className="fs-xs c-amber">
+                          ◆ {r.note}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

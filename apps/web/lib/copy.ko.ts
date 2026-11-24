@@ -1625,8 +1625,6 @@ export const copy = {
       more: (n: number) => `외 ${n}명`,
       fail: (n: number) => `손해 본 ${n}가지 경우`,
       hit: (n: number) => `걸림 ${n}`,
-      done: "끝난 확인",
-      doneN: (n: number) => `${n}개`,
       events: "사건 문건",
       jump: "바로 꺼내 보기",
       jumps: [
@@ -1744,8 +1742,6 @@ export const copy = {
     claim: "배당요구",
     share: "지분 매각",
     events: "사건 문건",
-    doneFold: (n: number) => `끝난 확인 ${n}개`,
-    gotAt: (doc: string, t: string | null) => (t ? `${doc} · ${t} 받음` : doc),
     flowGuess: "예상",
     afterDeadline: "종기 뒤",
     // 저작권 보호정책: 법원 자료는 출처를 구체적으로 표시해야 함 · 이용약관 제7조: 입찰 전 법원 비치 서류로 다시 확인(11/4)

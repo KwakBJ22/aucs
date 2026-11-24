@@ -336,7 +336,12 @@ export type ItemDetail = ItemCard & {
     verified: boolean;
     fail_odds?: FailOdds | null; // 같은 법원·종류·회차 실제 유찰 비율(WAIT-01, 11/7)
   };
-  rounds: { sale_date: string; min_price_krw: number | null; result: string }[];
+  rounds: {
+    sale_date: string;
+    min_price_krw: number | null;
+    result: string;
+    note?: string | null; // 최저가가 다시 올라간 까닭(확약서 · 재감정, 11/24)
+  }[];
   tags: { label: string; ok: boolean }[];
   questions: Question[];
   failure_types: { code: string; title: string }[];
