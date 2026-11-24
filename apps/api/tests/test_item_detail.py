@@ -308,4 +308,19 @@ def test_restart_note():
         "10/12 대항력 포기 확약서 제출 — 매각조건이 바뀌어 감정가부터 다시 시작했어요"
     )
     assert restart_note({"restarted": True, "reappraised": True}).startswith("감정을 다시 해")
-    assert "까닭이 없어요" in restart_note({"restarted": True, "reappraised": False, "why": None})
+    none = {"restarted": True, "reappraised": False, "why": None}
+    assert "까닭이 따로 적혀 있지 않아요" in restart_note(none)
+    # 문건엔 없고 명세서 비고에만 확약서(날짜가 그 회차 사이) — 11/24
+    from datetime import date as d
+
+    x = {**none, "prev_date": d(2026, 9, 7), "sale_date": d(2026, 10, 19)}
+    spec = "주택도시보증공사로부터 2026.10.12.자에 '… 대항력은 포기하며 …'는 내용의 확약서가 제출됨."
+    assert restart_note(x, spec) == (
+        "10/12 대항력 포기 확약서 제출(매각물건명세서) — 매각조건이 바뀌어 감정가부터 다시 시작했어요"
+    )
+    # 날짜가 그 회차 사이가 아니면 이 회차 까닭으로 잇지 않음
+    old = {**x, "prev_date": d(2025, 1, 1), "sale_date": d(2025, 3, 1)}
+    assert restart_note(old, spec) == (
+        "감정가부터 다시 시작했어요 · 매각물건명세서 비고에 2026.10.12 대항력 포기 확약서 내용이 있어요"
+    )
+    assert restart_note(x, "말소에 동의하는 확약서가 제출됨").endswith("(날짜 없음)")

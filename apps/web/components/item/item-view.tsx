@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DDay } from "@/components/dday";
 import { HeartButton } from "@/components/heart-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,7 +17,7 @@ import { OddsLine } from "@/components/item/next-round";
 import { OutcomeBand } from "@/components/item/outcome-band";
 import type { MyReg } from "@/components/item/registry";
 import { SameHouse } from "@/components/item/same-house";
-import { DOT, t } from "@/components/item/shared";
+import { DOT, t, DocCtx } from "@/components/item/shared";
 import type { ItemDetail } from "@/lib/api/items";
 import { copyText } from "@/lib/copy-text";
 import { copy } from "@/lib/copy.ko";
@@ -42,6 +42,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
     if (moved) window.scrollBy(0, moved);
   }, [open]);
   const [copied, setCopied] = useState(false);
+  const openDoc = useContext(DocCtx);
   const verdict = (
     <Verdict text={d.verdict} tone={d.questions.find((q) => q.key === "hold")?.tone} />
   );
@@ -377,6 +378,11 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
                       <tr>
                         <td colSpan={3} className="fs-xs c-amber">
                           ◆ {r.note}
+                          {r.note_doc && (
+                            <button onClick={() => openDoc(r.note_doc!)} className="link in ml-6">
+                              {t.doc.open}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     )}

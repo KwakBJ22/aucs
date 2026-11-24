@@ -196,7 +196,9 @@ def build_detail(
                 "sale_date": x["sale_date"].isoformat(),
                 "min_price_krw": x["min_price_krw"],
                 "result": RESULT_KO.get(x["result"], x["result"]),
-                "note": restart_note(x),
+                "note": restart_note(x, stxt),
+                # 까닭이 명세서에 따로 없을 때 명세서 원문을 바로 열 수 있게(11/24)
+                "note_doc": "spec_sheet" if spec and x.get("restarted") else None,
             }
             for x in rounds
         ],  # fmt: skip
@@ -224,10 +226,24 @@ def build_detail(
 _CASE = "(select case_id from core.items where item_id = %s)"
 
 _PLEDGE_KIND = re.compile(r"(대항력\s*포기|인수조건\s*변경|말소\s*동의)?\s*확약서")
+# 명세서 비고의 확약서 글(11/24 — 문건에 없던 476번 중 238번이 명세서에만 적혀 있었음)
+_SPEC_PLEDGE = re.compile(r"확약|대항력.{0,10}포기|말소.{0,6}동의")
+# 날짜 꼴이 여럿(「2026.10.12.자」 · 「2026. 9. 2. 주택도시…」 · 「(2026. 2. 25. 접수)」) — 확약 글 앞뒤 80자 안의 날짜만
+_SPEC_DATE = re.compile(r"(20\d\d)\s*\.\s*(\d{1,2})\s*\.\s*(\d{1,2})")
+RESTARTED = "매각조건이 바뀌어 감정가부터 다시 시작했어요"
 
 
-def restart_note(x: dict[str, Any]) -> str | None:
-    """최저가가 앞 회차보다 올라간 회차의 까닭(11/24 대표님 — 57221 10/19). 문건에 없으면 지어내지 않음."""
+def _spec_pledge_kind(text: str) -> str:
+    if re.search(r"대항력.{0,10}포기", text):
+        return "대항력 포기 확약서"
+    if re.search(r"말소.{0,6}동의", text):
+        return "말소 동의 확약서"
+    return "확약서"
+
+
+def restart_note(x: dict[str, Any], spec_txt: str = "") -> str | None:
+    """최저가가 앞 회차보다 올라간 회차의 까닭(11/24 대표님 — 57221 10/19). 법원 문건 → 매각물건명세서 순.
+    명세서는 가장 최근 것 하나뿐이라, 날짜가 그 회차 사이에 들 때만 그 회차 까닭으로 이음. 지어내지 않음."""
     if not x.get("restarted"):
         return None
     if x.get("reappraised"):
@@ -237,8 +253,26 @@ def restart_note(x: dict[str, Any]) -> str | None:
         m = _PLEDGE_KIND.search(why.get("text") or "")
         kind = re.sub(r"\s+", " ", m.group(0).strip()) if m else "확약서"
         d = str(why.get("date") or "")[5:].replace("-", "/")
-        return f"{d} {kind} 제출 — 매각조건이 바뀌어 감정가부터 다시 시작했어요"
-    return "감정가부터 다시 시작했어요 · 받은 문건에 까닭이 없어요(매각물건명세서 확인)"
+        return f"{d} {kind} 제출 — {RESTARTED}"
+    if spec_txt and _SPEC_PLEDGE.search(spec_txt):
+        kind = _spec_pledge_kind(spec_txt)
+        prev, cur = x.get("prev_date"), x.get("sale_date")
+        seen: list[date] = []
+        near = " ".join(
+            spec_txt[max(0, p.start() - 80) : p.end() + 80] for p in _SPEC_PLEDGE.finditer(spec_txt)
+        )
+        for m in _SPEC_DATE.finditer(near):
+            try:
+                d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            except ValueError:
+                continue
+            if prev and cur and prev < d <= cur:
+                return f"{d.month:02d}/{d.day:02d} {kind} 제출(매각물건명세서) — {RESTARTED}"
+            seen.append(d)
+        if seen:  # 날짜가 이 회차 사이가 아니면 까닭으로 잇지 않고 적힌 대로만
+            return f"감정가부터 다시 시작했어요 · 매각물건명세서 비고에 {seen[0]:%Y.%m.%d} {kind} 내용이 있어요"
+        return f"감정가부터 다시 시작했어요 · 매각물건명세서 비고에 {kind} 내용이 있어요(날짜 없음)"
+    return "감정가부터 다시 시작했어요 · 매각물건명세서에 까닭이 따로 적혀 있지 않아요"
 
 
 def _man(v: int) -> int:
@@ -294,7 +328,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                    y as (select x.*, lag(min_price_krw) over w as prev_min, lag(sale_date) over w as prev_date,
                                 lag(appraisal_krw) over w as prev_app
                          from x window w as (order by sale_date))
-                   select sale_date, min_price_krw, result,
+                   select sale_date, prev_date, min_price_krw, result,
                           min_price_krw > prev_min as restarted,
                           coalesce(appraisal_krw <> prev_app, false) as reappraised,
                           case when min_price_krw > prev_min then (

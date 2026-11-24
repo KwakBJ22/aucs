@@ -341,6 +341,7 @@ export type ItemDetail = ItemCard & {
     min_price_krw: number | null;
     result: string;
     note?: string | null; // 최저가가 다시 올라간 까닭(확약서 · 재감정, 11/24)
+    note_doc?: DocKind | null; // 까닭 옆에 열 원문(매각물건명세서)
   }[];
   tags: { label: string; ok: boolean }[];
   questions: Question[];
