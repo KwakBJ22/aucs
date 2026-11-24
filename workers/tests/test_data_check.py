@@ -31,3 +31,9 @@ def test_is_registry():
     assert not is_registry("x.pdf", "감정평가서 " * 50)
     assert is_registry("등기부_401호.pdf", "")
     assert not is_registry("scan.pdf", "")
+
+
+def test_is_registry_iros_print():
+    from aucs_workers.collectors.registry_folder import is_registry
+
+    assert is_registry("a.pdf", "", "viewer.jsp_optNoUi=true&optLang=ko&contentId=B208B319631C6D9")

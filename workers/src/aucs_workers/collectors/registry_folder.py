@@ -25,19 +25,25 @@ SEEN = Path(__file__).resolve().parents[4] / "logs" / "registry_downloads_seen.t
 _ITEM = re.compile(r"(\d{4}타경\d+)(?:-(\d+))?")
 
 
-def _text(raw: bytes) -> str:
+def _text(raw: bytes) -> tuple[str, str]:
+    """(앞 세 쪽 글, PDF 제목)."""
     import io
 
     from pypdf import PdfReader
 
     try:
-        return "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(raw)).pages[:3])
+        r = PdfReader(io.BytesIO(raw))
+        title = str((r.metadata or {}).get("/Title") or "")
+        return "\n".join((p.extract_text() or "") for p in r.pages[:3]), title
     except Exception:  # noqa: BLE001
-        return ""
+        return "", ""
 
 
-def is_registry(name: str, text: str) -> bool:
-    """등기부 PDF 인가(순수 함수): 글에 「등기사항」과 갑구/을구, 글 없는 그림 PDF 는 파일 이름에 「등기」."""
+def is_registry(name: str, text: str, title: str = "") -> bool:
+    """등기부 PDF 인가(순수 함수). 우리가 뗀 등기부(data/등기부 2건)는 인터넷등기소 열람 화면을 「PDF로 인쇄」한 그림 PDF —
+    글이 없고 제목이 「viewer.jsp_optNoUi=true…」 → 제목으로 가림. 글 있는 PDF 는 「등기사항」과 갑구/을구, 그 밖엔 파일 이름에 「등기」."""
+    if "viewer.jsp" in title and "optNoUi" in title:
+        return True
     if len(re.sub(r"\s", "", text)) > 100:
         return "등기사항" in text and bool(re.search(r"갑\s*구|을\s*구", text))
     return "등기" in name
@@ -58,7 +64,7 @@ def from_downloads(root: Path) -> int:
         if key in seen:
             continue
         seen.add(key)
-        if is_registry(f.name, _text(f.read_bytes())):
+        if is_registry(f.name, *_text(f.read_bytes())):
             t = root / f.name
             if t.exists():
                 t = root / f"{f.stem}-{int(now)}{f.suffix}"

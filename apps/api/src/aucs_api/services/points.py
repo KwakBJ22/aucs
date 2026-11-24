@@ -378,20 +378,7 @@ def save_appraisal(uid: str, item_id: str, path: str) -> dict[str, Any]:
 
     from aucs_api.services.registry import take_from_storage
 
-    # 11/19 대표님: 한 사람 하루 감정평가서 올리기 한도(기준표 daily_max.appraisal) — 넘으면 받지 않음(법원 차단 예방, 관리자 빼고)
-    with connect() as c:
-        q_t, q_n, q_a = batch(c, [
-            (_TABLE_SQL, None),
-            ("""select count(*) as n from app.contrib_uploads
-                where user_id = %s and kind = 'appraisal'
-                  and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date""", (uid,)),
-            ("select 1 from app.admins where user_id = %s", (uid,)),
-        ])  # fmt: skip
-        t = q_t.fetchone()
-        cap = int(((dict(t["value"]) if t else {}).get("daily_max") or {}).get("appraisal") or 0)
-        n = q_n.fetchone()
-        if not q_a.fetchone() and cap and n and int(n["n"]) >= cap:
-            return {"ok": False, "points": 0, "why": "day_limit"}
+    # 11/24 대표님: 하루 10건을 넘겨도 올리기는 받음 — 포인트만 없음(points_for 의 limit). 11/19 의 올리기 막음은 풂
     raw = take_from_storage(uid, path, APPRAISAL_IN)
     if raw is None:
         return {"ok": False, "why": "no_file"}
