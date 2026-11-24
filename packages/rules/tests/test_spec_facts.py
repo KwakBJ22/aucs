@@ -115,3 +115,23 @@ def test_note_superficies_and_resale():
     assert note_facts("법정지상권 성립여부는 불분명").get("statutory_superficies") is True
     assert not note_facts("법정지상권 성립 여지 없음").get("statutory_superficies")
     assert note_facts("재매각. 매수보증금은 최저매각가격의 20%임").get("resale") is True
+
+
+def test_note_negations_after_rerun():
+    # 11/24 재분석 뒤 실제 비고 글
+    assert not note_facts(
+        "현황 밭으로 조사되었으나 농지취득자격증명이 필요하지 않다는 시흥시 사실조회 회신있음."
+    ).get("farmland_permit")
+    assert not note_facts("2. 건물만 매각, 법정지상권 없음 3. 제시외 건물 포함").get(
+        "statutory_superficies"
+    )
+    assert note_facts("관습법상법정지상권 성립여부 알 수 없음.").get("statutory_superficies")
+    assert note_facts(
+        "유치권 점유 없었으나, 현황재조사시 1층 공동출입문에 유치권행사중으로 무단출입을 금한다 경고표시"
+    ).get("lien_reported")
+    assert note_facts("허위의 유치권행사 현수막 게시임을 이유로 유치권배제 신청서가 접수 됨.").get(
+        "lien_reported"
+    )
+    assert not note_facts("유치권점유신고서 제출하였으나 유치권점유 취하서 제출함").get(
+        "lien_reported"
+    )
