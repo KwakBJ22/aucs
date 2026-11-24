@@ -66,3 +66,51 @@ def spec_facts(spec: dict[str, Any] | None) -> dict[str, Any]:
         ):
             out["lease_registration_with_power"] = True
     return out
+
+
+# ── 법원 목록 비고 · 명세서 비고 글(11/24 종류별 검증) ─────────────────────────────
+# 신호 규칙(risk)에 농취증 · 재매각 · 선순위 임차인 인수 칸이 있었으나 채우는 곳이 없었고, 유치권 · 법정지상권은
+# 문건 · 명세서 칸에서만 찾아 비고에만 적힌 것을 놓쳤음(진행 수도권: 농취증 240 · 유치권 19 · 법정지상권 35 ·
+# 대항력 있는 임차인 인수 29). 보증기관 「대항력 포기조건 매각」은 「확약」 글이 없어 말소동의로 못 봄(312).
+_N_LIEN_NO = re.compile(r"유치권[^.。\n]{0,25}(철회|취하|배제|부존재|성립\s*하지\s*않|없음)")
+_N_SUP = re.compile(r"법정\s*지상권")
+_N_SUP_NO = re.compile(r"법정\s*지상권[^.。\n]{0,20}(성립\s*(여지\s*)?(없|하지\s*않))")
+_N_FARM = re.compile(r"농지\s*취득\s*자격\s*증명|농취증")
+_N_FARM_NO = re.compile(
+    r"(농지\s*취득\s*자격\s*증명|농취증)[^.。\n]{0,15}(불요|불필요|필요\s*(하지\s*)?없|미발급\s*대상)"
+)
+_N_RESALE = re.compile(r"재\s*매각")
+_N_SENIOR = re.compile(
+    r"(대항력\s*(이\s*)?있는\s*임차인|선순위\s*임차인)[^.。\n]{0,80}(인수|매수인)"
+)
+_N_PLEDGE_KIND = re.compile(r"확약|포기\s*조건\s*매각|포기서")
+
+
+def note_facts(note: str | None, have: dict[str, Any] | None = None) -> dict[str, Any]:
+    """비고 글(법원 목록 비고 + 명세서 비고) → 신호 사실. have = 이미 모은 사실(겹침 판단용)."""
+    text = re.sub(r"\s+", " ", note or "")
+    have = have or {}
+    out: dict[str, Any] = {}
+    if not text.strip():
+        return out
+    released = bool(have.get("lease_reg_released"))
+    if (
+        not released
+        and not have.get("prior_assumed_rights")
+        and _GUARANTOR.search(text)
+        and _PLEDGE.search(text)
+        and _N_PLEDGE_KIND.search(text)
+    ):
+        released = True
+        out["lease_reg_released"] = [text[:120]]
+    if _LIEN.search(text) and not _N_LIEN_NO.search(text):
+        out["lien_reported"] = True
+    if _N_SUP.search(text) and not _N_SUP_NO.search(text):
+        out["statutory_superficies"] = True
+    if _N_FARM.search(text) and not _N_FARM_NO.search(text):
+        out["farmland_permit"] = True
+    if _N_RESALE.search(text):
+        out["resale"] = True
+    if not released and _N_SENIOR.search(text):
+        out["senior_tenant_assumed"] = True
+    return out

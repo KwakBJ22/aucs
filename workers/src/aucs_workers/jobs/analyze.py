@@ -43,7 +43,7 @@ from aucs_rules.sale_rate import (
     rate_range,
 )
 from aucs_rules.small_lease_region import region_class
-from aucs_rules.spec_facts import spec_facts
+from aucs_rules.spec_facts import note_facts, spec_facts
 from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant, tenant_doubts
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
@@ -651,6 +651,9 @@ def analyze_item(
     if spec_note:
         facts["note"] = f"{facts.get('note') or ''} {spec_note}".strip()
     for k, v in sf.items():
+        facts[k] = facts.get(k) or v
+    # 비고 글(목록 + 명세서)에만 적힌 농취증 · 재매각 · 유치권 · 법정지상권 · 대항력 있는 임차인 · 보증기관 대항력 포기(11/24)
+    for k, v in note_facts(facts.get("note"), facts).items():
         facts[k] = facts.get(k) or v
     bldg = load_building(cur, item, today, pre)  # 건축물대장: 사용승인·그 층 용도(근생빌라 확정)
     if bldg:

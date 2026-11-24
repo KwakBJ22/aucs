@@ -1,5 +1,5 @@
 from aucs_rules.risk import signals
-from aucs_rules.spec_facts import spec_facts
+from aucs_rules.spec_facts import note_facts, spec_facts
 
 
 def test_none_values_mean_nothing():
@@ -38,7 +38,11 @@ def test_lease_reg_release_agreed():
         f = spec_facts({"keep": keep})
         ids = {s.rule_id for s in signals(f)}
         assert ids == {"risk.lease_reg_released"}, keep
-    f = spec_facts({"keep": "을구 1번 전세권, 을구 2번 주택임차권등기(다만 주택도시보증공사의 말소동의 확약서가 제출됨)"})
+    f = spec_facts(
+        {
+            "keep": "을구 1번 전세권, 을구 2번 주택임차권등기(다만 주택도시보증공사의 말소동의 확약서가 제출됨)"
+        }
+    )
     assert "risk.prior_rights" in {s.rule_id for s in signals(f)}
 
 
@@ -66,3 +70,48 @@ def test_tenant_in_docs_only():
     ids = {s.rule_id for s in signals({"doc_tenants": {"n": 1, "lease_only": True},
                                        "lease_reg_released": ["확약서"]})}  # fmt: skip
     assert ids == {"risk.lease_reg_released"}
+
+
+# ── 비고 글(11/24 종류별 검증 — 법원 목록 비고 원문 그대로)
+
+
+def test_note_farmland():
+    f = note_facts(
+        "1. 특별매각조건으로 농지취득자격증명 필요(미제출시 보증금 몰수) 2. 원상회복명령"
+    )
+    assert f.get("farmland_permit") is True
+    assert not note_facts("농지취득자격증명 불요").get("farmland_permit")
+
+
+def test_note_lien_unclear_counts():
+    f = note_facts(
+        "2.양계성이 2025.5.30. 유치권신고(공사대금:176,000,000원)를 하였으나 그 성립여부는 불분명함."
+    )
+    assert f.get("lien_reported") is True
+    assert not note_facts("유치권 신고가 있었으나 철회됨").get("lien_reported")
+
+
+def test_note_senior_tenant():
+    f = note_facts(
+        "임차인 남○○ 대항력있는 임차인으로 배당에서 보증금이 전액 변제되지 아니하면 잔액을 매수인이 인수함."
+    )
+    assert f.get("senior_tenant_assumed") is True
+
+
+def test_note_guarantor_waiver_condition_is_released():
+    f = note_facts(
+        "임차인 및 임차보증금반환채권승계인 주택도시보증공사의 매수인에 대한 대항력 포기조건 매각"
+    )
+    assert f.get("lease_reg_released")
+    assert not f.get("senior_tenant_assumed")
+
+
+def test_note_waiver_not_when_spec_keeps_rights():
+    f = note_facts("주택도시보증공사의 대항력 포기조건 매각", {"prior_assumed_rights": ["전세권"]})
+    assert not f.get("lease_reg_released")
+
+
+def test_note_superficies_and_resale():
+    assert note_facts("법정지상권 성립여부는 불분명").get("statutory_superficies") is True
+    assert not note_facts("법정지상권 성립 여지 없음").get("statutory_superficies")
+    assert note_facts("재매각. 매수보증금은 최저매각가격의 20%임").get("resale") is True
