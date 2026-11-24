@@ -565,12 +565,13 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
                         seqs, has_apr = _known(conn, court, case_no) if light else ([], False)
                         # 서류 보관: 물건상세를 일주일 안에 받았으면 문건송달·현황조사만(11/12)
                         only = not light and _fresh_detail(conn, court, case_no)
-                        has_st = (only or a.new) and _has_status(conn, court, case_no)
+                        has_st = only and _has_status(conn, court, case_no)
                         # 첫 바퀴(--details)는 물건상세만 — 감정평가서 정보(가격시점)는 홈 사진·서류 보관 때 받음
                         docs = fetch_case(
                             page, polite, court, case_no, seqs or None,
                             not (has_apr or a.details), docs_only=only,
-                            has_status=has_st, with_status=a.new,
+                            # 11/24 밤: 새 사건 때 현황조사서도 묻던 것은 224건 중 40건만 받아져(법원에 아직 없음) 되돌림
+                            has_status=has_st,
                         )  # fmt: skip
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")

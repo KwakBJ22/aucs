@@ -28,13 +28,14 @@ STEPS = [
     ("입찰 임박 서류", ["aucs_workers.collectors.court_docs", "--soon"], 25),
     # 11/18: 새 사건이 첫 바퀴(입찰 가까운 순)에서 밀려 며칠씩 사진·명세서가 비었음 → 맨 앞에 40%.
     #   사진 30 → 20, 다음 회차 15 → 10, 첫 바퀴 35 → 15, 서류 보관 20 → 15. 새 사건이 없으면 그 몫은 첫 바퀴로
-    ("새 사건 물건상세", ["aucs_workers.collectors.court_docs", "--new"], 30),
+    # 11/24 밤 대표님: 서류 보관(현황조사서)이 하루 489번뿐 → 입찰 7일 안 84% · 8~14일 19% 로 떨어짐. 새 사건 30 → 25, 보관 10 → 15
+    ("새 사건 물건상세", ["aucs_workers.collectors.court_docs", "--new"], 25),
     # 11/7: 홈은 사진 있는 물건만 띄움 → 홈에 뜰 물건 사진을 가장 크게(물건상세 한 번이라 같은 몫으로 5배쯤)
     # 11/7 오전: 물건상세 첫 바퀴(모든 진행 물건, 약 9,700번 · 일주일 남짓) — 서류 보관 35 → 20, 사진 35 → 30, 다음 회차 20 → 15
     ("홈에 뜰 물건 사진", ["aucs_workers.collectors.court_docs", "--picks"], 15),
     ("다음 회차 미리 받기", ["aucs_workers.collectors.court_docs", "--next"], 10),
     ("물건상세 첫 바퀴", ["aucs_workers.collectors.court_docs", "--details"], 10),
-    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 10),
+    ("서류 보관", ["aucs_workers.collectors.court_docs", "--archive"], 15),
     # 11/7 대표님: 당분간 이 노트북에서 감정평가서 원본(KAPA)을 받지 않음 — KAPA 가 자동 조회로 막음. 몫 10% 는 첫 바퀴로
     ("분석(새 서류)", ["aucs_workers.jobs.analyze", "--stale"], None),
 ]
@@ -208,7 +209,7 @@ def main() -> None:
             return
         share = hour_share(_cap())
         # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)
-        new_spare = 0 if _new_left() else 30
+        new_spare = 0 if _new_left() else 25
         soon_spare = 0 if _soon_left() else 25
         details_left = _details_left()
         for name, mod, pct in STEPS:
