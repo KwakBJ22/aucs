@@ -48,6 +48,8 @@ NEXT_MAX = 100  # 하루: 유찰된 물건의 다음 회차·사진 미리 받�
 DETAILS_MAX = 300  # 한 번에: 물건상세 첫 바퀴(11/7 — 요항·토지건물 나눔·제시외·대지권을 모든 진행 물건에, 실제 양은 시간 몫이 정함)
 DETAILS_DAYS = 45  # 입찰 이만큼 안의 진행 물건
 NEW_MAX = 300  # 한 번에: 새 사건 물건상세(11/18, 실제 양은 시간 몫이 정함)
+SOON_MAX = 300  # 한 번에: 입찰 7일 안 서류가 비었거나 오래된 사건(11/24, 실제 양은 시간 몫이 정함)
+SOON_DAYS = 7  # 입찰 이만큼 안
 NEW_DAYS = 7  # 들어온 지 이만큼 안의 사건 — 밀린 것까지 따라잡게
 PICKS_MAX = 300  # 한 번에: 홈에 뜰 물건 중 사진 없는 것(11/7 가볍게 받으므로 50 → 300, 실제 양은 시간 몫이 정함)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
@@ -213,6 +215,33 @@ def new_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
             limit %(n)s""",
         {"today": today, "since": today - timedelta(days=NEW_DAYS), "usages": list(ARCHIVE_USAGES),
          "n": NEW_MAX},
+    ).fetchall()  # fmt: skip
+    return [(court, case_no) for court, case_no in rows if court in COURTS]
+
+
+def soon_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
+    """입찰 7일 안 사건 가운데 물건상세가 없거나(14일 넘게 묵었거나) 문건송달 · 현황조사를 7일 안에 안 물어본 것 — 입찰 가까운 순(11/24).
+
+    11/24 대표님(서울동부 2024타경57221): 입찰 7일 안 4,001건 중 물건상세 없음 201 · 문건송달 · 현황조사 없음 743 →
+    재진행 까닭(확약서)·임차인을 못 읽은 채 손님에게 나감. 서류 보관(14일 창)이 뒷차례라 몫이 모자랐음 → 매시 관심 물건 다음에.
+    법원에 서류가 없어 비어 와도 하루 안에 다시 묻지 않음."""
+    rows = conn.execute(
+        f"""select c.court_code, c.case_no
+            from core.items i join core.cases c using (case_id)
+            where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone'
+              and i.sale_date between %(from)s and %(to)s  -- 오늘 입찰은 이미 늦음
+              and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                              and r.fetched_at > now() - interval '1 day')
+            group by c.case_id, c.court_code, c.case_no
+            having not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
+                               and r.doc_kind like 'item_detail_%%' and r.fetched_at > now() - interval '14 days')
+                or coalesce(greatest(max(c.docs_checked_at), (select max(fetched_at) from raw.court_doc_raw r
+                       where r.case_id = c.case_id and r.doc_kind = 'status_report'))::date, '-infinity'::date)
+                   < min(i.sale_date) - %(days)s
+            order by min(i.sale_date), (count(distinct i.item_no) > 6), min({LIVE_FIRST})
+            limit %(n)s""",
+        {"from": today + timedelta(days=1), "to": today + timedelta(days=SOON_DAYS), "days": SOON_DAYS,
+         "usages": list(ARCHIVE_USAGES), "n": SOON_MAX},
     ).fetchall()  # fmt: skip
     return [(court, case_no) for court, case_no in rows if court in COURTS]
 
@@ -473,6 +502,7 @@ def main() -> None:
     ap.add_argument("--picks", action="store_true", help="추천 후보 중 사진 없는 것(11/4)")
     ap.add_argument("--details", action="store_true", help="물건상세를 안 받은 진행 물건(11/7)")
     ap.add_argument("--new", action="store_true", help="새 사건 물건상세(11/18)")
+    ap.add_argument("--soon", action="store_true", help="입찰 7일 안 서류 빈 것 먼저(11/24)")
     ap.add_argument(
         "--queue", action="store_true", help="손님이 연 물건의 서류 요청(11/4, 5분마다)"
     )
@@ -517,6 +547,8 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
             targets = details_targets(conn, date.today())
         elif a.new:
             targets = new_targets(conn, date.today())
+        elif a.soon:  # 서류 보관과 같이 받음(물건상세가 일주일 안이면 문건송달 · 현황조사만)
+            targets = soon_targets(conn, date.today())
         else:
             targets = archive_targets(conn, date.today())
         print(f"대상 {len(targets)}건")
