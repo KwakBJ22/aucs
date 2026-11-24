@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminGate } from "@/components/admin/gate";
 import { AdminProvider } from "@/components/admin/ctx";
 import { AppraisalGet } from "@/components/admin/appraisal-get";
+import { DocsGet } from "@/components/admin/docs-get";
 import { BroadcastView } from "@/components/admin/broadcasts";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
@@ -75,8 +76,13 @@ export default function AdminPage() {
                   <ReviewView />
                 </>
               )}
-              {/* 서류 올리기 = 감정평가서 받기만(11/24 대표님) — 받은 파일은 PC 가 감정평가서 폴더로 옮겨 올림 */}
-              {m === "upload" && <AppraisalGet />}
+              {/* 서류 올리기 = 찾아서 감정평가서 · 등기부등본 받기 + 감정평가서 받을 목록(11/24 대표님) — 받은 파일은 PC 가 폴더로 옮겨 올림 */}
+              {m === "upload" && (
+                <>
+                  <DocsGet />
+                  <AppraisalGet />
+                </>
+              )}
               {m === "members" && <MembersView />}
               {m === "notices" && (
                 <>

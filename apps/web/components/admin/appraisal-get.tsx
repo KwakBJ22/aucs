@@ -32,7 +32,6 @@ export function AppraisalGet() {
   return (
     <section className="section">
       <h2>{t.title(d.total)}</h2>
-      <p className="sub">{t.how}</p>
       <p className="sub">{t.order(d.home, d.station)}</p>
       {d.last && (
         <p className="sub adm-msg">

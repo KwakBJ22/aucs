@@ -118,6 +118,13 @@ def main() -> None:
             print(f"── 감정평가서 받은 폴더: {got}", flush=True)
     except Exception as e:  # noqa: BLE001
         print(f"감정평가서 받은 폴더 실패: {e}", flush=True)
+    try:  # 등기부등본 받은 폴더(11/24 대표님) — 다운로드 폴더의 등기부도 옮겨 와 주소로 물건을 찾아 넣음
+        from aucs_workers.collectors import registry_folder
+
+        if got := registry_folder.inbox():
+            print(f"── 등기부등본 받은 폴더: {got}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"등기부등본 받은 폴더 실패: {e}", flush=True)
     queue_docs()
     try:  # 빨간 불 휴대폰 알림 · 관리자가 쓴 알림 보내기(11/12) — 실패해도 요청 처리는 계속
         from aucs_workers import ops_watch

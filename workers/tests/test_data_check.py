@@ -21,3 +21,13 @@ def test_data_lights():
     assert keys == {"data:note_signal", "data:soon_docs"}
     assert data_lights(None) == []
     assert data_lights({"message": "x"}) == []
+
+
+def test_is_registry():
+    from aucs_workers.collectors.registry_folder import is_registry
+
+    body = "등기사항전부증명서(말소사항 포함) - 집합건물\n" + "【 갑 구 】 소유권에 관한 사항 " * 10
+    assert is_registry("x.pdf", body)
+    assert not is_registry("x.pdf", "감정평가서 " * 50)
+    assert is_registry("등기부_401호.pdf", "")
+    assert not is_registry("scan.pdf", "")

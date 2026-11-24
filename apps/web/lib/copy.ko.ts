@@ -2353,9 +2353,19 @@ export const copy = {
       appraisal: "감정평가서",
       registry: "등기부등본",
     },
+    // 서류 받기(11/24 대표님): 사건번호로 찾아 감정평가서 · 등기부등본 받기
+    docsGet: {
+      ask: "사건번호(2025타경12345 · 25-12345 · 12345)",
+      go: "찾기",
+      none: "찾은 물건이 없어요",
+      note: "받은 PDF는 다운로드 폴더에 그대로 두면 PC가 5분 안에 「D:\\Auction\\감정평가서」 · 「D:\\Auction\\등기부등본」 폴더로 옮겨 알아서 올려요(포인트 없음)",
+      item: (n: number | null) => (n ? `물건 ${n}` : ""),
+      hasAppraisal: "감정평가서 있음",
+      registry: "등기부등본 받기",
+      copied: "주소를 복사했어요 · 인터넷등기소에서 붙여 넣어 찾으세요",
+    },
     getAppraisal: {
       title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
-      how: "법원에서 받으면(다운로드 폴더) PC가 5분 안에 「D:\\Auction\\감정평가서」 폴더로 옮겨 알아서 올려요 · 올라간 사건은 여기서 빠져요",
       order: (h: number, s: number) =>
         `홈에 뜨는 물건 ${h.toLocaleString("ko-KR")}건 → 역 가까운 물건 ${s.toLocaleString("ko-KR")}건 → 입찰일 순`,
       last: "마지막으로 넣은 때",
