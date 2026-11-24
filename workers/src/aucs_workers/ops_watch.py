@@ -84,10 +84,43 @@ def red_lights(conn: psycopg.Connection[Any]) -> list[dict[str, str]]:
     if n.get("db_bytes", 0) > DB_LIMIT * 0.8:
         red.append({"kind": "db", "key": "db80", "go": "today",
                     "text": "DB 크기가 포함 디스크(8GB)의 80%를 넘음 — 디스크 90%면 자동으로 늘고 요금이 붙음"})  # fmt: skip
+    red += data_lights(cur.execute(
+        """select message from ops.job_runs where job_id = 'data_check' and status = 'ok'
+           order by started_at desc limit 1"""
+    ).fetchone())  # fmt: skip
     bk = by.get("backup")
     if not bk or bk["status"] != "ok" or _hours(bk["finished_at"] or bk["started_at"]) > 24 * 8:
         red.append({"kind": "db", "key": "backup", "text": "백업이 8일 넘게 없음", "go": "today"})
     return red
+
+
+# 자료 점검(jobs/data_check.py, 11/24 ③) — 넘으면 빨간 불. 목록 원문과 다름은 받은 시각 차이로 몇 건 날 수 있어 20,
+# 입찰 임박 서류는 한 번에 300 까지만 세므로 300(= 못 따라잡음), 옛 규칙은 규칙을 올린 날 낮 매시 분석이 따라잡는 동안 50.
+DATA_LIMITS = {"list_diff": 20, "note_signal": 0, "soon_docs": 299, "stale": 50}
+DATA_TEXT = {
+    "list_diff": "법원 목록 원문과 최저가 · 감정가 · 기일이 다른 물건",
+    "note_signal": "비고에 적힌 위험(농취증 · 유치권 · 대항력 있는 임차인 등)인데 신호가 없는 물건",
+    "soon_docs": "입찰 7일 안인데 서류(물건상세 · 문건송달 · 현황조사)가 빈 사건",
+    "stale": "지금 규칙으로 분석되지 않은 진행 물건",
+}
+
+
+def data_lights(row: dict[str, Any] | None) -> list[dict[str, str]]:
+    """자료 점검 결과(ops.job_runs 한 줄 · message JSON) → 빨간 불(순수 함수)."""
+    import json
+
+    try:
+        res = json.loads((row or {}).get("message") or "{}")
+    except (TypeError, ValueError):
+        return []
+    out = []
+    for k, limit in DATA_LIMITS.items():
+        v = res.get(k) or {}
+        if int(v.get("n") or 0) > limit:
+            ex = " · ".join(v.get("ex") or [])[:80]
+            out.append({"kind": "data", "key": f"data:{k}", "go": "jobs",
+                        "text": f"{DATA_TEXT[k]} {v['n']}건 · 예: {ex}"})  # fmt: skip
+    return out
 
 
 def alert_admins(conn: psycopg.Connection[Any], now: datetime | None = None) -> int:

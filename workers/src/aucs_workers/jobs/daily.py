@@ -24,6 +24,8 @@ STEPS = [
     # 11/24 대표님 「빠뜨리지 않게」: 아침 분석은 날마다 전체(약 20분) — 물건이 그대로여도 새 실거래 · 새 낙찰 사례가
     #   예상 낙찰가 · 주변 시세에 그날 들어가게(전엔 월요일만 전체라 최대 일주일 늦었음). 낮에는 매시 --stale 그대로
     ("분석(전체)", ["aucs_workers.jobs.analyze"]),
+    # 11/24 대표님 「빠뜨리지 않게」 ③: 원문과 다름 · 비고에 있는데 신호 없음 · 입찰 임박 서류 빔 · 옛 규칙 — 넘으면 빨간 불
+    ("자료 점검", ["aucs_workers.jobs.data_check"]),
     ("첫 화면 숫자 새로", ["aucs_workers.jobs.warm"]),
     ("알림", ["aucs_workers.jobs.notify"]),
     ("올린 등기부 원본 지우기", ["aucs_workers.jobs.purge"]),
