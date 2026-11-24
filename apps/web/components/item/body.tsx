@@ -338,6 +338,21 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
                 </div>
               </>
             )}
+            {b.near_market && (
+              <>
+                <Row
+                  label={t.near.label(b.near_market.n, b.near_market.lots)}
+                  value={
+                    <b>
+                      {won(b.near_market.p25_krw)} ~ {won(b.near_market.p75_krw)}
+                    </b>
+                  }
+                />
+                <div className="sub m-0 fs-xs">
+                  {t.near.mid(won(b.near_market.p50_krw))} · {t.near.basis}
+                </div>
+              </>
+            )}
             {b.land_value && (
               <>
                 <Row

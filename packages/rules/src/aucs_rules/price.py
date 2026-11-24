@@ -73,6 +73,54 @@ def market_price(
     return RuleResult(None, Status.UNKNOWN, "price.none", [])
 
 
+NEARBY_MIN = 5  # 주변 비슷한 집 — 이보다 적으면 내지 않음
+NEARBY_MIN_LOTS = 2  # 한 건물 거래만으로 「주변」이라 하지 않음
+
+
+def _q(xs: list[float], p: float) -> float:
+    """정렬된 값의 p 지점(선형 보간)."""
+    k = (len(xs) - 1) * p
+    lo = int(k)
+    hi = min(lo + 1, len(xs) - 1)
+    return xs[lo] + (xs[hi] - xs[lo]) * (k - lo)
+
+
+def nearby_price(
+    trades: list[Trade],
+    *,
+    as_of: date,
+    area_m2: float,
+    build_year: int | None = None,
+) -> RuleResult:
+    """같은 법정동 · 같은 종류 · 전용 ±10% · 지은 해 ±5년 · 최근 12개월 매매의 ㎡단가로 이 넓이 값을 어림.
+
+    같은 건물 거래가 적을 때(1년 3건 미만) 보여 주는 배경 정보 — 입찰가 계산에는 쓰지 않음(11/24 대표님 ①).
+    튀는 거래는 빼고(_drop_outliers) 25 · 50 · 75% 지점을 냄. 빌라는 건물마다 값 차이가 커서 범위를 같이 보임.
+    """
+    since = as_of - timedelta(days=365)
+    pool = [
+        t for t in trades
+        if not t.cancelled and since <= t.deal_date <= as_of and t.area_m2 > 0
+        and abs(t.area_m2 - area_m2) <= area_m2 * 0.1
+        and (build_year is None or t.build_year is None or abs(t.build_year - build_year) <= 5)
+    ]  # fmt: skip
+    used = _drop_outliers(pool)
+    lots = {t.complex_name for t in used if t.complex_name}
+    if len(used) < NEARBY_MIN or len(lots) < NEARBY_MIN_LOTS:
+        return RuleResult(None, Status.UNKNOWN, "price.nearby.few", [{"n": len(used)}])
+    ppm = sorted(t.price_krw / t.area_m2 for t in used)
+    value = {
+        "n": len(used),
+        "lots": len(lots),
+        "p25_krw": int(_q(ppm, 0.25) * area_m2),
+        "p50_krw": int(_q(ppm, 0.5) * area_m2),
+        "p75_krw": int(_q(ppm, 0.75) * area_m2),
+        "area_m2": area_m2,
+        "build_year": build_year,
+    }
+    return RuleResult(value, Status.ESTIMATED, "price.nearby", [])
+
+
 def trade_region(code: str) -> str:
     """실거래 자료는 법정동을 읍·면까지만 씀(리 코드 끝 두 자리가 00). 리 주소 물건도 맞게(10/28)."""
     return code[:8] + "00" if len(code) == 10 else code

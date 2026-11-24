@@ -31,7 +31,7 @@ from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min, usage_for_
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
-from aucs_rules.price import Trade, market_price, trade_region
+from aucs_rules.price import Trade, market_price, nearby_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import is_land_or_house, signals, top_signal
 from aucs_rules.sale_rate import (
@@ -80,6 +80,8 @@ class Pre:
         default_factory=dict
     )  # (사건, 서류 종류) → 가장 최근 원문
     trades: dict[tuple[str, str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
+    # (법정동, 종류) → 최근 1년 매매(주변 비슷한 집, 11/24)
+    near: dict[tuple[str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
     buildings: dict[tuple[str, str], list[dict[str, Any]]] = field(default_factory=dict)
     parcels: dict[str, Any] | None = None  # 필지 번호 → 걸린 지역 · 지구(표가 없으면 None)
     overrides: set[str] = field(default_factory=set)  # 관리자가 판단한 신호가 있는 물건
@@ -178,6 +180,15 @@ def preload(
             pre.trades.setdefault((r["region_code"], r["prop_type"], r["lot_no"]), []).append(
                 (r["deal_date"], r["price_krw"], r["area_m2"], r["floor"], r["build_year"])
             )
+        nk = sorted({(k[0], k[1]) for k in mk})
+        for r in cur.execute(
+            NEAR_SQL
+            + " and (region_code, prop_type) in (select * from unnest(%s::text[], %s::text[]))",
+            (today - timedelta(days=365), [k[0] for k in nk], [k[1] for k in nk]),
+        ).fetchall():
+            pre.near.setdefault((r["region_code"], r["prop_type"]), []).append(
+                (r["deal_date"], r["price_krw"], r["area_m2"], r["lot_no"], r["build_year"])
+            )
     bk = sorted({k for i in pre.items.values() if (k := _building_key(i))})
     if bk:
         for r in cur.execute(
@@ -273,6 +284,42 @@ def load_market(
         return None
     recent = sorted(res.evidence, key=lambda e: e["date"], reverse=True)[:5]
     return {**res.value, "recent": recent} | ({"other_kind": other} if other else {})
+
+
+NEAR_SQL = """select region_code, prop_type, lot_no, deal_date, price_krw, area_m2, build_year
+  from core.trades where deal_kind = 'sale' and deal_date >= %s and price_krw > 0 and area_m2 > 0"""
+
+
+def load_near_market(
+    cur: Any, item: dict[str, Any], market: dict[str, Any] | None, bldg: dict[str, Any] | None,
+    today: date, pre: Pre | None = None,
+) -> dict[str, Any] | None:  # fmt: skip
+    """같은 건물 거래가 1년 3건 미만일 때 같은 법정동 비슷한 집(전용 ±10% · 지은 해 ±5년 · 1년)으로 어림한 값.
+    화면에 같은 건물 값과 나란히 보이기만 함 — 입찰가 계산에는 안 씀(11/24 대표님 ①, 57221: 같은 건물 1건뿐)."""
+    if market and market.get("level") == 1:
+        return None
+    key = _market_key(item)
+    if not key:
+        return None
+    region, kind, _ = key
+    if pre is not None:
+        rows = pre.near.get((region, kind), [])
+    else:
+        rows = cur.execute(
+            NEAR_SQL + " and region_code = %s and prop_type = %s",
+            (today - timedelta(days=365), region, kind),
+        ).fetchall()
+        rows = [
+            (x["deal_date"], x["price_krw"], x["area_m2"], x["lot_no"], x["build_year"])
+            for x in rows
+        ]
+    approved = (bldg or {}).get("approved")
+    trades = [Trade(d, int(p), float(a), None, lot, by) for d, p, a, lot, by in rows]
+    res = nearby_price(
+        trades, as_of=today, area_m2=float(item["building_area_m2"]),
+        build_year=int(approved[:4]) if approved else None,
+    )  # fmt: skip
+    return res.value
 
 
 def commercial_over(
@@ -613,6 +660,7 @@ def analyze_item(
             use_approval_date=date.fromisoformat(bldg["approved"]) if bldg["approved"] else None,
         )  # fmt: skip
     land = load_land_value(cur, item, bldg, today, land_table)
+    near_market = load_near_market(cur, item, market, bldg, today, pre)
     redev = find_zone(
         cur, item, pre.zones if pre is not None else None
     )  # 서울 정비사업(지번·단지 이름이 맞을 때만)
@@ -694,6 +742,8 @@ def analyze_item(
         "local_peers": peers.value,
         "new_item": new_item(eff_failed, app, market["price_krw"] if market else None).value,
         "market": market,
+        # 같은 건물 거래가 적을 때 주변 비슷한 집 어림(보기용 · 입찰가 셈에 안 씀, 11/24)
+        "near_market": near_market,
         # 같은 단지 거래가 없는 단독·다가구: 땅값 역산 추정 시세(하단·가운데·상단, LAND-01) — 보기용, 입찰가 셈에는 안 씀
         "land_value": land,
         "tenant_count": len(tenants),
@@ -727,7 +777,7 @@ def analyze_item(
         else None,
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
-               "tenants": tenants, "market": market, "building": bldg, "parts": parts, "land": land,
+               "tenants": tenants, "market": market, "near_market": near_market, "building": bldg, "parts": parts, "land": land,
                "area": area, "stores": stores, "land_trades": land_trades, "engine": ENGINE_VERSION})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",

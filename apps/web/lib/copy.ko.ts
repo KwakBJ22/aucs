@@ -1446,6 +1446,12 @@ export const copy = {
     rangeLabel: "감정가 기준 예상 낙찰가",
     sample: (n: number) => `최근 1년 비슷한 물건 ${n}건 기준`,
     market: (n: number) => `시세 (같은 단지 실거래 ${n}건)`,
+    // 같은 건물 거래가 적을 때 같은 동 비슷한 집으로 어림(11/24) — 보기용
+    near: {
+      label: (n: number, lots: number) => `주변 비슷한 집 (${lots}개 건물 ${n}건)`,
+      mid: (krw: string) => `가운데 ${krw}`,
+      basis: "같은 동 · 넓이 ±10% · 지은 해 ±5년 · 최근 1년 매매 · 입찰가 계산에는 넣지 않아요",
+    },
     land: {
       label: "추정 시세 (땅값 + 건물)",
       mid: (krw: string) => `가운데 ${krw}`,
