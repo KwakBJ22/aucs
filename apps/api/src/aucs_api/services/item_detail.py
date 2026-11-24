@@ -324,7 +324,15 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                      union all
                      select s.sale_date, s.min_price_krw, s.appraisal_krw, s.result from core.sale_results s
                      where s.item_id = %(id)s and not exists (select 1 from core.rounds r
-                           where r.item_id = s.item_id and r.sale_date = s.sale_date)),
+                           where r.item_id = s.item_id and r.sale_date = s.sale_date)
+                     -- 다음 회차가 공고(preview)돼 물건에는 기일 · 최저가가 있는데 회차 줄이 아직 없을 때(11/24 수원 2025타경57005 —
+                     -- 머리엔 12/14 인데 표에 없고 「다음 기일은 아직 안 잡혔어요」, preview 695건)
+                     union all
+                     select i.sale_date, i.min_price_krw, i.appraisal_krw, 'scheduled' from core.items i
+                     where i.item_id = %(id)s and i.sale_date is not null
+                       and not exists (select 1 from core.rounds r where r.item_id = i.item_id and r.sale_date = i.sale_date)
+                       and not exists (select 1 from core.sale_results s where s.item_id = i.item_id
+                                       and s.sale_date = i.sale_date)),
                    y as (select x.*, lag(min_price_krw) over w as prev_min, lag(sale_date) over w as prev_date,
                                 lag(appraisal_krw) over w as prev_app
                          from x window w as (order by sale_date))
@@ -349,8 +357,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             q_tenants = c.execute(
                 f"""select name_masked as name, occupied_part as part, move_in_date::text as move_in,
                           fixed_date::text as fixed, claim_date::text as claim, deposit_krw, monthly_rent_krw
-                   from core.tenants where case_id = {_CASE} order by move_in_date nulls last""",
-                (item_id,),
+                   from core.tenants where case_id = {_CASE} and (item_id is null or item_id = %s)
+                   order by move_in_date nulls last""",
+                (item_id, item_id),
             )
             q_spec = c.execute(
                 f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "

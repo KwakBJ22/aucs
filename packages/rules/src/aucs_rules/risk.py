@@ -189,7 +189,10 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.family", "mid", "가족 임차인 의심 — 실제 임대차 확인")
     if f.get("claim_after_deadline"):
         add("risk.late_claim", "mid", "배당요구종기 뒤 권리신고")
-    if f.get("rehab_or_bankrupt"):
+    if f.get("rehab_or_bankrupt") and f.get("rehab_resumed"):
+        # 11/24 수원 2025타경57005: 파산선고 뒤 속행 · 매각이 이미 열렸는데 맨 위에 「정지 가능」 — 떠안는 권리도 아님
+        add("risk.rehab", "info", "회생·파산 문건 뒤에도 경매가 다시 진행됐어요 · 기일 바뀜만 확인")
+    elif f.get("rehab_or_bankrupt"):
         add("risk.rehab", "mid", "회생·파산 — 정지 가능")
     if f.get("stop_attempts"):
         add("risk.stop", "mid", "정지·연기 신청 — 기일이 바뀔 수 있음")

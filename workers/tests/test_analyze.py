@@ -73,3 +73,29 @@ def test_doc_tenants_from_deliveries():
     assert doc_tenants(ev)["n"] == 2
     assert build_facts({}, ev, [], True)["doc_tenants"]["n"] == 2
     assert "doc_tenants" not in build_facts({}, ev, [{"move_in_date": None}], True)
+
+
+def test_rehab_resumed():
+    from datetime import date as _d
+
+    from aucs_workers.jobs.analyze import rehab_resumed
+
+    ev = [
+        {"event_date": _d(2026, 3, 3), "category": "회생·파산"},
+        {"event_date": _d(2026, 7, 28), "category": "경매 속행 신청"},
+    ]
+    assert rehab_resumed(ev)
+    assert not rehab_resumed(ev[:1])
+
+
+def test_status_report_tenants_have_unit():
+    from aucs_workers.extract.case_docs import tenants_from_status_report
+
+    sr = {
+        "dlt_ordTsRlet": [{"objctSeq": 1, "dspslObjctSeq": 1}, {"objctSeq": 2, "dspslObjctSeq": 3}],
+        "dlt_ordTsLserLtn": [
+            {"intrpsNm": "이강준", "objctSeq": 1, "mvinDtlCtt": "2021.01.29."},
+            {"intrpsNm": "김태영", "objctSeq": 2, "mvinDtlCtt": "2020.12.17."},
+        ],
+    }
+    assert [t["item_no"] for t in tenants_from_status_report(sr)] == [1, 3]

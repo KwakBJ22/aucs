@@ -149,7 +149,7 @@ def preload(
     ).fetchall():
         pre.events.setdefault(r.pop("case_id"), []).append(r)
     for r in cur.execute(
-        "select case_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration"
+        "select case_id, item_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration"
         " from core.tenants where case_id = any(%s)",
         (cases,),
     ).fetchall():
@@ -401,6 +401,7 @@ def build_facts(
     tenants: list[dict[str, Any]],
     has_status_report: bool,
     commercial_over_limit: bool = False,
+    case_tenants: bool | None = None,
 ) -> dict[str, Any]:
     """물건·문건·임차인 → 위험 신호 규칙이 읽는 사실 묶음 (순수 함수)."""
     cats = {e["category"] for e in events}
@@ -412,14 +413,29 @@ def build_facts(
         "note": item.get("note_masked"),
         "lien_reported": "유치권 신고" in cats,
         "rehab_or_bankrupt": "회생·파산" in cats,
+        "rehab_resumed": rehab_resumed(events),
         "duplicate_auction": "중복경매" in cats,
         "stop_attempts": progress.value == "기일이 바뀔 수 있음",
         "creditor_changed": "채권자 바뀜" in cats,
         "claim_after_deadline": any(e["after_deadline"] for e in events),
         "commercial_over_limit": commercial_over_limit,
         **({"tenants_checked": False} if not has_status_report else {}),
-        **({"doc_tenants": dt} if not tenants and (dt := doc_tenants(events)) else {}),
+        # 문건 임차인은 호를 몰라, 사건 현황조사서에 임차인이 하나도 없을 때만(다른 호 임차인을 이 호에 붙이지 않음)
+        **(
+            {"doc_tenants": dt}
+            if not (tenants if case_tenants is None else case_tenants) and (dt := doc_tenants(events))
+            else {}
+        ),
     }
+
+
+def rehab_resumed(events: list[dict[str, Any]]) -> bool:
+    """회생 · 파산 문건 뒤에 속행 신청이나 입찰이 있었나(11/24 수원 2025타경57005 — 파산선고 뒤 속행 · 두 번 매각)."""
+    last = max((e["event_date"] for e in events if e["category"] == "회생·파산" and e["event_date"]), default=None)
+    return bool(last) and any(
+        e["event_date"] and e["event_date"] > last and e["category"] in ("경매 속행 신청", "입찰 진행")
+        for e in events
+    )
 
 
 # 이름 뒤 괄호(「한OO(OO)」 — 같은 사람)는 떼고 셈(11/24 인천 2025타경513908: 2명을 3명으로 셌음)
@@ -602,7 +618,7 @@ def analyze_item(
             (item["case_id"],),
         ).fetchall()
         tenants = cur.execute(
-            "select move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
+            "select item_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
             (item["case_id"],),
         ).fetchall()
         sr = cur.execute(
@@ -611,6 +627,13 @@ def analyze_item(
             (item["case_id"],),
         ).fetchone()
         has_sr, poss = sr is not None, (sr or {}).get("poss") or ""
+    # 그 호 임차인만(호를 모르는 줄은 사건 전체로 — 11/24 수원 2025타경57005)
+    case_tenants = bool(tenants)
+    tenants = [
+        {k: v for k, v in t.items() if k != "item_id"}
+        for t in tenants
+        if t.get("item_id") in (None, item["item_id"])
+    ]
     detail = load_detail(cur, item, pre)
     # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
     # 법원 요항을 아직 못 받았으면 받아 둔 감정평가서 원본의 요항표로(11/11)
@@ -629,7 +652,7 @@ def analyze_item(
     ).value
     over = commercial_over(item, tenants, commercial_table, today, hint)
     market = load_market(conn, item, today, pre)
-    facts = build_facts(item, events, tenants, has_sr, over)
+    facts = build_facts(item, events, tenants, has_sr, over, case_tenants=case_tenants)
     for k, v in (*af.items(), *pf.items()):
         facts.setdefault(k, v)
     if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음

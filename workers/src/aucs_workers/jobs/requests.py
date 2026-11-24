@@ -24,6 +24,8 @@ def command(key: str) -> list[str] | None:
     """요청 이름 → 실행할 명령. 모르는 이름은 None."""
     if key.startswith("analyze_item:"):
         return [sys.executable, "-m", "aucs_workers.jobs.analyze", "--item", key.split(":", 1)[1]]
+    if key == "tenant_units":  # 이미 받은 현황조사서로 임차인 줄에 호를 채움(11/24 한 번)
+        return [sys.executable, "-m", "aucs_workers.extract.case_docs"]
     if key == "station_fix":  # 역 좌표를 주소와 견줘 바로잡기(11/15) — 5분쯤
         return [sys.executable, "-m", "aucs_workers.collectors.station_fix"]
     if key == "station_official":  # 역 좌표를 공식 자료(레일포털)로 맞추기(11/15)

@@ -347,7 +347,8 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
                 ),
                 (
                     f"""select name_masked as name, move_in_date::text as move_in, fixed_date::text as fixed,
-                          claim_date::text as claim, deposit_krw from core.tenants where case_id = {case}""",
+                          claim_date::text as claim, deposit_krw from core.tenants where case_id = {case}
+                          and (item_id is null or item_id = %(id)s)""",
                     {"id": item_id},
                 ),
             ],

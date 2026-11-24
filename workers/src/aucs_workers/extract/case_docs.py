@@ -254,9 +254,17 @@ def parse_dot_date(text: Any) -> date | None:
 def tenants_from_status_report(sr: dict[str, Any]) -> list[dict[str, Any]]:
     """현황조사서 임대차관계 → 임차인 줄들 (원문 이름은 내부용 칸에만)."""
     out = []
+    # 11/24 수원 2025타경57005: 임차인마다 목록 번호(objctSeq)가 있음 → 매각 물건 번호(dspslObjctSeq)로 바꿔
+    #   그 호 물건에만 붙임(전엔 사건 전체 임차인이 모든 호에 보였음 — 여러 호 사건 841건)
+    seq = {
+        r.get("objctSeq"): r.get("dspslObjctSeq") or r.get("objctSeq")
+        for r in sr.get("dlt_ordTsRlet") or []
+    }
     for x in sr.get("dlt_ordTsLserLtn") or []:
         name = str(x.get("intrpsNm") or "")
+        no = seq.get(x.get("objctSeq"), x.get("objctSeq"))
         out.append({
+            "item_no": int(no) if str(no or "").isdigit() else None,
             "name_raw": name or None,
             "name_masked": (name[0] + "○○") if name else None,
             "occupied_part": None if str(x.get("lesPartCtt")) in ("None", "미상") else x.get("lesPartCtt"),
@@ -281,11 +289,14 @@ def save_tenants(conn: psycopg.Connection, case_id: str, sr: dict[str, Any]) -> 
     )
     with conn.cursor() as cur:
         cur.executemany(
-            "insert into core.tenants (case_id, name_masked, name_raw, occupied_part, move_in_date, fixed_date,"
-            " deposit_krw, monthly_rent_krw, source, fetched_at) values (%s,%s,%s,%s,%s,%s,%s,%s,'status_report', now())",
+            "insert into core.tenants (case_id, item_id, name_masked, name_raw, occupied_part, move_in_date, fixed_date,"
+            " deposit_krw, monthly_rent_krw, source, fetched_at) values (%s,"
+            " (select item_id from core.items where item_id = %s),"  # 우리 목록에 있는 호만(없으면 사건 전체로)
+            " %s,%s,%s,%s,%s,%s,%s,'status_report', now())",
             [
                 (
                     case_id,
+                    f"{case_id}-{t['item_no']}" if t["item_no"] else None,
                     t["name_masked"],
                     t["name_raw"],
                     t["occupied_part"],
@@ -298,3 +309,36 @@ def save_tenants(conn: psycopg.Connection, case_id: str, sr: dict[str, Any]) -> 
             ],  # fmt: skip
         )
     return len(rows)
+
+
+def backfill_items(conn: psycopg.Connection) -> int:
+    """이미 받은 현황조사서로 임차인 줄에 호를 채움(11/24 한 번) — 진행 중 여러 호 사건, 이름 · 전입일로 맞춤."""
+    rows = conn.execute(
+        """select distinct on (r.case_id) r.case_id, r.payload from raw.court_doc_raw r
+           where r.doc_kind = 'status_report'
+             and exists (select 1 from core.tenants t where t.case_id = r.case_id and t.item_id is null
+                         and t.source = 'status_report' and t.name_raw is not null)
+             and (select count(*) from core.items i where i.case_id = r.case_id) > 1
+           order by r.case_id, r.fetched_at desc"""
+    ).fetchall()
+    n = 0
+    for case_id, sr in rows:
+        for t in tenants_from_status_report(sr):
+            if not t["item_no"] or not t["name_raw"]:
+                continue
+            cur = conn.execute(
+                """update core.tenants set item_id = (select item_id from core.items where item_id = %s)
+                   where case_id = %s and source = 'status_report' and item_id is null and name_raw = %s
+                     and move_in_date is not distinct from %s""",
+                (f"{case_id}-{t['item_no']}", case_id, t["name_raw"], t["move_in_date"]),
+            )
+            n += cur.rowcount
+        conn.commit()
+    return n
+
+
+if __name__ == "__main__":
+    from aucs_workers.db import connect
+
+    with connect() as c:
+        print(f"임차인 호 채움: {backfill_items(c)}줄")
