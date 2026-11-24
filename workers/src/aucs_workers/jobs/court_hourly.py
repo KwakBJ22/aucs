@@ -91,41 +91,8 @@ def _details_left() -> bool:
         return True
 
 
-# 11/18 대표님: 법원이 그날 물건을 몇 시까지 다 올리는지 재기 — 저녁에 법원 목록을 한 번 더 받고,
-#   다음 날 06:00 아침 묶음에서 새 사건이 더 나오는지 센다. 하루씩 한 시간 당김(토·일은 법원이 안 올림).
-#   안전한 시각이 정해지면 그 시각~24시를 새 물건 채우기로 바꿈. 아침 06:00 묶음은 그대로.
-# 11/18 20시는 하루 한도가 먼저 다 차서 못 잼 → 11/19 20시로 다시(대표님)
-# 11/20 대표님: 11/19 20시 시험에서 새 사건 0건인데 다음 날 06시에 288건 → 20시엔 아직 안 올라옴. 한 시간씩 늦춤
-EVENING_PROBE = {"2026-11-19": 20, "2026-11-20": 21, "2026-11-23": 22, "2026-11-24": 23}
-PROBE_RESERVE = 450  # 저녁 목록 한 번(수도권 약 330쪽) 몫 — 시험 날엔 그 시각 전까지 매시 수집이 이만큼 남겨 둠
-
-
-
-def probe_reserved() -> bool:
-    """오늘 시험이 아직 남았고, 이번 시간 몫까지 쓰면 남은 몫이 시험 몫 아래가 되면 True(이번 시간 매시 수집은 쉼).
-
-    11/19: 처음엔 「지금 남은 몫 < 450」만 봐서 18시에 482가 남은 채 돌고 200번을 써 20시 시험에 282번만 남았음
-    → 이번 시간 몫(hour_share)을 쓴 뒤 기준으로 봄."""
-    h = EVENING_PROBE.get(datetime.now().date().isoformat())
-    if h is None or datetime.now().hour >= h:
-        return False
-    try:
-        b = Polite(site="court", jitter=False)._load()[1]
-        cap = int(b["cap"])
-        return cap - int(b["count"]) - hour_share(cap) < PROBE_RESERVE
-    except Exception:  # noqa: BLE001 — 모르면 지금처럼
-        return False
-
-
-def evening_probe() -> None:
-    """오늘 정한 시각이면 법원 목록을 한 번 받음(아침 물건 수집과 같은 명령)."""
-    now = datetime.now()
-    if EVENING_PROBE.get(now.date().isoformat()) != now.hour:
-        return
-    print(f"── 저녁 목록 시험({now.hour}시)", flush=True)
-    code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_items"])
-    if code != 0:
-        print(f"   저녁 목록 시험 멈춤({code})", flush=True)
+# 11/18~11/24 저녁 목록 시험(20 · 21 · 22 · 23시): 네 번 모두 그 시각 새 사건 0건, 다음 날 06시에 145~288건
+#   → 법원은 닫혀 있는 00~06시 사이에 올림. 저녁 「새 물건 채우기」는 만들지 않고 시험 코드는 걷어 냄(11/25 대표님)
 
 
 def alive(pid: int) -> bool:
@@ -185,6 +152,21 @@ def nationwide_due(now: datetime) -> bool:
         return True
 
 
+# 11/25 대표님: 공시가격(브이월드)이 아침마다 응답이 늦어 사흘 연속 실패 → 아침 묶음에서 빼 15시 뒤 첫 매시 차례 끝에 하루 한 번.
+#   법원에 묻지 않으므로 법원 몫과 상관없음.
+OFFICIAL_FROM = 15
+OFFICIAL_DONE = LOCK.parent / "official_prices.done"
+
+
+def official_due(now: datetime) -> bool:
+    if now.hour < OFFICIAL_FROM:
+        return False
+    try:
+        return OFFICIAL_DONE.read_text(encoding="utf-8").strip() != now.date().isoformat()
+    except OSError:
+        return True
+
+
 def main() -> None:
     if datetime.now().hour not in SERVICE:
         print("법원 서비스 시간이 아니에요 — 쉼")
@@ -195,10 +177,6 @@ def main() -> None:
     LOCK.parent.mkdir(exist_ok=True)
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
-        evening_probe()
-        if probe_reserved():
-            print(f"저녁 목록 시험 몫({PROBE_RESERVE}번)을 남겨 두려고 이번 시간은 쉼", flush=True)
-            return
         if nationwide_due(datetime.now()):
             print("── 전국 매각결과 · 물건 목록 보관(하루 한 번, 다른 단계 쉼)", flush=True)
             NATIONWIDE_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
@@ -234,6 +212,12 @@ def main() -> None:
             code = subprocess.call([sys.executable, "-m", *mod], env=env)
             if code != 0:
                 print(f"   {name} 멈춤({code}) — 한도·막힘이면 다음 시간에 이어서", flush=True)
+        if official_due(datetime.now()):
+            print("── 공시가격(하루 한 번, 브이월드)", flush=True)
+            OFFICIAL_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
+            cmd = [sys.executable, "-m", "aucs_workers.collectors.official_prices", "--cap", "1500"]
+            if subprocess.call(cmd) != 0:
+                print("   공시가격 멈춤 — 내일 다시", flush=True)
     finally:
         LOCK.unlink(missing_ok=True)
 

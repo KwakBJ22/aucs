@@ -32,3 +32,13 @@ def test_nationwide_once_a_day_from_14(tmp_path, monkeypatch) -> None:  # type: 
     (tmp_path / "done").write_text("2026-11-23", encoding="utf-8")
     assert not m.nationwide_due(datetime(2026, 11, 23, 16, 10))
     assert m.nationwide_due(datetime(2026, 11, 24, 14, 10))
+
+
+def test_official_prices_once_a_day_from_15(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from datetime import datetime
+
+    monkeypatch.setattr(m, "OFFICIAL_DONE", tmp_path / "done")
+    assert not m.official_due(datetime(2026, 11, 25, 14, 10))
+    assert m.official_due(datetime(2026, 11, 25, 16, 10))
+    (tmp_path / "done").write_text("2026-11-25", encoding="utf-8")
+    assert not m.official_due(datetime(2026, 11, 25, 17, 10))
