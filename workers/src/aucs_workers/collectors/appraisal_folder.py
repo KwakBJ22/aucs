@@ -135,11 +135,61 @@ def _move(f: Path, to: Path) -> None:
     f.rename(t)
 
 
+SEEN = Path(__file__).resolve().parents[4] / "logs" / "appraisal_downloads_seen.txt"
+
+
+def from_downloads(root: Path) -> int:
+    """다운로드 폴더(11/24 대표님 — 관리자 「서류 올리기」에서 받은 감정평가서가 감정평가서 폴더로 들어가게)에서
+    우리 사건의 감정평가서로 확인되는 PDF 만 받은 폴더로 옮김(글 속 사건번호 · 파일 이름 = 감정서 번호).
+    아닌 PDF 는 건드리지 않고, 한 번 본 파일은 다시 읽지 않음(logs/appraisal_downloads_seen.txt). 옮긴 수."""
+    import shutil
+
+    dl = Path(os.getenv("APPRAISAL_DOWNLOADS", "").strip() or Path.home() / "Downloads")
+    if not dl.is_dir():
+        return 0
+    now = time.time()
+    seen = set(SEEN.read_text(encoding="utf-8").splitlines()) if SEEN.exists() else set()
+    new = [
+        f
+        for f in sorted(dl.iterdir())
+        if f.is_file() and f.suffix.lower() == ".pdf" and 15 < now - f.stat().st_mtime < 3 * 86400
+        and f"{f.name}|{int(f.stat().st_mtime)}" not in seen
+    ]  # fmt: skip
+    if not new:
+        return 0
+    moved = 0
+    with connect() as conn:
+        for f in new:
+            key = f"{f.name}|{int(f.stat().st_mtime)}"
+            try:
+                data = {"no": appraisal_no(f), **read_pdf(f.read_bytes())}
+                # 감정평가서인지 먼저(글에 「감정평가」, 글 없는 그림 PDF 는 파일 이름 = 감정서 번호로만) — 명세서 등 다른 법원 서류는 안 옮김
+                kind_ok = "감정평가" in str(data.get("head") or "") or bool(data.get("scanned"))
+                ours = kind_ok and bool(find_case(conn, {**data, "file": f.stem}, data["no"], None))
+            except Exception:  # noqa: BLE001 — 깨진 PDF · 다른 서류는 그대로 둠
+                ours = False
+            seen.add(key)
+            if ours:
+                t = root / f.name
+                if t.exists():
+                    t = root / f"{f.stem}-{int(now)}{f.suffix}"
+                shutil.move(str(f), str(t))  # C: → D: 는 rename 이 안 돼서
+                moved += 1
+                print(f"   다운로드 → 감정평가서 폴더: {f.name}", flush=True)
+    SEEN.parent.mkdir(exist_ok=True)
+    SEEN.write_text("\n".join(sorted(seen)[-2000:]), encoding="utf-8")
+    return moved
+
+
 def inbox(folder: str | None = None) -> str | None:
     """받은 폴더(5분마다): 새 PDF 를 넣고 「넣음」·「못 넣음」으로 옮김. 한 줄 결과, 할 일이 없으면 None."""
     root = Path(folder or os.getenv("APPRAISAL_INBOX", "").strip() or INBOX)
     if not root.is_dir():
         return None
+    try:  # 다운로드 폴더에 받은 감정평가서도 여기로(11/24)
+        from_downloads(root)
+    except Exception as e:  # noqa: BLE001 — 다운로드 폴더 탈이 받은 폴더 일을 막지 않게
+        print(f"   다운로드 폴더 보기 실패: {e}", flush=True)
     now = time.time()
     files = [
         f

@@ -2355,7 +2355,7 @@ export const copy = {
     },
     getAppraisal: {
       title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
-      how: "받은 파일을 PC의 「D:\\Auction\\감정평가서」 폴더에 두면 5분 안에 알아서 올라가요 · 올라간 사건은 여기서 빠져요",
+      how: "법원에서 받으면(다운로드 폴더) PC가 5분 안에 「D:\\Auction\\감정평가서」 폴더로 옮겨 알아서 올려요 · 올라간 사건은 여기서 빠져요",
       order: (h: number, s: number) =>
         `홈에 뜨는 물건 ${h.toLocaleString("ko-KR")}건 → 역 가까운 물건 ${s.toLocaleString("ko-KR")}건 → 입찰일 순`,
       last: "마지막으로 넣은 때",
