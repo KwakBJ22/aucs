@@ -12,6 +12,7 @@
 가볍게(11/7 — --picks·--next·--photos·--details): 물건상세만 받음. 사진·명세서 내용·감정 요점·기일 목록이 그 한 요청에 다 있음.
 사건내역(물건 번호는 우리 목록에 있음)·기일내역(물건상세의 기일 목록으로 대신)은 건너뛰고, 감정평가서 정보는 사건당 한 번.
 현황조사·문건송달은 입찰 2주 안에 서류 보관(--archive)이 받음. 사건 하나에 7번 → 1~2번.
+11/24: 현황조사서는 사건당 한 번(새 사건 물건상세 때 같이) — 그 뒤 서류 보관은 문건송달만.
 명세서 PDF 는 받지 않습니다(데이터만). 감정평가서는 번호·가격시점만 받고 원본은 kapa_pdf(11/4). 원본은 raw 에 추가만 하므로
 다시 받을 때 비어 온 종류는 예전 것이 그대로 남습니다.
 """
@@ -263,6 +264,7 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
 def fetch_case(
     page: Any, polite: Polite, court: str, case_no: str,
     light_seqs: list[int] | None = None, need_appraisal: bool = True, docs_only: bool = False,
+    has_status: bool = False, with_status: bool = False,
 ) -> dict[str, dict[str, Any]]:  # fmt: skip
     """한 사건의 서류 데이터를 종류별로 받습니다. 물건상세가 실패하면 그 종류만 빠집니다.
 
@@ -274,6 +276,14 @@ def fetch_case(
         return dict(res.get("data") or {})
 
     out: dict[str, dict[str, Any]] = {}
+
+    def status() -> dict[str, Any]:
+        return post(
+            "/pgj/pgj15B/selectCurstExmndc.on",
+            {"dma_srchCurstExmn": {"cortOfcCd": court, "csNo": case_no, "auctnInfOriginDvsCd": "2", "ordTsCnt": ""}},
+            "현황조사",
+        )  # fmt: skip
+
     if docs_only:
         # 11/12: 물건상세(사진·명세서·기일·요항)를 이미 받은 사건 — 문건송달 · 현황조사만(사건당 7번 → 2번)
         out["deliveries"] = post(
@@ -281,14 +291,15 @@ def fetch_case(
             {"dma_srchDlvrOfdocDts": {"cortOfcCd": court, "csNo": cs, "srchFlag": "F"}},
             "문건송달",
         )
-        out["status_report"] = post(
-            "/pgj/pgj15B/selectCurstExmndc.on",
-            {"dma_srchCurstExmn": {"cortOfcCd": court, "csNo": case_no, "auctnInfOriginDvsCd": "2", "ordTsCnt": ""}},
-            "현황조사",
-        )  # fmt: skip
+        # 11/24 대표님: 현황조사서는 한 번 쓰면 거의 안 바뀜 → 이미 받은 사건은 문건송달만(2번 → 1번)
+        if not has_status:
+            out["status_report"] = status()
         return out
     if light_seqs:
         _details(post, court, cs, light_seqs, out)
+        # 11/24: 새 사건은 물건상세 받을 때 현황조사서도(입찰 8~14일 사건이 76% 비어 있었음)
+        if with_status and not has_status:
+            out["status_report"] = status()
         if need_appraisal:
             out["appraisal"] = fetch_appraisal_info(post, court, cs, out)
         return out
@@ -388,7 +399,9 @@ def save_case(
         "insert into core.cases (case_id, court_code, case_no) values (%s,%s,%s) on conflict do nothing",
         (case_id, court, case_no),
     )
-    if "status_report" in docs:  # 내용이 같아 새 줄이 안 생겨도 물어본 날은 남김(11/12)
+    # 내용이 같아 새 줄이 안 생겨도 물어본 날은 남김(11/12). 11/24: 서류 보관(문건송달)은 현황조사서를 건너뛰어도
+    # 물어본 날로 · 새 사건 때 받은 현황조사서는 내용이 있을 때만(없으면 14일 전 차례에 다시)
+    if docs.get("status_report") or "deliveries" in docs:
         conn.execute("update core.cases set docs_checked_at = now() where case_id = %s", (case_id,))
     pics: list[tuple[str, str]] = []
     for kind in list(docs):
@@ -414,6 +427,14 @@ def save_case(
                 apply_next_sales(conn, case_id, sch)
                 apply_past_rounds(conn, case_id, sch)
     store_photos(conn, case_id, pics)
+
+
+def _has_status(conn: psycopg.Connection, court: str, case_no: str) -> bool:
+    """이 사건 현황조사서를 (내용 있게) 받아 둔 적이 있나(11/24)."""
+    return bool(conn.execute(
+        "select 1 from raw.court_doc_raw where case_id = %s and doc_kind = 'status_report' limit 1",
+        (f"{court}-{case_no}",),
+    ).fetchone())  # fmt: skip
 
 
 def _fresh_detail(conn: psycopg.Connection, court: str, case_no: str) -> bool:
@@ -512,10 +533,12 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
                         seqs, has_apr = _known(conn, court, case_no) if light else ([], False)
                         # 서류 보관: 물건상세를 일주일 안에 받았으면 문건송달·현황조사만(11/12)
                         only = not light and _fresh_detail(conn, court, case_no)
+                        has_st = (only or a.new) and _has_status(conn, court, case_no)
                         # 첫 바퀴(--details)는 물건상세만 — 감정평가서 정보(가격시점)는 홈 사진·서류 보관 때 받음
                         docs = fetch_case(
                             page, polite, court, case_no, seqs or None,
                             not (has_apr or a.details), docs_only=only,
+                            has_status=has_st, with_status=a.new,
                         )  # fmt: skip
                     except DailyLimitReached:
                         print("요청 한도(이번 시간 몫 또는 하루) — 다음 시간에 이어서")
