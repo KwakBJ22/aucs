@@ -14,7 +14,7 @@ from typing import Any
 
 from aucs_rules.pick import usage_kind
 from aucs_rules.result import RuleResult, Status
-from aucs_rules.sale_rate import next_round_min_price
+from aucs_rules.sale_rate import judge_failed, next_round_min_price
 
 RULE_ID = "WAIT-01"
 LOOKBACK_DAYS = 180
@@ -62,7 +62,7 @@ PREVIEW = "preview"  # 유찰 뒤 기일내역으로 미리 안 다음 회차(�
 
 # 통계를 모으는 조회(값: 시작일 · 오늘) — 입찰이 열려 유찰 · 매각으로 끝난 회차만. API 와 수집기가 같이 씀(11/14)
 FAIL_STATS_SQL = """
-select c.court_code, i.usage_name, least(coalesce(r.failed_count, 0), 3) as fc,
+select c.court_code, i.usage_name, least(coalesce(r.price_round, r.failed_count, 0), 3) as fc,
        count(*) filter (where r.result = 'failed') as f, count(*) as n
 from core.rounds r join core.items i using (item_id) join core.cases c using (case_id)
 where r.sale_date >= %s and r.sale_date < %s and r.result in ('failed', 'sold')
@@ -92,7 +92,7 @@ def next_round(
         None
         if preview
         else fail_odds(
-            stats, r["court_code"], usage_kind(r["usage_name"]), round_bucket(r["failed_count"])
+            stats, r["court_code"], usage_kind(r["usage_name"]), round_bucket(judge_failed(r))
         ).value
     )
     out: dict[str, Any] = {

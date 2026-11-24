@@ -77,8 +77,9 @@ EXCLUDE_RULES = {
 SAFE_MODE = ["share", "lien", "senior", "superficies", "villa", "special", "stop"]
 
 _NUM = (  # (조건 이름, 경매 칸, 공매 칸, 비교)
-    ("failed_min", "i.failed_count", "o.failed_count", ">="),
-    ("failed_max", "i.failed_count", "o.failed_count", "<="),
+    # 유찰 조건은 지금 최저가가 몇 번 내린 값인가(price_round, 0077 · 11/24) — 법원 숫자는 다시 시작해도 쌓임
+    ("failed_min", "coalesce(i.price_round, i.failed_count)", "o.failed_count", ">="),
+    ("failed_max", "coalesce(i.price_round, i.failed_count)", "o.failed_count", "<="),
     ("app_min", "i.appraisal_krw", "o.appraisal_krw", ">="),
     ("app_max", "i.appraisal_krw", "o.appraisal_krw", "<="),
     ("price_max", "i.min_price_krw", "o.min_price_krw", "<="),

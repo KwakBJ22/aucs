@@ -15,7 +15,7 @@ from datetime import date
 from typing import Any
 
 from aucs_rules.result import RuleResult, Status
-from aucs_rules.sale_rate import adjusted_rates
+from aucs_rules.sale_rate import adjusted_rates, judge_failed
 
 RULE_ID = "PICK-01"
 PURPOSES = ("live", "rent", "invest")
@@ -300,7 +300,7 @@ def score_row(r: dict[str, Any], purpose: str | None, today: date) -> dict[str, 
     value: dict[str, Any] = pick_score(
         PickInput(
             usage=r["usage_name"], appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
-            failed_count=r["failed_count"],
+            failed_count=judge_failed(r),  # 지금 최저가로 센 유찰(11/24)
             area_m2=float(r["building_area_m2"]) if r["building_area_m2"] else None,
             is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
             analysis=r["analysis"] or {},

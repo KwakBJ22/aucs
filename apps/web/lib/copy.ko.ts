@@ -267,6 +267,13 @@ export const copy = {
     belowAppraisal: (x: string) => `감정가보다 ${x} 낮음`,
     deposit: (x: string) => `보증금 ${x}`,
     failed: (n: number) => `유찰 ${n}`,
+    // 감정가부터 다시 시작한 물건(11/24): 법원 유찰 수는 쌓이지만 지금 값은 다시 센 횟수만큼만 내림
+    failedOf: (n: number, round?: number | null) =>
+      round != null && round < n
+        ? round
+          ? `다시 시작 · 유찰 ${round}`
+          : "다시 시작"
+        : `유찰 ${n}`,
     unknown: (n: number) => `미확인 ${n}`,
     ofAppraisal: "감정가의",
     onbid: "공매",

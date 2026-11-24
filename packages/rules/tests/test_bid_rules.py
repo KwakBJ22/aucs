@@ -6,6 +6,7 @@ from aucs_rules.sale_rate import (
     Sale,
     court_cell,
     effective_failed,
+    judge_failed,
     local_peers,
     new_item,
     rate_range,
@@ -92,6 +93,12 @@ def test_effective_failed_restart() -> None:
     assert restarted(12, 379_000_000, 379_000_000) is True
     assert effective_failed(2, 100, 64) == 2
     assert restarted(0, 100, 100) is False
+    # 11/24: 그 뒤 한 번 더 유찰(80%) — 법원 숫자 12 그대로, DB 가 센 price_round 1
+    assert effective_failed(12, 379_000_000, 303_200_000, 1) == 1
+    assert restarted(12, 379_000_000, 303_200_000, 1) is True
+    assert restarted(2, 100, 64, 2) is False
+    assert judge_failed({"failed_count": 12, "price_round": 1}) == 1
+    assert judge_failed({"failed_count": 3}) == 3
 
 
 def test_heavy_failed_not_mixed_with_light_and_capped_by_last_fail():

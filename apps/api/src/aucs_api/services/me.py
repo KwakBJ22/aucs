@@ -9,7 +9,7 @@ from aucs_api.services.items import card
 
 _WATCH_SQL = """
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
-       i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
+       i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.price_round, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals, '{}'::json as data_status, w.step, w.in_compare,
        (select max(e.created_at) from app.alert_events e

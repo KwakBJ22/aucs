@@ -57,6 +57,7 @@ export type ItemCard = {
   min_rate: number | null;
   deposit_krw: number | null;
   failed_count: number | null;
+  price_round?: number | null; // 지금 최저가가 감정가에서 몇 번 내린 값(감정가부터 다시 시작하면 법원 숫자보다 작음)
   below_appraisal_krw: number;
   lat: number | null;
   lon: number | null;

@@ -19,6 +19,12 @@ def _has(text: str | None) -> bool:
 
 
 _RELEASE = re.compile(r"말소\s*동의")
+# 비고에만 적힌 보증기관 확약서(11/24 서울동부 2024타경57221 — 「소멸되지 않는 권리」 칸은 비고
+# 「주택도시보증공사 … 대항력은 포기하며 … 임차권등기를 말소하는 데 동의한다는 확약서가 제출됨」)
+_GUARANTOR = re.compile(r"주택도시보증공사|보증공사|서울보증|HUG")
+_PLEDGE = re.compile(
+    r"대항력\s*[은을]?\s*포기|말소\s*하는\s*(것|데)\s*에?\s*동의|말소\s*에?\s*동의"
+)
 _OTHER_RIGHTS = re.compile(r"전세권|가등기|가처분|지상권|지역권|근저당|유치권")
 
 
@@ -48,6 +54,10 @@ def spec_facts(spec: dict[str, Any] | None) -> dict[str, Any]:
     # 권리(전세권 · 가등기 · 가처분 · 지상권 …)가 함께 적혀 있으면 지금처럼 인수 신호를 냄
     if _has(keep) and _RELEASE.search(keep or "") and not _OTHER_RIGHTS.search(keep or ""):
         out["lease_reg_released"] = [re.sub(r"\s+", " ", keep or "")[:120]]
+    elif (
+        not _has(keep) and _GUARANTOR.search(remark) and _PLEDGE.search(remark) and "확약" in remark
+    ):
+        out["lease_reg_released"] = [re.sub(r"\s+", " ", remark)[:120]]
     elif _has(keep):
         out["prior_assumed_rights"] = [re.sub(r"\s+", " ", keep or "")[:80]]
         # 「주택임차권등기는 배당에서 전액 변제받지 않으면 잔액을 매수인이 인수」 → 대항력 있는 임차권등기

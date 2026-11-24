@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from aucs_rules.pick import usage_kind
+from aucs_rules.sale_rate import judge_failed
 from aucs_rules.wait import (
     FAIL_STATS_SQL,
     LOOKBACK_DAYS,
@@ -31,6 +32,6 @@ def odds_for(r: dict[str, Any], today: date) -> dict[str, Any] | None:
         fail_stats(today),
         r["court_code"],
         usage_kind(r["usage_name"]),
-        round_bucket(r["failed_count"]),
+        round_bucket(judge_failed(r)),
     ).value
     return v

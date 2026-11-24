@@ -263,24 +263,41 @@ def local_peers(
     return RuleResult(value, Status.ESTIMATED, "sale_rate.local", [])
 
 
-def effective_failed(
-    failed_count: int | None, appraisal_krw: int | None, min_price_krw: int | None
-) -> int:
-    """낙찰가율 표본을 고를 때 쓰는 유찰 횟수.
+def judge_failed(r: dict[str, Any]) -> int | None:
+    """판단에 쓰는 유찰 횟수 = 지금 최저가가 감정가에서 몇 번 내린 값(price_round, 0077 · 11/24).
+    법원 숫자(failed_count)는 감정가부터 다시 시작해도 쌓여 화면 표시에만 씀. 값이 없으면 법원 숫자."""
+    pr = r.get("price_round")
+    return pr if pr is not None else r.get("failed_count")
 
-    유찰이 있었어도 최저가가 감정가 그대로면(임차인 대항력 포기 등 매각조건이 바뀌어
-    법원이 감정가부터 다시 시작) 처음 나온 물건과 같은 자리라 0으로 봅니다.
+
+def effective_failed(
+    failed_count: int | None,
+    appraisal_krw: int | None,
+    min_price_krw: int | None,
+    price_round: int | None = None,
+) -> int:
+    """낙찰가율 표본을 고를 때 쓰는 유찰 횟수 = 지금 최저가가 감정가에서 몇 번 내린 값인가.
+
+    법원 유찰 횟수는 매각조건이 바뀌어(임차인 대항력 포기 등) 감정가부터 다시 시작해도 계속 쌓임
+    (11/24 서울동부 2024타경57221: 11번 유찰 · 8.6% → 감정가로 다시 → 1회 유찰 80% 인데 법원 숫자 12).
+    price_round 는 DB 가 최저가 ÷ 감정가와 법원 저감률로 센 값(core.price_round, 0077) — 있으면 그것.
     """
     if appraisal_krw and min_price_krw and min_price_krw >= appraisal_krw:
         return 0
+    if price_round is not None:
+        return price_round
     return failed_count or 0
 
 
 def restarted(
-    failed_count: int | None, appraisal_krw: int | None, min_price_krw: int | None
+    failed_count: int | None,
+    appraisal_krw: int | None,
+    min_price_krw: int | None,
+    price_round: int | None = None,
 ) -> bool:
-    """유찰이 있었는데 최저가가 감정가로 돌아온 물건."""
-    return bool(failed_count) and effective_failed(failed_count, appraisal_krw, min_price_krw) == 0
+    """유찰이 있었는데 감정가부터 다시 시작한 물건(그 뒤 다시 유찰돼 내려간 것도)."""
+    eff = effective_failed(failed_count, appraisal_krw, min_price_krw, price_round)
+    return bool(failed_count) and eff < (failed_count or 0)
 
 
 def new_item(

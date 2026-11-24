@@ -46,7 +46,7 @@ FAILURE_TYPES = {
     "T11": "값어치·대출·자금",
 }
 RULE_TYPE = {
-    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1",
+    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1", "risk.tenant_unlisted": "T1",
     "risk.tenants_unknown": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
@@ -65,6 +65,7 @@ _HOUSING_WORDS = re.compile(r"(다세대|연립|다가구|단독|주택|빌라|�
 _LAND_OR_HOUSE = re.compile(r"(대지|임야|잡종지|토지|단독|다가구|공장|창고|^\s*전\b|^\s*답\b)")
 _COMMERCIAL = re.compile(r"(근린|상가|판매|점포)")
 _SPECIAL_CONDITION = re.compile(r"(대항력\s*포기|주택도시보증공사|HUG|일괄매각|제시외)")
+_RELEASED_WORDS = re.compile(r"대항력\s*[은을]?\s*포기|주택도시보증공사|HUG")
 
 
 PRIOR_KINDS = ("전세권", "가등기", "가처분", "지상권", "지역권", "임차권", "근저당")
@@ -168,6 +169,14 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             "감정평가서에 서류와 실제가 다른 점이 있어요",
             Status.NEEDS_CHECK,
         )
+    if (dt := f.get("doc_tenants")) and not (f.get("lease_reg_released") and dt.get("lease_only")):
+        # 현황조사서에 임차인이 없는데(폐문 등) 법원 문건(송달 · 접수)에는 임차인 · 임차권자가 있음(11/24 —
+        # 진행 물건 765건이 「임차인 없음」으로 보였음). 대항력은 모르니 확인 필요로만
+        add(
+            "risk.tenant_unlisted", "mid",
+            f"현황조사서에 없는 임차인 {dt['n']}명 — 법원 문건에 있어요 · 매각물건명세서 · 등기부로 확인",
+            Status.NEEDS_CHECK, n=dt["n"],
+        )  # fmt: skip
     if doubt := f.get("tenant_doubt"):  # 가짜 임차인 의심(11/15) — 단정하지 않고 확인 필요로만
         add(
             "risk.tenant_doubt",
@@ -225,6 +234,9 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             Status.NEEDS_CHECK, unit_use=uu,
         )  # fmt: skip
     note = f.get("note") or ""
+    # 보증기관 확약서는 위 신호가 풀어 말함 — 그 말만으로 「원문 확인」을 또 띄우지 않음(11/24)
+    if f.get("lease_reg_released"):
+        note = _RELEASED_WORDS.sub(" ", note)
     if m := _SPECIAL_CONDITION.search(note):
         add(
             "risk.special_condition",

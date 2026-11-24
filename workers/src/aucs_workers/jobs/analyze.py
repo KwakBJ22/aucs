@@ -371,7 +371,23 @@ def build_facts(
         "claim_after_deadline": any(e["after_deadline"] for e in events),
         "commercial_over_limit": commercial_over_limit,
         **({"tenants_checked": False} if not has_status_report else {}),
+        **({"doc_tenants": dt} if not tenants and (dt := doc_tenants(events)) else {}),
     }
+
+
+_DOC_TENANT = re.compile(r"^\s*(?:주택|상가)?임차(권자|인)\s+(\S+)")
+
+
+def doc_tenants(events: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """문건 · 송달에 이름이 나온 임차인 · 임차권자(가린 이름 기준). 없으면 None."""
+    who: dict[str, str] = {}
+    for e in events:
+        if m := _DOC_TENANT.match(e.get("text") or ""):
+            lease = m.group(1) == "권자" and who.get(m.group(2)) != "tenant"
+            who[m.group(2)] = "lease" if lease else "tenant"
+    if not who:
+        return None
+    return {"n": len(who), "lease_only": all(v == "lease" for v in who.values())}
 
 
 HOUSE_USES = ("단독주택다가구", "단독주택", "다가구주택")
@@ -639,8 +655,9 @@ def analyze_item(
     if doubt:
         facts["tenant_doubt"] = doubt
     sig = signals(facts)
+    # 법원 유찰 횟수가 아니라 지금 최저가가 감정가에서 몇 번 내린 값인가(0077, 11/24)
     eff_failed = effective_failed(
-        item["failed_count"], item["appraisal_krw"], item["min_price_krw"]
+        item["failed_count"], item["appraisal_krw"], item["min_price_krw"], item.get("price_round")
     )
     rates = rate_range(
         sales, as_of=today, sido=item["sido"], sigungu=item["sigungu"], usage_name=item["usage_name"],
@@ -766,12 +783,15 @@ def analyze_item(
 def load_sales(conn: psycopg.Connection, today: date) -> list[Sale]:
     """최근 12개월 매각 사례 (면적은 우리 물건 표에서 이어 붙임).
 
+    유찰 횟수는 법원 숫자가 아니라 최저가로 센 값(price_round, 0077) — 감정가부터 다시 시작한 물건의
+    「13회 유찰 · 80%」 낙찰이 13회 칸에 섞이지 않게(11/24).
+
     입찰가를 잘못 쓴 것으로 보이는 낙찰(감정가 3배 이상 + 0 하나를 빼도 최저가를 넘음,
     11/17 의정부 2026타경70099 702%)은 특수 사건처럼 비교 사례에서 뺌.
     """
     rows = conn.execute(
         """select s.sale_date, s.sido, i.sigungu, s.usage_name, coalesce(s.building_area_m2, i.building_area_m2),
-                  s.failed_count, s.sale_rate, s.is_share or s.is_special_case
+                  coalesce(s.price_round, s.failed_count), s.sale_rate, s.is_share or s.is_special_case
                   or coalesce(s.sale_rate >= 300 and s.winning_bid_krw >= s.min_price_krw * 10, false), s.address, s.court_code,
                   case when s.appraisal_krw > 0 then s.min_price_krw * 100.0 / s.appraisal_krw end
            from core.sale_results s left join core.items i on i.item_id = s.item_id

@@ -15,6 +15,7 @@ from typing import Any
 
 from aucs_rules.pick import _won_short, assumes_debt, expected_price, overvalued
 from aucs_rules.result import RuleResult, Status
+from aucs_rules.sale_rate import judge_failed
 from aucs_rules.walk import station_name, walk_estimate
 
 RULE_ID = "COLLECT-01"
@@ -106,7 +107,7 @@ def collect_row(r: dict[str, Any], nr: dict[str, Any], today: Any) -> dict[str, 
         CollectInput(
             appraisal_krw=r["appraisal_krw"], min_price_krw=r["min_price_krw"],
             is_share=bool(r["is_share"]), is_special=bool(r["is_special_case"]),
-            analysis=r["analysis"] or {}, station=st, failed_count=r["failed_count"],
+            analysis=r["analysis"] or {}, station=st, failed_count=judge_failed(r),
         )
     ).value  # fmt: skip
     d_day = (r["sale_date"] - today).days if r.get("sale_date") else 0

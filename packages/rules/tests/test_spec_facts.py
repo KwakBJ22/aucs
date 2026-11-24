@@ -40,3 +40,29 @@ def test_lease_reg_release_agreed():
         assert ids == {"risk.lease_reg_released"}, keep
     f = spec_facts({"keep": "을구 1번 전세권, 을구 2번 주택임차권등기(다만 주택도시보증공사의 말소동의 확약서가 제출됨)"})
     assert "risk.prior_rights" in {s.rule_id for s in signals(f)}
+
+
+def test_guarantor_pledge_in_remark_only():
+    """확약서가 비고에만 적힘(11/24 서울동부 2024타경57221) → 말소동의 신호, 「원문 확인」은 안 띄움."""
+    remark = (
+        "주택도시보증공사(양도전:임차인 이○○)로부터 2026.10.12.자에 '임차보증금에 대하여 우선변제권만 주장하고 "
+        "대항력은 포기하며, 보증금 전액을 변제받지 못하더라도 임차권등기를 말소하는 데 동의한다'는 내용의 확약서가 제출됨."
+    )
+    f = spec_facts({"keep": None, "remark": remark, "item_remark": remark})
+    assert f["lease_reg_released"]
+    f["note"] = f.pop("spec_note")
+    ids = {s.rule_id for s in signals(f)}
+    assert ids == {"risk.lease_reg_released"}
+    # 확약서 말고 다른 조건(일괄매각)이 같이 있으면 「원문 확인」은 그대로
+    f["note"] += " 일괄매각"
+    assert "risk.special_condition" in {s.rule_id for s in signals(f)}
+
+
+def test_tenant_in_docs_only():
+    """현황조사서엔 없는데 문건에 임차인이 있으면 확인 필요(11/24)."""
+    ids = {s.rule_id for s in signals({"doc_tenants": {"n": 1, "lease_only": False}})}
+    assert ids == {"risk.tenant_unlisted"}
+    # 임차권자 하나뿐이고 보증기관 말소동의면 위 신호가 다 말함
+    ids = {s.rule_id for s in signals({"doc_tenants": {"n": 1, "lease_only": True},
+                                       "lease_reg_released": ["확약서"]})}  # fmt: skip
+    assert ids == {"risk.lease_reg_released"}

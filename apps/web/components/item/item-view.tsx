@@ -200,7 +200,7 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
           {won(d.min_price_krw)}{" "}
           <span className="item-price-sub">
             {pc ? t.panel.priceLabel(d.min_rate) : `${copy.card.ofAppraisal} ${d.min_rate}%`}
-            {d.failed_count ? ` · ${copy.card.failed(d.failed_count)}` : ""}
+            {d.failed_count ? ` · ${copy.card.failedOf(d.failed_count, d.price_round)}` : ""}
           </span>
         </div>
         {!closed && <CapLine id={d.item_id} minPrice={d.min_price_krw} />}

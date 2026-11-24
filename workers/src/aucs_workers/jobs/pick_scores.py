@@ -30,8 +30,8 @@ from aucs_workers.db import connect
 
 # 홈에 뜰 수 있는 물건 전부: 손님에게 보이는 물건(FIND-03) 가운데 사진이 있는 것
 SQL = f"""
-select i.item_id, c.court_code, i.usage_name, i.appraisal_krw, i.min_price_krw, i.failed_count,
-       i.building_area_m2, i.is_share, i.is_special_case, i.sale_date, i.status_code,
+select i.item_id, c.court_code, i.usage_name, i.appraisal_krw, i.min_price_krw,
+       i.failed_count, i.price_round, i.building_area_m2, i.is_share, i.is_special_case, i.sale_date, i.status_code,
        {PICK_ANALYSIS_SQL} as analysis, rl.monthly_krw as rent_monthly, rl.deposit_krw as rent_deposit
 from core.items i
 join core.cases c using (case_id)
@@ -40,8 +40,8 @@ where {COURT_VISIBLE} and {HAS_PHOTO}
 """
 # 모아 보기(COLLECT-01)는 사진이 없어도 듦 — 손님에게 보이는 물건 전부 + 가까운 역(직선 500m 안)
 COLLECT_SQL = f"""
-select i.item_id, c.court_code, i.usage_name, i.appraisal_krw, i.min_price_krw, i.failed_count,
-       i.is_share, i.is_special_case, i.sale_date, i.status_code,
+select i.item_id, c.court_code, i.usage_name, i.appraisal_krw, i.min_price_krw,
+       i.failed_count, i.price_round, i.is_share, i.is_special_case, i.sale_date, i.status_code,
        {PICK_ANALYSIS_SQL} as analysis, stn.station_name, stn.station_m
 from core.items i
 join core.cases c using (case_id)

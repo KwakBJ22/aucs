@@ -75,7 +75,17 @@ def test_worth_restarted():
     )
     w = d["questions"][2]
     assert w["answer"] == "감정가부터 다시 시작한 물건이라 처음 나온 물건처럼 보면 돼요"
-    assert w["body"]["notes"][0].startswith("유찰 12회 뒤 매각조건이 바뀌어")
+    assert w["body"]["notes"][0].startswith("법원 유찰 12회 — 매각조건이 바뀌어")
+
+
+def test_worth_restarted_then_failed():
+    """다시 시작한 뒤 한 번 더 유찰(11/24 서울동부 2024타경57221) — 지금 값이 몇 번 내린 것인지 밝힘."""
+    d = build_detail(
+        full(failed_count=12, price_round=1, appraisal_krw=379_000_000, min_price_krw=303_200_000),
+        [], [], [], None, TODAY, [],
+    )  # fmt: skip
+    notes = d["questions"][2]["body"]["notes"]
+    assert any("그 뒤 1번 내린 값" in n for n in notes), notes
 
 
 def test_worth_checks_from_100_sample():

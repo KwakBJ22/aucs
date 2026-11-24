@@ -112,7 +112,7 @@ export function ItemCard({ c, why }: { c: Card; why?: string }) {
           {won(c.min_price_krw)}{" "}
           <span className="ic-rate">
             {c.min_rate != null ? `${c.min_rate}%` : ""}
-            {c.failed_count ? ` · ${t.failed(c.failed_count)}` : ""}
+            {c.failed_count ? ` · ${t.failedOf(c.failed_count, c.price_round)}` : ""}
           </span>
         </div>
         <div className="mt-6">{onbid ? <OnbidLine c={c} /> : <Chip c={c} />}</div>

@@ -1,7 +1,7 @@
 from datetime import date
 
 from aucs_rules.risk import signals, top_signal
-from aucs_workers.jobs.analyze import build_facts
+from aucs_workers.jobs.analyze import build_facts, doc_tenants
 
 
 def test_facts_to_signals() -> None:
@@ -34,3 +34,39 @@ def test_sigungu_from_address() -> None:
     assert sigungu_from_address("경기 용인시 수지구 성복동 760") == "용인시"
     assert sigungu_from_address("서울 강남구 역삼동 1") == "강남구"
     assert sigungu_from_address(None) is None
+
+
+def test_doc_tenants_from_deliveries():
+    """현황조사서에 임차인이 없을 때 문건 · 송달의 임차인 · 임차권자(11/24 서울동부 2024타경57221)."""
+    ev = [
+        {
+            "text": "주택임차권자 이OO 최고서 발송",
+            "category": "이해관계인 최고",
+            "event_date": None,
+            "after_deadline": False,
+        },
+        {
+            "text": "주택임차권자 이OO 임차인통지서 발송",
+            "category": "임차인 통지",
+            "event_date": None,
+            "after_deadline": False,
+        },
+        {
+            "text": "채무자겸소유자 양OO 개시결정정본 발송",
+            "category": "경매 개시",
+            "event_date": None,
+            "after_deadline": False,
+        },
+    ]
+    assert doc_tenants(ev) == {"n": 1, "lease_only": True}
+    ev.append(
+        {
+            "text": "임차인 김OO 권리신고및배당요구신청서 제출",
+            "category": "권리신고·배당요구",
+            "event_date": None,
+            "after_deadline": False,
+        }
+    )
+    assert doc_tenants(ev) == {"n": 2, "lease_only": False}
+    assert build_facts({}, ev, [], True)["doc_tenants"]["n"] == 2
+    assert "doc_tenants" not in build_facts({}, ev, [{"move_in_date": None}], True)

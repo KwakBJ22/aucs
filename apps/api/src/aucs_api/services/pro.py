@@ -319,7 +319,7 @@ def market(f: dict[str, Any], today: date) -> dict[str, Any]:
                     p,
                 ),
                 (
-                    f"select least(s.failed_count, 4) as failed, count(*) as n, {_MED} as p50"
+                    f"select least(coalesce(s.price_round, s.failed_count), 4) as failed, count(*) as n, {_MED} as p50"
                     f" from core.sale_results s {where} and s.failed_count is not null group by 1 order by 1",
                     p,
                 ),

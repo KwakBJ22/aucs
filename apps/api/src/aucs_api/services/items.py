@@ -29,7 +29,7 @@ where i.item_id = any(%s) and i.geom is not null
 
 _CARD_SQL = f"""
 select i.item_id, c.court_code, c.case_no, i.sale_date, i.usage_name, i.sido, i.sigungu, i.gu, i.address,
-       i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.is_share,
+       i.building_desc, i.building_area_m2, i.appraisal_krw, i.min_price_krw, i.failed_count, i.price_round, i.is_share,
        st_y(i.geom::geometry) as lat, st_x(i.geom::geometry) as lon,
        a.result -> 'top' as top, a.result -> 'signals' as signals,
        (a.result -> 'market' ->> 'price_krw')::numeric as market_krw,
@@ -118,6 +118,8 @@ def card(r: dict[str, Any], today: date) -> dict[str, Any]:
         if mn
         else None,  # 입찰보증금(보통 최저가 10%) — 재매각·특별조건은 상세에서
         "failed_count": r["failed_count"],
+        # 감정가부터 다시 시작한 물건: 지금 최저가가 몇 번 내린 값인가(법원 숫자보다 작을 때만 다름, 0077)
+        "price_round": r.get("price_round"),
         "below_appraisal_krw": app - mn if app and mn and app > mn else 0,
         # 최저가가 추정 시세보다 몇 % 낮은지(지도 「시세 대비」 색, 11/13) — 시세가 없으면 None
         "vs_market_pct": round((mk - mn) * 100 / mk) if (mk := r.get("market_krw")) and mn else None,
