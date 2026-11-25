@@ -171,13 +171,14 @@ def acquisition_tax(
         edu = float(table["edu_heavy"])
         farm_key = str(int(heavy))
     else:
+        # 11/25: 기본 세율 구간도 기준표(basic)에서 — 세법이 바뀌면 새 줄만 넣으면 됨(전엔 코드에 1 · 공식 · 3% 고정)
         eok = price_krw / 100_000_000
-        if price_krw <= 600_000_000:
-            rate = 1.0
-        elif price_krw <= 900_000_000:
-            rate = round(eok * 2 / 3 - 3, 4)  # 지방세법 §11①8: 소수점 다섯째 자리에서 반올림
-        else:
-            rate = 3.0
+        rate = 3.0
+        for upper, r in table.get("basic") or [[600_000_000, 1.0], [900_000_000, "formula"], [None, 3.0]]:
+            if upper is None or price_krw <= int(upper):
+                # 지방세법 §11①8: 6억 초과 9억 이하 = 취득가(억) × 2/3 − 3, 소수점 다섯째 자리에서 반올림
+                rate = round(eok * 2 / 3 - 3, 4) if r == "formula" else float(r)
+                break
         edu = rate * float(table["edu_rate_of_basic"]) / 100
         farm_key = "basic"
     farm = float(table["farm_over85"][farm_key]) if area_m2 and area_m2 > 85 else 0.0

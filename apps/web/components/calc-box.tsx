@@ -362,6 +362,11 @@ export function CalcBox({ id }: { id: string }) {
               label={<b>{c.cash}</b>}
               value={<b className="cash-total num">{won(s.cash_krw)}</b>}
             />
+            {d.law_change && (
+              <div className="fs-sm mt-6" style={{ color: "var(--amber)" }}>
+                {d.law_change}
+              </div>
+            )}
             {myCash && (
               <div
                 className="fs-sm ta-right"

@@ -28,6 +28,7 @@ from aucs_rules.appraisal_points import (
 from aucs_rules.area_stats import area_stats
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min, usage_for_kind
+from aucs_rules.rule_dates import change_line, plan as rule_plan
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
@@ -57,6 +58,7 @@ COMMERCIAL_WORDS = ("상가", "근린", "점포", "사무실", "공장")
 
 
 _LAND_USE_TABLE: list[bool] = []  # 표가 있는지 한 번만 봄
+RuleRows = dict[str, list[tuple[date, Any]]]  # 기준표 줄(시행일 · 값), 물건마다 잔금일로 고름
 CHUNK = 100  # 재료를 한 번에 받아 둘 물건 수
 COMMIT_EVERY = 20
 
@@ -602,6 +604,7 @@ def analyze_item(
     cash_tables: dict[str, Any] | None = None,
     land_table: dict[str, Any] | None = None,
     pre: Pre | None = None,
+    cash_rows: RuleRows | None = None,
 ) -> bool:
     """pre 가 있으면 재료를 거기서 꺼내 씀(묶음으로 미리 받은 것), 없으면 예전처럼 물건마다 조회."""
     cur = conn.cursor(row_factory=dict_row)
@@ -766,6 +769,7 @@ def analyze_item(
         min_rate=min_rate, review_p50=review_p50,
     )  # fmt: skip
     top = top_signal(sig)
+    cash_need, law_change, rules_used = _cash_plan(item, market, cash_tables, bldg, cash_rows, today)
     result = {
         "signals": [
             {
@@ -789,7 +793,10 @@ def analyze_item(
         "land_value": land,
         "tenant_count": len(tenants),
         # 최저가에 낙찰받을 때 필요한 현금(집 수별) — 찾기·추천의 「가진 현금」 기준(11/9)
-        "cash_need": _cash_need(item, market, cash_tables, bldg),
+        "cash_need": cash_need,
+        # 잔금 기간에 기준표(세율 · 대출 비율 · 규제지역)가 바뀌면 한 줄(11/25) — 금액이 달라질 때만
+        "law_change": law_change,
+        "rules_used": rules_used,
         "redev": redev,
         "plan_zone": plan_z,
         "land_plan": land_plan,
@@ -819,7 +826,8 @@ def analyze_item(
     }
     h = _hash({"facts": facts, "rates": rates.value, "court": court.value, "peers": peers.value,
                "tenants": tenants, "market": market, "near_market": near_market, "building": bldg, "parts": parts, "land": land,
-               "area": area, "stores": stores, "land_trades": land_trades, "engine": ENGINE_VERSION})  # fmt: skip
+               "area": area, "stores": stores, "land_trades": land_trades, "engine": ENGINE_VERSION,
+               "rules": rules_used})  # fmt: skip
     last = cur.execute(
         "select version, input_hash from analysis.item_analysis where item_id = %s order by version desc limit 1",
         (item_id,),
@@ -914,6 +922,65 @@ def load_cash_tables(conn: psycopg.Connection, today: date) -> dict[str, Any] | 
     return out
 
 
+def load_rule_rows(conn: psycopg.Connection, keys: tuple[str, ...]) -> tuple[RuleRows, dict[tuple[str, str], str]]:
+    """기준표 줄 전부(시행일 · 값)와 줄마다 고친 시각 — 물건마다 잔금일로 고름(11/25)."""
+    rows: RuleRows = {k: [] for k in keys}
+    stamp: dict[tuple[str, str], str] = {}
+    for k, vf, v, ch in conn.execute(
+        # changed_at 은 0082 — 이주 전에도 돌게 to_jsonb 로 읽음
+        "select rule_key, valid_from, value, to_jsonb(t) ->> 'changed_at' from ref.rule_tables t where rule_key = any(%s)",
+        (list(keys),),
+    ).fetchall():
+        rows[k].append((vf, v))
+        stamp[(k, vf.isoformat())] = ch or ""
+    return rows, stamp
+
+
+RULE_STAMP: dict[tuple[str, str], str] = {}
+
+
+def rules_key(p: dict[str, Any]) -> str:
+    """고른 줄(시행일 · 고친 시각) + 잔금 기간에 바뀌는 날 — 이게 달라지면 다시 분석."""
+    used = ",".join(f"{k}:{vf}:{RULE_STAMP.get((k, vf), '')}" for k, vf in sorted(p["used"].items()))
+    after = p["after"]["from"].isoformat() if p.get("after") else ""
+    return f"{used}|{after}"
+
+
+def _diff_line(keys: list[str], since: date, before: dict[str, int], after: dict[str, int], *, applied: bool) -> str | None:
+    """집 수(없음 · 1채 · 2채) 중 금액이 1만 원 넘게 달라지는 첫 경우로 한 줄 — 어느 경우도 안 달라지면 알리지 않음."""
+    for h, who in (("0", ""), ("1", "1주택이면 "), ("2", "2주택 이상이면 ")):
+        if h in before and h in after:
+            line = change_line(keys, since, before[h], after[h], applied=applied)
+            if line:
+                return line.replace(" · ", f" · {who}", 1) if who else line
+    return None
+
+
+def _cash_plan(
+    item: dict[str, Any], market: dict[str, Any] | None, today_tables: dict[str, Any] | None,
+    bldg: dict[str, Any] | None, rows: RuleRows | None, today: date,
+) -> tuple[dict[str, int] | None, dict[str, Any] | None, str | None]:
+    """필요한 현금을 잔금일 기준표로. 잔금 기간에 바뀌는 줄이 있으면 두 번 셈해 금액이 다를 때만 알림(11/25)."""
+    if not rows:
+        return _cash_need(item, market, today_tables, bldg), None, None
+    p = rule_plan(rows, CASH_TABLE_KEYS, item.get("sale_date"), today)
+    cash = _cash_need(item, market, p["tables"], bldg)
+    note = None
+    if cash and p["after"]:
+        alt = _cash_need(item, market, p["after"]["tables"], bldg) or {}
+        line = _diff_line(p["after"]["keys"], p["after"]["from"], cash, alt, applied=False)
+        if line:
+            note = {"kind": "inside", "from": p["after"]["from"].isoformat(), "keys": p["after"]["keys"],
+                    "line": line, "cash_after": alt}  # fmt: skip
+    elif cash and p["applied"]:
+        now = _cash_need(item, market, today_tables, bldg) or {}
+        line = _diff_line(p["applied"]["keys"], p["applied"]["from"], now, cash, applied=True)
+        if line:
+            note = {"kind": "applied", "from": p["applied"]["from"].isoformat(), "keys": p["applied"]["keys"],
+                    "line": line, "cash_today": now}  # fmt: skip
+    return cash, note, rules_key(p)
+
+
 def _cash_need(
     item: dict[str, Any], market: dict[str, Any] | None, tables: dict[str, Any] | None,
     bldg: dict[str, Any] | None = None,
@@ -943,6 +1010,23 @@ where i.sale_date >= %s
        or exists (select 1 from raw.court_doc_raw d where d.case_id = i.case_id and d.fetched_at > a.computed_at))
 order by i.sale_date
 """
+
+
+def rules_stale(conn: psycopg.Connection, rows: RuleRows, today: date, skip: set[str]) -> list[str]:
+    """진행 물건 중 지금 고를 기준표가 분석 때 쓴 것과 다른 물건. 끝난 사건은 그때 값 그대로(굳힘)."""
+    out = []
+    for item_id, sale_date, used in conn.execute(
+        """select i.item_id, i.sale_date, a.result ->> 'rules_used' from core.items i
+           join lateral (select result from analysis.item_analysis x where x.item_id = i.item_id
+                         order by version desc limit 1) a on true
+           where i.sale_date >= %s""",
+        (today,),
+    ).fetchall():
+        if item_id in skip or not item_id:
+            continue
+        if used != rules_key(rule_plan(rows, CASH_TABLE_KEYS, sale_date, today)):
+            out.append(item_id)
+    return out
 
 
 def sigungu_from_address(address: str | None) -> str | None:
@@ -977,6 +1061,9 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
         ).fetchone()
         commercial_table = row[0] if row else None
         cash_tables = load_cash_tables(conn, today)
+        cash_rows, stamp = load_rule_rows(conn, CASH_TABLE_KEYS)
+        RULE_STAMP.clear()
+        RULE_STAMP.update(stamp)
         lv = conn.execute(
             "select value from ref.rule_tables where rule_key = 'land_value' and valid_from <= %s"
             " order by valid_from desc limit 1",
@@ -992,6 +1079,8 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
                     STALE_SQL, (today - timedelta(days=7), ENGINE_VERSION)
                 ).fetchall()
             ]
+            # 기준표가 바뀌었거나 잔금 기간에 시행일이 새로 끼게 된 물건만(11/25 — 전체 다시 돌리지 않음)
+            ids += rules_stale(conn, cash_rows, today, set(ids))
         else:
             ids = [r[0] for r in conn.execute(
                 "select item_id from core.items where sale_date >= %s", (today - timedelta(days=7),)).fetchall()]  # fmt: skip
@@ -1011,7 +1100,7 @@ def _analyze(a: argparse.Namespace, today: date) -> None:
                     print(f"묶어 받기 실패 → 물건마다 받음: {type(e).__name__} {str(e)[:120]}")
             for n, item_id in enumerate(part):
                 if analyze_item(
-                    conn, item_id, sales, today, commercial_table, cash_tables, land_table, pre
+                    conn, item_id, sales, today, commercial_table, cash_tables, land_table, pre, cash_rows
                 ):
                     job.count += 1
                 if pre is None or n % COMMIT_EVERY == COMMIT_EVERY - 1:

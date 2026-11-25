@@ -49,7 +49,7 @@ def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:
 
 _CALC_SQL = """
 select i.item_id, i.sido, i.address, i.appraisal_krw, i.min_price_krw, i.building_area_m2, i.note_masked,
-       i.usage_name, i.building_desc,
+       i.usage_name, i.building_desc, i.sale_date,
        a.result -> 'sale_rate' as sale_rate, a.result -> 'court_cell' as court_cell,
        a.result -> 'local_peers' as local_peers, a.result -> 'new_item' as new_item,
        a.result -> 'market' as market, a.result -> 'signals' as signals, a.result -> 'building' as building
@@ -76,6 +76,8 @@ _TABLE_KEYS = (
 )
 # 보유세 기준표(11/11) — 없어도 계산 상자는 돌아가게 따로 둠
 _HOLD_KEYS = ("property_tax_home", "comprehensive_tax_home")
+# 기준표 줄 전부 — 오늘이 아니라 잔금 낼 날로 고름(11/25, aucs_rules.rule_dates)
+_RULES_SQL = "select rule_key, valid_from, value from ref.rule_tables where rule_key = any(%s)"
 _OFFICIAL_SQL = """select kind, payload from raw.official_price_raw
                    where item_id = %s and kind in ('apt', 'house') order by fetched_at desc limit 1"""
 
@@ -291,47 +293,48 @@ def calc(
             item_id, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
             selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw,
         )  # fmt: skip
+    from aucs_rules.rule_dates import change_line, pick, plan
+
     with connect() as c:
         qs = batch(
             c,
-            [(_CALC_SQL, (item_id,))]
-            + [
-                (
-                    "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
-                    "order by valid_from desc limit 1",
-                    (k,),
-                )
-                for k in _TABLE_KEYS
-            ]
-            + [(_LEASE_SQL, (item_id,))]  # 세놓으면(같은 단지 전월세 1년)
-            + [
-                (
-                    "select value from ref.rule_tables where rule_key = %s and valid_from <= current_date "
-                    "order by valid_from desc limit 1",
-                    (k,),
-                )
-                for k in _HOLD_KEYS
-            ]
-            + [(_OFFICIAL_SQL, (item_id,))],
-        )
+            [(_CALC_SQL, (item_id,)), (_RULES_SQL, (list(_TABLE_KEYS + _HOLD_KEYS),)),
+             (_LEASE_SQL, (item_id,)), (_OFFICIAL_SQL, (item_id,))],
+        )  # fmt: skip
         r = qs[0].fetchone()
         if not r or not r["min_price_krw"]:
             return None
-        n = len(_TABLE_KEYS)
-        tables = {
-            k: _one(q.fetchone())["value"] for k, q in zip(_TABLE_KEYS, qs[1 : n + 1], strict=True)
-        }
-        leases = qs[n + 1].fetchall()
-        for k, q in zip(_HOLD_KEYS, qs[n + 2 : n + 2 + len(_HOLD_KEYS)], strict=True):
-            row = q.fetchone()
-            if row:
-                tables[k] = row["value"]
-        official = qs[-1].fetchone()
-    return build_calc(
-        r, tables, bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw,
-        selling=selling, income_krw=income_krw, other_monthly_krw=other_monthly_krw, leases=leases,
-        assume_krw=assume_krw, official=official,
+        rows: dict[str, list[Any]] = {}
+        for x in qs[1].fetchall():
+            rows.setdefault(x["rule_key"], []).append((x["valid_from"], x["value"]))
+        leases = qs[2].fetchall()
+        official = qs[3].fetchone()
+    p = plan(rows, _TABLE_KEYS, r.get("sale_date"), date.today())
+
+    def tables_at(main: dict[str, Any] | None, day: date) -> dict[str, Any]:
+        if main is None:
+            raise LookupError("기준표가 비어 있어요")
+        hold = {k: v for k in _HOLD_KEYS if (v := (pick(rows, (k,), day) or {}).get(k)) is not None}
+        return {**main, **hold}
+
+    kw: dict[str, Any] = dict(
+        bid_krw=bid_krw, homes=homes, first_time=first_time, loan_krw=loan_krw, selling=selling,
+        income_krw=income_krw, other_monthly_krw=other_monthly_krw, leases=leases, assume_krw=assume_krw,
+        official=official,
     )  # fmt: skip
+    out = build_calc(r, tables_at(p["tables"], p["day"]), **kw)
+    # 잔금 기간에 세율 · 대출 기준이 바뀌면 한 줄(11/25) — 고른 조건에서 금액이 실제로 달라질 때만
+    line = None
+    if p["after"]:
+        alt = build_calc(r, tables_at(p["after"]["tables"], p["after"]["day"]), **kw)
+        line = change_line(p["after"]["keys"], p["after"]["from"], out["selected"]["cash_krw"],
+                           alt["selected"]["cash_krw"], applied=False)  # fmt: skip
+    elif p["applied"]:
+        today = date.today()
+        now = build_calc(r, tables_at(pick(rows, _TABLE_KEYS, today), today), **kw)
+        line = change_line(p["applied"]["keys"], p["applied"]["from"], now["selected"]["cash_krw"],
+                           out["selected"]["cash_krw"], applied=True)  # fmt: skip
+    return {**out, "law_change": line}
 
 
 def bid_day(item_id: str, today: date) -> dict[str, Any] | None:
