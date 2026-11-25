@@ -20,6 +20,10 @@ def area_class(sido: str | None, address: str | None, regulated: dict[str, Any])
     addr = " ".join((address or "").split())
     if any(name in addr for name in regulated.get("gyeonggi", [])):
         return "regulated"
+    # 11/25: 새로 생긴 구(화성시 동탄구)는 법원 주소에 구 이름이 없음(「화성시 오산동 …」) → 법정동으로
+    for city, dongs in (regulated.get("gyeonggi_dongs") or {}).items():
+        if re.search(rf"{city}\s+(?:\S+구\s+)?(?:{'|'.join(dongs)})(?:\s|$)", addr):
+            return "regulated"
     return "metro" if sd.startswith(METRO) else "other"
 
 
