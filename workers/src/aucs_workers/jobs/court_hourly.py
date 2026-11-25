@@ -167,6 +167,65 @@ def official_due(now: datetime) -> bool:
         return True
 
 
+# 11/26 대표님: PC 두 대(다른 인터넷)로 나눠 받기 — .env 의 AUCS_ROLE 로 맡을 일을 나눔. 하루 법원 한도는 PC 마다 따로(logs/court_budget.json).
+#   main(1번 PC): 아침 묶음 · 매시(관심 · 입찰 임박 · 새 사건 · 사진 · 다음 회차 · 첫 바퀴 · 분석) · 공시가격 · 관리자 요청
+#   docs(2번 PC): 매시 서류 보관(현황조사서 · 문건송달)만 몫 전부로 + 14시 뒤 전국 보관. 분석은 1번 PC 가 다음 차례에
+#   2번 PC 가 90분 넘게 소식이 없으면(꺼짐) 1번 PC 가 서류 보관 · 전국 보관을 예전처럼 대신 함.
+DOCS_ALIVE_MIN = 90
+
+
+def role() -> str:
+    import aucs_workers.db  # noqa: F401 — .env 를 읽음
+
+    return (os.environ.get("AUCS_ROLE") or "main").strip().lower()
+
+
+def docs_pc_alive() -> bool:
+    try:
+        from aucs_workers.db import connect
+
+        with connect() as conn:
+            return bool(conn.execute(
+                "select 1 from ops.job_runs where job_id = 'docs_pc' and started_at > now() - %s * interval '1 minute' limit 1",
+                (DOCS_ALIVE_MIN,),
+            ).fetchone())  # fmt: skip
+    except Exception:  # noqa: BLE001 — 모르면 1번 PC 가 대신 함(빠지는 것보다 겹치는 편이 나음)
+        return False
+
+
+def heartbeat() -> None:
+    try:
+        from aucs_workers.db import connect
+        from aucs_workers.jobs.runlog import run
+
+        with connect() as conn, run(conn, "docs_pc", "2번 PC(서류 보관) 살아 있음"):
+            pass
+    except Exception as e:  # noqa: BLE001
+        print(f"   살아 있음 기록 못 함({type(e).__name__})", flush=True)
+
+
+def run_nationwide() -> None:
+    print("── 전국 매각결과 · 물건 목록 보관(하루 한 번, 다른 단계 쉼)", flush=True)
+    NATIONWIDE_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
+    code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_nationwide"])
+    if code != 0:
+        print(f"   전국 보관 멈춤({code}) — 내일 다시", flush=True)
+
+
+def docs_main() -> None:
+    """2번 PC: 서류 보관만(이 PC 하루 한도의 시간 몫 전부)."""
+    heartbeat()
+    if nationwide_due(datetime.now()):
+        run_nationwide()
+        return
+    print("── 서류 보관(2번 PC)", flush=True)
+    env = dict(os.environ, AUCS_STEP_REQ=str(hour_share(_cap())))
+    cmd = [sys.executable, "-m", "aucs_workers.collectors.court_docs", "--archive"]
+    code = subprocess.call(cmd, env=env)
+    if code != 0:
+        print(f"   서류 보관 멈춤({code}) — 한도·막힘이면 다음 시간에 이어서", flush=True)
+
+
 def main() -> None:
     if datetime.now().hour not in SERVICE:
         print("법원 서비스 시간이 아니에요 — 쉼")
@@ -177,13 +236,14 @@ def main() -> None:
     LOCK.parent.mkdir(exist_ok=True)
     LOCK.write_text(str(os.getpid()), encoding="utf-8")
     try:
-        if nationwide_due(datetime.now()):
-            print("── 전국 매각결과 · 물건 목록 보관(하루 한 번, 다른 단계 쉼)", flush=True)
-            NATIONWIDE_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
-            cmd = [sys.executable, "-m", "aucs_workers.collectors.court_nationwide"]
-            code = subprocess.call(cmd)
-            if code != 0:
-                print(f"   전국 보관 멈춤({code}) — 내일 다시", flush=True)
+        if role() == "docs":
+            docs_main()
+            return
+        docs_alive = docs_pc_alive()
+        if docs_alive:
+            print("2번 PC 가 서류 보관 · 전국 보관을 맡음", flush=True)
+        elif nationwide_due(datetime.now()):
+            run_nationwide()
             return
         share = hour_share(_cap())
         # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)
@@ -191,6 +251,8 @@ def main() -> None:
         soon_spare = 0 if _soon_left() else 25
         details_left = _details_left()
         for name, mod, pct in STEPS:
+            if name == "서류 보관" and docs_alive:
+                continue
             if name == "새 사건 물건상세" and new_spare:
                 continue
             if name == "입찰 임박 서류" and soon_spare:

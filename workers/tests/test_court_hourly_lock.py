@@ -42,3 +42,27 @@ def test_official_prices_once_a_day_from_15(tmp_path, monkeypatch) -> None:  # t
     assert m.official_due(datetime(2026, 11, 25, 16, 10))
     (tmp_path / "done").write_text("2026-11-25", encoding="utf-8")
     assert not m.official_due(datetime(2026, 11, 25, 17, 10))
+
+
+def test_docs_pc_runs_only_archive(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    # 11/26: 2번 PC(AUCS_ROLE=docs)는 서류 보관만, 1번 PC 는 2번 PC 가 살아 있으면 서류 보관을 건너뜀
+    calls: list[list[str]] = []
+    monkeypatch.setattr(m, "LOCK", tmp_path / "lock")
+    monkeypatch.setattr(m, "NATIONWIDE_DONE", tmp_path / "nw")
+    monkeypatch.setattr(m, "OFFICIAL_DONE", tmp_path / "of")
+    monkeypatch.setattr(m, "SERVICE", range(0, 24))
+    monkeypatch.setattr(m, "heartbeat", lambda: None)
+    monkeypatch.setattr(m, "nationwide_due", lambda now: False)
+    monkeypatch.setattr(m, "official_due", lambda now: False)
+    monkeypatch.setattr(m, "_cap", lambda: 1800)
+    monkeypatch.setattr(m.subprocess, "call", lambda cmd, **kw: calls.append(cmd) or 0)
+    monkeypatch.setenv("AUCS_ROLE", "docs")
+    m.main()
+    assert [c[-1] for c in calls] == ["--archive"]
+    calls.clear()
+    monkeypatch.setenv("AUCS_ROLE", "main")
+    monkeypatch.setattr(m, "docs_pc_alive", lambda: True)
+    for f in ("_new_left", "_soon_left", "_details_left"):
+        monkeypatch.setattr(m, f, lambda: True)
+    m.main()
+    assert "--archive" not in [c[-1] for c in calls] and "--new" in [c[-1] for c in calls]
