@@ -293,7 +293,7 @@ def bid_cases(
     """세 경우: 예상 낙찰 범위의 아래·가운데·위 (만 원 단위로 끝자리 정리, 최저가 미만이면 최저가)."""
     out = []
     for key, pct, chance in (("low", p25, "낮음"), ("mid", p50, "보통"), ("high", p75, "높음")):
-        bid = max(int(appraisal_krw * pct / 100) // 10_000 * 10_000, min_price_krw)
+        bid = max(round(appraisal_krw * pct / 100) // 10_000 * 10_000, min_price_krw)  # 11/25: 87.1% 가 1만 원 모자라게 셈됨(부동소수)
         out.append({"key": key, "bid_krw": bid, "rate": pct, "chance": chance})
     return out
 
