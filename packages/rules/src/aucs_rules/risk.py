@@ -99,14 +99,14 @@ def signals(f: dict[str, Any]) -> list[Signal]:
                    or f.get("lease_registration_with_power")):  # fmt: skip
         # 11/25 점검: 전입일이 말소기준보다 앞선 임차인 — 비고에 「인수」가 없어도 대항력은 있음
         dep = f" · 보증금 {man_text(tp['deposit_krw'])}" if tp.get("deposit_krw") else ""
-        add(
-            "risk.tenant_power", "high" if tp.get("unclaimed") else "mid",
-            f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — "
-            + ("배당요구가 없어 보증금을 떠안을 수 있어요" if tp.get("unclaimed")
-               else "배당에서 다 못 받은 보증금은 떠안아요")
-            + " · 매각물건명세서 확인",
-            Status.NEEDS_CHECK, **tp,
-        )  # fmt: skip
+        if not tp.get("lease_known", True):
+            title, lv = (f"말소기준보다 먼저 전입한 세대 {tp['n']}곳 — 임차인인지 · 보증금이 있는지 "
+                         "매각물건명세서 · 전입세대로 확인"), "mid"  # fmt: skip
+        elif tp.get("unclaimed"):
+            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당요구가 없어 보증금을 떠안을 수 있어요", "high"
+        else:
+            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당에서 다 못 받은 보증금은 떠안아요", "mid"
+        add("risk.tenant_power", lv, title, Status.NEEDS_CHECK, **tp)
     if f.get("lien_reported"):
         add("risk.lien", "fatal", "유치권 신고")
     if f.get("statutory_superficies"):

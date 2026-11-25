@@ -48,6 +48,8 @@ def power_tenants(tenants: list[Tenant], base_date: date | None) -> dict[str, An
         "n": len(power),
         "deposit_krw": sum(deps) if deps else None,
         "unclaimed": any(t.claim_date is None and not t.has_lease_registration for t in power),
+        # 보증금 · 확정일자 · 배당요구가 다 없는 세대는 소유자 가족 · 무상 거주일 때가 많음 → 「확인」으로만(11/25 표본)
+        "lease_known": any(t.deposit_krw or t.fixed_date or t.claim_date or t.has_lease_registration for t in power),
     }
 
 

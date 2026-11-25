@@ -24,6 +24,7 @@ _RELEASE = re.compile(r"말소\s*동의")
 _GUARANTOR = re.compile(r"주택도시보증공사|보증공사|서울보증|HUG|주택금융공사")
 _PLEDGE = re.compile(
     r"대항력\s*[은을]?\s*포기|말소\s*하는\s*(것|데)\s*에?\s*동의|말소\s*에?\s*동의"
+    r"|반환\s*청구권\s*[을은]?\s*포기"  # 11/25: 「잔액에 대한 임차보증금반환청구권을 포기하고 … 조건으로 매각」
 )
 _OTHER_RIGHTS = re.compile(r"전세권|가등기|가처분|지상권|지역권|근저당|유치권")
 
@@ -87,7 +88,7 @@ _N_RESALE = re.compile(r"재\s*매각")
 _N_SENIOR = re.compile(
     r"(대항력\s*(이\s*)?있는\s*임차인|선순위\s*임차인)[^.。\n]{0,80}(인수|매수인)"
 )
-_N_PLEDGE_KIND = re.compile(r"확약|포기\s*조건\s*매각|포기서")
+_N_PLEDGE_KIND = re.compile(r"확약|포기\s*조건\s*매각|포기서|조건\s*으로\s*매각")
 # 보증기관 말고 확약을 내는 쪽(11/25 수원 2025타경58164 「신청채권자로부터 … 대항력은 포기하며 … 말소해 주겠다는 확약서」)
 _N_PLEDGER = re.compile(r"임차인|임차권자|신청채권자|채권자")
 _N_WAIVE_SALE = re.compile(r"대항력\s*포기\s*조건")  # 「특별매각조건(대항력포기조건)」 · 「대항력 포기조건 매각」
