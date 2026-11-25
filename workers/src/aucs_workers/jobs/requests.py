@@ -55,6 +55,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.complexes"]
     if key == "trades_land":  # 토지 매매 실거래 처음 2년치(11/16) — 그 뒤는 매월 trades 가 같이
         return [sys.executable, "-m", "aucs_workers.collectors.trades", "--types", "land_sale", "--months", "24", "--skip-done"]
+    if key == "probe_spec":  # 매각물건명세서 원본 한 건 보기(11/26 지시 1126a) — DB 에 안 넣음, logs/probe_spec.log
+        return [sys.executable, "-m", "aucs_workers.collectors.probe_spec", "B000210", "2025타경103942", "1"]
     if key == "probe_land":  # 군포시 토지 매매가 늘 0줄인 까닭 표본(11/18) — 4번만 부름, DB 에 안 넣음
         return [sys.executable, "-m", "aucs_workers.collectors.probe_land"]
     if key == "court_nationwide":  # 전국 매각결과 · 물건 목록 보관(11/18) — 아침 묶음 끝에도 돎
