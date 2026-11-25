@@ -28,13 +28,14 @@ from aucs_rules.appraisal_points import (
 from aucs_rules.area_stats import area_stats
 from aucs_rules.building import lot_key, parse_jibun, summarize
 from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min, usage_for_kind
-from aucs_rules.rule_dates import change_line, plan as rule_plan
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
 from aucs_rules.price import Trade, is_under, market_price, nearby_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import is_land_or_house, signals, top_signal
+from aucs_rules.rule_dates import change_line
+from aucs_rules.rule_dates import plan as rule_plan
 from aucs_rules.sale_rate import (
     Sale,
     court_cell,
@@ -45,7 +46,14 @@ from aucs_rules.sale_rate import (
 )
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import note_facts, spec_facts
-from aucs_rules.tenants import Tenant, base_date_of, base_dates_of, power_tenants, tax_before_tenant, tenant_doubts
+from aucs_rules.tenants import (
+    Tenant,
+    base_date_of,
+    base_dates_of,
+    power_tenants,
+    tax_before_tenant,
+    tenant_doubts,
+)
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
