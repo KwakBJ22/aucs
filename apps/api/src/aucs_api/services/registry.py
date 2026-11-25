@@ -337,7 +337,7 @@ def latest(uid: str, item_id: str) -> dict[str, Any] | None:
                 (
                     f"""select payload, fetched_at from raw.court_doc_raw where case_id = {case}
                        and doc_kind = 'item_detail_' || coalesce((select item_no from core.items
-                       where item_id = %(id)s), 1) order by fetched_at desc limit 1""",
+                       where item_id = %(id)s), 1) and jsonb_typeof(payload->'dma_result') = 'object' order by fetched_at desc limit 1""",
                     {"id": item_id},
                 ),
                 (

@@ -22,6 +22,7 @@ _JUDGE_SQL = """with c as (
     from c
     cross join lateral (select payload from raw.court_doc_raw d
       where d.case_id = c.case_id and d.doc_kind = 'item_detail_' || coalesce(c.item_no, 1)
+        and jsonb_typeof(d.payload->'dma_result') = 'object'
       order by d.fetched_at desc limit 1) d
     cross join lateral (select regexp_replace(
       coalesce(d.payload->'dma_result'->'dspslGdsDxdyInfo'->>'ndstrcRghCtt', ''), '<br\\s*/?>', ' ', 'g') as keep) k

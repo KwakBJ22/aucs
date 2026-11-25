@@ -363,7 +363,8 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             q_spec = c.execute(
                 f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "
-                "and doc_kind = %s order by fetched_at desc limit 1",
+                "and doc_kind = %s and jsonb_typeof(payload->'dma_result') = 'object'"
+                " order by fetched_at desc limit 1",
                 (item_id, f"item_detail_{item_no}"),
             )
             q_apr = c.execute(

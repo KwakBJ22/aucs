@@ -5,6 +5,7 @@
   note_signal 비고 글(농취증 · 재매각 · 유치권 · 법정지상권 · 대항력 있는 임차인 · 보증기관 대항력 포기)에 있는데 신호가 없음
   soon_docs   입찰 7일 안인데 물건상세 · 문건송달 · 현황조사가 비었거나 묵음(입찰 임박 서류 대상, 최대 300)
   stale       진행 물건 중 지금 규칙 버전으로 분석되지 않은 것
+  empty_detail 하루 안에 넣은 빈 물건상세(dma_result 없음) — 11/25 수원 2025타경55353: 빈 답이 최근 것이 돼 명세서를 못 읽었음
 결과는 ops.job_runs.message(JSON)에 — 빨간 불 판단은 ops_watch.red_lights 한 곳(LIMITS 넘으면).
 
     uv run python -m aucs_workers.jobs.data_check
@@ -56,6 +57,12 @@ left join lateral (select engine_version from analysis.item_analysis a where a.i
 where {LIVE} and {REAL_ESTATE} and a.engine_version is distinct from %s
 """
 
+EMPTY_DETAIL_SQL = """
+select r.case_id || ' ' || r.doc_kind from raw.court_doc_raw r
+where r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') is distinct from 'object'
+  and r.fetched_at > now() - interval '1 day'
+"""
+
 # 비고 사실 → 신호
 NOTE_RULE = {
     "lien_reported": "risk.lien",
@@ -90,6 +97,7 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "note_signal": note_misses(cur.execute(NOTE_SQL).fetchall()),
         "soon_docs": [f"{c}-{n}" for c, n in soon_targets(conn, today)],
         "stale": [r[0] for r in cur.execute(STALE_SQL, (ENGINE_VERSION,)).fetchall()],
+        "empty_detail": [r[0] for r in cur.execute(EMPTY_DETAIL_SQL).fetchall()],
     }
     return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
 

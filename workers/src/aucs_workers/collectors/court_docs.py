@@ -111,7 +111,8 @@ select c.court_code, c.case_no, min(i.sale_date) as d,
        bool_or(exists (select 1 from app.watch_items w where w.item_id = i.item_id)) as watched
 from core.cases c join core.items i using (case_id)
 where i.sale_date >= %s
-  and exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id and r.doc_kind like 'item_detail_%%')
+  and exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id and r.doc_kind like 'item_detail_%%'
+                and jsonb_typeof(r.payload->'dma_result') = 'object')
   and not exists (select 1 from core.item_photos p where p.case_id = c.case_id)
 group by 1, 2 order by watched desc, d
 limit %s
@@ -141,7 +142,7 @@ def next_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]
               and exists (select 1 from core.sale_results s where s.item_id = i.item_id and s.result = 'failed'
                           and s.sale_date = i.sale_date)
               and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
-                              and (r.doc_kind = 'schedule' or r.doc_kind like 'item_detail_%%')
+                              and (r.doc_kind = 'schedule' or (r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') = 'object'))
                               and r.fetched_at::date > i.sale_date)
             group by c.case_id, c.court_code, c.case_no
             order by min({LIVE_FIRST}), min(i.min_price_krw::float / nullif(i.appraisal_krw, 0))
@@ -186,7 +187,8 @@ def details_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
             where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone'
               and i.sale_date between %(today)s and %(to)s
               and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
-                              and (r.doc_kind like 'item_detail_%%' or r.fetched_at > now() - interval '3 days'))
+                              and ((r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') = 'object')
+                                   or r.fetched_at > now() - interval '3 days'))
             group by c.case_id, c.court_code, c.case_no
             order by (count(distinct i.item_no) > 6), min(i.sale_date), min({LIVE_FIRST})
             limit %(n)s""",
@@ -208,7 +210,8 @@ def new_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]:
               and i.sale_date >= %(today)s
               and (c.created_at at time zone 'Asia/Seoul')::date >= %(since)s
               and not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
-                              and (r.doc_kind like 'item_detail_%%' or r.fetched_at > now() - interval '1 day'))
+                              and ((r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') = 'object')
+                                   or r.fetched_at > now() - interval '1 day'))
             group by c.case_id, c.court_code, c.case_no
             order by max((c.created_at at time zone 'Asia/Seoul')::date) desc,
                      (count(distinct i.item_no) > 6), min(i.sale_date), min({LIVE_FIRST})
@@ -234,7 +237,8 @@ def soon_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, str]]
                               and r.fetched_at > now() - interval '1 day')
             group by c.case_id, c.court_code, c.case_no
             having not exists (select 1 from raw.court_doc_raw r where r.case_id = c.case_id
-                               and r.doc_kind like 'item_detail_%%' and r.fetched_at > now() - interval '14 days')
+                               and r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') = 'object'
+                               and r.fetched_at > now() - interval '14 days')
                 or coalesce(greatest(max(c.docs_checked_at), (select max(fetched_at) from raw.court_doc_raw r
                        where r.case_id = c.case_id and r.doc_kind = 'status_report'))::date, '-infinity'::date)
                    < min(i.sale_date) - %(days)s
@@ -432,6 +436,11 @@ def save_case(
     # 물어본 날로 · 새 사건 때 받은 현황조사서는 내용이 있을 때만(없으면 14일 전 차례에 다시)
     if docs.get("status_report") or "deliveries" in docs:
         conn.execute("update core.cases set docs_checked_at = now() where case_id = %s", (case_id,))
+    # 11/25 수원 2025타경55353: 법원이 빈 물건상세(dma_result 없음)를 돌려준 것을 넣어 「가장 최근」이 빈 것이 됐고,
+    #   분석 · 화면이 앞의 명세서(대항력 임차권 3억 2,800만 인수)를 못 읽었음 → 빈 물건상세는 넣지 않음(예전 것 유지)
+    for kind in [k for k in docs if k.startswith("item_detail_")]:
+        if not isinstance((docs[kind] or {}).get("dma_result"), dict):
+            docs.pop(kind)
     pics: list[tuple[str, str]] = []
     for kind in list(docs):
         if kind.startswith("item_detail_") and docs[kind]:
@@ -469,7 +478,7 @@ def _has_status(conn: psycopg.Connection, court: str, case_no: str) -> bool:
 def _fresh_detail(conn: psycopg.Connection, court: str, case_no: str) -> bool:
     """이 사건 물건상세를 일주일 안에 받았나 — 그러면 서류 보관 때 다시 받지 않음(11/12)."""
     return bool(conn.execute(
-        """select 1 from raw.court_doc_raw where case_id = %s and doc_kind like 'item_detail_%%'
+        """select 1 from raw.court_doc_raw where case_id = %s and doc_kind like 'item_detail_%%' and jsonb_typeof(payload->'dma_result') = 'object'
            and fetched_at > now() - interval '7 days' limit 1""",
         (f"{court}-{case_no}",),
     ).fetchone())  # fmt: skip

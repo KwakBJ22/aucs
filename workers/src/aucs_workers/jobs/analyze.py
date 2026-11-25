@@ -163,7 +163,8 @@ def preload(
         pre.possession[r["case_id"]] = r["poss"] or ""
     for r in cur.execute(
         """select distinct on (case_id, doc_kind) case_id, doc_kind, payload from raw.court_doc_raw
-           where case_id = any(%s) and (left(doc_kind, 12) = 'item_detail_' or doc_kind in ('appraisal', 'appraisal_pdf'))
+           where case_id = any(%s) and ((left(doc_kind, 12) = 'item_detail_' and jsonb_typeof(payload->'dma_result') = 'object')  -- 빈 답은 건너뜀(11/25)
+                                      or doc_kind in ('appraisal', 'appraisal_pdf'))
            order by case_id, doc_kind, fetched_at desc""",
         (cases,),
     ).fetchall():
@@ -350,7 +351,8 @@ def load_detail(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> dict[
     if pre is not None:
         return dict((pre.docs.get((item["case_id"], kind)) or {}).get("dma_result") or {})
     row = cur.execute(
-        "select payload from raw.court_doc_raw where case_id = %s and doc_kind = %s order by fetched_at desc limit 1",
+        "select payload from raw.court_doc_raw where case_id = %s and doc_kind = %s"
+        " and jsonb_typeof(payload->'dma_result') = 'object' order by fetched_at desc limit 1",
         (item["case_id"], kind),
     ).fetchone()
     return dict(((row or {}).get("payload") or {}).get("dma_result") or {})
