@@ -135,3 +135,17 @@ def test_note_negations_after_rerun():
     assert not note_facts("유치권점유신고서 제출하였으나 유치권점유 취하서 제출함").get(
         "lien_reported"
     )
+
+
+def test_note_pledge_by_tenant_or_creditor():
+    # 11/25 수원 2025타경58164 비고 원문
+    f = note_facts(
+        "신청채권자로부터 2026.6.1.자에 '임차보증금에 대하여 우선변제권만 주장하고 대항력은 포기하며, "
+        "전액을 변제받지 못하더라도 임차권등기를 말소해 주겠다.'는 내용의 확약서가 제출됨"
+    )
+    assert f.get("lease_reg_released") and f.get("lease_reg_released_by") == "other"
+    assert note_facts("특별매각조건(대항력포기조건) 있음 · 채권자의 매수인에 대한 대항력 포기조건 매각").get(
+        "lease_reg_released"
+    )
+    g = note_facts("한국주택금융공사로부터 대항력은 포기하며 임차권등기를 말소해 주겠다는 확약서가 제출됨")
+    assert g.get("lease_reg_released") and not g.get("lease_reg_released_by")

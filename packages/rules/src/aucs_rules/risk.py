@@ -64,7 +64,7 @@ RULE_TYPE = {
 _HOUSING_WORDS = re.compile(r"(다세대|연립|다가구|단독|주택|빌라|아파트)")
 _LAND_OR_HOUSE = re.compile(r"(대지|임야|잡종지|토지|단독|다가구|공장|창고|^\s*전\b|^\s*답\b)")
 _COMMERCIAL = re.compile(r"(근린|상가|판매|점포)")
-_SPECIAL_CONDITION = re.compile(r"(대항력\s*포기|주택도시보증공사|HUG|일괄매각|제시외)")
+_SPECIAL_CONDITION = re.compile(r"(대항력\s*[은을]?\s*포기|주택도시보증공사|HUG|일괄매각|제시외)")
 _RELEASED_WORDS = re.compile(r"대항력\s*[은을]?\s*포기|주택도시보증공사|HUG")
 
 
@@ -111,7 +111,9 @@ def signals(f: dict[str, Any]) -> list[Signal]:
     if f.get("lease_reg_released"):  # 11/17 — 보증기관 말소동의: 떠안지 않음, 확인만
         add(
             "risk.lease_reg_released", "info",
-            "선순위 임차권등기 — 보증기관이 말소에 동의해 떠안지 않아요 · 입찰 전 매각물건명세서 확인",
+            "선순위 임차권등기 — 임차인(채권자)이 대항력 포기 · 말소 동의를 확약해 떠안지 않아요 · 입찰 전 매각물건명세서 확인"
+            if f.get("lease_reg_released_by") == "other"
+            else "선순위 임차권등기 — 보증기관이 말소에 동의해 떠안지 않아요 · 입찰 전 매각물건명세서 확인",
             Status.CONFIRMED, text=f["lease_reg_released"],
         )  # fmt: skip
     if f.get("land_or_building_only"):

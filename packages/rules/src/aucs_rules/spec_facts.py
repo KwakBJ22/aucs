@@ -21,7 +21,7 @@ def _has(text: str | None) -> bool:
 _RELEASE = re.compile(r"말소\s*동의")
 # 비고에만 적힌 보증기관 확약서(11/24 서울동부 2024타경57221 — 「소멸되지 않는 권리」 칸은 비고
 # 「주택도시보증공사 … 대항력은 포기하며 … 임차권등기를 말소하는 데 동의한다는 확약서가 제출됨」)
-_GUARANTOR = re.compile(r"주택도시보증공사|보증공사|서울보증|HUG")
+_GUARANTOR = re.compile(r"주택도시보증공사|보증공사|서울보증|HUG|주택금융공사")
 _PLEDGE = re.compile(
     r"대항력\s*[은을]?\s*포기|말소\s*하는\s*(것|데)\s*에?\s*동의|말소\s*에?\s*동의"
 )
@@ -88,6 +88,9 @@ _N_SENIOR = re.compile(
     r"(대항력\s*(이\s*)?있는\s*임차인|선순위\s*임차인)[^.。\n]{0,80}(인수|매수인)"
 )
 _N_PLEDGE_KIND = re.compile(r"확약|포기\s*조건\s*매각|포기서")
+# 보증기관 말고 확약을 내는 쪽(11/25 수원 2025타경58164 「신청채권자로부터 … 대항력은 포기하며 … 말소해 주겠다는 확약서」)
+_N_PLEDGER = re.compile(r"임차인|임차권자|신청채권자|채권자")
+_N_WAIVE_SALE = re.compile(r"대항력\s*포기\s*조건")  # 「특별매각조건(대항력포기조건)」 · 「대항력 포기조건 매각」
 
 
 def note_facts(note: str | None, have: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -101,12 +104,15 @@ def note_facts(note: str | None, have: dict[str, Any] | None = None) -> dict[str
     if (
         not released
         and not have.get("prior_assumed_rights")
-        and _GUARANTOR.search(text)
+        and (_GUARANTOR.search(text) or _N_PLEDGER.search(text))
         and _PLEDGE.search(text)
-        and _N_PLEDGE_KIND.search(text)
+        and (_N_PLEDGE_KIND.search(text) or _N_WAIVE_SALE.search(text))
     ):
         released = True
         out["lease_reg_released"] = [text[:120]]
+        # 11/25 수원 2025타경58164: 임차인 본인 · 신청채권자가 낸 확약도 같음 — 화면 글만 「보증기관」이 아니게
+        if not _GUARANTOR.search(text):
+            out["lease_reg_released_by"] = "other"
     if _LIEN.search(text) and (_N_LIEN_OPEN.search(text) or not _N_LIEN_NO.search(text)):
         out["lien_reported"] = True
     if _N_SUP.search(text) and not _N_SUP_NO.search(text):

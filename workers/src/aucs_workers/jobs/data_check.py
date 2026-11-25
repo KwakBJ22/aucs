@@ -82,7 +82,7 @@ def note_misses(rows: list[tuple[str, str, list[str]]]) -> list[str]:
         # 명세서에 인수 권리가 있으면 말소동의로 보지 않음(analyze 와 같게)
         ctx = {"prior_assumed_rights": True} if "risk.prior_rights" in have else {}
         for k in note_facts(note, ctx):
-            if NOTE_RULE[k] not in have:
+            if k in NOTE_RULE and NOTE_RULE[k] not in have:  # 신호가 없는 덧붙임 사실(…_by)은 건너뜀
                 out.append(item_id)
                 break
     return out
