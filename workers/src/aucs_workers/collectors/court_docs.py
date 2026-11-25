@@ -8,7 +8,7 @@
     uv run python -m aucs_workers.collectors.court_docs --new            # 새 사건(7일 안 들어온 것) 물건상세 — 오늘 들어온 것부터(11/18)
     uv run python -m aucs_workers.collectors.court_docs --case B000250 2025타경55580
 
-보관 규칙(10/16 결정): 매각기일 14일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
+보관 규칙(10/16 결정, 11/26 21일로): 매각기일 21일 안 1번 → 7일 안 1번 더 → 기일 뒤 1번, 하루 최대 150건(기일 가까운 순).
 가볍게(11/7 — --picks·--next·--photos·--details): 물건상세만 받음. 사진·명세서 내용·감정 요점·기일 목록이 그 한 요청에 다 있음.
 사건내역(물건 번호는 우리 목록에 있음)·기일내역(물건상세의 기일 목록으로 대신)은 건너뛰고, 감정평가서 정보는 사건당 한 번.
 현황조사·문건송달은 입찰 2주 안에 서류 보관(--archive)이 받음. 사건 하나에 7번 → 1~2번.
@@ -50,6 +50,7 @@ DETAILS_DAYS = 45  # 입찰 이만큼 안의 진행 물건
 NEW_MAX = 300  # 한 번에: 새 사건 물건상세(11/18, 실제 양은 시간 몫이 정함)
 SOON_MAX = 300  # 한 번에: 입찰 7일 안 서류가 비었거나 오래된 사건(11/24, 실제 양은 시간 몫이 정함)
 SOON_DAYS = 7  # 입찰 이만큼 안
+ARCHIVE_FIRST_DAYS = 21  # 서류 보관이 현황조사서를 처음 묻는 때(11/26: 14 → 21 — 법원 3주 전 공개)
 NEW_DAYS = 7  # 들어온 지 이만큼 안의 사건 — 밀린 것까지 따라잡게
 PICKS_MAX = 300  # 한 번에: 홈에 뜰 물건 중 사진 없는 것(11/7 가볍게 받으므로 50 → 300, 실제 양은 시간 몫이 정함)
 # 보관 대상 용도 (10/18: 아파트 → 다세대·연립·오피스텔까지, 하루 한도는 그대로)
@@ -76,9 +77,11 @@ def internal_no(case_no: str) -> str:
 
 
 def archive_due(sale_date: date, last_fetched: date | None, today: date) -> tuple[bool, int]:
-    """(받을 차례인지, 순서). 기일 14일 안 처음 → 7일 안 한 번 더 → 기일 뒤 한 번. 지난 것은 맨 뒤."""
+    """(받을 차례인지, 순서). 기일 21일 안 처음 → 7일 안 한 번 더 → 기일 뒤 한 번. 지난 것은 맨 뒤.
+
+    11/26 대표님(지시 1126a): 법원은 현황조사서를 매각기일 3주 전부터 공개 — 8~21일 사건 4,952건 중 15%만 있었음 → 14 → 21일."""
     left = (sale_date - today).days
-    if left > 14 or left < -7:
+    if left > ARCHIVE_FIRST_DAYS or left < -7:
         return False, 0
     if left >= 0:
         need = last_fetched is None or (left <= 7 and last_fetched < sale_date - timedelta(days=7))
@@ -281,7 +284,7 @@ def archive_targets(conn: psycopg.Connection, today: date) -> list[tuple[str, st
            where {REAL_ESTATE} and {AREA}
              and i.sale_date between %s and %s
            group by c.case_id, c.court_code, c.case_no""",
-        (today - timedelta(days=7), today + timedelta(days=14)),
+        (today - timedelta(days=7), today + timedelta(days=ARCHIVE_FIRST_DAYS)),
     ).fetchall()
     todo = []
     for court, case_no, sale_date, last in rows:

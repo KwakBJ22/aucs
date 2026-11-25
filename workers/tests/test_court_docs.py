@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -25,6 +25,9 @@ def test_archive_schedule() -> None:
     assert archive_due(date(2026, 10, 22), date(2026, 10, 16), T)[0] is False
     assert archive_due(date(2026, 10, 15), date(2026, 10, 10), T) == (True, 102)  # 기일 뒤 결과
     assert archive_due(date(2026, 11, 30), None, T)[0] is False
+    # 11/26: 현황조사서는 3주 전 공개 → 21일 안이면 처음 받음, 22일 뒤는 아직
+    assert archive_due(T + timedelta(days=21), None, T) == (True, 21)
+    assert archive_due(T + timedelta(days=22), None, T)[0] is False
 
 
 def test_case_docs_extract() -> None:
