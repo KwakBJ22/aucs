@@ -268,7 +268,8 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         if isinstance(approved, date) and (as_of - approved).days >= 365 * 30:
             add("risk.old", "mid", "사용승인 30년 이상 — 수선비·재건축 확인")
     # 감정가 저평가: 감정 1년 이상 지났고 감정가 < 실거래 시세 95% (경쟁이 붙어 낙찰가율이 높게 나옴)
-    if (app := f.get("appraisal_krw")) and (mkt := f.get("market_price_krw")) and app < mkt * 0.95:
+    # 11/25: 지분 물건은 감정가가 지분 몫이라 단지 시세와 견주지 않음(진행 7건 — 시세의 7~30%로 「저평가」가 떴음)
+    if (app := f.get("appraisal_krw")) and (mkt := f.get("market_price_krw")) and app < mkt * 0.95 and not f.get("is_share"):
         ad, as_of0 = f.get("appraisal_date"), f.get("as_of")
         old = isinstance(ad, date) and isinstance(as_of0, date) and (as_of0 - ad).days >= 365
         if old or ad is None:
