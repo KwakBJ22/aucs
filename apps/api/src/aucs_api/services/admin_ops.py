@@ -223,7 +223,8 @@ APPRAISAL_PAGE = 30
 
 # 11/25 대표님: 관리자 위에서 시군구로 골라 받기 — 남은 사건이 있는 시군구와 건수(사건 단위)
 _APPRAISAL_AREAS_SQL = """
-select concat_ws(' ', left(i.sido, 2), i.sigungu, i.gu) as area  -- 「서울 중구」 · 「인천 중구」를 가름, count(distinct i.case_id) as n
+select concat_ws(' ', left(i.sido, 2), i.sigungu, i.gu) as area,  -- 「서울 중구」 · 「인천 중구」를 가름
+       count(distinct i.case_id) as n  -- 11/26: 앞 줄 끝 주석에 묻혀 n 이 없어 「잠시 문제가 생겼어요」였음
 from core.items i
 where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/Seoul')::date
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
