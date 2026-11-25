@@ -20,6 +20,7 @@ from aucs_rules.location import (
 from aucs_rules.risk import FAILURE_TYPES
 from aucs_rules.sale_rate import next_round_min_price
 from aucs_rules.schedule import after_sale
+from aucs_workers.extract.mask import mask_names
 
 from aucs_api import settings
 from aucs_api.cache import memo
@@ -224,6 +225,11 @@ def build_detail(
 
 
 _CASE = "(select case_id from core.items where item_id = %s)"
+# 11/25 대표님: 진행 중인 사건은 이름을 그대로(다른 업체·법원과 같음), 끝난 사건(모든 물건 매각기일 + 30일)만 가림
+_ENDED = (
+    "not exists (select 1 from core.items j where j.case_id = " + _CASE
+    + " and (j.sale_date is null or j.sale_date >= current_date - 30))"
+)
 
 _PLEDGE_KIND = re.compile(r"(대항력\s*포기|인수조건\s*변경|말소\s*동의)?\s*확약서")
 # 명세서 비고의 확약서 글(11/24 — 문건에 없던 476번 중 238번이 명세서에만 적혀 있었음)
@@ -349,18 +355,22 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
                 {"id": item_id},
             )
             q_events = c.execute(
-                f"""select event_date::text as date, category, importance, text_masked as text, after_deadline
+                f"""select event_date::text as date, category, importance,
+                          case when {_ENDED} then text_masked else coalesce(text_raw, text_masked) end as text,
+                          after_deadline
                    from core.case_events where case_id = {_CASE} and importance in ('high', 'mid')
                    order by event_date desc nulls last limit 12""",
-                (item_id,),
+                (item_id, item_id),
             )
             q_tenants = c.execute(
-                f"""select name_masked as name, occupied_part as part, move_in_date::text as move_in,
+                f"""select case when {_ENDED} then name_masked else coalesce(name_raw, name_masked) end as name,
+                          occupied_part as part, move_in_date::text as move_in,
                           fixed_date::text as fixed, claim_date::text as claim, deposit_krw, monthly_rent_krw
                    from core.tenants where case_id = {_CASE} and (item_id is null or item_id = %s)
                    order by move_in_date nulls last""",
-                (item_id, item_id),
+                (item_id, item_id, item_id),
             )
+            q_end = c.execute(f"select {_ENDED} as ended", (item_id,))
             q_spec = c.execute(
                 f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "
                 "and doc_kind = %s and jsonb_typeof(payload->'dma_result') = 'object'"
@@ -454,6 +464,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         events = q_events.fetchall()
         tenants = q_tenants.fetchall()
         sp = q_spec.fetchone()
+        ended = bool(q_end.fetchone()["ended"])
+        if ended and r and r.get("note_masked"):
+            r = {**r, "note_masked": mask_names(r["note_masked"])}
         apr = {x["doc_kind"]: x["payload"] or {} for x in q_apr.fetchall()}
         pdf = q_file.fetchone()
         doc_times = {x["doc_kind"]: x["t"] for x in q_docs.fetchall()}
@@ -466,7 +479,7 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         stations = q_stn.fetchall()
         hubs = q_hubs.fetchall()
         zones = q_zones.fetchall()
-    spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
+    spec, spec_at = (spec_sheet(sp["payload"], hide=ended), sp["fetched_at"]) if sp else (None, None)
     if spec_at:
         doc_times["spec_sheet"] = spec_at
     out = build_detail(
@@ -515,7 +528,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         inside_zone(r.get("redev"), r.get("plan_zone")),
     ).value
     out["appraisal"] = appraisal_section(
-        sp["payload"] if sp else None, apr, pdf_url(pdf["path"] if pdf else None)
+        sp["payload"] if sp else None, apr,
+        # 11/25 대표님: 끝난 사건(매각 + 30일)은 감정평가서 원본을 보이지 않음 — 업계 공동 선언 · 약관 제6조의2
+        None if ended else pdf_url(pdf["path"] if pdf else None),
     )
     return out
 

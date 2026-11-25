@@ -34,6 +34,7 @@ export type AppraisalTargets = {
     item_count: number | null;
     message: string | null;
   } | null;
+  areas: { area: string; n: number }[]; // 첫 쪽에만 옴(11/25)
 };
 // 「오늘」(11/14): 하실 일 → 수집·분석 → 서비스 현황 → DB
 export type Todo = { key: string; text: string; go: string; red?: boolean; ack_job?: string };
@@ -450,8 +451,11 @@ export const adminApi = {
   markStale: (t: string) => call<{ n: number }>(t, "/jobs/mark-stale", "POST"),
   caseItems: (t: string, q: string) =>
     call<CaseItem[]>(t, `/case-items?q=${encodeURIComponent(q)}`),
-  appraisalTargets: (t: string, offset = 0) =>
-    call<AppraisalTargets>(t, `/appraisal/targets?offset=${offset}`),
+  appraisalTargets: (t: string, offset = 0, sigungu = "") =>
+    call<AppraisalTargets>(
+      t,
+      `/appraisal/targets?offset=${offset}${sigungu ? `&sigungu=${encodeURIComponent(sigungu)}` : ""}`,
+    ),
   ackJob: (t: string, job_id: string) => call(t, `/jobs/${enc(job_id)}/ack`, "POST"),
   requestJob: (t: string, job_key: string) =>
     call<{ req_id: number; dup: boolean }>(t, "/job-requests", "POST", { job_key }),

@@ -28,9 +28,9 @@ def test_mask_holder():
     assert mask_holder("서울특별시") == "서울특별시"
 
 
-def test_json_roundtrip_masks():
+def test_json_roundtrip_keeps_name():
     j = right_to_json(_rights()[0])
-    assert j["holder"] == "홍○○" and j["receipt_date"] == "2015-03-02"
+    assert j["holder"] == "홍길동" and j["receipt_date"] == "2015-03-02"
     assert right_from_json(j).receipt_date == D(2015, 3, 2)
 
 

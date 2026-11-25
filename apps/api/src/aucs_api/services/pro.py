@@ -214,9 +214,12 @@ def case_detail(case_id: str, today: date) -> dict[str, Any] | None:
             (case_id,),
         ).fetchall()
         ev = c.execute(
-            """select event_date, kind, category, importance, after_deadline, text_masked
+            """select event_date, kind, category, importance, after_deadline,
+                      case when not exists (select 1 from core.items j where j.case_id = %s
+                             and (j.sale_date is null or j.sale_date >= current_date - 30))
+                           then text_masked else coalesce(text_raw, text_masked) end as text_masked
                from core.case_events where case_id = %s order by event_date, event_id""",
-            (case_id,),
+            (case_id, case_id),
         ).fetchall()
     prog = judge_progress([(e["event_date"], e["category"]) for e in ev if e["event_date"]])
     counts: dict[str, int] = {}

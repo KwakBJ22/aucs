@@ -53,7 +53,7 @@ def right_to_json(r: Right) -> dict[str, Any]:
     d = asdict(r)
     d["receipt_date"] = _iso(r.receipt_date)
     d["move_in_date"] = _iso(r.move_in_date)
-    d["holder"] = mask_holder(r.holder)
+    d["holder"] = r.holder  # 11/25 대표님: 진행 중 사건은 이름 그대로(끝난 사건은 등기부를 다른 회원에게 보이지 않음)
     d.pop("source", None)
     return d
 

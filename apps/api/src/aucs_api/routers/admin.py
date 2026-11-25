@@ -308,8 +308,10 @@ def put_refund(a: Owner, request_id: int, body: RefundDecideIn) -> dict[str, boo
 
 # 3-2 감정평가서 받기(11/14): 원본 없는 사건(홈 노출 · 역 가까운 곳 먼저) — 받아 PC 폴더에 두면 알아서 올라감
 @router.get("/appraisal/targets")
-def get_appraisal_targets(_: Any_, offset: int = Query(default=0, ge=0)) -> dict[str, Any]:
-    return admin_ops.appraisal_targets(offset)
+def get_appraisal_targets(
+    _: Any_, offset: int = Query(default=0, ge=0), sigungu: str | None = Query(default=None, max_length=40)
+) -> dict[str, Any]:
+    return admin_ops.appraisal_targets(offset, sigungu)
 
 
 # 3-3 서류 올리기(11/18 대표님): 사건번호로 물건을 찾아 손님 화면과 같은 칸으로 감정평가서 · 등기부를 올림(포인트 없음)

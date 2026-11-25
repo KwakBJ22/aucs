@@ -177,7 +177,7 @@ export default function PointsPage() {
 
       <section className="section">
         <h2>{t.listTitle}</h2>
-        <p className="sub mt-4">{t.listSub(total)}</p>
+        <p className="sub mt-4">{t.listSub}</p>
         {!rows && (
           <Delayed>
             <SkRows n={6} />

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DDay } from "@/components/dday";
-import { OriginalLink } from "@/components/item/appraisal";
+import { COURT_CASE_PAGE } from "@/components/item/appraisal";
+import { t as itemT } from "@/components/item/shared";
 import { adminApi, type AppraisalTargets } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
@@ -13,22 +14,37 @@ const t = copy.admin.getAppraisal;
 const dDay = (iso: string | null) =>
   iso ? Math.round((parseTime(iso).getTime() - new Date().setHours(0, 0, 0, 0)) / 864e5) : null;
 
-// 감정평가서 받기(11/14 대표님): 손님 화면처럼 법원에서 받되, 올리는 일은 PC 의 받은 폴더가 알아서
+// 감정평가서 받기(11/14 대표님): 손님 화면처럼 법원에서 받되, 올리는 일은 PC 의 받은 폴더가 알아서.
+// 11/25 대표님: 위에서 시군구로 고르고, 법원 사이트는 맨 위 링크로 한 번만 열어 둠 — 줄마다는 「복사」만(새 창 없음)
 export function AppraisalGet() {
   const { token, say } = useAdmin();
   const [d, setD] = useState<AppraisalTargets | null>(null);
+  const [areas, setAreas] = useState<AppraisalTargets["areas"]>([]);
+  const [area, setArea] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
   const load = useCallback(
-    (offset: number) =>
+    (offset: number, sg: string) =>
       adminApi
-        .appraisalTargets(token, offset)
-        .then((x) => setD((v) => (offset && v ? { ...x, rows: [...v.rows, ...x.rows] } : x)))
+        .appraisalTargets(token, offset, sg)
+        .then((x) => {
+          if (!offset && !sg && x.areas.length) setAreas(x.areas);
+          setD((v) => (offset && v ? { ...x, rows: [...v.rows, ...x.rows] } : x));
+        })
         .catch((e) => say(errText(e))),
     [token, say],
   );
   useEffect(() => {
-    void load(0);
-  }, [load]);
+    void load(0, area);
+  }, [load, area]);
   if (!d) return null;
+  const all = areas.reduce((n, a) => n + a.n, 0);
+  const copyNo = (caseNo: string) => {
+    const num = caseNo.split("타경")[1] ?? caseNo;
+    navigator.clipboard?.writeText(num).then(
+      () => setCopied(caseNo),
+      () => setCopied(null),
+    );
+  };
   return (
     <section className="section">
       <h2>{t.title(d.total)}</h2>
@@ -38,28 +54,56 @@ export function AppraisalGet() {
           {t.last}: {when(d.last.started_at)} · {d.last.message ?? ""}
         </p>
       )}
-      {d.rows.map((r) => (
-        <div key={r.case_id} className="adm-card">
-          <Link
-            prefetch={false}
-            href={`/item/${encodeURIComponent(r.item_id)}`}
-            target="_blank"
-            className="link fw-6"
-          >
-            {r.place}
-          </Link>
-          <div className="sub mt-2">
-            <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
-            {r.home && <span className="chip blue ml-6">{t.home}</span>}
-            {r.station && <span className="chip green ml-6">{t.station}</span>}
+      <div className="adm-line mt-8">
+        <select
+          className="adm-input"
+          aria-label={t.areaLabel}
+          value={area}
+          onChange={(e) => setArea(e.target.value)}
+        >
+          <option value="">{t.allAreas(all || d.total)}</option>
+          {areas.map((a) => (
+            <option key={a.area} value={a.area}>
+              {t.area(a.area, a.n)}
+            </option>
+          ))}
+        </select>
+        {/* 같은 창 이름(court)으로 열어 두 번째부터는 그 창으로 감 */}
+        <a className="btn soft sm" href={COURT_CASE_PAGE} target="court" rel="noreferrer">
+          {t.openCourt}
+        </a>
+      </div>
+      <p className="sub fs-sm mt-6">{t.openHint}</p>
+      {d.rows.map((r) => {
+        const [year = "", num = r.case_no] = r.case_no.split("타경");
+        return (
+          <div key={r.case_id} className="adm-card">
+            <Link
+              prefetch={false}
+              href={`/item/${encodeURIComponent(r.item_id)}`}
+              target="_blank"
+              className="link fw-6"
+            >
+              {r.place}
+            </Link>
+            <div className="sub mt-2">
+              <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
+              {r.home && <span className="chip blue ml-6">{t.home}</span>}
+              {r.station && <span className="chip green ml-6">{t.station}</span>}
+            </div>
+            <div className="adm-line mt-8">
+              <button type="button" className="btn soft sm" onClick={() => copyNo(r.case_no)}>
+                {t.copy}
+              </button>
+              {copied === r.case_no && (
+                <p className="sub fs-sm w-full m-0">{itemT.appraisal.copied(r.court, year, num)}</p>
+              )}
+            </div>
           </div>
-          <div className="adm-line mt-8">
-            <OriginalLink court={r.court} caseNo={r.case_no} compact />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       {d.rows.length < d.total && (
-        <button className="adm-btn mt-8" onClick={() => load(d.next)}>
+        <button className="adm-btn mt-8" onClick={() => load(d.next, area)}>
           {t.more}
         </button>
       )}

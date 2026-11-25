@@ -212,6 +212,7 @@ left join analysis.collection_items s on s.item_id = i.item_id and s.key = 'stat
 where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/Seoul')::date
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
   and not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id)
+  and (%(sg)s::text is null or concat_ws(' ', left(i.sido, 2), i.sigungu, i.gu) = %(sg)s)
 group by i.case_id, c.court_code, c.case_no
 order by case when min(p.rank) is null then 2
               when min(i.sale_date) <= (now() at time zone 'Asia/Seoul')::date + 14 then 0 else 1 end,  -- 홈 추천은 입찰 14일 안
@@ -220,15 +221,30 @@ offset %(offset)s limit %(limit)s"""
 APPRAISAL_PAGE = 30
 
 
-def appraisal_targets(offset: int = 0) -> dict[str, Any]:
+# 11/25 대표님: 관리자 위에서 시군구로 골라 받기 — 남은 사건이 있는 시군구와 건수(사건 단위)
+_APPRAISAL_AREAS_SQL = """
+select concat_ws(' ', left(i.sido, 2), i.sigungu, i.gu) as area  -- 「서울 중구」 · 「인천 중구」를 가름, count(distinct i.case_id) as n
+from core.items i
+where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/Seoul')::date
+  and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
+  and not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id)
+  and coalesce(i.sigungu, '') <> ''
+group by 1 order by 1"""
+
+
+def appraisal_targets(offset: int = 0, sigungu: str | None = None) -> dict[str, Any]:
     """감정평가서 원본이 없는 사건 30건씩(홈 노출 · 역 가까운 곳 먼저) + 받은 폴더의 마지막 결과."""
     from aucs_rules.courts import COURTS
     from aucs_rules.find_filter import VEHICLES
 
     with connect() as c:
         rows = c.execute(
-            _APPRAISAL_SQL, {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE}
+            _APPRAISAL_SQL,
+            {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE, "sg": sigungu or None},
         ).fetchall()
+        areas = (
+            c.execute(_APPRAISAL_AREAS_SQL, {"vehicles": VEHICLES}).fetchall() if offset == 0 else []
+        )
         last = c.execute(
             """select started_at, status, item_count, left(message, 500) as message from ops.job_runs
                where job_id = 'appraisal_inbox' order by started_at desc limit 1"""
@@ -253,6 +269,7 @@ def appraisal_targets(offset: int = 0) -> dict[str, Any]:
         "station": int(f.get("station_n") or 0),
         "next": offset + APPRAISAL_PAGE,
         "last": last,
+        "areas": [{"area": a["area"], "n": int(a["n"])} for a in areas],
     }
 
 

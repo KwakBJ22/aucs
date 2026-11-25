@@ -38,7 +38,7 @@ def _mask(name: Any) -> str | None:
     return n or None
 
 
-def status_report(p: dict[str, Any]) -> dict[str, Any]:
+def status_report(p: dict[str, Any], hide: bool = False) -> dict[str, Any]:
     """현황조사서 → 조사일·현황·점유·임대차 글·임차인 목록."""
     m = p.get("dma_curstExmnMngInf") or {}
     objs = p.get("dlt_ordTsRlet") or []
@@ -47,24 +47,24 @@ def status_report(p: dict[str, Any]) -> dict[str, Any]:
         "exam_at": _clean(m.get("exmnDtDts")),
         "summary": _clean(m.get("printRltnDts")),
         "lease_note": _clean(m.get("lesDts")),
-        "possession": [x for x in (mask_text(_clean(o.get("gdsPossCtt"))) for o in objs) if x],
+        "possession": [x for x in (mask_text(_clean(o.get("gdsPossCtt")), hide) for o in objs) if x],
         "tenants": [
             {
-                "name": _mask(t.get("intrpsNm")),
+                "name": _mask(t.get("intrpsNm")) if hide else (str(t.get("intrpsNm") or "").strip() or None),
                 "part": _clean(t.get("lesPartCtt")),
                 "use": _clean(t.get("lesUsgDts")),
                 "move_in": _clean(t.get("mvinDtlCtt")),
                 "fixed": _clean(t.get("rgstryCrtcpCfmtnCtt")),
                 "deposit": _clean(t.get("lesDposDts")),
                 "rent": _clean(t.get("mmrntAmtDts")),
-                "note": mask_text(_clean(t.get("lesDtsRmk"))),
+                "note": mask_text(_clean(t.get("lesDtsRmk")), hide),
             }
             for t in lessees
         ],
     }
 
 
-def deliveries(p: dict[str, Any]) -> dict[str, Any]:
+def deliveries(p: dict[str, Any], hide: bool = False) -> dict[str, Any]:
     """문건·송달내역 → 접수 문건(중요 표시)과 송달."""
     filings: list[dict[str, Any]] = [
         {"date": _ymd(x.get("ofdocRcptYmd")), "text": _clean(x.get("rcptDts")), "result": _clean(x.get("rcptRslt"))}
@@ -75,6 +75,7 @@ def deliveries(p: dict[str, Any]) -> dict[str, Any]:
         f["key"] = bool(_KEY.search(f["text"] or ""))
         if _HIDE.search(f["text"] or ""):
             f["text"] = "감정인 서류 제출"
+        f["text"] = mask_text(f["text"], hide)
     sends = [
         {"date": _ymd(x.get("dlvrbkRegYmd")), "text": _clean(x.get("dlvrDts")), "result": _clean(x.get("lastDlvrblRchYmd"))}
         for x in p.get("dlt_dlvrDtsLst") or []
@@ -83,6 +84,7 @@ def deliveries(p: dict[str, Any]) -> dict[str, Any]:
     for s in sends:
         if _HIDE.search(s["text"] or ""):
             s["text"] = "감정인 송달"
+        s["text"] = mask_text(s["text"], hide)
     return {"filings": filings, "sends": sends}
 
 
@@ -103,10 +105,14 @@ _NOT_OWNER = {
 }
 
 
-def mask_text(text: str | None) -> str | None:
-    """원문 글의 사람 이름 가림: 역할 뒤 이름(mask_names) + 「홍길동 지분」 꼴."""
+def mask_text(text: str | None, hide: bool = True) -> str | None:
+    """원문 글의 사람 이름 가림: 역할 뒤 이름(mask_names) + 「홍길동 지분」 꼴.
+
+    11/25 대표님: 진행 중인 사건은 이름을 그대로 보임(hide=False) — 끝난 사건만 가림."""
     if not text:
         return None
+    if not hide:
+        return text
     t = mask_names(text)
     t = _SHARE_OWNER.sub(
         lambda m: m.group(0) if m.group(0) in _NOT_OWNER else m.group(1) + "○" * len(m.group(2)), t
@@ -114,14 +120,14 @@ def mask_text(text: str | None) -> str | None:
     return t
 
 
-def spec_sheet(p: dict[str, Any]) -> dict[str, Any] | None:
+def spec_sheet(p: dict[str, Any], hide: bool = False) -> dict[str, Any] | None:
     """물건상세의 명세서 묶음(dspslGdsDxdyInfo) → 작성일·최선순위·인수 권리·지상권·비고. 작성 전이면 None."""
     info = (p.get("dma_result") or {}).get("dspslGdsDxdyInfo") or {}
     if not info.get("gdsSpcfcWrtYmd"):
         return None
 
     def t(k: str) -> str | None:
-        return mask_text(_clean(info.get(k)))
+        return mask_text(_clean(info.get(k)), hide)
 
     remark, item_remark = t("gdsSpcfcRmk"), t("dspslGdsRmk")
     if item_remark and remark and item_remark.strip() == remark.strip():
@@ -196,6 +202,9 @@ def item_docs(item_id: str) -> dict[str, Any] | None:
         it, rows, sp = q_it.fetchone(), q_rows.fetchall(), q_spec.fetchone()
         if not it:
             return None
+        if it["closed"]:
+            # 11/25 대표님: 끝난 사건은 원문(명세서·현황조사서·문건송달)을 보내지 않음 — 약관 제6조의2, 지지옥션과 같게
+            return {"closed": True, "status_report": None, "deliveries": None, "spec_sheet": None}
         spec, spec_at = (spec_sheet(sp["payload"]), sp["fetched_at"]) if sp else (None, None)
     out: dict[str, Any] = {"closed": bool(it["closed"]), "status_report": None, "deliveries": None,
                            "spec_sheet": {**spec, "fetched_at": _ts(spec_at)} if spec else None}  # fmt: skip

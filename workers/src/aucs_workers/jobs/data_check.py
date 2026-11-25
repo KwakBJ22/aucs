@@ -5,7 +5,9 @@
   note_signal 비고 글(농취증 · 재매각 · 유치권 · 법정지상권 · 대항력 있는 임차인 · 보증기관 대항력 포기)에 있는데 신호가 없음
   soon_docs   입찰 7일 안인데 물건상세 · 문건송달 · 현황조사가 비었거나 묵음(입찰 임박 서류 대상, 최대 300)
   stale       진행 물건 중 지금 규칙 버전으로 분석되지 않은 것
-  empty_detail 하루 안에 넣은 빈 물건상세(dma_result 없음) — 11/25 수원 2025타경55353: 빈 답이 최근 것이 돼 명세서를 못 읽었음
+  empty_detail 하루 안에 넣은 빈 서류(물건상세 dma_result 없음 · 현황조사 · 문건송달 · 기일 · 사건정보 {"ipcheck"}뿐)
+              — 11/25 수원 2025타경55353 · 상세 값 점검: 빈 답이 최근 것이 돼 명세서 · 문건 흐름을 못 읽었음
+  unit_area   진행 물건 중 대장 호 전유 면적이 법원 면적의 1.5배 넘게 다른 것 — 11/25: 다른 동 · 대장 두 장을 더했음
 결과는 ops.job_runs.message(JSON)에 — 빨간 불 판단은 ops_watch.red_lights 한 곳(LIMITS 넘으면).
 
     uv run python -m aucs_workers.jobs.data_check
@@ -59,8 +61,16 @@ where {LIVE} and {REAL_ESTATE} and a.engine_version is distinct from %s
 
 EMPTY_DETAIL_SQL = """
 select r.case_id || ' ' || r.doc_kind from raw.court_doc_raw r
-where r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') is distinct from 'object'
-  and r.fetched_at > now() - interval '1 day'
+where r.fetched_at > now() - interval '1 day'
+  and ((r.doc_kind like 'item_detail_%%' and jsonb_typeof(r.payload->'dma_result') is distinct from 'object')
+       or (r.doc_kind in ('status_report','deliveries','schedule','case_info')
+           and not exists (select 1 from jsonb_object_keys(r.payload) k where k <> 'ipcheck')))
+"""
+
+UNIT_AREA_SQL = """
+select i.item_id from core.items i join core.building_units u using (item_id)
+where i.sale_date >= current_date and u.result = 'ok' and i.building_area_m2 > 0 and u.own_area > 0
+  and greatest(u.own_area, i.building_area_m2) > 1.5 * least(u.own_area, i.building_area_m2)
 """
 
 # 비고 사실 → 신호
@@ -96,24 +106,4 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "list_diff": [r[0] for r in cur.execute(LIST_DIFF_SQL).fetchall()],
         "note_signal": note_misses(cur.execute(NOTE_SQL).fetchall()),
         "soon_docs": [f"{c}-{n}" for c, n in soon_targets(conn, today)],
-        "stale": [r[0] for r in cur.execute(STALE_SQL, (ENGINE_VERSION,)).fetchall()],
-        "empty_detail": [r[0] for r in cur.execute(EMPTY_DETAIL_SQL).fetchall()],
-    }
-    return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
-
-
-def main() -> None:
-    with connect() as conn, run(conn, "data_check", "자료 점검") as job:
-        res = check(conn, date.today())
-        job.count = sum(v["n"] for v in res.values() if isinstance(v, dict))
-        conn.execute(
-            "update ops.job_runs set message = %s where run_id = %s",
-            (json.dumps(res, ensure_ascii=False), job.run_id),
-        )
-        conn.commit()
-        for k, v in res.items():
-            print(k, v)
-
-
-if __name__ == "__main__":
-    main()
+        "sta

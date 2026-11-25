@@ -10,7 +10,7 @@ SR = {
 
 
 def test_status_report_masks_and_cleans():
-    r = status_report(SR)
+    r = status_report(SR, hide=True)
     assert r["exam_at"] == "2025년04월28일10시10분"
     assert r["possession"] == ["폐문부재로 만날 수 없어 안내문을 부착함."]
     assert r["tenants"][0]["name"] == "임○" and r["tenants"][0]["move_in"] == "2021.04.01."
@@ -38,9 +38,11 @@ def test_spec_sheet_from_item_detail():
         "gdsSpcfcWrtYmd": "20260918", "tprtyRnkHypthcStngDts": "2021.3.31.근저당권",
         "ndstrcRghCtt": "해당사항없음", "sprfcExstcDts": None,
         "gdsSpcfcRmk": "위반건축물 등재되어 있음<br/>임차인 홍길동 대항력 포기"}}}  # fmt: skip
-    s = spec_sheet(p)
+    s = spec_sheet(p, hide=True)
     assert s["written"] == "2026-09-18" and s["base"] == "2021.3.31.근저당권"
     assert s["remark"] == "위반건축물 등재되어 있음\n임차인 홍○○ 대항력 포기"
+    # 11/25 대표님: 진행 중 사건은 이름 그대로
+    assert spec_sheet(p)["remark"] == "위반건축물 등재되어 있음\n임차인 홍길동 대항력 포기"
     assert "위반건축" in spec_text(s)
     assert spec_sheet({"dma_result": {"dspslGdsDxdyInfo": {"gdsSpcfcWrtYmd": None}}}) is None
 

@@ -6,8 +6,6 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-from aucs_workers.extract.mask import mask_names
-
 KATEC = (
     "+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +units=m "
     "+towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +no_defs"
@@ -211,7 +209,8 @@ def parse_item(r: dict[str, Any]) -> dict[str, Any]:
     case_id, item_id, item_no = ids(r)
     sale_date = to_date(r.get("maeGiil"))
     latlon = katec_to_wgs84(r.get("xCordi"), r.get("yCordi"))
-    note = mask_names(r.get("mulBigo"))
+    # 11/25 대표님: 진행 중 사건은 이름 그대로 — 칸 이름은 note_masked 그대로 두고 원문을 넣음, 끝난 사건은 화면에서 가림
+    note = str(r.get("mulBigo") or "").strip()
     address = re.sub(r"^\s*(사용본거지|소재지)\s*:\s*", "", str(r.get("printSt") or "")).strip()
     sido, sigungu, gu = region_from(r.get("hjguSido") or None, r.get("hjguSigu"), address)
     item = {
