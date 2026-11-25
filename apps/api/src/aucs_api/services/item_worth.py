@@ -61,6 +61,10 @@ def appraisal_gap(
     return "none", f"{deal} · 다른 평형 거래일 수도 있어요"
 
 
+# 예상 가운데 값 > 시세 × 1.1 인 지난 낙찰(입찰 전 값, 지분 · 특수 뺌): (전체, 예상보다 낮게 팔린 것) — 11/26 셈
+OVER_MARKET_BASIS = (41, 20)
+
+
 def worth(
     r: dict[str, Any],
     signals: list[dict[str, Any]],
@@ -121,6 +125,13 @@ def worth(
         )
     if not gap and any(s.get("rule_id") == "risk.low_appraisal" for s in signals):
         notes.append("감정가가 시세보다 낮아 더 높게 팔릴 수 있어요")
+    # 11/26 대표님(타워팰리스): 예상 가운데 값이 시세보다 10% 넘게 높으면 한 줄 — 입찰 전 값으로 되짚으면(sale_snapshots)
+    # 이런 물건 41건 중 20건이 예상보다 낮게 팔렸음(범위 안 32%, 나머지 물건 41%). 숫자는 바꾸지 않고 알리기만
+    if mkt and app and app * mid / 100 > mkt["price_krw"] * 1.1:
+        notes.append(
+            f"예상 가운데 값이 시세({won(mkt['price_krw'])})보다 높아요 — "
+            f"이런 물건은 지난 낙찰 {OVER_MARKET_BASIS[0]}건 중 {OVER_MARKET_BASIS[1]}건이 예상보다 낮게 팔렸어요"
+        )
     ans = f"비슷한 물건은 감정가의 {pct_range(lo, hi)}에 낙찰됐어요"
     if adj.get("capped"):  # 이미 유찰된 값보다 높게 말하지 않음(11/8)
         ans = (

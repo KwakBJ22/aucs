@@ -8,6 +8,8 @@
   empty_detail 하루 안에 넣은 빈 서류(물건상세 dma_result 없음 · 현황조사 · 문건송달 · 기일 · 사건정보 {"ipcheck"}뿐)
               — 11/25 수원 2025타경55353 · 상세 값 점검: 빈 답이 최근 것이 돼 명세서 · 문건 흐름을 못 읽었음
   unit_area   진행 물건 중 대장 호 전유 면적이 법원 면적의 1.5배 넘게 다른 것 — 11/25: 다른 동 · 대장 두 장을 더했음
+  over_market 진행 물건 중 예상 낙찰가(감정가 × 가운데 낙찰가율)가 시세보다 10% 넘게 높은 것 — 11/26 타워팰리스:
+              입찰 전 값으로 되짚으면 이런 물건 41건 중 20건이 예상보다 낮게 팔림(범위 안 32%, 나머지 41%)
 결과는 ops.job_runs.message(JSON)에 — 빨간 불 판단은 ops_watch.red_lights 한 곳(LIMITS 넘으면).
 
     uv run python -m aucs_workers.jobs.data_check
@@ -73,6 +75,14 @@ where i.sale_date >= current_date and u.result = 'ok' and i.building_area_m2 > 0
   and greatest(u.own_area, i.building_area_m2) > 1.5 * least(u.own_area, i.building_area_m2)
 """
 
+OVER_MARKET_SQL = """
+select i.item_id from core.items i
+cross join lateral (select result from analysis.item_analysis a where a.item_id = i.item_id order by version desc limit 1) r
+where i.sale_date >= current_date and i.status_code is distinct from 'gone' and i.appraisal_krw > 0
+  and (r.result -> 'market' ->> 'price_krw') is not null and (r.result -> 'sale_rate' ->> 'p50') is not null
+  and i.appraisal_krw * (r.result -> 'sale_rate' ->> 'p50')::numeric / 100 > 1.1 * (r.result -> 'market' ->> 'price_krw')::numeric
+"""
+
 # 비고 사실 → 신호
 NOTE_RULE = {
     "lien_reported": "risk.lien",
@@ -109,6 +119,7 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "stale": [r[0] for r in cur.execute(STALE_SQL, (ENGINE_VERSION,)).fetchall()],
         "empty_detail": [r[0] for r in cur.execute(EMPTY_DETAIL_SQL).fetchall()],
         "unit_area": [r[0] for r in cur.execute(UNIT_AREA_SQL).fetchall()],
+        "over_market": [r[0] for r in cur.execute(OVER_MARKET_SQL).fetchall()],
     }
     return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
 

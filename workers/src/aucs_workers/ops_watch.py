@@ -97,7 +97,7 @@ def red_lights(conn: psycopg.Connection[Any]) -> list[dict[str, str]]:
 # 자료 점검(jobs/data_check.py, 11/24 ③) — 넘으면 빨간 불. 목록 원문과 다름은 받은 시각 차이로 몇 건 날 수 있어 20,
 # 입찰 임박 서류는 한 번에 300 까지만 세므로 300(= 못 따라잡음), 옛 규칙은 규칙을 올린 날 낮 매시 분석이 따라잡는 동안 50.
 DATA_LIMITS = {"list_diff": 20, "note_signal": 0, "soon_docs": 299, "stale": 50, "empty_detail": 0,
-               "unit_area": 20}  # fmt: skip
+               "unit_area": 20, "over_market": 400}  # fmt: skip  # over_market: 11/26 294건 — 크게 늘면 시세나 낙찰가율 셈이 틀어진 것
 DATA_TEXT = {
     "list_diff": "법원 목록 원문과 최저가 · 감정가 · 기일이 다른 물건",
     "note_signal": "비고에 적힌 위험(농취증 · 유치권 · 대항력 있는 임차인 등)인데 신호가 없는 물건",
@@ -105,6 +105,7 @@ DATA_TEXT = {
     "stale": "지금 규칙으로 분석되지 않은 진행 물건",
     "empty_detail": "법원이 빈 서류를 돌려줬는데 저장된 것(명세서 · 문건 흐름을 못 읽게 됨)",
     "unit_area": "건축물대장 호 면적이 법원 면적과 크게 다른 진행 물건(다른 호를 잡았을 수 있음)",
+    "over_market": "예상 낙찰가가 시세보다 10% 넘게 높은 진행 물건(시세나 낙찰가율 셈이 틀어졌을 수 있음)",
 }
 
 
