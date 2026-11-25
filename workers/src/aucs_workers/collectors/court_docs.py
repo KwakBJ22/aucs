@@ -480,10 +480,13 @@ def _has_status(conn: psycopg.Connection, court: str, case_no: str) -> bool:
 
 
 def _fresh_detail(conn: psycopg.Connection, court: str, case_no: str) -> bool:
-    """이 사건 물건상세를 일주일 안에 받았나 — 그러면 서류 보관 때 다시 받지 않음(11/12)."""
+    """이 사건 물건상세를 (내용 있게) 받아 둔 적이 있나 — 그러면 서류 보관 · 입찰 임박 때 다시 받지 않음(11/12).
+
+    11/25 대표님: 「일주일 안」이었을 때 넘은 사건마다 사건 전체(6~8번)를 다시 받아 하루 2,000번으로 300건만 처리 —
+    입찰 7일 안 현황조사서 84% → 72%. 물건상세는 사진 · 다음 회차 · 첫 바퀴가 따로 새로 받으므로 한 번이라도 있으면 됨."""
     return bool(conn.execute(
         """select 1 from raw.court_doc_raw where case_id = %s and doc_kind like 'item_detail_%%' and jsonb_typeof(payload->'dma_result') = 'object'
-           and fetched_at > now() - interval '7 days' limit 1""",
+           limit 1""",
         (f"{court}-{case_no}",),
     ).fetchone())  # fmt: skip
 
