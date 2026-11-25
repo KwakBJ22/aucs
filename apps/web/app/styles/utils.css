@@ -27,9 +27,6 @@
 .d-inline-flex {
   display: inline-flex !important;
 }
-.d-none {
-  display: none !important;
-}
 .f-1 {
   flex: 1 1 0 !important;
 }

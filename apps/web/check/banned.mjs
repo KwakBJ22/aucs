@@ -38,7 +38,7 @@ for (const d of ["app", "components", "lib", "public"]) walk(join(web, d));
 // ① !important 와 토큰 밖 숫자(글자 크기 px · 둥글기 px · 색 #)가 아래 기준보다 늘면 멈춤 — 값은 tokens.css 토큰으로.
 //    줄었으면 기준 숫자를 그만큼 낮춰 적어 둠(다시 늘지 않게).
 // ② CSS 에만 있고 화면 코드 어디에도 안 나오는 클래스 이름이 생기면 멈춤(안 쓰는 규칙은 지움).
-const STYLE_MAX = { important: 193, 글자크기px: 103, 둥글기px: 156, 색: 35 };
+const STYLE_MAX = { important: 192, 글자크기px: 100, 둥글기px: 154, 색: 35 };
 const DYNAMIC = ["k-", "dd-", "logo-"]; // 화면이 `k-${…}` 처럼 이어 붙여 쓰는 이름
 const cssFiles = [];
 (function css(d) {
