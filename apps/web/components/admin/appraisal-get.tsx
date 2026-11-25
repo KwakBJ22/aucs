@@ -14,6 +14,21 @@ const t = copy.admin.getAppraisal;
 const dDay = (iso: string | null) =>
   iso ? Math.round((parseTime(iso).getTime() - new Date().setHours(0, 0, 0, 0)) / 864e5) : null;
 
+// 법원 창: 이름(court)으로 찾아 — 비어 있으면(처음) 그때만 법원 주소로, 이미 법원 화면이면(다른 주소라 읽으면 오류) 앞으로만
+function openCourt() {
+  const w = window.open("", "court");
+  if (!w) {
+    window.open(COURT_CASE_PAGE, "court");
+    return;
+  }
+  try {
+    if (w.location.href === "about:blank") w.location.href = COURT_CASE_PAGE;
+  } catch {
+    // 이미 법원 사이트가 열려 있음 — 다시 불러오지 않음
+  }
+  w.focus();
+}
+
 // 감정평가서 받기(11/14 대표님): 손님 화면처럼 법원에서 받되, 올리는 일은 PC 의 받은 폴더가 알아서.
 // 11/25 대표님: 위에서 시군구로 고르고, 법원 사이트는 맨 위 링크로 한 번만 열어 둠 — 줄마다는 「복사」만(새 창 없음)
 export function AppraisalGet() {
@@ -68,10 +83,10 @@ export function AppraisalGet() {
             </option>
           ))}
         </select>
-        {/* 같은 창 이름(court)으로 열어 두 번째부터는 그 창으로 감 */}
-        <a className="btn soft sm" href={COURT_CASE_PAGE} target="court" rel="noreferrer">
+        {/* 11/26 대표님: 처음에만 열고, 이미 열려 있으면 다시 불러오지 않고 그 창으로만(적어 둔 검색이 남게) */}
+        <button type="button" className="btn soft sm" onClick={openCourt}>
           {t.openCourt}
-        </a>
+        </button>
       </div>
       <p className="sub fs-sm mt-6">{t.openHint}</p>
       {d.rows.map((r) => {
