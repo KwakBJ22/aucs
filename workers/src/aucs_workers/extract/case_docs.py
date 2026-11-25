@@ -337,8 +337,27 @@ def backfill_items(conn: psycopg.Connection) -> int:
     return n
 
 
+def rebuild_events(conn: psycopg.Connection) -> int:
+    """빈 문건송달에 지워진 문건 흐름을 내용 있는 가장 최근 문건송달로 다시 씀(11/25 한 번)."""
+    rows = conn.execute(
+        """select distinct on (r.case_id) r.case_id, r.payload from raw.court_doc_raw r
+           where r.doc_kind = 'deliveries' and r.payload ?| array['dlt_dlvrDtsLst','dlt_ofdocDtsLst']
+             and not exists (select 1 from core.case_events e where e.case_id = r.case_id)
+           order by r.case_id, r.fetched_at desc"""
+    ).fetchall()
+    for case_id, dv in rows:
+        apply_case_docs(conn, case_id, {"deliveries": dv})
+        conn.commit()
+    return len(rows)
+
+
 if __name__ == "__main__":
+    import sys
+
     from aucs_workers.db import connect
 
     with connect() as c:
-        print(f"임차인 호 채움: {backfill_items(c)}줄")
+        if sys.argv[1:] == ["events"]:
+            print(f"문건 흐름 다시 씀: {rebuild_events(c)}사건")
+        else:
+            print(f"임차인 호 채움: {backfill_items(c)}줄")

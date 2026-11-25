@@ -432,15 +432,19 @@ def save_case(
         "insert into core.cases (case_id, court_code, case_no) values (%s,%s,%s) on conflict do nothing",
         (case_id, court, case_no),
     )
+    # 11/25 점검: 법원이 빈 답({"ipcheck": …}뿐)을 준 서류를 넣어 「가장 최근」이 빈 것이 됐고, 빈 문건송달로
+    #   문건 흐름까지 지워졌음(진행 105사건) → 내용 없는 서류는 모두 넣지 않음(예전 것 유지 · 물어본 날도 안 남김).
+    #   11/25 수원 2025타경55353: 빈 물건상세(dma_result 없음)도 같음
+    for kind in list(docs):
+        d = docs[kind] or {}
+        if not set(d) - {"ipcheck"} or (
+            kind.startswith("item_detail_") and not isinstance(d.get("dma_result"), dict)
+        ):
+            docs.pop(kind)
     # 내용이 같아 새 줄이 안 생겨도 물어본 날은 남김(11/12). 11/24: 서류 보관(문건송달)은 현황조사서를 건너뛰어도
     # 물어본 날로 · 새 사건 때 받은 현황조사서는 내용이 있을 때만(없으면 14일 전 차례에 다시)
     if docs.get("status_report") or "deliveries" in docs:
         conn.execute("update core.cases set docs_checked_at = now() where case_id = %s", (case_id,))
-    # 11/25 수원 2025타경55353: 법원이 빈 물건상세(dma_result 없음)를 돌려준 것을 넣어 「가장 최근」이 빈 것이 됐고,
-    #   분석 · 화면이 앞의 명세서(대항력 임차권 3억 2,800만 인수)를 못 읽었음 → 빈 물건상세는 넣지 않음(예전 것 유지)
-    for kind in [k for k in docs if k.startswith("item_detail_")]:
-        if not isinstance((docs[kind] or {}).get("dma_result"), dict):
-            docs.pop(kind)
     pics: list[tuple[str, str]] = []
     for kind in list(docs):
         if kind.startswith("item_detail_") and docs[kind]:
