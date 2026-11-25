@@ -223,4 +223,8 @@ def run_once() -> str:
 
     with connect() as conn:
         a = alert_admins(conn)
-       
+        b = send_broadcasts(conn)
+        conn.commit()
+        p = send_pushes(conn) if (a or b) else 0
+        conn.commit()
+    return f"빨간 불 {a} · 보낸 알림 {b}명 · 푸시 {p}"

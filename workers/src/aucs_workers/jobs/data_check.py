@@ -106,4 +106,25 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "list_diff": [r[0] for r in cur.execute(LIST_DIFF_SQL).fetchall()],
         "note_signal": note_misses(cur.execute(NOTE_SQL).fetchall()),
         "soon_docs": [f"{c}-{n}" for c, n in soon_targets(conn, today)],
-        "sta
+        "stale": [r[0] for r in cur.execute(STALE_SQL, (ENGINE_VERSION,)).fetchall()],
+        "empty_detail": [r[0] for r in cur.execute(EMPTY_DETAIL_SQL).fetchall()],
+        "unit_area": [r[0] for r in cur.execute(UNIT_AREA_SQL).fetchall()],
+    }
+    return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
+
+
+def main() -> None:
+    with connect() as conn, run(conn, "data_check", "자료 점검") as job:
+        res = check(conn, date.today())
+        job.count = sum(v["n"] for v in res.values() if isinstance(v, dict))
+        conn.execute(
+            "update ops.job_runs set message = %s where run_id = %s",
+            (json.dumps(res, ensure_ascii=False), job.run_id),
+        )
+        conn.commit()
+        for k, v in res.items():
+            print(k, v)
+
+
+if __name__ == "__main__":
+    main()
