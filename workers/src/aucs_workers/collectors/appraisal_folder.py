@@ -181,6 +181,25 @@ def from_downloads(root: Path) -> int:
     return moved
 
 
+def _to_registry(f: Path) -> bool:
+    """등기부 PDF 면 등기부등본 받은 폴더로 옮기고 True — 감정평가서로 읽다 「못 넣음」으로 가지 않게."""
+    import shutil
+
+    from aucs_workers.collectors import registry_folder as rf
+
+    try:
+        if not rf.is_registry(f.name, *rf._text(f.read_bytes())):
+            return False
+        reg = Path(os.getenv("REGISTRY_INBOX", "").strip() or rf.INBOX)
+        reg.mkdir(parents=True, exist_ok=True)
+        t = reg / f.name if not (reg / f.name).exists() else reg / f"{f.stem}-{int(time.time())}{f.suffix}"
+        shutil.move(str(f), str(t))
+        print(f"   감정평가서 폴더 → 등기부등본 폴더: {f.name}", flush=True)
+        return True
+    except Exception:  # noqa: BLE001 — 못 가리면 감정평가서로 읽어 봄(예전대로)
+        return False
+
+
 def inbox(folder: str | None = None) -> str | None:
     """받은 폴더(5분마다): 새 PDF 를 넣고 「넣음」·「못 넣음」으로 옮김. 한 줄 결과, 할 일이 없으면 None."""
     root = Path(folder or os.getenv("APPRAISAL_INBOX", "").strip() or INBOX)
@@ -196,6 +215,8 @@ def inbox(folder: str | None = None) -> str | None:
         for f in sorted(root.iterdir())
         if f.is_file() and f.suffix.lower() == ".pdf" and now - f.stat().st_mtime > 15
     ]  # 방금 바뀐 파일은 받는 중일 수 있어 다음 차례에
+    # 11/26 대표님: 크롬이 감정평가서 폴더에 바로 받음 → 같이 받아진 등기부는 등기부등본 폴더로 넘김(다음 등기부 차례에 넣음)
+    files = [f for f in files if not _to_registry(f)]
     if not files:
         return None
     miss: list[str] = []
