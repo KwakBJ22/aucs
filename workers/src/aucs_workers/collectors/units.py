@@ -57,7 +57,8 @@ def ho_names(desc: str) -> tuple[list[str], str | None]:
     if not ho:
         return [], None
     n = ho.group(1)
-    dong = re.search(r"(\d+|[가-힣A-Za-z])동[\s\-]", desc)  # 「201동-803호」도(11/18)
+    # 「201동-803호」도(11/18) · 「세담파크뷰(2동)」도(11/25)
+    dong = re.search(r"(\d+|[가-힣A-Za-z])동(?=[\s\-)]|$)", desc)
     floor = re.search(r"(\d+)\s*층\s*제?\s*" + re.escape(n) + r"\s*호", desc)
     letter = re.search(r"(에이|비|씨|디|와이)\s*-?\s*\d+\s*호", desc)  # 「디-520호」도(11/18)
     pre = LETTER.get(letter.group(1), "") if letter else ""
@@ -107,11 +108,32 @@ def num(x: Any) -> float:
         return 0.0
 
 
+def unit_rows(rows: list, area: float | None) -> tuple[list, list]:
+    """그 호 하나의 전유 · 공용 줄(11/25 점검). 같은 호 이름이 여러 동(동 이름 없는 물건 · 「(2동)」)이나
+    대장 두 장(같은 호가 두 번)으로 와서 전유를 모두 더해 2배 · 20배가 됐음(진행 물건 30여 건) →
+    대장 · 동마다 묶어 법원 면적에 가장 가까운 한 묶음만."""
+    own = [r for r in rows if r.get("exposPubuseGbCdNm") == "전유"]
+    com = [r for r in rows if r.get("exposPubuseGbCdNm") == "공용"]
+    groups: dict[tuple[str, str], list] = {}
+    for r in own:
+        groups.setdefault((str(r.get("dongNm") or "").strip(), str(r.get("mgmBldrgstPk") or "")), []).append(r)
+    if len(groups) <= 1:
+        return own, com
+    keys = list(groups)
+    if area:
+        keys.sort(key=lambda k: abs(sum(num(r.get("area")) for r in groups[k]) - area))
+    dong, pk = keys[0]
+    same = [r for r in com if str(r.get("mgmBldrgstPk") or "") == pk] or [
+        r for r in com if str(r.get("dongNm") or "").strip() == dong
+    ]
+    return groups[keys[0]], same
+
+
 def save(
     conn: psycopg.Connection, item_id: str, code: str, lot: str, name: str | None, rows: list
 ) -> None:
-    own = [r for r in rows if r.get("exposPubuseGbCdNm") == "전유"]
-    com = [r for r in rows if r.get("exposPubuseGbCdNm") == "공용"]
+    area = conn.execute("select building_area_m2 from core.items where item_id = %s", (item_id,)).fetchone()
+    own, com = unit_rows(rows, float(area[0]) if area and area[0] else None)
     first = own[0] if own else {}
     conn.execute(
         """insert into core.building_units (item_id, region_code, lot_no, ho_name, result, own_area,
@@ -133,10 +155,26 @@ def save(
         conn.execute("update core.items set updated_at = now() where item_id = %s", (item_id,))
 
 
+def resave(conn: psycopg.Connection) -> int:
+    """받아 둔 대장 줄로 전유 · 공용 면적을 다시 셈(11/25 한 번) — 대장을 다시 받지 않음."""
+    todo = conn.execute(
+        "select item_id, region_code, lot_no, ho_name, rows from core.building_units where result = 'ok'"
+    ).fetchall()
+    for item_id, code, lot, name, rows in todo:
+        save(conn, item_id, code, lot, name, rows)
+    conn.commit()
+    return len(todo)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cap", type=int, default=1200, help="한 번에 받을 최대 물건 수")
+    ap.add_argument("--resave", action="store_true", help="받아 둔 줄로 면적만 다시 셈")
     a = ap.parse_args()
+    if a.resave:
+        with connect() as conn:
+            print(f"다시 셈: {resave(conn):,}건")
+        return
     key = os.getenv("DATA_GO_KR_SERVICE_KEY", "").strip().strip("\"'")
     key = unquote(key) if "%" in key else key
     if not key:

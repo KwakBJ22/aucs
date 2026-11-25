@@ -60,8 +60,28 @@ def area_sum(text: str | None) -> float | None:
     return round(sum(vals), 3) if vals else None
 
 
+# 11/25 점검: 집합건물 「58.68㎡ 지하실 19.56㎡」를 더해 78.24㎡로 적어 시세(실거래 전용 ±3㎡)를 못 찾았음
+#   → 집합건물은 지하실 · 창고 · 다락 · 보일러실 · 전유부공용 · 연면적 제외 면적을 빼고 셈(진행 36건)
+_EXTRA = re.compile(r"(지하실|지하\s*$|창고|다락|보일러실|전유부\s*공용|발코니)")
+
+
+def unit_area(text: str | None) -> float | None:
+    """집합건물 한 호의 전유 면적 — 딸린 공간(_EXTRA · 「(연면적제외)」)은 뺌. 다 빠지면 area_sum."""
+    text = text or ""
+    vals, last = [], 0
+    for m in re.finditer(r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*㎡+(\s*\(\s*연면적\s*제외\s*\))?", text):
+        before = text[last : m.start()].rsplit("\n", 1)[-1]
+        last = m.end()
+        if m.group(2) or _EXTRA.search(before):
+            continue
+        vals.append(float(m.group(1).replace(",", "")))
+    return round(sum(vals), 3) if vals else area_sum(text)
+
+
 def building_area(r: dict[str, Any]) -> float | None:
     """건물 면적: 건물 목록 → 비었으면 집합건물·건물일 때만 면적 목록(땅만 있는 물건은 비워 둠)."""
+    if str(r.get("convAddr") or "").startswith("[집합건물"):
+        return unit_area(r.get("pjbBuldList")) or area_sum(r.get("areaList"))
     area = area_sum(r.get("pjbBuldList"))
     if area is None and re.match(r"\[(집합건물|건물)", str(r.get("convAddr") or "")):
         area = area_sum(r.get("areaList"))

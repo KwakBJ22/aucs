@@ -29,6 +29,8 @@ def command(key: str) -> list[str] | None:
         if len(found) != 1 or not key.split(":", 1)[1].isdigit():
             return None
         return [sys.executable, str(ROOT / "tools" / "apply_sql.py"), str(found[0])]
+    if key == "units_resave":  # 받아 둔 대장 줄로 호 면적 다시 셈(11/25 한 번)
+        return [sys.executable, "-m", "aucs_workers.collectors.units", "--resave"]
     if key == "case_events":  # 빈 문건송달에 지워진 문건 흐름 다시 쓰기(11/25 한 번)
         return [sys.executable, "-m", "aucs_workers.extract.case_docs", "events"]
     if key == "tenant_units":  # 이미 받은 현황조사서로 임차인 줄에 호를 채움(11/24 한 번)
