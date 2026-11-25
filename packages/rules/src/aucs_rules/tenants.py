@@ -83,6 +83,17 @@ def base_date_of(text: str | None) -> date | None:
         return None
 
 
+def base_dates_of(text: str | None) -> list[date]:
+    """명세서 최선순위 글의 날짜 모두(11/25) — 「목록1. 2020.2.13. 근저당 / 목록2. 2021.2.10. 근저당」처럼 목록마다 다를 수 있음."""
+    out = []
+    for m in _BASE_DATE.finditer(text or ""):
+        try:
+            out.append(date(int(m.group(1)), int(m.group(2)), int(m.group(3))))
+        except ValueError:
+            continue
+    return out
+
+
 def tax_before_tenant(
     tenants: list[Tenant], base_date: date | None, tax_dates: list[date]
 ) -> RuleResult:

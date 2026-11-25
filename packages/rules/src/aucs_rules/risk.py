@@ -99,13 +99,16 @@ def signals(f: dict[str, Any]) -> list[Signal]:
                    or f.get("lease_registration_with_power")):  # fmt: skip
         # 11/25 점검: 전입일이 말소기준보다 앞선 임차인 — 비고에 「인수」가 없어도 대항력은 있음
         dep = f" · 보증금 {man_text(tp['deposit_krw'])}" if tp.get("deposit_krw") else ""
-        if not tp.get("lease_known", True):
+        if tp.get("multi_base"):
+            title, lv = (f"목록마다 말소기준이 달라 먼저 전입했을 수 있는 임차인 {tp['n']}명{dep} — "
+                         "매각물건명세서로 그 건물의 말소기준 확인"), "mid"  # fmt: skip
+        elif not tp.get("lease_known", True):
             title, lv = (f"말소기준보다 먼저 전입한 세대 {tp['n']}곳 — 임차인인지 · 보증금이 있는지 "
                          "매각물건명세서 · 전입세대로 확인"), "mid"  # fmt: skip
         elif tp.get("unclaimed"):
-            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당요구가 없어 보증금을 떠안을 수 있어요", "high"
+            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당요구가 없어 보증금을 떠안을 수 있어요 · 매각물건명세서 확인", "high"
         else:
-            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당에서 다 못 받은 보증금은 떠안아요", "mid"
+            title, lv = f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — 배당에서 다 못 받은 보증금은 떠안아요 · 매각물건명세서 확인", "mid"
         add("risk.tenant_power", lv, title, Status.NEEDS_CHECK, **tp)
     if f.get("lien_reported"):
         add("risk.lien", "fatal", "유치권 신고")

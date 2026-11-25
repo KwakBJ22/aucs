@@ -44,7 +44,7 @@ from aucs_rules.sale_rate import (
 )
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import note_facts, spec_facts
-from aucs_rules.tenants import Tenant, base_date_of, power_tenants, tax_before_tenant, tenant_doubts
+from aucs_rules.tenants import Tenant, base_date_of, base_dates_of, power_tenants, tax_before_tenant, tenant_doubts
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -734,12 +734,14 @@ def analyze_item(
     if doubt:
         facts["tenant_doubt"] = doubt
     # 말소기준보다 먼저 전입한 임차인(11/25 점검 — 명세서 비고에 「인수」가 없으면 신호가 없었음, 진행 98건)
-    tp = power_tenants(
-        [Tenant(move_in_date=t["move_in_date"], fixed_date=t["fixed_date"], claim_date=t.get("claim_date"),
-                deposit_krw=t["deposit_krw"], has_lease_registration=bool(t["has_lease_registration"]))
-         for t in tenants],
-        base_date_of(base_txt),
-    )  # fmt: skip
+    ts = [Tenant(move_in_date=t["move_in_date"], fixed_date=t["fixed_date"], claim_date=t.get("claim_date"),
+                 deposit_krw=t["deposit_krw"], has_lease_registration=bool(t["has_lease_registration"]))
+          for t in tenants]  # fmt: skip
+    # 11/25: 목록마다 말소기준이 다르면(여러 필지 · 건물) 가장 이른 날보다 먼저면 확실, 늦은 날보다만 먼저면 「확인」
+    bases = sorted(set(base_dates_of(base_txt)))
+    tp = power_tenants(ts, bases[0] if bases else None)
+    if not tp and len(bases) > 1 and (tp := power_tenants(ts, bases[-1])):
+        tp = {**tp, "multi_base": True}
     if tp:
         facts["tenant_power"] = tp
     sig = signals(facts)
