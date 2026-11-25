@@ -608,7 +608,7 @@
     min-height: 46px;
   }
 }
-/* 물건 상세 맨 위 「서류 채우고 포인트 받기」 띠(11/12) */
+/* 홈 옥스아카데미 띠의 바탕(.pt-band · 11/26 상세 포인트 띠는 뺌) */
 .pt-band {
   display: flex;
   align-items: center;
@@ -619,16 +619,6 @@
   background: linear-gradient(135deg, var(--blue-soft) 0%, var(--surface) 90%);
   color: var(--text);
   text-decoration: none;
-}
-.pt-band-coin {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  fill: var(--blue);
-  stroke: var(--surface);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 .pt-band-sub {
   color: var(--blue-text);
@@ -752,25 +742,6 @@
   .topbar:has(~ .item-top) .icon-btn svg {
     width: 22px;
     height: 22px;
-  }
-}
-@media (max-width: 1023px) {
-  /* 서류 채우고 포인트 받기 띠: 연파랑 판 · 동그라미 30 */
-  .pt-band:not(.ac-band) {
-    background: var(--blue-soft);
-  }
-  .pt-band-coin {
-    width: 30px;
-    height: 30px;
-  }
-}
-@media (max-width: 1023px) {
-  .pt-band:not(.ac-band) b {
-    font-size: var(--fs-md);
-  }
-  .pt-band:not(.ac-band) .pt-band-sub {
-    font-size: var(--fs-xs);
-    font-weight: 600;
   }
 }
 /* 휴대폰 질문 머리(11/23 M-DetailQ): 작은 이름 12 굵게 · 답 17 · 800 */

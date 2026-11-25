@@ -15,6 +15,7 @@ from aucs_rules.points import points_for
 from psycopg.types.json import Jsonb
 
 from aucs_api.db import batch, connect
+from aucs_api.services import pay
 from aucs_api.services.items import COURT_NAME
 
 _ACADEMY_KEY = re.compile(r"(task:|test:)?[a-z0-9][a-z0-9-]{0,39}")  # 수업 열쇠 · 「task:수업」 · 「test:l1」(레벨 시험 통과, 11/17)
@@ -33,6 +34,9 @@ _ENDED_SQL = """select not exists (select 1 from core.items i where i.case_id = 
 _BALANCE_SQL = """select coalesce(sum(delta) filter (where delta > 0 and (expires_at is null or expires_at > now())), 0)
                        + coalesce(sum(delta) filter (where delta < 0), 0) as balance
                   from app.point_ledger where user_id = %(uid)s"""
+# 포인트함 내역(11/26): 받고 · 쓰고 · 충전한 줄 최근 30
+_HISTORY_SQL = """select delta, reason, created_at, expires_at from app.point_ledger
+                  where user_id = %(uid)s order by created_at desc, entry_id desc limit 30"""
 
 
 def _table(c: Any) -> dict[str, Any]:
@@ -43,13 +47,20 @@ def _table(c: Any) -> dict[str, Any]:
 def summary(uid: str) -> dict[str, Any]:
     """잔액 · 오늘 받은 건수 · 점수표."""
     with connect() as c:
-        q_t, q_today, q_bal = batch(
-            c, [(_TABLE_SQL, None), (_TODAY_SQL, {"uid": uid}), (_BALANCE_SQL, {"uid": uid})]
+        q_t, q_today, q_bal, q_hist = batch(
+            c,
+            [
+                (_TABLE_SQL, None),
+                (_TODAY_SQL, {"uid": uid}),
+                (_BALANCE_SQL, {"uid": uid}),
+                (_HISTORY_SQL, {"uid": uid}),
+            ],
         )
         t = q_t.fetchone()
         table = dict(t["value"]) if t else {}
         today = {r["kind"]: int(r["n"]) for r in q_today.fetchall()}
         bal = q_bal.fetchone()
+        history = [dict(r) for r in q_hist.fetchall()]
     return {
         "balance": max(0, int(bal["balance"])) if bal else 0,
         "today": {k: today.get(k, 0) for k in ("registry", "appraisal")},
@@ -57,6 +68,12 @@ def summary(uid: str) -> dict[str, Any]:
         "points": {k: table.get(k) for k in ("registry", "appraisal")},
         "pay_max_pct": table.get("pay_max_pct"),
         "hold_minutes": table.get("hold_minutes"),
+        "history": history,
+        "charge": {
+            "open": pay.is_open(),
+            "krw": list(pay.CHARGE_KRW),
+            "expire_years": pay.CHARGE_EXPIRE_DAYS // 365,
+        },
     }
 
 

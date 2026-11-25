@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { AppraisalParts, ItemDetail } from "@/lib/api/items";
-import { meApi, uploadAppraisal, type MyAppraisal } from "@/lib/api/me";
-import { useSession } from "@/lib/auth";
 import { Row } from "@/components/calc-box";
 import { won } from "@/lib/format";
 import { t } from "@/components/item/shared";
-import { copy } from "@/lib/copy.ko";
 
 // 법원 경매사건검색 화면 — 감정평가서 원본은 손님이 법원에서 직접 열어 봄(11/7).
 // pgjId 까지 붙여야 휴대폰에서도 첫 화면이 아니라 사건검색으로 바로 감(11/12 대표님)
@@ -20,12 +16,10 @@ export function AppraisalPoints({
   a,
   court,
   caseNo,
-  itemId,
 }: {
   a: NonNullable<ItemDetail["appraisal"]>;
   court: string;
   caseNo: string;
-  itemId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const c = t.appraisal;
@@ -56,138 +50,24 @@ export function AppraisalPoints({
           <span className="fs-md">{open ? c.less : c.more(a.points.length - 3)}</span>
         </button>
       )}
-      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} itemId={itemId} earn />
+      <OriginalLink pdf={a.pdf_url} court={court} caseNo={caseNo} />
     </div>
-  );
-}
-
-// 물건 상세에서 바로 올리기(11/14 대표님): 법원에서 받은 파일을 이 자리에서 올리고, 어떻게 됐는지 이 자리에 남김
-// (전에는 포인트 화면으로 가야 했고, 올린 뒤 결과가 한 번 뜨고 사라져 올렸는지 알 수 없었음)
-// compact: 머리 서류 줄의 작은 단추 · statusOnly: 원본이 이미 있을 때 「내가 올림」만(11/14 — 올린 뒤 표시가 사라져 안 올라간 줄 앎)
-// admin: 관리자 「서류 올리기」(11/18) — 같은 칸, 포인트 글만 뺌
-export function AppraisalUpload({
-  itemId,
-  compact = false,
-  statusOnly = false,
-  admin = false,
-}: {
-  itemId: string;
-  compact?: boolean;
-  statusOnly?: boolean;
-  admin?: boolean;
-}) {
-  const p = copy.points;
-  const { session } = useSession();
-  const token = session?.access_token;
-  const file = useRef<HTMLInputElement>(null);
-  const [mine, setMine] = useState<MyAppraisal>({});
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    let stop = false;
-    meApi
-      .myAppraisal(token, itemId)
-      .then((x) => !stop && setMine(x ?? {}))
-      .catch(() => undefined);
-    return () => {
-      stop = true;
-    };
-  }, [token, itemId]);
-
-  const gap = compact ? "" : " mt-10";
-  if (statusOnly)
-    return mine.status === "ok" ? (
-      <span className={`chip green${gap}`}>
-        {mine.points ? p.hereMine(p.pt(mine.points)) : p.hereMineNoPoint}
-      </span>
-    ) : null;
-  if (!token)
-    return compact ? null : (
-      <Link href="/points" className="link fs-sm mt-6 d-inline-block">
-        {p.earn}
-      </Link>
-    );
-  const why = (w: string, pts: number) => {
-    const r = p.result[w];
-    return typeof r === "function" ? r(p.pt(pts)) : (r ?? w);
-  };
-  const send = (f: File | undefined) => {
-    if (!f) return;
-    setBusy(true);
-    setErr(null);
-    uploadAppraisal(token, itemId, f)
-      .then((x) => {
-        if (x.why === "review") setMine({ status: "review" });
-        else if (x.points || x.why === "first" || x.why === "ended" || x.why === "admin")
-          setMine({ status: "ok", points: x.points, ended: x.why === "ended" });
-        else if (x.why === "mismatch" && x.found?.[0]) setErr(p.mismatchFound(x.found[0]));
-        else setErr(why(x.why, x.points));
-      })
-      .catch((e: Error) => setErr(e.message))
-      .finally(() => setBusy(false));
-  };
-  if (mine.status === "review")
-    return (
-      <span className={`chip orange${gap}`}>{compact ? p.herePendingShort : p.herePending}</span>
-    );
-  if (mine.status === "ok")
-    return (
-      <span className={`chip green${gap}`}>
-        {mine.points ? p.hereDone(p.pt(mine.points)) : p.hereDoneNoPoint}
-      </span>
-    );
-  return (
-    <>
-      <button
-        className={compact ? "btn primary sm" : "btn primary mt-10"}
-        disabled={busy}
-        onClick={() => file.current?.click()}
-      >
-        {busy
-          ? p.sending
-          : compact
-            ? mine.ended
-              ? p.hereUploadShortEnded
-              : p.hereUploadShort
-            : mine.ended || admin
-              ? p.hereUploadEnded
-              : p.hereUpload}
-      </button>
-      <input
-        ref={file}
-        type="file"
-        accept="application/pdf"
-        hidden
-        onChange={(e) => {
-          send(e.target.files?.[0]);
-          e.target.value = "";
-        }}
-      />
-      {(err || mine.status === "rejected") && (
-        <p className="sub fs-sm mt-6 c-red">{err ?? why(mine.why ?? "mismatch", 0)}</p>
-      )}
-    </>
   );
 }
 
 // 감정평가서 원본(11/11 대표님): 받아 둔 원본이 있으면 바로 열고, 없으면 사건번호를 복사해 법원 사건검색 화면으로
 // (법원 사이트에는 물건별 감정평가서 창으로 바로 가는 주소가 없음)
+// 11/26 대표님: 손님 올리기는 뺌 — 감정평가서는 운영에서 모두 받아 넣음
 export function OriginalLink({
   pdf,
   court,
   caseNo,
   compact = false,
-  earn = false,
-  itemId,
 }: {
   pdf?: string | null;
   court: string;
   caseNo: string;
-  itemId?: string; // 있으면 이 자리에서 바로 올림(물건 상세, 11/14)
   compact?: boolean; // 머리 서류 줄에 놓는 작은 단추(11/11) — 안내 글 없이
-  earn?: boolean; // 원본이 없을 때 「올리면 500P」(포인트 벌기로, 11/12)
 }) {
   const [copied, setCopied] = useState(false);
   const c = t.appraisal;
@@ -196,12 +76,9 @@ export function OriginalLink({
   const cls = compact ? "btn soft sm" : "btn soft mt-10";
   if (pdf)
     return (
-      <>
-        <a className={cls} href={pdf} target="_blank" rel="noreferrer">
-          {compact ? c.short : c.original}
-        </a>
-        {itemId && !compact && <AppraisalUpload itemId={itemId} statusOnly />}
-      </>
+      <a className={cls} href={pdf} target="_blank" rel="noreferrer">
+        {compact ? c.short : c.original}
+      </a>
     );
   return (
     <>
@@ -223,15 +100,6 @@ export function OriginalLink({
         <p className={`sub fs-sm ${compact ? "w-full m-0" : "mt-6"}`}>
           {copied ? c.copied(court, year, num) : c.courtHint(court, year, num)}
         </p>
-      )}
-      {itemId ? (
-        <AppraisalUpload itemId={itemId} compact={compact} />
-      ) : (
-        earn && (
-          <Link href="/points" className="link fs-sm mt-6 d-inline-block">
-            {copy.points.earn}
-          </Link>
-        )
       )}
     </>
   );

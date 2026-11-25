@@ -29,6 +29,9 @@ PERIOD_NAME = {"month": "매달", "year": "1년", "one": "한 건"}
 # 화면에서 고르는 수단(copy.checkout.methods 의 열쇠) — 매달은 카드 자동결제(billing)만
 METHODS = {"card", "bank", "vbank", "toss", "naver", "kakao"}
 RENEW_TRIES = 3
+# 포인트 충전(11/26 대표님): 고를 수 있는 금액(1원 = 1P) · 충전한 포인트 유효기간(5년)
+CHARGE_KRW = (5_000, 10_000, 30_000, 50_000)
+CHARGE_EXPIRE_DAYS = 365 * 5
 
 
 def is_open() -> bool:
@@ -72,6 +75,8 @@ def new_order_id(today: date) -> str:
 
 
 def order_name(plan: str, period: str, title: str | None = None) -> str:
+    if plan == "points":
+        return f"옥스경매 포인트 충전 · {title}"
     base = f"옥스경매 {PLAN_NAME[plan]}" + ("" if plan == "one" else f" · {PERIOD_NAME[period]}")
     return (f"{base} · {title}" if title else base)[:100]
 
@@ -150,7 +155,9 @@ def _amount(plan: str, period: str) -> int:
 
 
 def _check(plan: str, period: str) -> None:
-    ok = (plan == "personal" and period in ("month", "year")) or (plan == "one" and period == "one")
+    ok = (plan == "personal" and period in ("month", "year")) or (
+        plan in ("one", "points") and period == "one"
+    )
     if not ok:  # 전문가 이용권은 아직 안 팖(이용권 화면 「준비 중」)
         raise HTTPException(409, "아직 팔지 않는 이용권이에요")
 
@@ -178,11 +185,18 @@ def quote(uid: str, plan: str, period: str, item_id: str | None) -> dict[str, An
 
 
 def make_order(
-    uid: str, plan: str, period: str, item_id: str | None, method: str
+    uid: str,
+    plan: str,
+    period: str,
+    item_id: str | None,
+    method: str,
+    charge_krw: int | None = None,
 ) -> dict[str, Any]:
     """결제창을 열기 전 주문. 금액 · 이름은 서버가 정하고 화면은 이 값 그대로 결제창에 넘김."""
     _need_open()
     _check(plan, period)
+    if plan == "points" and charge_krw not in CHARGE_KRW:
+        raise HTTPException(400, "충전할 금액을 골라 주세요")
     if period == "month" or method not in METHODS:
         raise HTTPException(
             400, "매달은 카드 등록으로 결제해요" if period == "month" else "결제 수단을 골라 주세요"
@@ -203,8 +217,12 @@ def make_order(
             if mine:
                 raise HTTPException(409, "이미 이 물건 이용권이 있어요")
         oid = new_order_id(today)
-        name = order_name(plan, period, title)
-        amount = _amount(plan, period)
+        if plan == "points":
+            amount = int(charge_krw or 0)
+            name = order_name(plan, period, f"{amount:,}P")
+        else:
+            name = order_name(plan, period, title)
+            amount = _amount(plan, period)
         c.execute(
             """insert into app.pay_orders (order_id, user_id, plan, period, item_id, amount_krw, order_name, method)
                values (%s,%s,%s,%s,%s,%s,%s,%s)""",
@@ -271,13 +289,15 @@ def _grant(order_id: str, toss: dict[str, Any], auto_renew: bool = False, start:
         ).fetchone()
         if not o:
             raise HTTPException(404, "주문을 찾지 못했어요")
-        if o["payment_id"]:
+        if o["payment_id"] or o["status"] == "paid":
             return dict(o)
         if int(toss.get("totalAmount") or 0) != int(o["amount_krw"]):
             # 금액이 다르면 이용권을 열지 않음(관리자 오류 목록에 남도록 500)
             raise RuntimeError(
                 f"결제 금액 불일치 {order_id}: {toss.get('totalAmount')} != {o['amount_krw']}"
             )
+        if o["plan"] == "points":
+            return _charge_points(c, o, toss)
         begin = start or date.today()
         sale = _item(c, o["item_id"], check=False)["until_day"] if o["plan"] == "one" else None
         until = period_end(o["period"], begin, sale or begin)
@@ -303,12 +323,34 @@ def _grant(order_id: str, toss: dict[str, Any], auto_renew: bool = False, start:
     return dict(o)
 
 
+def _charge_points(c: Any, o: dict[str, Any], toss: dict[str, Any]) -> dict[str, Any]:
+    """포인트 충전 승인 → 포인트 한 줄(이용권 표 payments 에는 넣지 않음 — 0083). _grant 의 같은 묶음 안에서."""
+    amount = int(o["amount_krw"])
+    c.execute(
+        """insert into app.point_ledger (user_id, delta, reason, expires_at)
+           values (%s,%s,'charge', now() + make_interval(days => %s))""",
+        (o["user_id"], amount, CHARGE_EXPIRE_DAYS),
+    )
+    o = c.execute(
+        """update app.pay_orders set status = 'paid', payment_key = %s, done_at = now()
+           where order_id = %s returning """
+        + _O,
+        (toss.get("paymentKey"), o["order_id"]),
+    ).fetchone()
+    if o["user_id"]:
+        c.execute(
+            "insert into app.notifications (user_id, title, body, link) values (%s,%s,%s,%s)",
+            (o["user_id"], "포인트를 충전했어요", f"{amount:,}P · {amount:,}원", "/points"),
+        )
+    return dict(o)
+
+
 def _mark(order_id: str, status: str, **cols: Any) -> dict[str, Any]:
     sets = ", ".join(f"{k} = %({k})s" for k in cols)
     with connect() as c:
         o = c.execute(
             f"update app.pay_orders set status = %(status)s{', ' + sets if sets else ''} "
-            "where order_id = %(oid)s and payment_id is null returning " + _O,
+            "where order_id = %(oid)s and payment_id is null and status <> 'paid' returning " + _O,
             {"status": status, "oid": order_id, **cols},
         ).fetchone()
         if not o:
@@ -345,7 +387,7 @@ def confirm(uid: str, payment_key: str, order_id: str, amount: int) -> dict[str,
         ).fetchone()
     if not o or str(o["user_id"]) != uid:
         raise HTTPException(404, "주문을 찾지 못했어요")
-    if o["payment_id"] or o["status"] not in ("ready", "failed"):
+    if o["payment_id"] or o["status"] not in ("ready", "failed"):  # 충전은 payment_id 없이 paid
         return _result(dict(o))  # 새로 고침 · 두 번 누름
     if int(amount) != int(o["amount_krw"]):
         _mark(order_id, "failed", fail_code="AMOUNT", fail_msg="결제 금액이 주문과 달라요")

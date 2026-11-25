@@ -16,7 +16,7 @@ from aucs_api.services import pay
 public = APIRouter(prefix="/pay")
 router = APIRouter(prefix="/me/pay")
 Uid = Annotated[str, Depends(current_user_id)]
-Plan = Literal["personal", "one"]
+Plan = Literal["personal", "one", "points"]
 Period = Literal["month", "year", "one"]
 
 
@@ -25,6 +25,8 @@ class OrderIn(BaseModel):
     period: Period
     item_id: str | None = Field(default=None, max_length=80)
     method: str = Field(max_length=20)
+    # 포인트 충전 금액(11/26) — 서버가 고른 값 중 하나인지 봄
+    amount_krw: int | None = Field(default=None, gt=0)
 
 
 class ConfirmIn(BaseModel):
@@ -61,7 +63,7 @@ def get_quote(uid: Uid, plan: Plan, period: Period, item: str | None = None) -> 
 
 @router.post("/order")
 def post_order(uid: Uid, body: OrderIn) -> dict[str, Any]:
-    return pay.make_order(uid, body.plan, body.period, body.item_id, body.method)
+    return pay.make_order(uid, body.plan, body.period, body.item_id, body.method, body.amount_krw)
 
 
 @router.post("/confirm")

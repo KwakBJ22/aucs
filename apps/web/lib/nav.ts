@@ -58,7 +58,7 @@ export const NAV: NavItem[] = [
   },
   {
     key: "points",
-    label: "포인트 UP!",
+    label: "포인트함",
     href: "/points",
     group: "basic",
     ready: true,

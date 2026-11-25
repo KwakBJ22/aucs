@@ -1,23 +1,20 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { meApi, uploadRegistry, type RegistryUpload } from "@/lib/api/me";
+import { meApi, type RegistryUpload } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { parseTime, won } from "@/lib/format";
-import { copy } from "@/lib/copy.ko";
 import { useIsPc } from "@/lib/use-pc";
 import { t, JUDGE_COLOR, DocCtx } from "@/components/item/shared";
 
-// 등기부 올리기 + 권리 사다리(ITEM-03). 올린 사람만 봄.
+// 등기부 권리 사다리(ITEM-03). 11/26 대표님: 손님 올리기는 뺌 — 등기부는 운영에서 떼어 넣음(회원 무료 건수 · 포인트 차감은 다음에)
 // 내가 올린 등기부: 상세 화면 전체가 같이 씀(「무엇을 떠안나」 요약 줄도 이걸로 바뀜)
 export type MyReg = {
   ready: boolean;
   token?: string;
   u: RegistryUpload | null | undefined;
   err: string | null;
-  sending: boolean;
   startedAt: number | null;
-  pick: (f: File | undefined) => void;
   fix: (section: string, rank_no: string, purpose: string) => void;
   accept: () => void;
 };
@@ -29,8 +26,6 @@ export function useMyRegistry(id: string): MyReg {
   const token = session?.access_token;
   const [u, setU] = useState<RegistryUpload | null | undefined>(undefined);
   const [err, setErr] = useState<string | null>(null);
-  const [round, setRound] = useState(0); // 올릴 때마다 다시 확인 시작
-  const [sending, setSending] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -58,26 +53,8 @@ export function useMyRegistry(id: string): MyReg {
       stop = true;
       if (timer) clearTimeout(timer);
     };
-  }, [token, id, round]);
+  }, [token, id]);
 
-  const pick = useCallback(
-    (f: File | undefined) => {
-      if (!f || !token) return;
-      setErr(null);
-      setSending(true);
-      setStartedAt(Date.now());
-      setU((v) => ({ ...(v ?? ({} as RegistryUpload)), status: "processing", ladder: null }));
-      uploadRegistry(token, id, f)
-        .then(() => setRound((n) => n + 1))
-        .catch((e: Error) => {
-          setErr(e.message);
-          setStartedAt(null);
-          setRound((n) => n + 1);
-        })
-        .finally(() => setSending(false));
-    },
-    [token, id],
-  );
   const fix = useCallback(
     (section: string, rank_no: string, purpose: string) => {
       if (!token) return;
@@ -95,22 +72,22 @@ export function useMyRegistry(id: string): MyReg {
       .then(setU)
       .catch((e: Error) => setErr(e.message));
   }, [token, id]);
-  return { ready, token, u, err, sending, startedAt, pick, fix, accept };
+  return { ready, token, u, err, startedAt, fix, accept };
 }
 
 // 읽는 동안 진행 막대: 서버가 페이지별 진행을 알려 주지 않아 시간 기준(그림 PDF 약 40초).
 // 결과가 오기 전엔 90%에서 기다리고, 오면 막대가 사라지고 결과가 나옴.
 export const EXPECT_SEC = 40;
 
-export function ReadingBar({ sending, startedAt }: { sending: boolean; startedAt: number | null }) {
+export function ReadingBar({ startedAt }: { startedAt: number | null }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(iv);
   }, []);
   const sec = startedAt ? Math.max(0, (now - startedAt) / 1000) : 0;
-  const pct = sending ? Math.min(15, 5 + sec * 3) : Math.min(90, 15 + (75 * sec) / EXPECT_SEC);
-  const step = sending ? 0 : pct < 75 ? 1 : 2;
+  const pct = Math.min(90, 15 + (75 * sec) / EXPECT_SEC);
+  const step = pct < 75 ? 1 : 2;
   const r = t.reg;
   return (
     <div role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
@@ -180,24 +157,17 @@ export function PayoutBox({ p }: { p: NonNullable<RegistryUpload["ladder"]>["pay
   );
 }
 
-// 내가 올린 등기부의 포인트 결과 한 줄(11/12)
-function pointsLine(why: string, pts: number): string {
-  const x = copy.points.result[why];
-  return typeof x === "function" ? x(copy.points.pt(pts)) : (x ?? "");
-}
-
-// admin: 관리자 「서류 올리기」(11/18) — 같은 칸, 포인트 안내만 뺌
-export function RegistryBox({ admin = false }: { admin?: boolean }) {
+export function RegistryBox() {
   const r = t.reg;
   const reg = useContext(RegCtx);
   const pc = useIsPc();
   const [ladOpen, setLadOpen] = useState(false);
   if (!reg || !reg.ready) return null;
-  const { token, u, err, pick, fix, accept, sending, startedAt } = reg;
+  const { token, u, err, fix, accept, startedAt } = reg;
   const addr = u?.status === "parsed" ? u.address : undefined;
   const blocked =
     !!addr && !addr.ok && (addr.result === "different" || addr.result === "unit_differs");
-  if (!token) return <p className="sub mt-10">{r.needLogin}</p>;
+  if (!token || !u) return null;
   const lad = u?.ladder;
   return (
     <div className="mt-12 pt-10">
@@ -205,7 +175,7 @@ export function RegistryBox({ admin = false }: { admin?: boolean }) {
         (u.method === "ocr_wait" ? (
           <p className="note blue">{t.reg.ocrWait}</p>
         ) : (
-          <ReadingBar sending={sending} startedAt={startedAt} />
+          <ReadingBar startedAt={startedAt} />
         ))}
       {blocked && addr && (
         <div className="bg-orange-soft r-16 p-14">
@@ -231,10 +201,6 @@ export function RegistryBox({ admin = false }: { admin?: boolean }) {
         <p className="fs-sm c-amber mt-0 mb-6 mx-0">{r.addrUnknown}</p>
       )}
       {u?.status === "failed" && <p className="c-amber fs-md">{r.failed}</p>}
-      {u?.mine === false && <p className="sub fs-sm mt-0 mb-6">{copy.points.shared}</p>}
-      {u?.points && (
-        <p className="sub fs-sm mt-0 mb-6">{pointsLine(u.points.why, u.points.points)}</p>
-      )}
       {lad && (
         <>
           <div className="fs-base fw-7">{lad.line}</div>
@@ -327,25 +293,7 @@ export function RegistryBox({ admin = false }: { admin?: boolean }) {
           {lad.payout && <PayoutBox p={lad.payout} />}
         </>
       )}
-      {u?.status !== "processing" && (
-        <>
-          <label className="btn secondary mt-10 cur-pointer" style={{ height: 48 }}>
-            {u ? r.reupload : r.upload}
-            <input
-              type="file"
-              accept="application/pdf"
-              className="d-none"
-              onChange={(e) => {
-                pick(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          {!admin && <p className="sub fs-xs mb-0">{r.hint}</p>}
-        </>
-      )}
       {err && <p className="c-red fs-sm">{err}</p>}
-      {u && <p className="sub fs-xs">{r.keep(!!u.shared)}</p>}
     </div>
   );
 }

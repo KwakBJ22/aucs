@@ -46,15 +46,20 @@ function Done() {
   if (!ready) return <main className="page narrow" />;
   if (!session) return <NeedLogin title={t.title} />;
 
-  const go = r?.item_id ? (
-    <Link href={`/item/${encodeURIComponent(r.item_id)}`} className="btn primary mt-12">
-      {D.toItem}
-    </Link>
-  ) : (
-    <Link href="/find" className="btn primary mt-12">
-      {D.toHome}
-    </Link>
-  );
+  const go =
+    r?.plan === "points" ? (
+      <Link href="/points" className="btn primary mt-12">
+        {D.toPoints}
+      </Link>
+    ) : r?.item_id ? (
+      <Link href={`/item/${encodeURIComponent(r.item_id)}`} className="btn primary mt-12">
+        {D.toItem}
+      </Link>
+    ) : (
+      <Link href="/find" className="btn primary mt-12">
+        {D.toHome}
+      </Link>
+    );
 
   return (
     <main className="page narrow checkout">
@@ -129,12 +134,12 @@ function Done() {
           <>
             <h2 className="co-title">{D.failTitle}</h2>
             {r.fail && <p className="sub">{r.fail}</p>}
-            <Link href="/plans" className="btn primary mt-12">
+            <Link href={r.plan === "points" ? "/points" : "/plans"} className="btn primary mt-12">
               {D.again}
             </Link>
           </>
         )}
-        {r && (
+        {r && r.plan !== "points" && (
           <Link href="/more/billing" className="link d-block mt-12">
             {D.history}
           </Link>

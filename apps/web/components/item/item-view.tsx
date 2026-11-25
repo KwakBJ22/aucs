@@ -233,17 +233,10 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             </span>
           ))}
           {/* 감정평가서(11/11 대표님 — 어디서 보는지 안 보였음): 서류 줄 끝에 바로 */}
-          <OriginalLink
-            pdf={d.appraisal?.pdf_url}
-            court={d.court}
-            caseNo={d.case_no}
-            itemId={closed ? undefined : d.item_id}
-            compact
-          />
+          <OriginalLink pdf={d.appraisal?.pdf_url} court={d.court} caseNo={d.case_no} compact />
           {pc && <span className="sub">{t.panel.legend}</span>}
         </div>
       </section>
-      {!closed && <PointsBand id={d.item_id} reg={reg} pdf={d.appraisal?.pdf_url} />}
       {!pc && (
         <div className="q-jump-m">
           <p className="q-jump-t">{t.panel.jump}</p>
@@ -432,28 +425,5 @@ function Verdict({ text, tone }: { text: string; tone?: string }) {
       <span className={tone === "red" ? "c-red" : "c-orange"}>◆ {text.slice(0, i)}</span>
       {text.slice(i)}
     </p>
-  );
-}
-
-// 서류가 빈 물건이면 상세 맨 위에 「채우고 포인트 받기」 띠(11/12 대표님 — 상세에서도 잘 보이게)
-function PointsBand({ id, reg, pdf }: { id: string; reg: MyReg; pdf?: string | null }) {
-  const p = copy.points;
-  const parts = [
-    ...(reg.u ? [] : [p.heroPerks[0]?.join(" ") ?? ""]),
-    ...(pdf ? [] : [p.heroPerks[1]?.join(" ") ?? ""]),
-  ];
-  if (!parts.length) return null;
-  return (
-    <Link href={`/points?item=${encodeURIComponent(id)}`} className="pt-band">
-      <svg className="pt-band-coin" viewBox="0 0 48 48" aria-hidden="true">
-        <circle cx="24" cy="24" r="20" />
-        <path d="M19 15h7a5 5 0 0 1 0 10h-7M19 15v18" />
-      </svg>
-      <span className="f-1">
-        <b className="d-block">{p.bandTitle}</b>
-        <span className="pt-band-sub">{p.bandBody(parts)}</span>
-      </span>
-      <span className="pt-band-go">{p.bandGo} ›</span>
-    </Link>
   );
 }

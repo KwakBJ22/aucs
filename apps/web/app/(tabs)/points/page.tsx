@@ -1,271 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { DDay } from "@/components/dday";
-import { OriginalLink } from "@/components/item/appraisal";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { NeedLogin } from "@/components/need-login";
 import { Delayed, SkRows } from "@/components/skeleton";
-import {
-  meApi,
-  uploadAppraisal,
-  uploadRegistry,
-  type DocKind,
-  type PointRow,
-  type PointSummary,
-} from "@/lib/api/me";
+import { meApi, payApi, type PointSummary } from "@/lib/api/me";
 import { useSession } from "@/lib/auth";
 import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
-import { IROS_HOME, iros } from "@/lib/go-links";
+import { openPayment } from "@/lib/pay";
 
 const t = copy.points;
-const KINDS: DocKind[] = ["registry", "appraisal"];
+const CO = copy.checkout;
+const wonFull = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+const day = (iso: string) => {
+  const d = parseTime(iso);
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+};
 
-const dDay = (iso: string | null) =>
-  iso ? Math.round((parseTime(iso).getTime() - new Date().setHours(0, 0, 0, 0)) / 864e5) : null;
-
-function resultText(why: string, pts: number): string {
-  const r = t.result[why];
-  if (typeof r === "function") return r(t.pt(pts));
-  return r ?? why;
-}
-
-// 포인트 벌기(11/12 대표님): 서류가 빈 물건 → 맡기기(10분) → 받는 곳 → 올리기 → 맞으면 포인트
+// 포인트함(11/26 대표님): 잔액 · 충전 · 내역. 서류 올리고 포인트 받기는 뺌.
+// 충전 = 결제(/me/pay/order plan=points) → 토스 결제창 → /checkout/done → 포인트 한 줄(서버가 금액을 정함)
 export default function PointsPage() {
   const { session, ready } = useSession();
   const token = session?.access_token ?? "";
   const [sum, setSum] = useState<PointSummary | null>(null);
-  const [rows, setRows] = useState<PointRow[] | null>(null);
-  const [total, setTotal] = useState(0);
-  const [next, setNext] = useState(0);
-  const [open, setOpen] = useState<{
-    id: string;
-    kind: DocKind;
-    until: string;
-    extended: boolean;
-  } | null>(null);
-  const [notice, setNotice] = useState("");
+  const [krw, setKrw] = useState<number | null>(null);
+  const [method, setMethod] = useState("toss");
   const [busy, setBusy] = useState(false);
-  const [, tick] = useState(0);
-  const file = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState("");
 
-  const load = useCallback(() => {
+  useEffect(() => {
     if (!token) return;
     meApi
       .points(token)
-      .then(setSum)
-      .catch(() => setSum(null));
-    // 상세의 「올리러 가기」로 오면(?item=) 그 물건을 맨 위에
-    const item = new URLSearchParams(window.location.search).get("item") ?? undefined;
-    meApi
-      .pointsBoard(token, 0, item)
-      .then((b) => {
-        setRows(b.rows);
-        setTotal(b.total);
-        setNext(b.next);
+      .then((x) => {
+        setSum(x);
+        setKrw((v) => v ?? x.charge?.krw?.[1] ?? x.charge?.krw?.[0] ?? null);
       })
-      .catch(() => setRows([]));
+      .catch(() => setSum(null));
   }, [token]);
-  const more = () =>
-    meApi.pointsBoard(token, next).then((b) => {
-      setRows((v) => [
-        ...(v ?? []),
-        ...b.rows.filter((x) => !v?.some((y) => y.item_id === x.item_id)),
-      ]);
-      setNext(b.next);
-    });
-  useEffect(load, [load]);
-
-  // 맡긴 동안만 1초마다 남은 시간을 다시 그림
-  useEffect(() => {
-    if (!open) return;
-    const h = setInterval(() => {
-      if (parseTime(open.until).getTime() <= Date.now()) setOpen(null);
-      tick((n) => n + 1);
-    }, 1000);
-    return () => clearInterval(h);
-  }, [open]);
 
   if (!ready)
     return (
-      <main className="page">
+      <main className="page narrow">
         <SkRows n={6} />
       </main>
     );
   if (!session) return <NeedLogin title={t.title} />;
 
-  const take = (r: PointRow, kind: DocKind, extend = false) =>
-    meApi
-      .hold(token, r.item_id, kind, extend)
-      .then(
-        (h) => h.until && setOpen({ id: r.item_id, kind, until: h.until, extended: h.extended }),
-      )
-      .catch(() => {
-        setNotice(t.taken);
-        load();
-      });
-
-  const send = (r: PointRow, kind: DocKind, f: File | undefined) => {
-    if (!f) return;
+  const open = Boolean(sum?.charge?.open) && krw != null;
+  const charge = async () => {
+    if (!open || busy || krw == null) return;
     setBusy(true);
-    const done = (text: string) => {
-      setNotice(`${r.place} ${t.kind[kind]} · ${text}`);
-      setOpen(null);
-      load();
-    };
-    (kind === "registry"
-      ? uploadRegistry(token, r.item_id, f).then(() => done(t.registrySent))
-      : uploadAppraisal(token, r.item_id, f).then((x) => done(resultText(x.why, x.points)))
-    )
-      .catch((e: Error) => setNotice(e.message))
-      .finally(() => setBusy(false));
+    setErr("");
+    try {
+      const o = await payApi.order(token, {
+        plan: "points",
+        period: "one",
+        item_id: null,
+        method,
+        amount_krw: krw,
+      });
+      await openPayment(o, method);
+    } catch (e) {
+      // 결제창을 닫으면 SDK 가 오류를 던짐(그만둔 것) — 문장만 보여 주고 다시 누를 수 있게
+      setErr(e instanceof Error && e.message !== "load" ? e.message : CO.done.failTitle);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const leftSec = open
-    ? Math.max(0, Math.round((parseTime(open.until).getTime() - Date.now()) / 1000))
-    : 0;
-
   return (
-    <main className="page">
+    <main className="page narrow checkout">
       <PageHeader title={t.title} />
-      <section className="pt-hero">
-        <svg className="pt-coin" viewBox="0 0 48 48" aria-hidden="true">
-          <circle cx="24" cy="24" r="20" />
-          <path d="M19 15h7a5 5 0 0 1 0 10h-7M19 15v18" />
-        </svg>
-        {/* 11/22 디자인: PC 는 왼쪽 설명 · 차례, 오른쪽 받는 포인트 두 칸 */}
-        <div className="pt-hero-l">
-          <h2 className="pt-hero-title">{t.heroTitle}</h2>
-          <p className="pt-hero-body">{t.heroBody}</p>
-          <ol className="pt-steps">
-            {t.steps.map((s) => (
-              <li key={s}>{s}</li>
-            ))}
-          </ol>
-        </div>
-        <div className="pt-hero-r">
-          <div className="pt-perks">
-            {t.heroPerks.map(([k, v]) => (
-              <div key={k}>
-                <span>{k}</span>
-                <b>{v}</b>
-              </div>
-            ))}
-          </div>
-          <p className="pt-hero-pay">{t.heroPay}</p>
-        </div>
-      </section>
-
       <section className="section">
         <div className="d-flex jc-between ai-end gap-12">
           <div>
             <div className="sub m-0">{t.balance}</div>
             <div className="item-price pt-balance">{sum ? t.pt(sum.balance) : "-"}</div>
-            {sum && (
-              <p className="sub mt-4 mb-0">{t.today(sum.today.registry + sum.today.appraisal)}</p>
-            )}
           </div>
-          {/* 이용권에 쓰기(11/22 디자인) */}
           <Link href="/plans" className="link f-none">
             {t.usePlans}
           </Link>
         </div>
-        {notice && <div className="bg-panel r-14 p-12 mt-10 fs-md">{notice}</div>}
+        <p className="sub mt-4 mb-0">{t.useLine}</p>
       </section>
 
       <section className="section">
-        <h2>{t.listTitle}</h2>
-        <p className="sub mt-4">{t.listSub}</p>
-        {!rows && (
+        <h2>{t.charge}</h2>
+        <div className="sub mt-8 mb-8">{t.chargeAmount}</div>
+        <div className="co-methods" role="radiogroup" aria-label={t.chargeAmount}>
+          {(sum?.charge?.krw ?? []).map((n) => (
+            <button
+              key={n}
+              role="radio"
+              aria-checked={krw === n}
+              className={krw === n ? "on" : ""}
+              onClick={() => setKrw(n)}
+            >
+              {wonFull(n)}
+            </button>
+          ))}
+        </div>
+        <div className="sub mt-14 mb-8">{t.method}</div>
+        <div className="co-methods" role="radiogroup" aria-label={t.method}>
+          {CO.methods.map(([k, label]) => (
+            <button
+              key={k}
+              role="radio"
+              aria-checked={method === k}
+              className={method === k ? "on" : ""}
+              onClick={() => setMethod(k)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {sum && <p className="sub mt-12 mb-0">{t.chargeNote(sum.charge?.expire_years ?? 5)}</p>}
+        {sum && !sum.charge?.open && <p className="sub mt-4 mb-0">{copy.plans.payLater}</p>}
+        <button
+          className="btn primary mt-12 w-full"
+          disabled={!open || busy}
+          onClick={() => void charge()}
+        >
+          {busy ? t.opening : t.chargeGo(krw != null ? wonFull(krw) : "")}
+        </button>
+        {err && <p className="sub c-red mt-8 mb-0">{err}</p>}
+      </section>
+
+      <section className="section">
+        <h2>{t.historyTitle}</h2>
+        {!sum && (
           <Delayed>
-            <SkRows n={6} />
+            <SkRows n={4} />
           </Delayed>
         )}
-        {rows?.length === 0 && <p className="sub mt-12">{t.empty}</p>}
-        {rows?.map((r) => (
-          <div key={r.item_id} className="pt-row">
-            {/* 11/22 디자인: 이름 · 사건은 왼쪽(누르면 물건), 올리기 단추는 같은 줄 오른쪽 */}
-            <Link
-              prefetch={false}
-              href={`/item/${encodeURIComponent(r.item_id)}`}
-              className="pt-row-name c-inherit"
-            >
-              <b>
-                {r.place} {r.building ?? ""}
-              </b>
-              <span className="sub">
-                <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
+        {sum?.history?.length === 0 && <p className="sub mt-12">{t.historyEmpty}</p>}
+        {sum?.history?.map((h, i) => (
+          <div key={i} className="line-row co-row">
+            <span>
+              {t.reason[h.reason] ?? h.reason}
+              <span className="sub d-block m-0 fs-sm">
+                {day(h.created_at)}
+                {h.delta > 0 && h.expires_at ? ` · ${t.until(day(h.expires_at))}` : ""}
               </span>
-            </Link>
-            <div className="pt-row-btns">
-              {KINDS.filter((k) => r.need[k]).map((k) => (
-                <button
-                  key={k}
-                  className={`btn sm ${open?.id === r.item_id && open.kind === k ? "primary" : "soft"}`}
-                  onClick={() => take(r, k)}
-                >
-                  {t.kind[k]} {t.pt(sum?.points[k] ?? 0)}
-                </button>
-              ))}
-            </div>
-            {open?.id === r.item_id && (
-              <div className="bg-panel r-14 p-12 mt-8 pt-row-open">
-                <div className="fs-sm fw-6">{t.left(Math.floor(leftSec / 60), leftSec % 60)}</div>
-                {open.kind === "registry" ? (
-                  <>
-                    {/* 인터넷등기소는 열람 화면으로 바로 가는 주소가 없음(첫 화면 검색칸이 열람 입구) → 주소를 복사해 감 */}
-                    <a
-                      className="btn soft mt-10"
-                      href={IROS_HOME}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => {
-                        e.currentTarget.href = iros();
-                        if (r.address) void navigator.clipboard?.writeText(r.address);
-                      }}
-                    >
-                      {t.getRegistry}
-                    </a>
-                    <p className="sub fs-sm mt-6">{t.registryHint}</p>
-                  </>
-                ) : (
-                  <OriginalLink court={r.court} caseNo={r.case_no} />
-                )}
-                <div className="btn-pair mt-10">
-                  <button
-                    className="btn primary"
-                    disabled={busy}
-                    onClick={() => file.current?.click()}
-                  >
-                    {busy ? t.sending : t.upload}
-                  </button>
-                  {!open.extended && leftSec < 180 && (
-                    <button className="btn secondary" onClick={() => take(r, open.kind, true)}>
-                      {t.more}
-                    </button>
-                  )}
-                </div>
-                <input
-                  ref={file}
-                  type="file"
-                  accept="application/pdf"
-                  hidden
-                  onChange={(e) => {
-                    send(r, open.kind, e.target.files?.[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-            )}
+            </span>
+            <b className={h.delta > 0 ? "c-blue-text" : ""}>{t.sign(h.delta)}</b>
           </div>
         ))}
-        {rows && next < total && (
-          <button className="btn secondary mt-14 w-full" onClick={() => void more()}>
-            {t.moreRows}
-          </button>
-        )}
       </section>
 
       <details className="section">

@@ -133,53 +133,7 @@ export type RegistryUpload = {
   };
 };
 
-// 등기부 PDF 올리기. 먼저 파일 보관함(registry-uploads/<회원>/…)에 바로 올리고 API 는 그걸 가져감(11/3 —
-// 서버(Vercel)가 한 번에 4.5MB 까지만 받아서). 보관함이 안 되면 예전처럼 API 로 직접(multipart).
-export async function uploadRegistry(token: string, itemId: string, file: File): Promise<void> {
-  await sendRegistry(token, itemId, file);
-  const { academyHit } = await import("@/lib/academy-hit");
-  academyHit("registry"); // 아카데미 과제 「등기부 올리기」(11/18) — 올리기가 끝난 뒤에만
-}
-
-async function sendRegistry(token: string, itemId: string, file: File): Promise<void> {
-  const { supabase } = await import("@/lib/auth");
-  const uid = supabase ? (await supabase.auth.getSession()).data.session?.user.id : undefined;
-  if (supabase && uid) {
-    const path = `${uid}/${crypto.randomUUID()}.pdf`;
-    const up = await supabase.storage
-      .from("registry-uploads")
-      .upload(path, file, { contentType: "application/pdf" });
-    if (!up.error) {
-      const res = await fetch(
-        `${apiBaseUrl}/me/registries/${encodeURIComponent(itemId)}/from-storage`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ path, file_name: file.name.slice(0, 120) }),
-        },
-      );
-      clearMeCache();
-      if (!res.ok) {
-        const j = (await res.json().catch(() => null)) as { detail?: string } | null;
-        throw new Error(j?.detail ?? `HTTP ${res.status}`);
-      }
-      return;
-    }
-  }
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch(`${apiBaseUrl}/me/registries/${encodeURIComponent(itemId)}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  });
-  if (!res.ok) {
-    const j = (await res.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(j?.detail ?? `HTTP ${res.status}`);
-  }
-}
-
-// 포인트 벌기(11/12, docs/design/11-points.md)
+// 포인트함(11/26 — 잔액 · 충전 · 내역)
 export type DocKind = "registry" | "appraisal";
 export type PointSummary = {
   balance: number;
@@ -188,47 +142,10 @@ export type PointSummary = {
   points: Partial<Record<DocKind, number>>;
   pay_max_pct?: number | null;
   hold_minutes: number | null;
-};
-export type PointHold = { until: string | null; extended: boolean };
-export type PointRow = {
-  item_id: string;
-  court: string;
-  case_no: string;
-  sale_date: string | null;
-  place: string;
-  building: string | null;
-  address: string | null; // 인터넷등기소 첫 화면 검색칸에 붙여 넣을 주소
-  need: Partial<Record<DocKind, PointHold>>;
+  history: { delta: number; reason: string; created_at: string; expires_at: string | null }[];
+  charge: { open: boolean; krw: number[]; expire_years: number };
 };
 export type PointResult = { ok?: boolean; points: number; why: string; found?: string[] };
-// 이 물건에 내가 올린 감정평가서(11/14): 확인 대기(review) · 받음(ok) · 반려(rejected). 올린 적 없으면 빈 것
-export type MyAppraisal = {
-  status?: "review" | "ok" | "rejected";
-  points?: number;
-  why?: string;
-  ended?: boolean; // 끝난 사건 — 올려도 포인트 없음(11/18)
-};
-
-// 감정평가서 PDF 올리기: 등기부와 같이 보관함(appraisal-uploads/<회원>/…)에 바로 → API 가 받아 사건번호를 맞춰 봄
-export async function uploadAppraisal(
-  token: string,
-  itemId: string,
-  file: File,
-): Promise<PointResult> {
-  const { supabase } = await import("@/lib/auth");
-  const uid = supabase ? (await supabase.auth.getSession()).data.session?.user.id : undefined;
-  if (!supabase || !uid) throw new Error("로그인이 필요해요");
-  const path = `${uid}/${crypto.randomUUID()}.pdf`;
-  const up = await supabase.storage
-    .from("appraisal-uploads")
-    .upload(path, file, { contentType: "application/pdf" });
-  if (up.error) throw new Error(up.error.message);
-  return call<PointResult>(token, `/appraisals/${encodeURIComponent(itemId)}/from-storage`, {
-    method: "POST",
-    body: JSON.stringify({ path }),
-  });
-}
-
 // 로그인한 사람의 자료. 토큰은 Supabase 세션에서.
 // 읽기(GET)는 잠깐 기억하고 같은 요청은 한 번만 보냄(client.ts). 바꾸는 요청은 끝나면 기억을 비움.
 // 등기부처럼 읽는 중 상태를 3초마다 확인하는 것은 fresh 로 기억을 건너뜀.
@@ -410,12 +327,6 @@ export const meApi = {
     call(t, "/profile", { method: "PUT", body: JSON.stringify(p) }),
   bids: (t: string) => call<Bids>(t, "/bids"),
   points: (t: string) => call<PointSummary>(t, "/points", { fresh: true }),
-  pointsBoard: (t: string, offset = 0, item?: string) =>
-    call<{ rows: PointRow[]; total: number; next: number }>(
-      t,
-      `/points/board?offset=${offset}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
-      { fresh: true },
-    ),
   // 경매 아카데미(11/14): 포인트를 받은 단계 · 한 단계를 다 들었을 때
   academy: (t: string) =>
     call<{ stages: string[]; done?: string[] }>(t, "/academy", { fresh: true }),
@@ -423,12 +334,6 @@ export const meApi = {
     call<{ added: number }>(t, "/academy", { method: "PUT", body: JSON.stringify({ keys }) }),
   academyDone: (t: string, stage: string) =>
     call<PointResult>(t, `/academy/${encodeURIComponent(stage)}`, { method: "POST" }),
-  myAppraisal: (t: string, id: string) =>
-    call<MyAppraisal>(t, `/appraisals/${encodeURIComponent(id)}`, { fresh: true }),
-  hold: (t: string, id: string, kind: DocKind, extend = false) =>
-    call<PointHold>(t, `/points/hold/${encodeURIComponent(id)}/${kind}?extend=${extend}`, {
-      method: "POST",
-    }),
   registry: (t: string, id: string) =>
     call<RegistryUpload | null>(t, `/registries/${encodeURIComponent(id)}`, { fresh: true }),
   acceptAddress: (t: string, id: string) =>
@@ -507,8 +412,16 @@ export const payApi = {
       t,
       `/quote?plan=${plan}&period=${period}${item ? `&item=${encodeURIComponent(item)}` : ""}`,
     ),
-  order: (t: string, b: { plan: string; period: string; item_id: string | null; method: string }) =>
-    payCall<PayOrder>(t, "/order", b),
+  order: (
+    t: string,
+    b: {
+      plan: string;
+      period: string;
+      item_id: string | null;
+      method: string;
+      amount_krw?: number;
+    },
+  ) => payCall<PayOrder>(t, "/order", b),
   confirm: (t: string, b: { payment_key: string; order_id: string; amount: number }) =>
     payCall<PayResult>(t, "/confirm", b),
   fail: (t: string, b: { order_id: string; code: string; message: string }) =>
