@@ -492,6 +492,13 @@ export const copy = {
     opening: "결제창을 여는 중…",
     chargeNote: (years: number) => `1원 = 1P · 충전한 포인트는 ${years}년 동안 써요`,
     historyTitle: "포인트 내역",
+    // 포인트 모으는 법(11/26 대표님)
+    earnTitle: "포인트 모으기",
+    earnAcademy: (a: number, b: number) =>
+      `옥스아카데미 — 한 단계를 끝내면 ${a.toLocaleString("ko-KR")}P${b && b !== a ? ` (중급 ${b.toLocaleString("ko-KR")}P)` : ""}`,
+    earnReport: (n: number) =>
+      `잘못된 정보 알리기 — 물건 화면의 「이 값이 틀렸어요」로 알려 주시고 저희가 고치면 ${n.toLocaleString("ko-KR")}P (같은 물건 같은 칸은 처음 알린 분께)`,
+    earnGo: "옥스아카데미 가기",
     historyEmpty: "아직 내역이 없어요",
     reason: {
       charge: "충전",
@@ -499,6 +506,7 @@ export const copy = {
       refund: "돌려받음",
       admin: "옥스가 드림",
       academy: "옥스아카데미",
+      report: "잘못된 정보 알림",
       registry: "등기부 올림",
       appraisal: "감정평가서 올림",
     } as Record<string, string>,
@@ -1383,7 +1391,7 @@ export const copy = {
       open: "이 값이 틀렸어요",
       label: "어디가 원문과 다른가요?",
       placeholder: "예: 임차인 전입일이 원문은 2021.3.5인데 3.15로 나와요",
-      hint: "확인해서 고칠게요 · 보낸 사람은 남에게 보이지 않아요",
+      hint: "확인해서 고치면 1,000P 드려요 · 보낸 사람은 남에게 보이지 않아요",
       send: "보내기",
       thanks: "고마워요. 확인해서 고칠게요",
       fail: "보내지 못했어요 · 다시 눌러 주세요",

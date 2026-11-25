@@ -13,6 +13,7 @@ import { InterestLine } from "@/components/item/interest-line";
 import { SameBuilding } from "@/components/item/same-building";
 import { ItemPhotos } from "@/components/item/item-photos";
 import { OriginalLink } from "@/components/item/appraisal";
+import { ReportBox } from "@/components/item/doc-sheet";
 import { OddsLine } from "@/components/item/next-round";
 import { OutcomeBand } from "@/components/item/outcome-band";
 import type { MyReg } from "@/components/item/registry";
@@ -386,6 +387,8 @@ export function ItemView({ d, reg, pc }: { d: ItemDetail; reg: MyReg; pc: boolea
             {!closed && <OddsLine odds={d.next_round.fail_odds} />}
           </section>
           <p className="sub fs-xs">{t.footer(d.computed_at ? d.computed_at.slice(0, 10) : "-")}</p>
+          {/* 잘못된 정보 알리기(11/26 대표님) — 고치면 1,000P */}
+          <ReportBox id={id} section="상세" />
         </div>
         {actions}
       </div>

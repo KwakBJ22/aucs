@@ -86,17 +86,47 @@ REPORT_REPLY = {
 }
 
 
+def _report_points(c: Any, report_id: int, item_id: str, section: str, uid: str) -> int:
+    """같은 물건 · 같은 칸에서 먼저 고친 제보가 없으면 포인트 한 줄(무료 기간에 받은 것은 기한 없음 — 다른 포인트와 같게)."""
+    if c.execute(
+        """select 1 from app.value_reports where item_id = %s and section = %s and status = 'fixed'
+           and report_id <> %s and points > 0""",
+        (item_id, section, report_id),
+    ).fetchone():
+        return 0
+    t = c.execute(
+        "select value from ref.rule_tables where rule_key = 'points' and valid_from <= current_date "
+        "order by valid_from desc limit 1"
+    ).fetchone()
+    table = dict(t["value"]) if t else {}
+    pts = int(table.get("report") or 0)
+    if not pts:
+        return 0
+    c.execute("update app.value_reports set points = %s where report_id = %s", (pts, report_id))
+    c.execute(
+        """insert into app.point_ledger (user_id, delta, reason, item_id, ref_id, expires_at)
+           values (%s, %s, 'report', %s, %s, case when %s then null else now() + make_interval(days => %s) end)""",
+        (uid, pts, item_id, report_id, bool(table.get("free_period")), int(table.get("expire_days") or 365)),
+    )
+    return pts
+
+
 def close_report(report_id: int, status: str) -> bool:
-    """「틀렸어요」 제보 처리: 고침(fixed)·안 고침(rejected). 제보한 사람에게 알림 한 통."""
+    """「틀렸어요」 제보 처리: 고침(fixed)·안 고침(rejected). 제보한 사람에게 알림 한 통.
+    11/26 대표님: 고침이면 같은 물건 · 같은 칸에서 처음 고친 제보에 포인트(기준표 points.report, 하루 상한 없음)."""
     title, body = REPORT_REPLY[status]
     with connect() as c:
         r = c.execute(
             """update app.value_reports set status = %s, closed_at = now()
-               where report_id = %s and status = 'open' returning user_id, item_id""",
+               where report_id = %s and status = 'open' returning user_id, item_id, section""",
             (status, report_id),
         ).fetchone()
         if not r:
             return False
+        if status == "fixed":
+            pts = _report_points(c, report_id, r["item_id"], r["section"], r["user_id"])
+            if pts:
+                body = f"알려 주셔서 고맙습니다 · {pts:,}P 드렸어요 · 물건 화면에서 확인해 보세요"
         c.execute(
             "insert into app.notifications (user_id, title, body, link) values (%s, %s, %s, %s)",
             (r["user_id"], title, body, f"/item/{r['item_id']}"),

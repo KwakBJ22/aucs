@@ -144,6 +144,7 @@ export type PointSummary = {
   hold_minutes: number | null;
   history: { delta: number; reason: string; created_at: string; expires_at: string | null }[];
   charge: { open: boolean; krw: number[]; expire_years: number };
+  earn?: { academy_stage?: number | null; academy_stage_mid?: number | null; report?: number | null };
 };
 export type PointResult = { ok?: boolean; points: number; why: string; found?: string[] };
 // 로그인한 사람의 자료. 토큰은 Supabase 세션에서.

@@ -87,6 +87,22 @@ export default function PointsPage() {
         <p className="sub mt-4 mb-0">{t.useLine}</p>
       </section>
 
+      {/* 포인트 모으기(11/26 대표님): 옥스아카데미 · 잘못된 정보 알리기 — 점수는 기준표 */}
+      {sum?.earn && (
+        <section className="section">
+          <h2>{t.earnTitle}</h2>
+          {sum.earn.academy_stage ? (
+            <p className="fs-md mt-8 mb-0">
+              {t.earnAcademy(sum.earn.academy_stage, sum.earn.academy_stage_mid ?? 0)}{" "}
+              <Link href="/academy" className="link in">
+                {t.earnGo}
+              </Link>
+            </p>
+          ) : null}
+          {sum.earn.report ? <p className="fs-md mt-8 mb-0">{t.earnReport(sum.earn.report)}</p> : null}
+        </section>
+      )}
+
       <section className="section">
         <h2>{t.charge}</h2>
         <div className="sub mt-8 mb-8">{t.chargeAmount}</div>

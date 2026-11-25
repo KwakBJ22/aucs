@@ -67,6 +67,8 @@ def summary(uid: str) -> dict[str, Any]:
         "max": table.get("daily_max") or {},
         "points": {k: table.get(k) for k in ("registry", "appraisal")},
         "pay_max_pct": table.get("pay_max_pct"),
+        # 포인트 모으는 법(11/26 대표님): 옥스아카데미 단계 · 잘못된 정보 알리기
+        "earn": {k: table.get(k) for k in ("academy_stage", "academy_stage_mid", "report")},
         "hold_minutes": table.get("hold_minutes"),
         "history": history,
         "charge": {
