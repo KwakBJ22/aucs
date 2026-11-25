@@ -4,6 +4,7 @@
 같은 법정동 ㎡단가는 배경 정보로만(입찰가 계산에 쓰지 않음).
 """
 
+import re
 from dataclasses import dataclass
 from datetime import date, timedelta
 from statistics import median
@@ -34,6 +35,14 @@ def _drop_outliers(trades: list[Trade]) -> list[Trade]:
     return [t for t in trades if lo <= t.price_krw / t.area_m2 <= hi]
 
 
+_UNDER = re.compile(r"지하|지층|지\s*\d+\s*층")
+
+
+def is_under(desc: str | None) -> bool | None:
+    """물건 설명으로 지하 호인가. 설명이 없으면 None(모름)."""
+    return bool(_UNDER.search(desc)) if desc else None
+
+
 def market_price(
     trades: list[Trade],
     *,
@@ -41,9 +50,15 @@ def market_price(
     complex_name: str | None,
     area_m2: float,
     build_year: int | None = None,
+    under: bool | None = None,
 ) -> RuleResult:
-    """기준 시세(원)와 쓴 거래 목록."""
+    """기준 시세(원)와 쓴 거래 목록.
+
+    11/25 점검: 지상 호 시세에 같은 넓이 지하 거래가 섞였음 → under 를 알면 지상 · 지하를 나눔.
+    같은 건물 1년 넘은 거래 한 건만으로는 시세라 하지 않음(2단계는 1년 안 거래가 있거나 2건 이상일 때만)."""
     live = [t for t in trades if not t.cancelled and t.deal_date <= as_of]
+    if under is not None:
+        live = [t for t in live if t.floor is None or (t.floor <= 0) == under]
     same = [
         t
         for t in live
@@ -63,6 +78,8 @@ def market_price(
         (3, lv3, 1, Status.ESTIMATED),
     ]:
         used = _drop_outliers(pool)
+        if level == 2 and len(used) == 1 and used[0].deal_date < as_of - timedelta(days=365):
+            continue
         if len(used) >= need:
             ppm = median(t.price_krw / t.area_m2 for t in used)
             value = {"price_krw": int(ppm * area_m2), "level": level, "n": len(used)}
