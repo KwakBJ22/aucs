@@ -9,6 +9,7 @@ from datetime import date
 from typing import Any
 
 from aucs_rules.calc import tax_kind
+from aucs_rules.fmt import man_text
 from aucs_rules.redev_member import member_transfer
 from aucs_rules.result import Status
 
@@ -46,7 +47,7 @@ FAILURE_TYPES = {
     "T11": "값어치·대출·자금",
 }
 RULE_TYPE = {
-    "risk.senior_tenant": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1", "risk.tenant_unlisted": "T1",
+    "risk.senior_tenant": "T1", "risk.tenant_power": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1", "risk.tenant_unlisted": "T1",
     "risk.tenants_unknown": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
@@ -93,6 +94,19 @@ def signals(f: dict[str, Any]) -> list[Signal]:
 
     if f.get("senior_tenant_assumed"):
         add("risk.senior_tenant", "fatal", "선순위 임차인 보증금 인수")
+    tp = f.get("tenant_power")
+    if tp and not (f.get("senior_tenant_assumed") or f.get("lease_reg_released")
+                   or f.get("lease_registration_with_power")):  # fmt: skip
+        # 11/25 점검: 전입일이 말소기준보다 앞선 임차인 — 비고에 「인수」가 없어도 대항력은 있음
+        dep = f" · 보증금 {man_text(tp['deposit_krw'])}" if tp.get("deposit_krw") else ""
+        add(
+            "risk.tenant_power", "high" if tp.get("unclaimed") else "mid",
+            f"말소기준보다 먼저 전입한 임차인 {tp['n']}명{dep} — "
+            + ("배당요구가 없어 보증금을 떠안을 수 있어요" if tp.get("unclaimed")
+               else "배당에서 다 못 받은 보증금은 떠안아요")
+            + " · 매각물건명세서 확인",
+            Status.NEEDS_CHECK, **tp,
+        )  # fmt: skip
     if f.get("lien_reported"):
         add("risk.lien", "fatal", "유치권 신고")
     if f.get("statutory_superficies"):

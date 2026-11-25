@@ -44,7 +44,7 @@ from aucs_rules.sale_rate import (
 )
 from aucs_rules.small_lease_region import region_class
 from aucs_rules.spec_facts import note_facts, spec_facts
-from aucs_rules.tenants import Tenant, base_date_of, tax_before_tenant, tenant_doubts
+from aucs_rules.tenants import Tenant, base_date_of, power_tenants, tax_before_tenant, tenant_doubts
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -731,6 +731,15 @@ def analyze_item(
     ).value  # fmt: skip
     if doubt:
         facts["tenant_doubt"] = doubt
+    # 말소기준보다 먼저 전입한 임차인(11/25 점검 — 명세서 비고에 「인수」가 없으면 신호가 없었음, 진행 98건)
+    tp = power_tenants(
+        [Tenant(move_in_date=t["move_in_date"], fixed_date=t["fixed_date"], claim_date=t.get("claim_date"),
+                deposit_krw=t["deposit_krw"], has_lease_registration=bool(t["has_lease_registration"]))
+         for t in tenants],
+        base_date_of(base_txt),
+    )  # fmt: skip
+    if tp:
+        facts["tenant_power"] = tp
     sig = signals(facts)
     # 법원 유찰 횟수가 아니라 지금 최저가가 감정가에서 몇 번 내린 값인가(0077, 11/24)
     eff_failed = effective_failed(

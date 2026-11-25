@@ -37,6 +37,20 @@ def opposing_power(t: Tenant, base_date: date | None) -> RuleResult:
     )
 
 
+def power_tenants(tenants: list[Tenant], base_date: date | None) -> dict[str, Any] | None:
+    """말소기준보다 먼저 전입한(대항력 있는) 임차인 — {"n", "deposit_krw", "unclaimed"} 또는 None(11/25 점검).
+    배당에서 다 못 받은 보증금은 낙찰자가 떠안음. 배당요구를 안 했으면 전액(unclaimed)."""
+    power = [t for t in tenants if opposing_power(t, base_date).value is True]
+    if not power:
+        return None
+    deps = [t.deposit_krw for t in power if t.deposit_krw]
+    return {
+        "n": len(power),
+        "deposit_krw": sum(deps) if deps else None,
+        "unclaimed": any(t.claim_date is None and not t.has_lease_registration for t in power),
+    }
+
+
 def priority_date(t: Tenant) -> RuleResult:
     """우선변제 순위일 = 대항력 발생일(전입 다음 날)과 확정일자 중 늦은 날 (제3조의2 제2항).
 
