@@ -46,7 +46,7 @@ def loan_limit(
     basis = min(x for x in (bid_krw, appraisal_krw, market_krw) if x)
     if kind != "house":  # 11/17 — 기준표는 주택담보대출 비율. 상가 · 오피스텔 · 땅은 은행마다 달라 셈하지 않음
         note = (
-            "용도(주택인지)가 확인되지 않아 대출을 셈하지 않았어요 — 「바꾸기」로 받을 금액을 넣어 주세요"
+            "대출 없이 계산했어요 — 주택이면 「바꾸기」로 받을 금액을 넣어 주세요"
             if kind == "unknown"
             else "상가·오피스텔·땅 대출은 은행마다 달라요 — 「바꾸기」로 받을 금액을 넣어 주세요"
         )

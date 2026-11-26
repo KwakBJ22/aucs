@@ -185,7 +185,7 @@ function Body({ k, d }: { k: Question["key"]; d: OnbidDetail }) {
         <div key={x.key} className="py-10 px-0">
           <div className="d-flex jc-between gap-8">
             <span className="fs-base fw-6">{x.label}</span>
-            <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
+            <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state === "미확인" ? "직접 확인" : x.state}</span>
           </div>
           <div className="sub fs-xs m-0">{x.what}</div>
         </div>

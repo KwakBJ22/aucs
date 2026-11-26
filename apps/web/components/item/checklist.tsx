@@ -136,7 +136,7 @@ export function CheckBody({ b }: { b: Record<string, any> }) {
       {todo.map((x) => (
         <div key={x.key} className="py-8 px-0">
           <div className="d-flex gap-8 ai-center">
-            <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state}</span>
+            <span className={`chip ${STATE_CHIP[x.state] ?? "gray"}`}>{x.state === "미확인" ? "직접 확인" : x.state}</span>
             <b className="fs-md">
               <Termed text={x.label} />
             </b>

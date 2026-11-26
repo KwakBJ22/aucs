@@ -48,9 +48,10 @@ def collect(x: CollectInput) -> RuleResult:
 
     market = (a.get("market") or {}).get("price_krw")
     expect = expected_price(app, mn, a)
+    deep = overvalued(app, mn, x.failed_count, a)  # 11/26: 많이 유찰된 물건은 「싸게 살 여지」에서도 뺌
     if market and not fatal and not debt:
         gap = market - expect
-        if gap >= max(10_000_000, market * 0.1):
+        if not deep and gap >= max(10_000_000, market * 0.1):
             pct = round(gap * 100 / market)  # 비율 순으로 늘어놓으므로 이유에도 비율을(11/7)
             out["cheap"] = {
                 "reason": f"시세보다 {_won_short(gap)}({pct}%) 낮게 살 여지",
@@ -67,9 +68,7 @@ def collect(x: CollectInput) -> RuleResult:
         and not unknown
         and not x.is_share
         and not x.is_special
-        and not overvalued(
-            app, mn, x.failed_count, a
-        )  # 시세 없이 많이 유찰된 물건은 초보용에서 뺌(11/9)
+        and not deep  # 많이 유찰된 물건은 초보용에서 뺌(11/9, 11/26 시세가 있어도)
     ):
         tenants = a.get("tenant_count") or 0
         out["safe"] = {

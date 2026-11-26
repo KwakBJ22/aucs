@@ -10,7 +10,7 @@ RESULT_KO = {
     "failed": "유찰",
     "changed": "변경",
     "withdrawn": "취하",
-    "unknown": "모름",
+    "unknown": "결과 받는 중",
 }
 
 

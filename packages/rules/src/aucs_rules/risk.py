@@ -48,7 +48,7 @@ FAILURE_TYPES = {
 }
 RULE_TYPE = {
     "risk.senior_tenant": "T1", "risk.tenant_power": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1", "risk.tenant_unlisted": "T1",
-    "risk.tenants_unknown": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1",
+    "risk.tenants_unknown": "T1", "risk.deep_discount": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
     "risk.duplicate": "T5", "risk.plan_facility": "T11",  # 11/15 중복경매 · 도시계획시설
@@ -352,12 +352,18 @@ def signals(f: dict[str, Any]) -> list[Signal]:
         add("risk.over_cost", "high", "총투입이 추정 시세보다 큼", gap_krw=cost - mkt)
 
     if "tenants_checked" in f and not f["tenants_checked"]:
+        # 11/26 대표님: 손님 화면에 「미확인 · 모름」 금지 — 손님이 할 일로
         add(
             "risk.tenants_unknown",
             "info",
-            "임차인 자료 미확인 — 안전으로 보지 않음",
+            "입찰 전 현황조사서 · 매각물건명세서로 임차인 확인",
             Status.UNKNOWN,
         )
+    # 11/26 대표님(메이준 18회 유찰 · 감정가의 2%): 많이 유찰됐는데 높은 위험 신호가 없으면 명세서 확인을 앞에
+    if f.get("deep_discount") and not any(s.level in ("fatal", "high") for s in out):
+        add("risk.deep_discount", "mid",
+            "많이 유찰된 물건 — 입찰 전 매각물건명세서에서 임차인 · 떠안는 권리를 꼭 확인하세요",
+            Status.NEEDS_CHECK, **f["deep_discount"])  # fmt: skip
     return sorted(out, key=lambda s: LEVEL_ORDER[s.level])
 
 

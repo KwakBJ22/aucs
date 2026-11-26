@@ -59,15 +59,15 @@ def test_overvalued_without_market_not_picked() -> None:
     no_mkt = {"sale_rate": {"p50": 60}, "signals": [], "tenant_count": 0}
     heavy = _x(usage="오피스텔", appraisal_krw=116_000_000, min_price_krw=4_681_000,
                failed_count=9, analysis=no_mkt)  # fmt: skip
-    assert pick_score(heavy).value["excluded"] == "시세 없이 많이 유찰"
+    assert pick_score(heavy).value["excluded"] == "많이 유찰"
     low = _x(min_price_krw=120_000_000, failed_count=3, analysis=no_mkt)  # 감정가의 24%
-    assert pick_score(low).value["excluded"] == "시세 없이 많이 유찰"
+    assert pick_score(low).value["excluded"] == "많이 유찰"
     one = pick_score(_x(failed_count=1, analysis=no_mkt)).value
     three = pick_score(_x(failed_count=3, min_price_krw=256_000_000, analysis=no_mkt)).value
     assert one["excluded"] is None and three["excluded"] is None
     assert three["parts"]["value"] < one["parts"]["value"]  # 유찰이 많으면 「싸다」 점수를 깎음
-    # 시세가 있으면 그대로 견줌
-    assert pick_score(_x(failed_count=9, min_price_krw=50_000_000)).value["excluded"] is None
+    # 11/26 서울남부 2024타경118082(18회 유찰 · 감정가의 2%): 시세가 있어도 뺌
+    assert pick_score(_x(failed_count=9, min_price_krw=50_000_000)).value["excluded"] == "많이 유찰"
 
 
 def test_assumed_debt_not_picked_and_unknown_not_safe() -> None:
@@ -104,3 +104,13 @@ def test_absurd_rent_yield_is_ignored() -> None:
     assert (
         v["parts"]["yield"] == pick_score(_x(), "rent").value["parts"]["yield"]
     )  # 모를 때와 같은 점수
+
+
+def test_deep_discount_signal() -> None:
+    """11/26: 많이 유찰 · 높은 위험 없음 -> 명세서 확인 안내(「모름」 글 아님)."""
+    from aucs_rules.risk import signals
+
+    r = signals({"deep_discount": {"failed": 18}})
+    sig = r.value if hasattr(r, "value") else r
+    s = [x for x in sig if x.rule_id == "risk.deep_discount"]
+    assert s and s[0].level == "mid" and "모름" not in s[0].title

@@ -43,9 +43,9 @@ class PickInput:
     )  # 같은 단지 1년 월세 {monthly_krw, deposit_krw, n}
 
 
-OVERVALUED_FAILS = 5  # 시세 없이 이만큼 유찰되면 추천하지 않음
+OVERVALUED_FAILS = 5  # 이만큼 유찰되면 추천하지 않음(11/26: 시세가 있어도)
 YIELD_MAX = 0.15  # 월세 수익률이 이보다 높게 나오면 믿지 않음(셈에서 뺌)
-OVERVALUED_RATE = 30  # 시세 없이 최저가가 감정가의 이 %보다 낮으면 추천하지 않음
+OVERVALUED_RATE = 30  # 최저가가 감정가의 이 %보다 낮으면 추천하지 않음(11/26: 시세가 있어도)
 
 
 def assumes_debt(signals: list[dict[str, Any]]) -> bool:
@@ -65,8 +65,10 @@ def overvalued(
     failed: int | None,
     analysis: dict[str, Any],
 ) -> bool:
-    """시세가 없는데 많이 유찰됐거나 감정가의 30% 아래 = 시장이 감정가를 인정하지 않은 물건(11/9)."""
-    if not appraisal_krw or not min_price_krw or (analysis.get("market") or {}).get("price_krw"):
+    """많이 유찰됐거나 감정가의 30% 아래 = 시장이 받아들이지 않은 물건(11/9).
+    11/26 대표님(서울남부 2024타경118082 메이준 18회 유찰 · 감정가의 2%): 시세가 있어도 — 떠안는 임차인 · 권리가 명세서
+    원본에만 있을 수 있어 「시세보다 ○ 싸다」로 추천하면 안 됨."""
+    if not appraisal_krw or not min_price_krw:
         return False
     return (
         failed or 0
@@ -139,7 +141,7 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     elif overvalued(app, mn, x.failed_count, a):
         # 시세가 없는데 많이 유찰됐거나 감정가의 30% 아래 = 시장이 감정가를 인정하지 않은 물건(11/9 —
         # 수원 2024타경101239: 감정가 1.16억 → 9번 유찰 · 같은 건물이 감정가 17%에 팔림). 찾기에는 그대로.
-        excluded = "시세 없이 많이 유찰"
+        excluded = "많이 유찰"
 
     # ── 싼 정도: 예상 낙찰가(감정가 × 중앙 낙찰가율, 최저가보다 낮을 수 없음) vs 시세. 25% 싸면 1
     expect = expected_price(app, mn, a)

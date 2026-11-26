@@ -185,7 +185,7 @@ def build_ladder(
     elif hold == 0 and partial:
         line, state = "배당에서 못 받는 보증금만큼 떠안을 수 있어요", "확인 필요"
     elif unknown_amount:
-        line, state = "떠안는 권리가 있는데 금액을 몰라요", "확인 필요"
+        line, state = "떠안는 권리가 있어요 — 금액은 등기부 원문으로 확인", "확인 필요"
     else:
         line, state = f"떠안는 돈 약 {won(hold)}" + (" + 배당 부족분" if partial else ""), "추정"
     return {

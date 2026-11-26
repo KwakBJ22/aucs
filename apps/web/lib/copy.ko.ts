@@ -53,7 +53,7 @@ export const copy = {
       `${date} 낙찰 ${bid}${rate != null ? ` · 감정가의 ${Math.round(rate)}%` : ""}`,
     other: (date: string, text: string) => `${date} ${text}`,
     failedNext: "다음 기일은 아직 안 잡혔어요",
-    unknown: "결과를 아직 못 받았어요",
+    unknown: "매각 결과를 받는 중이에요",
     within: "옥스 예상 범위 안",
     outside: (lo: string, hi: string) => `옥스 예상 ${lo}~${hi} 밖`,
     sameComplex: "같은 단지 다른 물건 보기",
@@ -274,7 +274,7 @@ export const copy = {
           ? `다시 시작 · 유찰 ${round}`
           : "다시 시작"
         : `유찰 ${n}`,
-    unknown: (n: number) => `미확인 ${n}`,
+    unknown: (n: number) => `확인할 것 ${n}`,
     ofAppraisal: "감정가의",
     onbid: "공매",
     trust: "신탁공매",
@@ -629,13 +629,13 @@ export const copy = {
       worth: "예상 낙찰",
       check: "확인할 것",
       market: "최저가 · 시세 대비",
-      unknown: "미확인",
+      unknown: "직접 확인",
       fail: "실패 유형 걸림·확인 필요",
       field: "내 확인 체크",
       mine: "내 계산",
       step: "단계",
     },
-    unknown: "시세 모름",
+    unknown: "시세 자료 없음",
     none: "없음",
     checked: (n: number) => `${n}개 확인`,
     addMore: "관심에서 더 넣기",
@@ -1051,7 +1051,7 @@ export const copy = {
     loanWho: (who: string, pct: number | null) =>
       pct == null
         ? who === "unknown"
-          ? "용도(주택인지)가 확인되지 않아 대출 없이 계산했어요"
+          ? "대출 없이 계산했어요 — 주택이면 「바꾸기」로 대출을 넣어 주세요"
           : "상가·오피스텔·땅 대출은 은행마다 달라 대출 없이 계산했어요"
         : `대출은 ${({ none: "무주택", first_time: "생애최초", owner: "집 있음", owner_sell: "기존 집 처분 조건" } as Record<string, string>)[who] ?? who} 기준 ${pct}%로 계산했어요`,
     footCourt:
@@ -1460,7 +1460,7 @@ export const copy = {
       // 11/17: 주택인지 확인할 자료가 없는 물건(법원 용도 「기타」 · 대장 없음) — 세율을 짐작하지 않음
       taxLabel: "취득세 등",
       taxUnknown:
-        "용도 확인 안 됨 — 필요한 현금에서 빠졌어요 · 주택이면 1.1~3.5%(다주택은 중과), 그 밖이면 4.6%(농지 3.4%)",
+        "주택인지 직접 확인 — 필요한 현금에서 빠졌어요 · 주택이면 1.1~3.5%(다주택은 중과), 그 밖이면 4.6%(농지 3.4%)",
       reg: "등기·법무사(대략)",
       rent: {
         open: "세놓으면",
@@ -1655,7 +1655,7 @@ export const copy = {
       addrItem: "이 물건",
       addrStill: "그래도 이 등기부로 보기",
       addrUnknown: "주소를 못 읽었어요 · 이 물건 등기부가 맞는지 확인해 주세요",
-      payUnknown: (names: string) => `금액 모름: ${names} — 세금은 먼저 받아 갈 수 있어요`,
+      payUnknown: (names: string) => `금액은 등기부 원문 확인: ${names} — 세금은 먼저 받아 갈 수 있어요`,
       payNote: "근저당은 채권최고액으로 잡아 임차인 몫을 적게 본 대략 계산이에요",
       checkReading: "올린 등기부를 읽고 있어요",
       checkDoc: "내 등기부",
