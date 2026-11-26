@@ -120,6 +120,11 @@ def mask_text(text: str | None, hide: bool = True) -> str | None:
     return t
 
 
+# 명세서는 작성일이 있는 가장 최근 판으로(11/26 대표님 — 서울남부 2024타경128843: 유찰 뒤 받은 물건상세에 다음 회차
+# 명세서가 아직 없어 「대항력 있는 임차인 보증금 2억 3천 인수」가 화면에서 사라졌음, 진행 124건)
+SPEC_FIRST = "((payload->'dma_result'->'dspslGdsDxdyInfo'->>'gdsSpcfcWrtYmd') is not null) desc"
+
+
 def spec_sheet(p: dict[str, Any], hide: bool = False) -> dict[str, Any] | None:
     """물건상세의 명세서 묶음(dspslGdsDxdyInfo) → 작성일·최선순위·인수 권리·지상권·비고. 작성 전이면 None."""
     info = (p.get("dma_result") or {}).get("dspslGdsDxdyInfo") or {}
@@ -162,7 +167,9 @@ def item_spec(c: Any, case_id: str, item_no: int) -> tuple[dict[str, Any] | None
     """물건 하나의 명세서와 받은 시각."""
     row = c.execute(
         "select payload, fetched_at from raw.court_doc_raw where case_id = %s and doc_kind = %s"
-        " and jsonb_typeof(payload->'dma_result') = 'object' order by fetched_at desc limit 1",
+        " and jsonb_typeof(payload->'dma_result') = 'object'"
+        # 11/26: 다음 회차 명세서를 아직 안 쓴 판이 최신이면 앞 회차 명세서(인수 권리)를 버렸음 → 작성일 있는 판 먼저
+        f" order by {SPEC_FIRST}, fetched_at desc limit 1",
         (case_id, f"item_detail_{item_no}"),
     ).fetchone()
     return (spec_sheet(row["payload"]), row["fetched_at"]) if row else (None, None)
@@ -194,7 +201,8 @@ def item_docs(item_id: str) -> dict[str, Any] | None:
                 (
                     f"""select payload, fetched_at from raw.court_doc_raw where case_id = {case}
                    and doc_kind = 'item_detail_' || coalesce((select item_no from core.items
-                   where item_id = %(id)s), 1) and jsonb_typeof(payload->'dma_result') = 'object' order by fetched_at desc limit 1""",
+                   where item_id = %(id)s), 1) and jsonb_typeof(payload->'dma_result') = 'object'
+                   order by {SPEC_FIRST}, fetched_at desc limit 1""",
                     {"id": item_id},
                 ),
             ],

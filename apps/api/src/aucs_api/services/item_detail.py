@@ -410,10 +410,19 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
             )
             q_end = c.execute(f"select {_ENDED} as ended", (item_id,))
             q_spec = c.execute(
-                f"select payload, fetched_at from raw.court_doc_raw where case_id = {_CASE} "
+                # 명세서는 작성일이 있는 가장 최근 판(spec_payload) — 11/26 128843: 다음 회차 명세서 전 판이 최신이면
+                # 앞 회차의 인수 권리가 사라졌음. 기일 목록 · 요항은 그대로 가장 최근 판(payload)
+                f"select payload, fetched_at, (select s.payload from raw.court_doc_raw s where s.case_id = {_CASE}"
+                " and s.doc_kind = %s and s.payload->'dma_result'->'dspslGdsDxdyInfo'->>'gdsSpcfcWrtYmd' is not null"
+                " order by s.fetched_at desc limit 1) as spec_payload,"
+                " (select s.fetched_at from raw.court_doc_raw s where s.case_id = {_CASE}"
+                " and s.doc_kind = %s and s.payload->'dma_result'->'dspslGdsDxdyInfo'->>'gdsSpcfcWrtYmd' is not null"
+                " order by s.fetched_at desc limit 1) as spec_at"
+                f" from raw.court_doc_raw where case_id = {_CASE} "
                 "and doc_kind = %s and jsonb_typeof(payload->'dma_result') = 'object'"
                 " order by fetched_at desc limit 1",
-                (item_id, f"item_detail_{item_no}"),
+                (item_id, f"item_detail_{item_no}", item_id, f"item_detail_{item_no}",
+                 item_id, f"item_detail_{item_no}"),
             )
             q_apr = c.execute(
                 f"""select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw where case_id = {_CASE}
@@ -517,7 +526,9 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         stations = q_stn.fetchall()
         hubs = q_hubs.fetchall()
         zones = q_zones.fetchall()
-    spec, spec_at = (spec_sheet(sp["payload"], hide=ended), sp["fetched_at"]) if sp else (None, None)
+    spec, spec_at = (
+        (spec_sheet(sp["spec_payload"], hide=ended), sp["spec_at"]) if sp and sp.get("spec_payload") else (None, None)
+    )
     if spec_at:
         doc_times["spec_sheet"] = spec_at
     out = build_detail(

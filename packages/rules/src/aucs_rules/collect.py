@@ -73,7 +73,9 @@ def collect(x: CollectInput) -> RuleResult:
     ):
         tenants = a.get("tenant_count") or 0
         out["safe"] = {
-            "reason": "위험 신호 없음 · 임차인 없음" if tenants == 0 else "위험 신호 없음",
+            # 11/26: 폐문부재 · 점유 미상이면 「임차인 없음」이라 하지 않음(법원도 못 만났음)
+            "reason": "위험 신호 없음 · 점유는 현장 확인" if a.get("possession_unknown")
+            else ("위험 신호 없음 · 임차인 없음" if tenants == 0 else "위험 신호 없음"),
             "sort": (app - mn) / app,
         }
 

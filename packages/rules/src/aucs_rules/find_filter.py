@@ -25,7 +25,8 @@ COURT_VISIBLE = (
 PICK_ANALYSIS_SQL = (
     "jsonb_build_object('market', a.result -> 'market', 'sale_rate', a.result -> 'sale_rate',"
     " 'court_cell', a.result -> 'court_cell', 'redev', a.result -> 'redev', 'new_item', a.result -> 'new_item',"
-    " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals', 'appraisal', a.result -> 'appraisal')"
+    " 'tenant_count', a.result -> 'tenant_count', 'signals', a.result -> 'signals', 'appraisal', a.result -> 'appraisal',"
+    " 'possession_unknown', a.result -> 'possession_unknown')"
 )
 # 임대 목적: 같은 단지(전용 ±3㎡) 1년 월세 가운데값 — 물건 상세 「세놓으면」과 같은 자료. ANALYSIS_JOIN 앞에 둠
 RENT_JOIN = """left join lateral (

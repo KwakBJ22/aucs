@@ -182,7 +182,8 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     if (
         not flagged and not unknown and safety >= 20
     ):  # 「미확인」이 있으면 「위험 없음」이라 하지 않음(11/9)
-        reasons.append("위험 신호 없음")
+        # 11/26 대표님: 현황조사서가 폐문부재 · 점유관계 미상이면 「위험 신호 없음」만으로 두지 않음
+        reasons.append("위험 신호 없음 · 점유는 현장 확인" if a.get("possession_unknown") else "위험 신호 없음")
 
     # ── 목적에 맞는 집(20점 표를 비율로)
     kind = usage_kind(x.usage)

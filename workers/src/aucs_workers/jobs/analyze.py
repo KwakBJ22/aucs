@@ -89,6 +89,7 @@ class Pre:
     docs: dict[tuple[str, str], Any] = field(
         default_factory=dict
     )  # (사건, 서류 종류) → 가장 최근 원문
+    specs: dict[tuple[str, str], Any] = field(default_factory=dict)  # (사건, 물건상세) → 작성일 있는 가장 최근 명세서 칸
     trades: dict[tuple[str, str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
     # (법정동, 종류) → 최근 1년 매매(주변 비슷한 집, 11/24)
     near: dict[tuple[str, str], list[tuple[Any, ...]]] = field(default_factory=dict)
@@ -179,6 +180,8 @@ def preload(
         (cases,),
     ).fetchall():
         pre.docs[(r["case_id"], r["doc_kind"])] = r["payload"]
+    for r in cur.execute(SPEC_SQL.format(where="case_id = any(%s)"), (cases,)).fetchall():
+        pre.specs[(r["case_id"], r["doc_kind"])] = r["info"]
     mk = sorted({k for i in pre.items.values() if (k := _market_key(i))})
     if mk:
         for r in cur.execute(
@@ -397,6 +400,25 @@ def load_appraisal(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> di
         "firm": (by.get("appraisal_pdf") or {}).get("firm"),
         "points": (by.get("appraisal_pdf") or {}).get("points") or [],  # 원본 요항표(11/11)
     }
+
+
+POSS_UNKNOWN = re.compile(r"폐문|점유\s*관계\s*(는|은)?\s*(미상|알\s*수\s*없|불명)|점유\s*관계[^.]{0,20}(별도의?\s*확인|확인을\s*요)|만나지\s*못|만날\s*수\s*없")
+
+
+# 명세서는 작성일이 있는 가장 최근 판(11/26 대표님 — 서울남부 2024타경128843: 유찰 뒤 받은 물건상세에 다음 회차 명세서가
+# 아직 없으면 그 판이 최신이 돼 앞 회차의 「대항력 있는 임차인 보증금 2억 3천 인수」가 사라졌음, 진행 124건)
+SPEC_SQL = """select distinct on (case_id, doc_kind) case_id, doc_kind, payload->'dma_result'->'dspslGdsDxdyInfo' as info
+  from raw.court_doc_raw where {where} and left(doc_kind, 12) = 'item_detail_'
+   and payload->'dma_result'->'dspslGdsDxdyInfo'->>'gdsSpcfcWrtYmd' is not null
+  order by case_id, doc_kind, fetched_at desc"""
+
+
+def load_spec_info(cur: Any, item: dict[str, Any], pre: Pre | None = None) -> dict[str, Any]:
+    kind = f"item_detail_{item.get('item_no') or 1}"
+    if pre is not None:
+        return dict(pre.specs.get((item["case_id"], kind)) or {})
+    row = cur.execute(SPEC_SQL.format(where="case_id = %s and doc_kind = %s"), (item["case_id"], kind)).fetchone()
+    return dict((row or {}).get("info") or {})
 
 
 def load_spec(detail: dict[str, Any]) -> dict[str, Any] | None:
@@ -678,7 +700,7 @@ def analyze_item(
     if apr["price_date"]:  # 가격시점 — 감정가 저평가 · 오래된 감정 신호가 읽음
         facts.update(appraisal_date=apr["price_date"], as_of=today)
     # 매각물건명세서(물건상세에 들어 있음) → 위반건축·대지권·유치권·법정지상권·인수 권리, 비고는 특별조건 찾기에도
-    spec = load_spec(detail)
+    spec = load_spec(detail) or load_spec({"dspslGdsDxdyInfo": load_spec_info(cur, item, pre)})
     sf = spec_facts(spec)
     # 세금이 대항력 임차인보다 먼저일 수 있음(11/11): 말소기준(명세서 최선순위) · 임차인 · 세금 교부청구 문건
     tb = tax_before_tenant(
@@ -809,6 +831,8 @@ def analyze_item(
         "cash_need": cash_need,
         # 잔금 기간에 기준표(세율 · 대출 비율 · 규제지역)가 바뀌면 한 줄(11/25) — 금액이 달라질 때만
         "law_change": law_change,
+        # 현황조사서가 「폐문부재 · 점유관계 미상」(11/26 대표님 홈 추천 3건 — 「위험 신호 없음」 옆에 「점유는 현장 확인」)
+        "possession_unknown": bool(POSS_UNKNOWN.search(poss or "")),
         "rules_used": rules_used,
         "redev": redev,
         "plan_zone": plan_z,
