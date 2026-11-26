@@ -214,14 +214,21 @@ def run_nationwide() -> None:
 
 
 def docs_main() -> None:
-    """2번 PC: 서류 보관만(이 PC 하루 한도의 시간 몫 전부)."""
+    """2번 PC: 명세서 원본(입찰 7일 안) → 서류 보관."""
     heartbeat()
     if nationwide_due(datetime.now()):
         run_nationwide()
         return
-    print("── 서류 보관(2번 PC)", flush=True)
     # 11/26 대표님: 2번 PC 는 한도 · 시간 몫 없이 계속(polite.uncapped) — 다음 차례(매시 10분) 2분 전까지만
     end = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1, minutes=8)
+    # 11/26 밤 지시 1126a: 입찰 7일 안 매각물건명세서 원본 먼저 — 한 차례 최대 25분, 남는 시간은 서류 보관
+    print("── 명세서 원본(2번 PC)", flush=True)
+    spec_end = min(end, datetime.now() + timedelta(minutes=25))
+    env = dict(os.environ, AUCS_DEADLINE=str(spec_end.timestamp()))
+    code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_spec"], env=env)
+    if code != 0:
+        print(f"   명세서 원본 멈춤({code}) — 다음 차례에 이어서", flush=True)
+    print("── 서류 보관(2번 PC)", flush=True)
     env = dict(os.environ, AUCS_DEADLINE=str(end.timestamp()))
     cmd = [sys.executable, "-m", "aucs_workers.collectors.court_docs", "--archive"]
     code = subprocess.call(cmd, env=env)

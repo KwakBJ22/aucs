@@ -323,6 +323,15 @@ def save_tenants(conn: psycopg.Connection, case_id: str, sr: dict[str, Any]) -> 
                 for t in rows
             ],  # fmt: skip
         )
+    # 11/26: 명세서 원본(court_spec)을 받은 물건은 명세서 임차인 줄만 씀 — 같은 사람을 두 번 세지 않게
+    from aucs_workers.collectors.court_spec import drop_status_rows
+
+    for (item_id,) in conn.execute(
+        "select distinct i.item_id from core.items i join raw.court_doc_raw s on s.case_id = i.case_id"
+        " and s.doc_kind = 'spec_' || i.item_no where i.case_id = %s and (s.payload->>'pages')::int > 0",
+        (case_id,),
+    ).fetchall():
+        drop_status_rows(conn, case_id, item_id)
     return len(rows)
 
 
