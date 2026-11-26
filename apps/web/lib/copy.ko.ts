@@ -2212,6 +2212,7 @@ export const copy = {
       jobs: "작업·수집",
       review: "자료 검수",
       upload: "서류 올리기",
+      spec: "명세서 올리기",
       members: "회원",
       notices: "공지·알림",
       plans: "이용권·포인트",
@@ -2318,6 +2319,24 @@ export const copy = {
       registry: "등기부등본",
     },
     // 서류 받기(11/24 대표님): 사건번호로 찾아 감정평가서 · 등기부등본 받기
+    specGet: {
+      note: "매각기일이 지나 법원에서 더는 받을 수 없는 물건이에요 · 매각물건명세서 PDF(글자 PDF)를 올리면 바로 임차인 표로 읽어요",
+      ask: "사건번호(2025타경12345 · 25-12345 · 12345) · 비우면 명세서 없는 지난 물건",
+      go: "찾기",
+      none: "찾은 물건이 없어요",
+      total: (n: number) => `명세서 없는 지난 물건 ${n.toLocaleString("ko-KR")}건 · 최근 기일 순`,
+      item: (n: number | null) => (n ? `물건 ${n}` : ""),
+      court: "법원 원본 있음",
+      upload: "올린 명세서 있음",
+      pick: "PDF 올리기",
+      again: "다시 올리기",
+      busy: "읽는 중…",
+      saved: (n: number, none?: boolean) =>
+        none ? "읽었어요 · 임차 내역 없음" : `읽었어요 · 임차인 ${n}줄`,
+      noTable: "읽었는데 임차인 표를 못 찾았어요 · 명세서 PDF가 맞는지 확인해 주세요",
+      noText: "글자가 없는 PDF(그림)예요 · 글자 PDF만 읽어요",
+      more: "더 보기",
+    },
     docsGet: {
       ask: "사건번호(2025타경12345 · 25-12345 · 12345)",
       go: "찾기",

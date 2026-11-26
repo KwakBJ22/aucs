@@ -6,12 +6,20 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel, Field
 
 from aucs_api.auth.admin import Admin, admin_login, require_admin, require_role
 from aucs_api.db import connect
-from aucs_api.services import admin, admin_money, admin_notify, admin_ops, billing, points
+from aucs_api.services import (
+    admin,
+    admin_money,
+    admin_notify,
+    admin_ops,
+    admin_spec,
+    billing,
+    points,
+)
 
 router = APIRouter(prefix="/admin")
 Any_ = Annotated[Admin, Depends(require_admin)]
@@ -315,6 +323,30 @@ def get_appraisal_targets(
 
 
 # 3-3 서류 올리기(11/18 대표님): 사건번호로 물건을 찾아 손님 화면과 같은 칸으로 감정평가서 · 등기부를 올림(포인트 없음)
+@router.get("/spec-items")
+def get_spec_items(
+    _: Any_, q: str = Query(default="", max_length=30), offset: int = Query(default=0, ge=0)
+) -> dict[str, Any]:
+    """명세서 올리기(11/27): 지난 물건 중 명세서 원본 없는 것 · 사건번호 찾기."""
+    return admin_spec.spec_items(q, offset)
+
+
+@router.post("/spec-items/{item_id}")
+async def post_spec(
+    item_id: str, _: Op,
+    file: Annotated[UploadFile, File()],
+) -> dict[str, Any]:  # fmt: skip
+    data = await file.read()
+    if len(data) > admin_spec.MAX_BYTES:
+        raise HTTPException(413, "10MB보다 큰 파일은 올릴 수 없어요")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(415, "PDF 파일만 올릴 수 있어요")
+    try:
+        return admin_spec.save_spec(item_id, data, file.filename or "spec.pdf")
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from e
+
+
 @router.get("/case-items")
 def get_case_items(_: Any_, q: str = Query(default="", max_length=30)) -> list[dict[str, Any]]:
     return admin_ops.case_items(q)

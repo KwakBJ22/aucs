@@ -5,6 +5,7 @@ import { AdminGate } from "@/components/admin/gate";
 import { AdminProvider } from "@/components/admin/ctx";
 import { AppraisalGet } from "@/components/admin/appraisal-get";
 import { DocsGet } from "@/components/admin/docs-get";
+import { SpecGet } from "@/components/admin/spec-get";
 import { BroadcastView } from "@/components/admin/broadcasts";
 import { JobsView } from "@/components/admin/jobs";
 import { MembersView } from "@/components/admin/members";
@@ -25,6 +26,7 @@ const MENUS = [
   "jobs",
   "review",
   "upload",
+  "spec",
   "members",
   "notices",
   "plans",
@@ -83,6 +85,8 @@ export default function AdminPage() {
                   <AppraisalGet />
                 </>
               )}
+              {/* 명세서 올리기(11/27 대표님): 법원에서 더는 못 받는 지난 물건의 매각물건명세서 PDF */}
+              {m === "spec" && <SpecGet />}
               {m === "members" && <MembersView />}
               {m === "notices" && (
                 <>

@@ -6,4 +6,5 @@ httpx>=0.28
 python-multipart>=0.0.9
 cryptography>=44
 pypdf>=5.0
+pypdfium2>=4.30  # 관리자 「명세서 올리기」 PDF 글자 자리 읽기(11/27)
 pywebpush>=2.0

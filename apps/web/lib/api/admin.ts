@@ -436,7 +436,47 @@ export type CaseItem = {
   has_appraisal: boolean;
 };
 
+// 명세서 올리기(11/27): 지난 물건 중 매각물건명세서 원본이 없는 것
+export type SpecItem = {
+  item_id: string;
+  court: string;
+  case_no: string;
+  item_no: number | null;
+  address: string | null;
+  usage: string | null;
+  sale_date: string | null;
+  spec: "court" | "upload" | null;
+  spec_rows: number;
+};
+export type SpecSaved = { ok: boolean; why?: string; rows: number; none?: boolean; pages?: number };
+
+async function uploadSpec(token: string, itemId: string, file: File): Promise<SpecSaved> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${apiBaseUrl}/admin/spec-items/${encodeURIComponent(itemId)}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      detail = ((await res.json()) as { detail?: string }).detail ?? detail;
+    } catch {
+      /* 내용 없음 */
+    }
+    throw new AdminError(res.status, detail);
+  }
+  return (await res.json()) as SpecSaved;
+}
+
 export const adminApi = {
+  specItems: (t: string, q: string, offset = 0) =>
+    call<{ rows: SpecItem[]; total: number }>(
+      t,
+      `/spec-items?q=${encodeURIComponent(q)}&offset=${offset}`,
+    ),
+  uploadSpec,
   pointReviews: (t: string) => call<PointReview[]>(t, "/points/review"),
   decidePoint: (t: string, id: number, ok: boolean) =>
     call(t, `/points/review/${id}`, "PUT", { ok }),
