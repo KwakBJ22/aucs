@@ -34,6 +34,13 @@ FETCH_TRIES, FETCH_WAIT_SEC = 3, 60.0
 # 11/23 대표님: 한 시간에 모든 수집기 합이 이보다 많으면 다음 시간까지 기다림 — 막히지 않은 11/22 의 가장 많은 시간(07시)
 # 매시 작업은 원래 시간 몫(하루 한도 ÷ 18)이 있으므로 이것은 아침 묶음 · 전국 보관처럼 몫 없이 도는 것에 걸림
 HOUR_MAX_ALL = 861
+# 11/26 대표님: 2번 PC(AUCS_ROLE=docs)는 하루 한도 · 시간 몫에 닿아도 멈추지 않음 — 언제 막히는지 재 보려고.
+#   요청 간격(2.5초 + 흔들림 · 사건 사이 6초)은 그대로. 막히면 지금처럼 멈추고 차단 기록 줄에 그날 센 수를 남김.
+#   한 차례가 다음 차례(매시 10분)를 넘지 않게 AUCS_DEADLINE(epoch 초)까지만 돎 — court_hourly.docs_main.
+def uncapped() -> bool:
+    return (os.environ.get("AUCS_ROLE") or "").strip().lower() == "docs"
+
+
 SITE_DAY_MAX = {"court": 2500}  # 시작 한도(하루 요청 수, 모든 수집기 합) — 사건 하나에 6~7번
 CAP_MIN, CAP_MAX = 800, 20000
 # 11/18 대표님: 무사한 날 7일 → 3일마다 20% 올림(막힘은 요청 속도 탓이었음 — 간격은 그대로)
@@ -220,10 +227,11 @@ class Polite:
             self._sleep(wait)
             f, b = self._load()
         cap = int(b["cap"])
-        if b["count"] >= cap:
+        free = uncapped()
+        if b["count"] >= cap and not free:
             raise DailyLimitReached(f"{self.site} 하루 전체 한도 {cap}번")
         hh = f"{now_kst():%H}"
-        while not self.hourly and b["hours"].get(hh, 0) >= HOUR_MAX_ALL:
+        while not self.hourly and not free and b["hours"].get(hh, 0) >= HOUR_MAX_ALL:
             n = now_kst()
             left = 3600 - n.minute * 60 - n.second + 5
             print(
@@ -233,7 +241,7 @@ class Polite:
             self._sleep(left)
             f, b = self._load()
             hh = f"{now_kst():%H}"
-        if self.hourly and b["hours"].get(hh, 0) >= hour_share(cap):
+        if self.hourly and not free and b["hours"].get(hh, 0) >= hour_share(cap):
             raise DailyLimitReached(
                 f"{self.site} 이번 시간 몫 {hour_share(cap)}번 — 다음 시간에 이어서"
             )
@@ -244,14 +252,15 @@ class Polite:
         b["last_ts"] = time.time()
         _save(f, b)
 
-    def _shrink(self) -> None:
-        """막힘 → 한도 20% 내리고 무사한 날 0부터(11/20 40% → 20%)."""
+    def _shrink(self) -> int:
+        """막힘 → 한도 20% 내리고 무사한 날 0부터(11/20 40% → 20%). 그날 센 수를 돌려줌."""
         if not SITE_DAY_MAX.get(self.site or ""):
-            return
+            return 0
         f, b = self._load()
         b.update(cap=max(CAP_MIN, int(int(b["cap"]) * SHRINK)), ok_days=0, blocked=True,
                  blocks=int(b.get("blocks") or 0) + 1)  # fmt: skip
         _save(f, b)
+        return int(b.get("count") or 0)
 
     def _run(self, fn: Callable[[], dict[str, Any]], what: str) -> dict[str, Any]:
         for n in range(1, FETCH_TRIES + 1):
@@ -276,6 +285,9 @@ class Polite:
             self.step_max is not None and self.count >= self.step_max
         ):  # 매시 작업이 단계마다 나눠 준 몫
             raise DailyLimitReached(f"이 단계 몫 {self.step_max}번 — 다음 단계로")
+        dl = os.environ.get("AUCS_DEADLINE")
+        if dl and time.time() >= float(dl):  # 2번 PC: 다음 차례 전에 끝냄
+            raise DailyLimitReached("이번 차례 시간 끝 — 다음 차례에 이어서")
         res: dict[str, Any] = {}
         for attempt in range(RETRIES):
             gap = self.gap + self._j(1.0) - (time.monotonic() - self._last)
@@ -291,10 +303,10 @@ class Polite:
                 break
             self._sleep(3.0 * (attempt + 1))
         if self.site:
-            self._shrink()
+            day_count = self._shrink()
             LOGS.mkdir(exist_ok=True)
             bf = _block_file(self.site)
-            line = f"{now_kst():%Y-%m-%d %H:%M} {what}\n"
+            line = f"{now_kst():%Y-%m-%d %H:%M} {what} (그날 {day_count}번째에 막힘)\n"
             if bf.exists() and read_until(bf.read_text(encoding="utf-8")) is not None:
                 # 오래 막힘 중의 확인도 막힘 → 하루 뒤에 다시 한 번만
                 nxt = now_kst() + timedelta(hours=DAILY_CHECK_HOURS)

@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from aucs_workers.collectors.polite import SITE_DAY_MAX, Polite, hour_share
@@ -219,7 +219,9 @@ def docs_main() -> None:
         run_nationwide()
         return
     print("── 서류 보관(2번 PC)", flush=True)
-    env = dict(os.environ, AUCS_STEP_REQ=str(hour_share(_cap())))
+    # 11/26 대표님: 2번 PC 는 한도 · 시간 몫 없이 계속(polite.uncapped) — 다음 차례(매시 10분) 2분 전까지만
+    end = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1, minutes=8)
+    env = dict(os.environ, AUCS_DEADLINE=str(end.timestamp()))
     cmd = [sys.executable, "-m", "aucs_workers.collectors.court_docs", "--archive"]
     code = subprocess.call(cmd, env=env)
     if code != 0:
