@@ -27,6 +27,8 @@ def test_nationwide_once_a_day_from_14(tmp_path, monkeypatch) -> None:  # type: 
     from datetime import datetime
 
     monkeypatch.setattr(m, "NATIONWIDE_DONE", tmp_path / "done")
+    assert not m.nationwide_due(datetime(2026, 11, 23, 14, 10))  # 11/26 밤부터 멈춤
+    monkeypatch.setattr(m, "NATIONWIDE_ON", True)
     assert not m.nationwide_due(datetime(2026, 11, 23, 13, 10))
     assert m.nationwide_due(datetime(2026, 11, 23, 14, 10))
     (tmp_path / "done").write_text("2026-11-23", encoding="utf-8")

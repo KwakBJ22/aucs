@@ -143,8 +143,13 @@ NATIONWIDE_FROM = 14
 NATIONWIDE_DONE = LOCK.parent / "court_nationwide.done"
 
 
+# 11/26 밤 대표님: 전국 보관을 멈춤 — 법원에 막힌 세 번(11/23 · 11/26 2번 PC 14:10 · 1번 PC 19:34)이 모두 전국 보관 중이었음.
+#   다시 할 때는 하루 몇십 쪽씩 아주 천천히 따로 시험한 뒤 켬.
+NATIONWIDE_ON = False
+
+
 def nationwide_due(now: datetime) -> bool:
-    if now.hour < NATIONWIDE_FROM:
+    if not NATIONWIDE_ON or now.hour < NATIONWIDE_FROM:
         return False
     try:
         return NATIONWIDE_DONE.read_text(encoding="utf-8").strip() != now.date().isoformat()
