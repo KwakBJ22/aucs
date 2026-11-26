@@ -14,9 +14,9 @@ OK_STATUS = ("extracted", "verified", "fetched")
 DOC_ITEMS = [
     ("status_report", "임차인", "누가 살고 있는지 · 전입일 · 보증금", "법원에 올라오면 받아 정리해 드려요(매각기일 3주 전쯤)"),
     ("spec_sheet", "떠안는 권리", "매각물건명세서의 인수 권리 · 비고란 조건", "명세서는 매각기일 1주 전까지 공개돼요(민사집행규칙 제55조)"),
-    ("deliveries", "사건 문건", "배당요구 · 권리신고 · 정지 신청", "법원 문건이 올라오면 정리해 드려요"),
+    ("deliveries", "사건 문건", "배당요구 · 권리신고 · 정지 신청", None),
     ("registry", "등기부", "말소기준 · 근저당 · 가압류", "「무엇을 떠안나」에서 등기부 PDF를 올리면 읽어 드려요"),
-    ("building", "건축물대장", "위반건축물 · 실제 용도", "건축물대장이 들어오면 정리해 드려요"),
+    ("building", "건축물대장", "위반건축물 · 실제 용도", None),
 ]  # fmt: skip
 DOC_NAME = {
     "status_report": "현황조사서",
@@ -37,12 +37,23 @@ def _ts(v: Any) -> str | None:
     return str(v) if v else None
 
 
+POSTED_DAYS = {"status_report": 21, "spec_sheet": 7}
+
+
+def _not_posted(kind: str, days_left: int | None) -> bool:
+    """법원이 아직 그 서류를 올리지 않았을 때만 참(문건 · 대장은 늘 올라와 있음)."""
+    d = POSTED_DAYS.get(kind)
+    return d is not None and days_left is not None and days_left > d
+
+
 def build_checklist(
     data_status: dict[str, str],
     doc_times: dict[str, Any],
     signals: list[dict[str, Any]],
+    days_left: int | None = None,
 ) -> list[dict[str, Any]]:
-    """자료 상태 + 신호 → 체크리스트. 끝나지 않은 것이 앞에 옵니다."""
+    """자료 상태 + 신호 → 체크리스트. 끝나지 않은 것이 앞에 옵니다.
+    11/27 대표님: 법원에 올라왔는데 우리가 못 받은 서류는 「올라오면 …」 안내를 내지 않음(현황조사서 3주 · 명세서 1주 전 공개)."""
     conflict = any(s.get("rule_id") == "risk.conflict" for s in signals)
     out: list[dict[str, Any]] = []
     for kind, label, what, hint in DOC_ITEMS:
@@ -52,7 +63,7 @@ def build_checklist(
             state = CONFLICT
         out.append({
             "key": kind, "label": label, "what": what, "state": state,
-            "hint": None if ok else hint,
+            "hint": None if ok or not _not_posted(kind, days_left) else hint,
             "evidence": {"doc": DOC_NAME[kind], "fetched_at": _ts(doc_times.get(kind))} if ok else None,
         })  # fmt: skip
     for s in signals:

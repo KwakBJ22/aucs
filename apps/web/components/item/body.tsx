@@ -219,7 +219,9 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           .join(" · ") + (b.tenants.length > 1 ? ` ${P.more(b.tenants.length - 1)}` : "")
       : b.status_report
         ? t.tenantsNoneSeen
-        : t.tenantsNone;
+        : b.status_pending
+          ? t.tenantsNone
+          : "";
     const ft = d.failure_table ?? [];
     const fc: Record<string, number> = {};
     ft.forEach((r) => (fc[r.state] = (fc[r.state] ?? 0) + 1));
@@ -229,7 +231,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
         {/* 위험 신호를 맨 위 한 판에(PC 11/22 · 휴대폰 11/23 디자인) */}
         {signalBox}
         <Panel id="tenant" title={P.tenant} sum={tenantSum}>
-          {b.tenants.length === 0 && (
+          {b.tenants.length === 0 && (b.status_report || b.status_pending) && (
             <p className="sub">{b.status_report ? t.tenantsNoneSeen : t.tenantsNone}</p>
           )}
           <Tenants list={b.tenants} />

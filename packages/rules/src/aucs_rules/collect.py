@@ -62,7 +62,7 @@ def collect(x: CollectInput) -> RuleResult:
             out["rising"] = {"reason": f"감정가보다 지금 시세가 {pct}% 높아요", "sort": pct}
 
     risky = [s for s in live if s.get("level") in ("fatal", "high", "mid")]
-    unknown = any(s.get("status") == "모름" for s in signals)
+    unknown = any(s.get("status") == "모름" for s in signals) or bool(a.get("tenants_missing"))  # 11/27
     if (
         not risky
         and not unknown

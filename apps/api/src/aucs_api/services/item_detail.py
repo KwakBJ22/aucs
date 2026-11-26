@@ -110,7 +110,8 @@ def build_detail(
     flags = ["farmland"] if any(s.get("rule_id") == "risk.farmland" for s in signals) else []
     sched = after_sale(r["sale_date"] or today, holidays or [], flags=flags).value
     types = sorted({s["ftype"] for s in warn if s.get("ftype")})
-    checklist = build_checklist(ds, doc_times or {}, signals)
+    days_left = (r["sale_date"] - today).days if r["sale_date"] else None
+    checklist = build_checklist(ds, doc_times or {}, signals, days_left)
     gap = appraisal_gap(r, signals, stxt)
     if gap and gap[0] in ("note", "none"):  # 지분·특별조건은 이미 위험 신호로 올라가 있음
         checklist = sorted(
@@ -145,7 +146,9 @@ def build_detail(
            "building": building_lines(r.get("building"))}),
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals,
-           "status_report": ds.get("status_report") in ("extracted", "verified")}),
+           "status_report": ds.get("status_report") in ("extracted", "verified"),
+           # 11/27: 법원이 아직 안 올렸을 때만 「올라오면 보여 드려요」(3주 안인데 없으면 우리가 못 받은 것 — 글 안 냄)
+           "status_pending": bool(r["sale_date"] and (r["sale_date"] - today).days > 21)}),
         q("worth", "얼마짜리인가", rate_ans, "gray" if not rate else "blue",
           {"appraisal_krw": app, "rate": rate, "notes": rate_notes, "market": r.get("market"),
            "near_market": r.get("near_market"),

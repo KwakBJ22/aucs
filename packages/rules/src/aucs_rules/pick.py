@@ -180,7 +180,8 @@ def pick_score(x: PickInput, purpose: str | None = None) -> RuleResult:
     if (a.get("tenant_count") or 0) > 0:
         safety -= 3
     r_safety = max(0.0, safety) / 25
-    unknown = any(s.get("status") == "모름" for s in signals)
+    # 11/27: 법원에 올라왔는데 현황조사서를 못 받은 물건은 「위험 신호 없음」이라 하지 않음
+    unknown = any(s.get("status") == "모름" for s in signals) or bool(a.get("tenants_missing"))
     if (
         not flagged and not unknown and safety >= 20
     ):  # 「미확인」이 있으면 「위험 없음」이라 하지 않음(11/9)
