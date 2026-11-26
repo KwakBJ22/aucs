@@ -182,7 +182,9 @@ def preload(
     mk = sorted({k for i in pre.items.values() if (k := _market_key(i))})
     if mk:
         for r in cur.execute(
-            """select region_code, prop_type, lot_no, deal_date, price_krw, area_m2, floor, build_year
+            """select region_code, case when prop_type = 'commercial' then 'commercial:' || coalesce(sub_type, '')
+                                   else prop_type end as prop_type,
+                      lot_no, deal_date, price_krw, area_m2, floor, build_year
                from core.trades
                where (region_code, lot_no) in (select * from unnest(%s::text[], %s::text[]))
                  and deal_kind = 'sale' and deal_date >= %s and price_krw > 0""",
@@ -260,7 +262,9 @@ def trade_type(usage: str | None, building_desc: str | None) -> str | None:
 
 # 같은 지번인데 다른 종류로 신고된 거래(11/21 대표님 「작업해」): 대장은 아파트인데 실거래는 연립다세대로
 # (또는 그 반대) 신고된 작은 건물 — 같은 건물이라 그 종류 거래가 없을 때만 씀. 진행 물건 중 아파트 33 · 빌라 91건.
-OTHER_KIND = {"apt": "rowhouse", "rowhouse": "apt"}
+# 11/26 대표님(화양동 한림타워 2025타경476): 업무시설로 지은 오피스텔은 국토부에 「상업업무용 · 업무」로 신고됨 →
+# 같은 지번 오피스텔 거래가 없을 때만 그 거래로(같은 넓이 ±3㎡ 는 market_price 가 거름). 진행 3건.
+OTHER_KIND = {"apt": "rowhouse", "rowhouse": "apt", "officetel": "commercial:업무"}
 
 
 def load_market(
@@ -277,11 +281,12 @@ def load_market(
     def get(k: str) -> list[Any]:
         if pre is not None:
             return pre.trades.get((region, k, item["lot_no"]), [])
+        prop, sub = (k.split(":", 1) + [None])[:2]
         return conn.execute(
             """select deal_date, price_krw, area_m2, floor, build_year from core.trades
                where region_code = %s and prop_type = %s and deal_kind = 'sale' and lot_no = %s
-                 and deal_date >= %s and price_krw > 0""",
-            (region, k, item["lot_no"], today - timedelta(days=730)),
+                 and deal_date >= %s and price_krw > 0 and (%s::text is null or sub_type = %s)""",
+            (region, prop, item["lot_no"], today - timedelta(days=730), sub, sub),
         ).fetchall()
 
     rows, other = get(kind), None

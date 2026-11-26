@@ -78,7 +78,11 @@ def prior_rights_title(texts: list[str]) -> str:
     kinds = [k for k in PRIOR_KINDS if k in t]
     if kinds == ["임차권"]:  # 11/17 — 명세서 글이 「배당에서 전액 변제되지 아니하면 잔액을 매수인이 인수」
         return "선순위 임차권 — 배당에서 다 못 받은 보증금은 낙찰자가 떠안아요"
-    return f"선순위 {'·'.join(kinds)} 인수" if kinds else "매각으로 안 지워지는 권리 인수"
+    title = f"선순위 {'·'.join(kinds)} 인수" if kinds else "매각으로 안 지워지는 권리 인수"
+    # 11/26 대표님(한림타워 2025타경476): 지상권은 누가 · 어디까지 갖느냐(지하철 구분지상권 등)로 부담이 크게 다름
+    if "지상권" in kinds:
+        title += " — 지상권자 · 범위는 등기부를 봐야 정확히 알 수 있어요"
+    return title
 
 
 def signals(f: dict[str, Any]) -> list[Signal]:
