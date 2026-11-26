@@ -247,6 +247,44 @@ def _spec_pledge_kind(text: str) -> str:
     return "확약서"
 
 
+# 법원 물건상세 기일 목록(gdsDspslDxdyLst)의 결과 코드 — 11/26 같은 날 기일내역 글과 맞대어 확인
+# (매각 001 · 최고가매각허가결정 003 · 최고가매각불허가결정 005 · 최고가매각허가취소결정 017 · 대금지급기한 미납 010)
+_AFTER_SALE = {("02", "005"): "매각불허가", ("02", "017"): "매각허가 취소", ("03", "010"): "대금 미납"}
+
+
+def past_sales(payload: dict[str, Any], rounds: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """회차 표(rounds)에 없는 지난 매각과, 매각 뒤 불허가 · 허가취소 · 미납을 법원 기일 목록 그대로 붙임(순수 함수).
+    매각 금액 · 까닭은 목록에 없으면 적지 않음(지어내지 않음)."""
+    lst = ((payload or {}).get("dma_result") or {}).get("gdsDspslDxdyLst") or []
+
+    def day(e: dict[str, Any]) -> str | None:
+        y = str(e.get("dxdyYmd") or "")
+        return f"{y[:4]}-{y[4:6]}-{y[6:]}" if len(y) == 8 else None
+
+    rows = sorted((e for e in lst if day(e)), key=lambda e: str(e.get("dxdyYmd")))
+    have = {x["sale_date"]: x for x in rounds}
+    out = list(rounds)
+    for i, e in enumerate(rows):
+        if (e.get("auctnDxdyKndCd"), e.get("auctnDxdyRsltCd")) != ("01", "001"):
+            continue
+        after = None
+        for f in rows[i + 1 :]:
+            if f.get("auctnDxdyKndCd") == "01":
+                break  # 다음 매각기일까지만
+            label = _AFTER_SALE.get((f.get("auctnDxdyKndCd"), f.get("auctnDxdyRsltCd")))
+            if label:
+                d = day(f) or ""
+                after = f"{int(d[5:7])}/{int(d[8:10])} {label}"
+        d = day(e) or ""
+        if d in have:
+            if after and not have[d].get("note"):
+                have[d]["note"] = after
+            continue
+        out.append({"sale_date": d, "min_price_krw": e.get("tsLwsDspslPrc"), "result": "매각", "note": after,
+                    "note_doc": None})  # fmt: skip
+    return sorted(out, key=lambda x: x["sale_date"])
+
+
 def restart_note(x: dict[str, Any], spec_txt: str = "") -> str | None:
     """최저가가 앞 회차보다 올라간 회차의 까닭(11/24 대표님 — 57221 10/19). 법원 문건 → 매각물건명세서 순.
     명세서는 가장 최근 것 하나뿐이라, 날짜가 그 회차 사이에 들 때만 그 회차 까닭으로 이음. 지어내지 않음."""
@@ -495,6 +533,8 @@ def detail(item_id: str, today: date) -> dict[str, Any] | None:
         sale,
     )
     out["next_round"]["fail_odds"] = odds_for(r, today)
+    if sp:  # 우리 자료 전(9/30 전)의 매각 · 불허가 · 미납도 회차 표에(11/26 대표님 — 대치 2023타경113343)
+        out["rounds"] = past_sales(sp["payload"], out["rounds"])
     cx = build_complex(trades, peers, c_area(r), today)
     for q in out["questions"]:
         if q["key"] == "worth":
