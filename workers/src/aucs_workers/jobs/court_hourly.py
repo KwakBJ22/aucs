@@ -170,7 +170,8 @@ def official_due(now: datetime) -> bool:
 # 11/26 대표님: PC 두 대(다른 인터넷)로 나눠 받기 — .env 의 AUCS_ROLE 로 맡을 일을 나눔. 하루 법원 한도는 PC 마다 따로(logs/court_budget.json).
 #   main(1번 PC): 아침 묶음 · 매시(관심 · 입찰 임박 · 새 사건 · 사진 · 다음 회차 · 첫 바퀴 · 분석) · 공시가격 · 관리자 요청
 #   docs(2번 PC): 매시 서류 보관(현황조사서 · 문건송달)만 몫 전부로 + 14시 뒤 전국 보관. 분석은 1번 PC 가 다음 차례에
-#   2번 PC 가 90분 넘게 소식이 없으면(꺼짐) 1번 PC 가 서류 보관 · 전국 보관을 예전처럼 대신 함.
+#   11/26 저녁 대표님: 2번 PC 가 꺼져도 1번 PC 는 대신하지 않음(각자 따로) — 19:34 1번 PC 가 대신 돌다 막혔음.
+#   서류 보관 · 전국 보관은 2번 PC 몫: 꺼져 있는 동안은 쉬고, 켜지면 멈춘 곳부터. docs_pc 기록은 살아 있는지 보는 용도로만.
 DOCS_ALIVE_MIN = 90
 
 
@@ -241,19 +242,14 @@ def main() -> None:
         if role() == "docs":
             docs_main()
             return
-        docs_alive = docs_pc_alive()
-        if docs_alive:
-            print("2번 PC 가 서류 보관 · 전국 보관을 맡음", flush=True)
-        elif nationwide_due(datetime.now()):
-            run_nationwide()
-            return
+        print("서류 보관 · 전국 보관은 2번 PC 몫 — 건너뜀", flush=True)
         share = hour_share(_cap())
         # 11/18: 새 사건이 없으면 그 몫(40)을 첫 바퀴로 → 첫 바퀴도 끝났으면 둘 다 서류 보관(현황조사서)으로(11/12)
         new_spare = 0 if _new_left() else 25
         soon_spare = 0 if _soon_left() else 25
         details_left = _details_left()
         for name, mod, pct in STEPS:
-            if name == "서류 보관" and docs_alive:
+            if name == "서류 보관":
                 continue
             if name == "새 사건 물건상세" and new_spare:
                 continue
