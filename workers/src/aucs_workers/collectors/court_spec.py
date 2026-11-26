@@ -9,7 +9,7 @@
 원본(낱말과 자리)은 raw.court_doc_raw doc_kind='spec_<물건번호>' 에 · 임차인 줄은 core.tenants(source='spec')에 —
 명세서를 받은 물건은 현황조사서 임차인 줄을 지움(같은 사람을 두 번 세지 않게. 명세서가 법원이 정리한 최종 표).
 
-    uv run python -m aucs_workers.collectors.court_spec            # 입찰 7일 안 차례대로(시간 몫은 매시 작업이 줌)
+    uv run python -m aucs_workers.collectors.court_spec            # 지난 60일 ~ 입찰 7일 안, 오래된 것부터(시간 몫은 매시 작업이 줌)
     uv run python -m aucs_workers.collectors.court_spec --case B000210 2026타경121 1
 """
 
@@ -39,6 +39,8 @@ from aucs_workers.extract.spec import parse_tenants, words_from_texts
 from aucs_workers.jobs.runlog import run
 
 SPEC_DAYS = 7  # 입찰 이만큼 안(법원 1주 전 공개)
+# 11/27: 입찰이 지난 물건도 명세서가 열려 있음(10/19 입찰 물건 확인) — 없어지기 전에 가장 오래된 것부터 받음
+SPEC_BACK_DAYS = 60
 SPEC_MAX = 300  # 한 번에 꺼낼 물건 수 — 실제 양은 시간 몫이 정함
 VIEW_WAIT_MS = 25000  # 뷰어가 쪽 글을 다 줄 때까지 최대
 
@@ -74,7 +76,7 @@ limit %(n)s"""
 def targets(conn: psycopg.Connection, today: date) -> list[dict[str, Any]]:
     rows = conn.execute(
         TARGETS_SQL,
-        {"from": today + timedelta(days=1), "to": today + timedelta(days=SPEC_DAYS),
+        {"from": today - timedelta(days=SPEC_BACK_DAYS), "to": today + timedelta(days=SPEC_DAYS),
          "usages": list(ARCHIVE_USAGES), "n": SPEC_MAX},
     ).fetchall()  # fmt: skip
     cols = ["item_id", "case_id", "court", "case_no", "item_no", "cs_no", "ecdoc"]
