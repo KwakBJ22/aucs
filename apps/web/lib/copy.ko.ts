@@ -1665,7 +1665,7 @@ export const copy = {
       summaryMine: (line: string) => `${line} · 내 등기부 기준`,
     },
     // 11/17: 받았는데 없는 것과 아직 못 받은 것을 나눔(예전엔 한 문장이라 「인수」 신호와 어긋나 보였음)
-    tenantsNone: "현황조사서를 아직 못 받았어요",
+    tenantsNone: "현황조사서가 법원에 올라오면 보여 드려요",
     tenantsNoneSeen: "현황조사서에 올라온 임차인이 없어요",
     tenantsCount: (n: number) => `임차인 ${n}명`,
     tenantsMore: (n: number) => `${n}명 더 보기`,

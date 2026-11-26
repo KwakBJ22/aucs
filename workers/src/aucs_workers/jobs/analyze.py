@@ -31,7 +31,6 @@ from aucs_rules.calc import CASH_TABLE_KEYS, area_class, cash_at_min, usage_for_
 from aucs_rules.costs import commercial_over_limit
 from aucs_rules.land_value import HouseTrade, land_value
 from aucs_rules.nearby import JIMOK, land_trade_price, nearby_stores
-from aucs_rules.pick import overvalued
 from aucs_rules.price import Trade, is_under, market_price, nearby_price, trade_region
 from aucs_rules.progress import judge_progress
 from aucs_rules.risk import is_land_or_house, signals, top_signal
@@ -787,10 +786,6 @@ def analyze_item(
     eff_failed = effective_failed(
         item["failed_count"], item["appraisal_krw"], item["min_price_krw"], item.get("price_round")
     )
-    # 11/26 대표님: 많이 유찰 · 감정가의 30% 아래 — 명세서 확인을 앞에(risk.deep_discount)
-    if overvalued(item["appraisal_krw"], item["min_price_krw"], eff_failed, {}):
-        facts["deep_discount"] = {"failed": eff_failed, "appraisal_krw": item["appraisal_krw"],
-                                  "min_price_krw": item["min_price_krw"]}  # fmt: skip
     sig = signals(facts)
     rates = rate_range(
         sales, as_of=today, sido=item["sido"], sigungu=item["sigungu"], usage_name=item["usage_name"],

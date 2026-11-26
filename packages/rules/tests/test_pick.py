@@ -104,13 +104,3 @@ def test_absurd_rent_yield_is_ignored() -> None:
     assert (
         v["parts"]["yield"] == pick_score(_x(), "rent").value["parts"]["yield"]
     )  # 모를 때와 같은 점수
-
-
-def test_deep_discount_signal() -> None:
-    """11/26: 많이 유찰 · 높은 위험 없음 -> 명세서 확인 안내(「모름」 글 아님)."""
-    from aucs_rules.risk import signals
-
-    r = signals({"deep_discount": {"failed": 18}})
-    sig = r.value if hasattr(r, "value") else r
-    s = [x for x in sig if x.rule_id == "risk.deep_discount"]
-    assert s and s[0].level == "mid" and "모름" not in s[0].title
