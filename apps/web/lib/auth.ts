@@ -2,13 +2,21 @@
 
 import { createClient, type Session } from "@supabase/supabase-js";
 import { createContext, createElement, useContext, useEffect, useState } from "react";
-import { clearMeCache, setApiToken } from "@/lib/api/client";
+import { clearMeCache, setApiToken, setTokenSource } from "@/lib/api/client";
 
 // 로그인은 Supabase Auth (카카오 · 이메일 링크, 11/8 카카오 열림). 공개 키만 씁니다.
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 export const supabase = url && key ? createClient(url, key) : null;
 if (!supabase) setApiToken(null); // 로그인 설정이 없으면 상세 요청이 기다리지 않게
+// 11/26: 요청마다 세션에서 출입증을 꺼냄(끝났으면 새로 받음) · 401 이면 한 번 새로 받음 — client.ts authFetch
+if (supabase) {
+  const sb = supabase;
+  setTokenSource(
+    async () => (await sb.auth.getSession()).data.session?.access_token ?? null,
+    async () => (await sb.auth.refreshSession()).data.session?.access_token ?? null,
+  );
+}
 
 type SessionState = { session: Session | null; ready: boolean };
 const Ctx = createContext<SessionState | null>(null);

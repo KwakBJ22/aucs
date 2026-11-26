@@ -126,6 +126,47 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+// 11/26 대표님 「휴대폰 로그인이 자꾸 끊김」: 휴대폰이 잠들었다 깨면 1시간짜리 출입증이 끝난 채 남아
+// 상세가 「로그인 필요」로 막히고 다시 로그인하게 됐음(서버는 끊지 않음). → 부르기 직전에 세션에서 출입증을
+// 다시 꺼내고(끝났으면 Supabase 가 새로 받아 줌), 그래도 401 이면 한 번 새로 받아 다시 부름. auth.ts 가 넣어 줌.
+let freshToken: (() => Promise<string | null>) | null = null;
+let renewToken: (() => Promise<string | null>) | null = null;
+let renewing: Promise<string | null> | null = null;
+export function setTokenSource(
+  fresh: () => Promise<string | null>,
+  renew: () => Promise<string | null>,
+): void {
+  freshToken = fresh;
+  renewToken = renew;
+}
+
+/** 로그인 요청 하나 — 새 출입증으로 보내고, 401 이면 한 번 새로 받아 다시. */
+export async function authFetch(token: string, url: string, init?: RequestInit): Promise<Response> {
+  const t0 = (freshToken && (await freshToken().catch(() => null))) || token;
+  const go = (t: string) =>
+    fetch(url, {
+      cache: "no-store",
+      ...init,
+      headers: {
+        ...((init?.headers as Record<string, string>) ?? {}),
+        Authorization: `Bearer ${t}`,
+      },
+    });
+  const res = await go(t0);
+  if (res.status !== 401 || !renewToken) return res;
+  renewing ??= renewToken()
+    .catch(() => null)
+    .finally(() => (renewing = null));
+  const t1 = await renewing;
+  return t1 && t1 !== t0 ? go(t1) : res;
+}
+
+async function authJson<T>(token: string, url: string): Promise<T> {
+  const res = await authFetch(token, url);
+  if (!res.ok) throw new ApiError(res.status);
+  return (await res.json()) as T;
+}
+
 /** 공개 자료(GET). ttl: 기억하는 시간(기본 1분, 지역 목록처럼 잘 안 바뀌는 것은 길게). */
 export function getJson<T>(path: string, ttl = PUB_TTL): Promise<T> {
   return remembered(pub, path, ttl, () => fetchJson<T>(`${apiBaseUrl}${path}`));
@@ -134,7 +175,7 @@ export function getJson<T>(path: string, ttl = PUB_TTL): Promise<T> {
 /** 로그인한 사람의 자료(GET). 토큰마다 따로 기억. */
 export function getMine<T>(token: string, path: string): Promise<T> {
   return remembered(mine, `me:${account(token)} ${path}`, ME_TTL, () =>
-    fetchJson<T>(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } }),
+    authJson<T>(token, `${apiBaseUrl}${path}`),
   );
 }
 
@@ -154,7 +195,7 @@ export async function getGated<T>(path: string): Promise<T> {
   const t = apiToken;
   if (!t) throw new ApiError(401);
   return remembered(mine, `me:${account(t)} ${path}`, PUB_TTL, () =>
-    fetchJson<T>(`${apiBaseUrl}${path}`, { headers: { Authorization: `Bearer ${t}` } }),
+    authJson<T>(t, `${apiBaseUrl}${path}`),
   );
 }
 
@@ -162,10 +203,7 @@ export async function getGated<T>(path: string): Promise<T> {
 export async function downloadGated(path: string, name: string): Promise<void> {
   await tokenReady;
   if (!apiToken) throw new ApiError(401);
-  const res = await fetch(`${apiBaseUrl}${path}`, {
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${apiToken}` },
-  });
+  const res = await authFetch(apiToken, `${apiBaseUrl}${path}`);
   if (!res.ok) throw new ApiError(res.status);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(await res.blob());

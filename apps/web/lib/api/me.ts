@@ -1,4 +1,4 @@
-import { ApiError, apiBaseUrl, clearMeCache, getMine } from "./client";
+import { ApiError, apiBaseUrl, authFetch, clearMeCache, getMine } from "./client";
 import type { ServerProfile } from "@/lib/profile";
 import type { Calc, ItemCard, ItemDetail, OnbidDetail, Schedule } from "./items";
 
@@ -144,7 +144,11 @@ export type PointSummary = {
   hold_minutes: number | null;
   history: { delta: number; reason: string; created_at: string; expires_at: string | null }[];
   charge: { open: boolean; krw: number[]; expire_years: number };
-  earn?: { academy_stage?: number | null; academy_stage_mid?: number | null; report?: number | null };
+  earn?: {
+    academy_stage?: number | null;
+    academy_stage_mid?: number | null;
+    report?: number | null;
+  };
 };
 export type PointResult = { ok?: boolean; points: number; why: string; found?: string[] };
 // 로그인한 사람의 자료. 토큰은 Supabase 세션에서.
@@ -158,13 +162,9 @@ async function call<T>(
   const method = init?.method ?? "GET";
   if (method === "GET" && !init?.fresh) return getMine<T>(token, `/me${path}`);
   try {
-    const res = await fetch(`${apiBaseUrl}/me${path}`, {
+    const res = await authFetch(token, `${apiBaseUrl}/me${path}`, {
       ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      },
-      cache: "no-store",
+      headers: init?.body ? { "Content-Type": "application/json" } : {},
     });
     if (!res.ok) throw new ApiError(res.status);
     return (await res.json()) as T;
