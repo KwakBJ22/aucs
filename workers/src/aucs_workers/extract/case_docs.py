@@ -18,6 +18,17 @@ def _d(v: Any) -> date | None:
         return None
 
 
+def _ymd(m: "re.Match[str] | None") -> date | None:
+    """정규식 년 · 월 · 일 → 날짜. 법원 서류에 없는 날(2월 30일 등)이 있으면 None.
+    11/26: 「day is out of range for month」로 서류 보관 한 차례가 통째로 멈췄음 → 그 칸만 비우고 넘어감."""
+    if not m:
+        return None
+    try:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+
+
 def case_basics(info: dict[str, Any]) -> dict[str, Any]:
     """사건내역 → 경매계·배당요구종기."""
     base = info.get("dma_csBasInf") or {}
@@ -144,7 +155,9 @@ def next_sales(schedule: dict[str, Any], today: date) -> dict[int, dict[str, Any
         price = parse_krw(r.get("tsLwsDspslPrc"))
         if not m or r.get("dxdyRslt") or not price:
             continue
-        d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        d = _ymd(m)
+        if d is None:
+            continue
         if d >= today and (seq not in out or d < out[seq]["date"]):
             out[seq] = {"date": d, "min_price_krw": price}
     for seq, x in out.items():
@@ -163,7 +176,9 @@ def past_failed_rounds(schedule: dict[str, Any]) -> list[dict[str, Any]]:
         if not m:
             continue
         seq = int(r.get("dspslGdsSeq") or 1)
-        d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        d = _ymd(m)
+        if d is None:
+            continue
         rows[(seq, d)] = {"seq": seq, "date": d, "min_price_krw": parse_krw(r.get("tsLwsDspslPrc")),
                           "place": r.get("dxdyPlcNm")}  # fmt: skip
     out = sorted(rows.values(), key=lambda x: (x["seq"], x["date"]))
@@ -248,7 +263,7 @@ def parse_krw(text: Any) -> int | None:
 def parse_dot_date(text: Any) -> date | None:
     """「2025.05.15.」「2025.05.15.(전입세대확인서)」 → 날짜. 「미전입」「미상」 → None."""
     m = re.match(r"(\d{4})\.(\d{1,2})\.(\d{1,2})", str(text or ""))
-    return date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+    return _ymd(m)
 
 
 def tenants_from_status_report(sr: dict[str, Any]) -> list[dict[str, Any]]:
