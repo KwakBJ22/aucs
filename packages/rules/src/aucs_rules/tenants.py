@@ -53,6 +53,38 @@ def power_tenants(tenants: list[Tenant], base_date: date | None) -> dict[str, An
     }
 
 
+GUARANTOR = re.compile(r"보증공사|보증보험|주택금융공사|도시보증|서울보증|에스지아이|SGI|HUG", re.I)
+
+
+def merge_guarantor(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """보증기관(주택도시보증공사 등)이 임차인 보증금을 넘겨받아 법원 표에 두 줄로 나온 것을 한 사람으로(11/27).
+
+    원래 임차인 줄과 보증금이 같고 전입일이 같거나 한쪽이 비었으면 묶음 — 배당요구 · 확정일자 · 임차권등기는
+    둘 중 있는 쪽으로. 묶지 않으면 보증금을 두 번 더하고, 원래 임차인 줄에 배당요구가 없어 「떠안음」으로 셈."""
+    guar = [r for r in rows if GUARANTOR.search(r.get("name_raw") or "")]
+    if not guar:
+        return rows
+    rest = [r for r in rows if r not in guar]
+    out = [dict(r) for r in rest]
+    for g in guar:
+        twin = next(
+            (o for o in out
+             if o.get("deposit_krw") and o.get("deposit_krw") == g.get("deposit_krw")
+             and (o.get("move_in_date") is None or g.get("move_in_date") is None
+                  or o.get("move_in_date") == g.get("move_in_date"))),
+            None,
+        )  # fmt: skip
+        if twin is None:
+            out.append(dict(g))
+            continue
+        for k in ("move_in_date", "fixed_date", "claim_date", "monthly_rent_krw"):
+            if twin.get(k) is None and g.get(k) is not None:
+                twin[k] = g[k]
+        if g.get("has_lease_registration"):
+            twin["has_lease_registration"] = True
+    return out
+
+
 def priority_date(t: Tenant) -> RuleResult:
     """우선변제 순위일 = 대항력 발생일(전입 다음 날)과 확정일자 중 늦은 날 (제3조의2 제2항).
 

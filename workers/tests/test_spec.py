@@ -48,3 +48,13 @@ def test_no_tenants_and_words() -> None:
     ws = words_from_texts(pages)
     assert [w[4] for w in ws] == ["조사된", "임차내역없음"]
     assert parse_tenants(ws) == {"none": True, "rows": []}
+
+
+def test_date_split_over_lines() -> None:
+    # 성남 2025타경52870: 확정일자 「(1)2022.08.1」 / 「0.」 두 줄 → 2022-08-10(08-01 로 읽었음, 11/27)
+    from aucs_workers.extract.spec import DATE, _join_dates
+
+    t = _join_dates(["(1)2022.08.1", "0.", "(2)2022.11.0", "1."])
+    assert DATE.findall(t) == ["2022.08.10", "2022.11.01"]
+    assert _join_dates(["2025.", "6.5."]) == "2025.6.5."
+    assert _join_dates(["미상"]) == "미상"

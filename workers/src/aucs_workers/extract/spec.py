@@ -117,6 +117,17 @@ def _join(parts: list[str]) -> str:
     return out
 
 
+def _join_dates(parts: list[str]) -> str:
+    """날짜 칸 조각 잇기 — 줄이 바뀌며 「2022.08.1 / 0.」처럼 나뉜 날짜를 붙임(11/27 성남 2025타경52870: 08-10 을 08-01 로 읽었음)."""
+    out = ""
+    for s in parts:
+        if out and s[:1].isdigit() and (out[-1].isdigit() or out[-1] == "."):
+            out += s
+        else:
+            out += (" " if out else "") + s
+    return out
+
+
 def table_words(ws: list[Word]) -> tuple[list[Word], bool]:
     """임차인 표 칸 안 낱말만(머리 아래 ~ 「<비고>」 위, 쪽을 넘으면 이어서). (낱말, 「조사된 임차내역없음」)"""
     out: list[Word] = []
@@ -196,9 +207,9 @@ def parse_tenants(ws: list[Word]) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for r in recs:
         name = _join(r.get("name", []))
-        dates_in = DATE.findall(" ".join(r.get("move_in", [])))
-        dates_fx = DATE.findall(" ".join(r.get("fixed", [])))
-        claim_t = " ".join(r.get("claim", []))
+        dates_in = DATE.findall(_join_dates(r.get("move_in", [])))
+        dates_fx = DATE.findall(_join_dates(r.get("fixed", [])))
+        claim_t = _join_dates(r.get("claim", []))
         row = {
             "name": name or None,
             "part": " ".join(r.get("part", [])) or None,

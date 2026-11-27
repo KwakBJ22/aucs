@@ -50,6 +50,7 @@ from aucs_rules.tenants import (
     Tenant,
     base_date_of,
     base_dates_of,
+    merge_guarantor,
     power_tenants,
     tax_before_tenant,
     tenant_doubts,
@@ -160,7 +161,7 @@ def preload(
     ).fetchall():
         pre.events.setdefault(r.pop("case_id"), []).append(r)
     for r in cur.execute(
-        "select case_id, item_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration"
+        "select case_id, item_id, name_raw, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration"
         " from core.tenants where case_id = any(%s)",
         (cases,),
     ).fetchall():
@@ -663,7 +664,7 @@ def analyze_item(
             (item["case_id"],),
         ).fetchall()
         tenants = cur.execute(
-            "select item_id, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
+            "select item_id, name_raw, move_in_date, fixed_date, claim_date, deposit_krw, monthly_rent_krw, has_lease_registration from core.tenants where case_id = %s",
             (item["case_id"],),
         ).fetchall()
         sr = cur.execute(
@@ -674,10 +675,11 @@ def analyze_item(
         has_sr, poss = sr is not None, (sr or {}).get("poss") or ""
     # 그 호 임차인만(호를 모르는 줄은 사건 전체로 — 11/24 수원 2025타경57005)
     case_tenants = bool(tenants)
+    tenants = [t for t in tenants if t.get("item_id") in (None, item["item_id"])]
+    # 보증기관이 넘겨받은 보증금은 원래 임차인과 한 사람(11/27 — 두 번 더하고 「배당요구 없음」으로 셈, 진행 67건)
     tenants = [
-        {k: v for k, v in t.items() if k != "item_id"}
-        for t in tenants
-        if t.get("item_id") in (None, item["item_id"])
+        {k: v for k, v in t.items() if k not in ("item_id", "name_raw")}
+        for t in merge_guarantor(tenants)
     ]
     detail = load_detail(cur, item, pre)
     # 감정평가 요항(11/4 사용 허락): 화면 요점 + 맹지·좁은 길·개발제한·교육환경·토지거래허가·과밀억제 사실
