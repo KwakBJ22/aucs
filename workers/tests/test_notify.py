@@ -82,3 +82,13 @@ def test_mock_text():
     assert t[0] == "강남구 A 3,000만원 모자랐어요"
     assert mock_text("강남구 A", None, "skip", "failed", None) is None
     assert "낙찰됐을" in mock_text("강남구 A", 300_000_000, "bid", "failed", None)[1]
+
+
+def test_upcoming_text() -> None:
+    from datetime import date
+
+    from aucs_workers.jobs.notify import upcoming_text
+
+    t, b = upcoming_text("2026타경101761", " 관악구 신림큐브 ", date(2027, 3, 4), 310_000_000)
+    assert t == "2026타경101761 매각공고됐어요"
+    assert b.startswith("관악구 신림큐브 · 첫 매각기일 03월 04일 · 감정가 3억 1,000만원")

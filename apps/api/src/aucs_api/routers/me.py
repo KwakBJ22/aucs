@@ -263,6 +263,33 @@ def delete_watch(item_id: str, uid: Uid) -> dict[str, bool]:
     return {"ok": True}
 
 
+@router.get("/upcoming/ids")
+def get_upcoming_ids(uid: Uid) -> list[str]:
+    """담아 둔 공고 전 사건(「법원코드:사건번호」, 11/27)."""
+    from aucs_api.services import upcoming
+
+    return upcoming.watch_ids(uid)
+
+
+@router.put("/upcoming/{court}/{case_no}")
+def put_upcoming(court: str, case_no: str, uid: Uid) -> dict[str, bool]:
+    from aucs_api.services import upcoming
+
+    try:
+        upcoming.watch_set(uid, court, case_no, True)
+    except ValueError as e:
+        raise HTTPException(404, "없는 법원이에요") from e
+    return {"ok": True}
+
+
+@router.delete("/upcoming/{court}/{case_no}")
+def delete_upcoming(court: str, case_no: str, uid: Uid) -> dict[str, bool]:
+    from aucs_api.services import upcoming
+
+    upcoming.watch_set(uid, court, case_no, False)
+    return {"ok": True}
+
+
 @router.get("/searches")
 def get_searches(uid: Uid) -> list[dict[str, Any]]:
     return me.searches(uid)

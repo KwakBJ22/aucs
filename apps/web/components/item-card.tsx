@@ -33,7 +33,7 @@ function OnbidLine({ c }: { c: Card }) {
 
 // 카드 왼쪽(11/9 대표님 — 회색 네모에 글자만 있어 사진이 덜 뜬 것 같았음):
 // 법원 사진이 있으면 사진, 없으면 종류마다 색 · 아이콘. 종류 판정은 API 규칙(usage_kind) 한 곳.
-const KIND: Record<string, { label: string; d: string }> = {
+export const KIND: Record<string, { label: string; d: string }> = {
   apt: {
     label: "아파트",
     d: "M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M15 10h3a1 1 0 0 1 1 1v10M3 21h18M8 8h1M11 8h1M8 12h1M11 12h1M8 16h1M11 16h1",

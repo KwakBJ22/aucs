@@ -1,5 +1,9 @@
 // 화면 문구는 이 파일 한 곳에 모읍니다.
-export type CollectionKey = "cheap" | "safe" | "rising" | "next" | "station" | "special";
+// 「2027-04」 → 「2027년 4월」
+const ym = (s: string) => `${s.slice(0, 4)}년 ${Number(s.slice(5, 7))}월`;
+
+export type CollectionKey =
+  "cheap" | "safe" | "rising" | "next" | "station" | "special" | "upcoming";
 
 export const copy = {
   appName: "옥스경매", // 화면 안 로고·머리 이름(11/4 「옥스」→「옥스경매」)
@@ -261,7 +265,21 @@ export const copy = {
         "특수 권리 물건",
         "떠안는 권리가 있어 경험자에게 맞는 물건 · 무엇이 문제인지 함께",
       ],
+      [
+        "upcoming",
+        "곧 나올 물건",
+        "경매가 시작돼 곧 매각 날짜가 잡힐 사건 · 하트를 누르면 공고될 때 알려 드려요",
+      ],
     ] as [CollectionKey, string, string][],
+  },
+  // 곧 나올 물건 카드(11/27): 감정가 · 최저가는 매각공고 때 법원이 처음 내므로, 아는 것(언제쯤 · 같은 단지 시세)만
+  upcoming: {
+    ordered: (d: string) => `개시 ${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`,
+    expect: (from: string, to: string) =>
+      from === to ? `첫 매각 보통 ${ym(from)}쯤` : `첫 매각 보통 ${ym(from)} ~ ${ym(to)}쯤`,
+    late: "보통보다 늦어지고 있어요 · 곧 나올 수 있어요",
+    market: "같은 단지 최근 1년 매매",
+    more: "더 보기",
   },
   card: {
     cashNoTax: "용도 확인 필요 · 가진 현금 비교에 취득세가 빠졌어요",

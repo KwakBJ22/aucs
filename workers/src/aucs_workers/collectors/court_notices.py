@@ -84,11 +84,13 @@ def parse_notice(court: str, dept: str, r: dict[str, Any]) -> dict[str, Any] | N
         "building_name": _txt(r.get("bldNm")),
         "building_detail": _txt(r.get("bldDtlDts")),
         "item_count": int(cnt) if cnt else None,
+        "list_kind": _txt(r.get("auctnLstDvsCd")),
     }
 
 
 _COLS = ["court_code", "case_no", "dept_code", "ordered_date", "claim_deadline", "notice_date", "sido",
-         "sigungu", "dong", "lot_no", "road_address", "building_name", "building_detail", "item_count"]  # fmt: skip
+         "sigungu", "dong", "lot_no", "road_address", "building_name", "building_detail", "item_count",
+         "list_kind"]  # fmt: skip
 _UPSERT = (
     f"insert into core.upcoming_cases ({', '.join(_COLS)}) values ({', '.join('%(' + c + ')s' for c in _COLS)}) "
     "on conflict (court_code, case_no) do update set "
@@ -97,9 +99,17 @@ _UPSERT = (
 )
 
 
+# 부동산(01 토지 · 02 건물 · 03 집합건물)만 지역 코드 — 물건과 같은 함수, 같은 단지 실거래를 붙이는 열쇠(이주 0088)
+REAL_ESTATE = ("01", "02", "03")
+_REGION = """update core.upcoming_cases
+   set region_code = ref.region_code_for(null, concat_ws(' ', sido, sigungu, split_part(dong, ' ', 1)))
+ where region_code is null and list_kind = any(%s)"""
+
+
 def save(conn: psycopg.Connection, rows: list[dict[str, Any]]) -> int:
     with conn.cursor() as cur:
         cur.executemany(_UPSERT, rows)
+        cur.execute(_REGION, (list(REAL_ESTATE),))
     return len(rows)
 
 

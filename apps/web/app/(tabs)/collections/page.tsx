@@ -6,10 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CollectionIcon } from "@/components/collection-icon";
 import { ItemCard } from "@/components/item-card";
+import { UpcomingCard } from "@/components/upcoming-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { LoadError } from "@/components/load-error";
 import { Delayed, SkRows } from "@/components/skeleton";
-import { fetchCollections, type Collections } from "@/lib/api/items";
+import { fetchCollections, fetchUpcoming, type Collections, type Upcoming } from "@/lib/api/items";
+import { meApi } from "@/lib/api/me";
+import { useSession } from "@/lib/auth";
 import { copy, type CollectionKey } from "@/lib/copy.ko";
 import { loadProfile, type Profile } from "@/lib/profile";
 
@@ -30,6 +33,17 @@ function CollectionsView() {
   const fresh = useFresh(); // 지난번 자료를 먼저 그리고, 새 자료가 오면 다시 그림
   const [failed, setFailed] = useState(false);
   const [tries, setTries] = useState(0);
+  // 곧 나올 물건(11/27): 물건이 아니라 공고 전 사건 — 따로 받음(건수는 칩에, 목록은 그 모음을 고를 때)
+  const up = key === "upcoming";
+  const [upData, setUpData] = useState<{
+    all: boolean;
+    total: number;
+    page: number;
+    rows: Upcoming[];
+  } | null>(null);
+  const [upIds, setUpIds] = useState<Set<string>>(new Set());
+  const { session } = useSession();
+  const token = session?.access_token ?? null;
 
   useEffect(() => {
     setProfile(loadProfile());
@@ -44,17 +58,57 @@ function CollectionsView() {
   useEffect(() => {
     if (!ready) return;
     setFailed(false);
-    fetchCollections({ ...opts, key, limit: 60 })
+    // 곧 나올 물건을 볼 때는 물건 모음은 건수만(1건)
+    fetchCollections({ ...opts, key: up ? "cheap" : key, limit: up ? 1 : 60 })
       .then((d) => setData({ key, all: !mine, d }))
+      .catch(() => setFailed(true));
+    fetchUpcoming({ sigungu: mine ? (profile?.regions ?? []) : [] })
+      .then((u) => setUpData({ all: !mine, total: u.total, page: 1, rows: u.items }))
       .catch(() => setFailed(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, mine, key, tries, fresh]);
+
+  useEffect(() => {
+    if (!up || !token) return;
+    meApi
+      .upcomingIds(token)
+      .then((xs) => setUpIds(new Set(xs)))
+      .catch(() => {});
+  }, [up, token]);
+
+  const upMore = () => {
+    if (!upData) return;
+    const page = upData.page + 1;
+    fetchUpcoming({ sigungu: mine ? (profile?.regions ?? []) : [], page })
+      .then((u) => setUpData({ ...upData, page, rows: [...upData.rows, ...u.items] }))
+      .catch(() => setFailed(true));
+  };
+  const upToggle = (k: string) => {
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+    const on = !upIds.has(k);
+    setUpIds((s) => {
+      const n = new Set(s);
+      if (on) n.add(k);
+      else n.delete(k);
+      return n;
+    });
+    void meApi.setUpcoming(token, k, on);
+  };
   const sum = data && data.all === !mine ? data.d : null;
+  const upNow = upData && upData.all === !mine ? upData : null;
+  const total = (k: string) => (k === "upcoming" ? (upNow?.total ?? 0) : (sum?.[k]?.total ?? 0));
 
   const go = (k: string, scope: boolean) =>
     router.replace(`/collections?key=${k}${scope ? "&scope=all" : ""}`, { scroll: false });
   const cur = t.list.find(([k]) => k === key);
-  const rows = data && data.key === key && data.all === !mine ? (data.d[key]?.items ?? []) : null;
+  const rows = up
+    ? null
+    : data && data.key === key && data.all === !mine
+      ? (data.d[key]?.items ?? [])
+      : null;
 
   return (
     <main className="page">
@@ -78,7 +132,7 @@ function CollectionsView() {
 
       <div className="col-chips quiet-scroll" role="tablist">
         {t.list
-          .filter(([k]) => k === key || !sum || (sum[k]?.total ?? 0) > 0) // 빈 모음 칩은 숨김(11/7)
+          .filter(([k]) => k === key || !sum || total(k) > 0) // 빈 모음 칩은 숨김(11/7)
           .map(([k, name]) => (
             <button
               key={k}
@@ -89,7 +143,7 @@ function CollectionsView() {
             >
               <CollectionIcon k={k} />
               <b>{name}</b>
-              <span className="num">{sum ? t.count(sum[k]?.total ?? 0) : "·"}</span>
+              <span className="num">{sum ? t.count(total(k)) : "·"}</span>
             </button>
           ))}
       </div>
@@ -98,15 +152,27 @@ function CollectionsView() {
       <section className="section">
         <h2>{cur?.[1]}</h2>
         <p className="sub mt-0">{cur?.[2]}</p>
-        {rows === null && !failed && (
+        {(up ? upNow === null : rows === null) && !failed && (
           <Delayed>
             <SkRows n={6} />
           </Delayed>
         )}
-        {rows?.length === 0 && <p className="sub">{t.empty}</p>}
+        {(up ? upNow?.rows.length === 0 : rows?.length === 0) && <p className="sub">{t.empty}</p>}
         <div className="col-list">
-          {rows?.map((c) => <ItemCard key={c.item_id} c={c} why={c.why} />)}
+          {rows?.map((c) => (
+            <ItemCard key={c.item_id} c={c} why={c.why} />
+          ))}
+          {up &&
+            upNow?.rows.map((u) => {
+              const k = `${u.court_code}:${u.case_no}`;
+              return <UpcomingCard key={k} u={u} on={upIds.has(k)} onToggle={() => upToggle(k)} />;
+            })}
         </div>
+        {up && upNow && upNow.rows.length < upNow.total && (
+          <button className="btn soft w-full mt-12" onClick={upMore}>
+            {copy.upcoming.more}
+          </button>
+        )}
       </section>
     </main>
   );

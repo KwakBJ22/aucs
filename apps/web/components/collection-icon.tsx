@@ -16,6 +16,8 @@ const PATHS: Record<CollectionKey, string> = {
     "M7 3h10a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V5a2 2 0 0 1 2-2Z M5 10h14 M8.5 13.5h.01 M15.5 13.5h.01 M8 17l-2 4 M16 17l2 4",
   // 느낌표 세모: 특수 권리
   special: "M12 4 2.8 19.5h18.4L12 4Z M12 10v4.5 M12 17h.01",
+  // 달력 + 점: 곧 나올 물건(공고 전)
+  upcoming: "M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z M4 10h16 M8 3v4 M16 3v4 M12 15h.01",
 };
 
 export function CollectionIcon({ k }: { k: CollectionKey }) {

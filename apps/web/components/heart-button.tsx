@@ -3,17 +3,24 @@
 import { useWatch } from "./watch-context";
 import { copy } from "@/lib/copy.ko";
 
+// 하트 모양 한 곳(11/27 — 물건 관심과 공고 전 사건 관심이 같이 씀)
 // inline: 글자 줄 옆(상세 머리 「작업 공간」 곁)에서는 가운데 맞춤 — 카드 귀퉁이에서는 위·오른쪽(11/11)
-export function HeartButton({ id, inline = false }: { id: string; inline?: boolean }) {
-  const { ids, toggle } = useWatch();
-  const on = ids.has(id);
+export function HeartToggle({
+  on,
+  onToggle,
+  inline = false,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  inline?: boolean;
+}) {
   return (
     <button
       aria-label={on ? copy.watch.remove : copy.watch.add}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        void toggle(id);
+        onToggle();
       }}
       className={`icon-btn d-flex p-4 ${inline ? "ai-center jc-center" : "ai-start jc-end"}`}
     >
@@ -30,4 +37,9 @@ export function HeartButton({ id, inline = false }: { id: string; inline?: boole
       </svg>
     </button>
   );
+}
+
+export function HeartButton({ id, inline = false }: { id: string; inline?: boolean }) {
+  const { ids, toggle } = useWatch();
+  return <HeartToggle on={ids.has(id)} onToggle={() => void toggle(id)} inline={inline} />;
 }

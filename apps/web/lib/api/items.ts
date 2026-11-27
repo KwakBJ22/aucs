@@ -214,6 +214,27 @@ export function fetchCollections(opts: {
   return getJson<Collections>(`/collections?${q.toString()}`);
 }
 
+// 곧 나올 물건(예정물건, 11/27): 매각공고 전 사건 · 첫 매각이 올 만한 달 · 같은 단지 최근 1년 매매(면적별)
+export type Upcoming = {
+  court_code: string;
+  court: string;
+  case_no: string;
+  kind: string;
+  address: string;
+  building: string | null;
+  ordered_date: string | null;
+  claim_deadline: string | null;
+  expect: { from: string; to: string; late: boolean; court_wide: boolean } | null;
+  market: { area: number; mid: number; n: number }[];
+};
+export type UpcomingPage = { total: number; page: number; size: number; items: Upcoming[] };
+export function fetchUpcoming(opts: { sigungu?: string[]; page?: number }) {
+  const q = new URLSearchParams();
+  (opts.sigungu ?? []).forEach((s) => q.append("sigungu", s));
+  if (opts.page && opts.page > 1) q.set("page", String(opts.page));
+  return getJson<UpcomingPage>(`/upcoming?${q.toString()}`);
+}
+
 // 게시 중인 공지(공개) — 고객센터(11/7)
 export type PublicNotice = { notice_id: number; title: string; body: string; start_at: string };
 export const fetchNotices = () => getJson<PublicNotice[]>("/notices");

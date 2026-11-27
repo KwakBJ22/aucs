@@ -114,6 +114,17 @@ def get_collections(
     )
 
 
+@router.get("/upcoming")
+def get_upcoming(
+    sigungu: Annotated[list[str] | None, Query()] = None,
+    page: Annotated[int, Query(ge=1, le=200)] = 1,
+) -> dict[str, Any]:
+    """곧 나올 물건(예정물건, 11/27): 매각공고 전 사건 · 언제쯤 · 같은 단지 시세."""
+    from aucs_api.services.upcoming import upcoming
+
+    return upcoming(sigungu=sigungu or [], page=page, today=date.today())
+
+
 @router.get("/notices")
 def get_notices() -> list[dict[str, Any]]:
     """게시 중인 공지(공개) — 고객센터 화면(11/7)."""

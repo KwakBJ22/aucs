@@ -315,6 +315,14 @@ export const meApi = {
     }),
   removeWatch: (t: string, id: string) =>
     call(t, `/watch/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  /** 담아 둔 공고 전 사건 「법원코드:사건번호」(11/27). */
+  upcomingIds: (t: string) => call<string[]>(t, "/upcoming/ids"),
+  setUpcoming: (t: string, key: string, on: boolean) => {
+    const [court, caseNo] = key.split(":");
+    return call(t, `/upcoming/${court}/${encodeURIComponent(caseNo ?? "")}`, {
+      method: on ? "PUT" : "DELETE",
+    });
+  },
   searches: (t: string) => call<SavedSearch[]>(t, "/searches"),
   addSearch: (t: string, name: string, filters: Record<string, unknown>) =>
     call<SavedSearch>(t, "/searches", {

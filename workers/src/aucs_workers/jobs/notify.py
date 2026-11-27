@@ -303,6 +303,51 @@ def make_watch_alerts(conn: psycopg.Connection) -> int:
     return n
 
 
+# 공고 전 사건(11/27): 담아 둔 예정물건이 매각공고(물건 목록)에 들어오면 한 통 + 그 물건들을 관심에 넣음.
+#   관심에 넣은 물건은 다음부터 make_watch_alerts 가 기일 · 최저가 · 결과를 알림(처음 값은 기준으로만).
+UPCOMING_SQL = """select w.user_id, w.court_code, w.case_no, i.item_id, i.sale_date, i.appraisal_krw,
+       coalesce(i.gu, i.sigungu, '') || ' ' || coalesce(i.building_desc, i.usage_name, '') as place
+  from app.upcoming_watches w
+  join core.cases c on c.court_code = w.court_code and c.case_no = w.case_no
+  join core.items i on i.case_id = c.case_id
+ where w.notified_at is null
+ order by w.user_id, w.court_code, w.case_no, i.item_no"""
+
+
+def upcoming_text(
+    case_no: str, place: str, sale_date: Any, appraisal: int | None
+) -> tuple[str, str]:
+    """(순수 함수) 공고 전 사건이 매각공고됐을 때 알림 글."""
+    when = f"첫 매각기일 {sale_date:%m월 %d일}" if sale_date else "매각기일은 곧 나와요"
+    worth = f" · 감정가 {won(appraisal)}" if appraisal else ""
+    return f"{case_no} 매각공고됐어요", f"{place.strip()} · {when}{worth} · 관심 물건에 넣었어요"
+
+
+def make_upcoming_alerts(conn: psycopg.Connection) -> int:
+    n, done = 0, set()
+    for uid, court, case_no, item_id, sale_date, appraisal, place in conn.execute(
+        UPCOMING_SQL
+    ).fetchall():
+        conn.execute(
+            "insert into app.watch_items (user_id, item_id) values (%s, %s) on conflict do nothing",
+            (uid, item_id),
+        )
+        if (uid, court, case_no) in done:
+            continue
+        done.add((uid, court, case_no))
+        eid = _event(conn, uid, item_id, "upcoming_listed", None, case_no)
+        if eid:
+            title, body = upcoming_text(case_no, place, sale_date, appraisal)
+            _noti(conn, uid, eid, title, body, f"/item/{item_id}")
+            n += 1
+        conn.execute(
+            "update app.upcoming_watches set notified_at = now() "
+            "where user_id = %s and court_code = %s and case_no = %s",
+            (uid, court, case_no),
+        )
+    return n
+
+
 MORNING_BODY = "등기부·매각물건명세서가 어제와 같은지, 입찰표 금액을 한글로 읽어 보세요"
 DEADLINE_KEYS = {"pay": "잔금", "tax": "취득세 신고", "order_deadline": "인도명령 신청"}
 
@@ -414,6 +459,9 @@ def run_once(*, morning: bool, push: bool = True) -> str:
             job.count = m
             return f"입찰일 아침 {m} · 푸시 {p}"
     with connect() as conn, run(conn, "notify", "알림") as job:
+        u = make_upcoming_alerts(
+            conn
+        )  # 먼저 — 관심에 넣은 물건의 처음 값을 아래 관심 알림이 기준으로 적음
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
         b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
         o = (
@@ -424,8 +472,8 @@ def run_once(*, morning: bool, push: bool = True) -> str:
         )
         conn.commit()
         p = send_pushes(conn) if push else 0
-        job.count = s + w + b + d + o
-        return f"조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 공매 {o} · 푸시 {p}"
+        job.count = s + w + b + d + o + u
+        return f"공고 전 {u} · 조건 알림 {s} · 관심 알림 {w} · 명세서 {b} · 마감 {d} · 공매 {o} · 푸시 {p}"
 
 
 def main() -> None:

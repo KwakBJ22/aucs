@@ -9,7 +9,7 @@ ROW = {
     "csCmdcYmd": "20260915", "dstrtDemnLstprdYmd": "20261127", "dstrtDemnLstprdPbancYmd": "20260918",
     "adongSdNm": "서울특별시", "adongSggNm": "관악구", "adongEmdNm": "신림동", "adongRiNm": "",
     "rprsLtnoAddr": "1421-1", "RDNM": "", "rdnmBldNo": "42", "rdnmRefcAddr": "(신림동,신림큐브)",
-    "bldNm": "신림큐브", "bldDtlDts": " 8층809호", "mgakMokmulCnt": "",
+    "bldNm": "신림큐브", "bldDtlDts": " 8층809호", "mgakMokmulCnt": "", "auctnLstDvsCd": "03",
     "realOwnr": "홍길동", "rprsDebtrNm": "홍길동",
 }  # fmt: skip
 
@@ -29,6 +29,7 @@ def test_parse_notice() -> None:
     )
     assert r["building_detail"] == "8층809호"
     assert r["item_count"] is None
+    assert r["list_kind"] == "03"
     assert "홍길동" not in str(r)  # 이름은 core 표에 넣지 않음
 
 
