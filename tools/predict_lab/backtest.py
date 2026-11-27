@@ -17,6 +17,7 @@ from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 
+from ladder import LADDER_TOL, LadderIndex, add_ladder_rounds, predict_ladder, predict_new
 from methods import (
     THIN_CLASS_N,
     apply_k,
@@ -34,9 +35,19 @@ from methods import (
 from paths import LAB_DIR, REDUCTION_JSON
 from usage import CLASSES
 
-METHODS = ("①지금 규칙", "②시세 기준", "③머신러닝")
+METHODS = ("①지금 규칙", "②시세 기준", "③머신러닝", "④새 방식", "⑤사다리")
+LADDER_METHODS = (METHODS[3], METHODS[4])
 CATS = list(CLASSES)
 MARKET_CATS = ("아파트", "빌라", "오피스텔")  # 시세를 붙이는 종류 — ② 는 여기서만 냄
+HOUSING3 = "주거 3종"  # 아파트 · 빌라 · 오피스텔을 합친 묶음(강사님 장부 숫자와 견주는 참고용)
+LADDER_NS = (10, 30, 50)  # ④⑤ 의 N(표본 최소 건수) — 설계서에 숫자가 없어 바꿔 가며 돌림
+LADDER_COMBOS = [(n, trim) for n in LADDER_NS for trim in (False, True)]  # (N, 이상치 뺌 여부)
+COMBO_NAME = {False: "이상치 그대로(가)", True: "이상치 뺌(나)"}
+# 강사님 장부 채점표 예시 숫자(설계서 5-6: 「숫자는 모양을 보이려는 예시다」)
+LEDGER = {
+    "④": {"평균 오차 %p": 5.6, "10%p 넘게 %": 11.5},
+    "⑤": {"평균 오차 %p": 5.4, "10%p 넘게 %": 12.9},
+}
 BID_GRID = list(range(40, 125, 5))  # 이길 확률 점검: 입찰가율 40~120% (5%p 간격)
 VARIANTS = {"all": "전체(지번 a·b·c + 단지 이름 d)", "strict": "지번만(a·b·c)"}
 MARKET_COLS = (
@@ -60,6 +71,17 @@ def read_reduction_pct(path: Path = REDUCTION_JSON) -> dict[str, float]:
     d = json.loads(path.read_text(encoding="utf-8"))
     ok = set(d.get("verified", []))
     return {c: v for c, v in d.get("pct", {}).items() if c in ok}
+
+
+def read_reduction_all(path: Path = REDUCTION_JSON) -> dict[str, float]:
+    """기준표 court_reduction_pct 의 법원별 저감률(%) 전부 — 회차 거꾸로 셈(④⑤)에 쓴다."""
+    if not path.exists():
+        return {}
+    return dict(json.loads(path.read_text(encoding="utf-8")).get("pct", {}))
+
+
+def item_key(t: dict) -> str:
+    return f"{t['court_code']}|{t['case_no']}|{t['item_no']}|{t['sale_date']}"
 
 
 def variant_rows(rows: list[dict], variant: str) -> list[dict]:
@@ -173,10 +195,15 @@ def _err_metrics(items: list[dict]) -> dict:
     low = sum(1 for i in items if i["actual"] < i["lo"])
     high = sum(1 for i in items if i["actual"] > i["hi"])
     mid_err = sum(abs(i["actual"] - i["mid"]) / i["actual"] for i in items if i["actual"]) / n
-    wrong10 = sum(1 for i in items if abs(i["pred_mid_ratio"] - i["actual_ratio"]) > 10) / n
+    pp = sorted(
+        abs(i["pred_mid_ratio"] - i["actual_ratio"]) for i in items
+    )  # 낙찰가율 기준 오차(%p)
+    wrong10 = sum(1 for e in pp if e > 10) / n
     adj = [i for i in items if i.get("lo_adj") is not None]
     out = {
         "건수": n,
+        "평균 오차 %p": round(sum(pp) / n, 2),
+        "가운데 값 %p": round(pp[n // 2] if n % 2 else (pp[n // 2 - 1] + pp[n // 2]) / 2, 2),
         "범위 안(25~75%) %": round(100 * inside / n, 1),
         "낮게 %": round(100 * low / n, 1),
         "높게 %": round(100 * high / n, 1),
@@ -190,6 +217,56 @@ def _err_metrics(items: list[dict]) -> dict:
             100 * sum(1 for i in adj if _in(i, "lo_adj", "hi_adj")) / len(adj), 1
         )
     return out
+
+
+def _rec_of(t: dict, p: dict) -> dict:
+    """한 물건의 예측 p(lo · mid · hi) → 채점 행."""
+    actual, app = float(t["winning_bid_krw"]), float(t["appraisal_krw"])
+    return {
+        "lo": p["lo"], "mid": p["mid"], "hi": p["hi"], "actual": actual,
+        "pred_mid_ratio": p["mid"] * 100 / app, "actual_ratio": actual * 100 / app,
+    }  # fmt: skip
+
+
+def ladder_predictions(rows: list[dict], start: date) -> tuple[dict, list[dict]]:
+    """④⑤ 를 6조합(N 10·30·50 × 이상치 그대로 · 뺌)으로 모든 낙찰 물건에 미리 낸다. 물건마다 입찰일 앞선 365일 낙찰만 쓰므로
+    달 학습과 무관(미래 섞임 없음). rows 는 매각일 순이어야 함(같은 날 캐시). 돌려주는 값: ({조합: {물건: {④·⑤ 예측}}}, 대상 물건들)."""
+    index = LadderIndex(rows)
+    targets = [
+        r
+        for r in rows
+        if r["result"] == "sold" and r["sale_date"] >= start and r.get("winning_bid_krw")
+    ]
+    preds: dict = {c: {} for c in LADDER_COMBOS}
+    for t in targets:
+        key = item_key(t)
+        for c in LADDER_COMBOS:
+            n, trim = c
+            preds[c][key] = {
+                LADDER_METHODS[0]: predict_new(index, t, n, trim),
+                LADDER_METHODS[1]: predict_ladder(index, t, n, trim),
+            }
+    return preds, targets
+
+
+def combo_table(preds: dict, targets: list[dict]) -> dict:
+    """6조합마다 ④⑤ 성적(전체 종류) + 제외 건수(못 셈 · 표본 부족), 그리고 가장 나은 조합.
+    가장 나은 조합 = ④ 와 ⑤ 의 평균 오차(%p) 평균이 가장 작은 조합."""
+    out: dict = {}
+    for c in LADDER_COMBOS:
+        cell: dict = {}
+        for meth in LADDER_METHODS:
+            recs = [
+                _rec_of(t, p) for t in targets if (p := preds[c][item_key(t)][meth]) is not None
+            ]
+            m = _err_metrics(recs)
+            m["제외"] = len(targets) - len(recs)
+            cell[meth] = m
+        out[c] = cell
+    best = min(
+        LADDER_COMBOS, key=lambda c: sum(out[c][m]["평균 오차 %p"] for m in LADDER_METHODS) / 2
+    )
+    return {"cells": {f"{c[0]}|{int(c[1])}": v for c, v in out.items()}, "best": [best[0], best[1]]}
 
 
 def assign_month_k(
@@ -215,8 +292,16 @@ def assign_month_k(
             )
 
 
-def evaluate(rows: list[dict], months: list[date], pool: dict, reduction: dict[str, float]) -> dict:
-    """한 시세 묶음(variant)의 되짚어 채점. 달마다: 그 달 전 낙찰로 ②③ 을 배우고, ① 은 물건마다 매각일 전 낙찰로 셈."""
+def evaluate(
+    rows: list[dict],
+    months: list[date],
+    pool: dict,
+    reduction: dict[str, float],
+    ladder: dict | None = None,
+) -> dict:
+    """한 시세 묶음(variant)의 되짚어 채점. 달마다: 그 달 전 낙찰로 ②③ 을 배우고, ① 은 물건마다 매각일 전 낙찰로 셈.
+    ④⑤ 는 물건마다 입찰일 앞선 365일 낙찰로 미리 낸 값(ladder: 물건 → {④·⑤ 예측})을 그대로 씀."""
+    ladder = ladder or {}
     records: list[dict] = []  # 낙찰 건 × 방식
     excluded: Counter = Counter()
     bid_pairs: list[tuple[float, int]] = []
@@ -255,9 +340,11 @@ def evaluate(rows: list[dict], months: list[date], pool: dict, reduction: dict[s
                     (cdf_from_quantiles(x, mp["ratio_q"]), 1 if actual_ratio <= x else 0)
                 )
 
+            key = item_key(t)
             preds: dict[str, dict | None] = {
                 METHODS[0]: _as_dict(predict_rule([], t, pool=pool, reduction_pct=reduction)),
                 METHODS[1]: _as_dict(predict_ratio(pools, t)),
+                **{m: ladder.get(key, {}).get(m) for m in LADDER_METHODS},
             }
             if cat in thin or cat not in CATS:
                 preds[METHODS[2]] = None
@@ -271,7 +358,6 @@ def evaluate(rows: list[dict], months: list[date], pool: dict, reduction: dict[s
                 if mn:
                     for k in ("lo", "mid", "hi"):
                         preds[METHODS[2]][k] = max(preds[METHODS[2]][k], float(mn))
-            key = f"{t['court_code']}|{t['case_no']}|{t['item_no']}|{t['sale_date']}"
             for meth, p in preds.items():
                 if p is None:
                     excluded[(meth, cat)] += 1
@@ -301,7 +387,7 @@ def evaluate(rows: list[dict], months: list[date], pool: dict, reduction: dict[s
     pooled: dict = {}
     grouped: dict[tuple, list[dict]] = defaultdict(list)
     for rec in records:
-        for c in (rec["cat"], "전체"):
+        for c in (rec["cat"], "전체", *((HOUSING3,) if rec["cat"] in MARKET_CATS else ())):
             grouped[(rec["method"], c, rec["month"])].append(rec)
             pooled.setdefault((c, rec["method"]), []).append(rec)
     for (meth, cat, mon), items in grouped.items():
@@ -313,7 +399,17 @@ def evaluate(rows: list[dict], months: list[date], pool: dict, reduction: dict[s
     return {
         "monthly": monthly_meta,
         "winners": {c: winner(records, c, METHODS) for c in MARKET_CATS}
-        | {c: winner(records, c, (METHODS[0], METHODS[2])) for c in CATS if c not in MARKET_CATS},
+        | {
+            c: winner(
+                records,
+                c,
+                tuple(
+                    m for m in METHODS if m != METHODS[1] and not (c == "그 밖" and m == METHODS[2])
+                ),
+            )
+            for c in CATS
+            if c not in MARKET_CATS
+        },
         "pooled": pooled_metrics,
         "per_month": per_cell,
         "excluded": {f"{m}|{c}": n for (m, c), n in excluded.items()},
@@ -340,6 +436,12 @@ def winner(records: list[dict], cat: str, methods: tuple[str, ...], min_n: int =
         m: sum(abs(v[m]["actual"] - v[m]["mid"]) / v[m]["actual"] for v in full) / len(full)
         for m in methods
     }
+    pps = {
+        m: sorted(abs(v[m]["pred_mid_ratio"] - v[m]["actual_ratio"]) for v in full) for m in methods
+    }
+    mean_pp = {m: sum(x) / len(x) for m, x in pps.items()}
+    med_pp = {m: x[len(x) // 2] if len(x) % 2 else (x[len(x) // 2 - 1] + x[len(x) // 2]) / 2 for m, x in pps.items()}  # fmt: skip
+    wrong10 = {m: sum(1 for e in x if e > 10) / len(x) for m, x in pps.items()}
     inside = {m: sum(1 for v in full if _in(v[m])) / len(full) for m in methods}
     adj_full = [v for v in full if all(v[m]["lo_adj"] is not None for m in methods)]
     inside_adj = {
@@ -352,12 +454,18 @@ def winner(records: list[dict], cat: str, methods: tuple[str, ...], min_n: int =
         m: (sum(1 for v in adj_full if _in(v[m])) / len(adj_full)) if adj_full else None
         for m in methods
     }
-    best = min(err, key=err.get)
+    best = min(
+        mean_pp, key=mean_pp.get
+    )  # 이긴 방식 = 낙찰가율 평균 오차(%p, 강사님 장부 잣대)가 가장 작은 방식
     pct = lambda d: {m: (None if v is None else round(100 * v, 1)) for m, v in d.items()}  # noqa: E731
     return {
         "이긴 방식": best,
+        "가운데 오차 기준 이긴 방식": min(err, key=err.get),
         "비교한 방식": list(methods),
         "건수": len(full),
+        "평균 오차 %p": {m: round(v, 2) for m, v in mean_pp.items()},
+        "가운데 값 %p": {m: round(v, 2) for m, v in med_pp.items()},
+        "10%p 넘게 %": pct(wrong10),
         "가운데 오차 %": pct(err),
         "범위 안(원래) %": pct(inside),
         "맞춘 뒤 비교 건수": len(adj_full),
@@ -377,13 +485,27 @@ def run(table: Path, out_dir: Path, today: date) -> dict:
         rows
     )  # 물건마다 매각일 전 낙찰만 쓰는 것은 rate_range · court_cell 이 함
 
+    # 회차를 최저가율로 거꾸로 셈(④⑤) — 모든 줄에 붙임, 못 센 줄은 ④⑤ 에서 빠짐
+    pct_all = read_reduction_all()
+    round_stat = add_ladder_rounds(rows, pct_all)
+    round_stat_sold = add_ladder_rounds([r for r in rows if r["result"] == "sold"], pct_all)
+    lpreds, ltargets = ladder_predictions(rows, months[1])
+    combos = combo_table(lpreds, ltargets)
+    best = (combos["best"][0], bool(combos["best"][1]))
+    ladder_best = lpreds[best]
+
     variants = {}
     for v in VARIANTS:
-        variants[v] = evaluate(variant_rows(rows, v), months, pool, reduction)
+        variants[v] = evaluate(variant_rows(rows, v), months, pool, reduction, ladder_best)
     main = variants["all"]
     result = {
         "built_on": today.isoformat(),
         "eval_months": [m["month"] for m in main["monthly"]],
+        "rounds": {"전체 줄": round_stat, "낙찰 줄": round_stat_sold},
+        "ladder_combos": combos,
+        "ladder_best": {"N": best[0], "이상치 뺌": best[1]},
+        "ladder_scopes": _scope_counts(ladder_best),
+        "ladder_breakdown": _ladder_breakdown(ladder_best, ltargets),
         "parity": parity_check(rows),
         "parity_now": parity_check(rows, engine_from=NOW_ENGINE),
         "variants": variants,
@@ -404,6 +526,35 @@ def run(table: Path, out_dir: Path, today: date) -> dict:
     return result
 
 
+def _ladder_breakdown(preds: dict, targets: list[dict]) -> dict:
+    """④ 가 어디서 크게 틀리는지(회차별 · 종류별): 건수 · 평균 오차 %p · 10%p 넘게 틀린 %. 장부 숫자와 다른 까닭 짐작의 근거."""
+    acc: dict[tuple, list[float]] = defaultdict(list)
+    for t in targets:
+        p = preds[item_key(t)][LADDER_METHODS[0]]
+        if p is None:
+            continue
+        rec = _rec_of(t, p)
+        e = abs(rec["pred_mid_ratio"] - rec["actual_ratio"])
+        acc[
+            ("회차", f"{min(t['ladder_round'], 3)}{'회 이상' if t['ladder_round'] >= 3 else '회'}")
+        ].append(e)
+        acc[("종류", t["category"])].append(e)
+    return {
+        f"{a}|{b}": {"건수": len(v), "평균 오차 %p": round(sum(v) / len(v), 2), "10%p 넘게 %": round(100 * sum(1 for x in v if x > 10) / len(v), 1)}
+        for (a, b), v in sorted(acc.items())
+    }  # fmt: skip
+
+
+def _scope_counts(preds: dict) -> dict:
+    """줄마다 어느 단을 썼는지(④ 는 법원 칸 · 칸, ⑤ 는 구 · 법원 · 용도군 · 전 용도) 건수."""
+    out: dict[str, Counter] = {m: Counter() for m in LADDER_METHODS}
+    for by_m in preds.values():
+        for m in LADDER_METHODS:
+            p = by_m[m]
+            out[m]["못 셈 · 표본 부족" if p is None else p["scope"]] += 1
+    return {m: dict(c) for m, c in out.items()}
+
+
 def _read_summary(table: Path) -> dict:
     p = table.with_name(table.stem + "_summary.json")
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
@@ -419,73 +570,235 @@ def _fmt(d: dict | None) -> str:
     return " · ".join(f"{m} {'-' if v is None else v}%" for m, v in (d or {}).items())
 
 
-def _winner_line(cat: str, w: dict) -> str:
-    if w["이긴 방식"] == "표본 적음":
-        names = " · ".join(w.get("비교한 방식", []))
-        return f"- {cat}: 같은 물건 {w['건수']}건 ({names}) — 표본 적어 가릴 수 없음"
-    extra = ""
-    if w.get("맞춘 뒤 비교 건수"):
-        extra = f" / 범위 안 맞춘 뒤 {_fmt(w['범위 안(맞춘 뒤) %'])} ({w['맞춘 뒤 비교 건수']}건, 같은 건수의 원래 {_fmt(w['그 건수의 범위 안(원래) %'])})"
-    return (
-        f"- {cat}: **{w['이긴 방식']}** · 같은 물건 {w['건수']}건 ({' · '.join(w['비교한 방식'])}) — "
-        f"가운데 오차 {_fmt(w['가운데 오차 %'])} / 범위 안 원래 {_fmt(w['범위 안(원래) %'])}{extra}"
+def _parity_section(r: dict) -> tuple[bool, list[str]]:
+    """① 맞춰 보기(스냅샷과 견줌). 돌려주는 값: (②③ 결론을 써도 되는가, 줄들)."""
+    lines: list[str] = []
+    p = r["parity"]
+    lines.append("## 참고 — ① 맞춰 보기: 지금 규칙이 운영과 같은가")
+    if not p.get("건수"):
+        lines.append(
+            "- 입찰 전 분석 스냅샷이 붙은 낙찰이 학습 표에 없어 맞춰 볼 수 없음 → ②③ 비교 결론을 쓰지 않음"
+        )
+        return False, lines + [""]
+    lines.append(
+        f"스냅샷(analysis.sale_snapshots) 낙찰 {p['건수']}건 · 스냅샷 날짜 {p['스냅샷 날짜'][0]}~{p['스냅샷 날짜'][1]}. "
+        "실험실 ① 의 낙찰가율 p25 · p50 · p75(법원 차이 · 최저가 손질 전 원값)와 스냅샷의 analysis->sale_rate 를 견줌, 기준일은 스냅샷 만든 날."
     )
+    for name in ("우리 낙찰만(운영과 같은 자료)", "실험실 전체 자료"):
+        q = p[name]
+        lines.append(
+            f"- 비교 사례 {name}: **p50 차이 1%p 안 {q['p50 차이 1%p 안 %']}%** "
+            f"(p25 {q['p25 차이 1%p 안 %']}% · p75 {q['p75 차이 1%p 안 %']}% · 표본 수 같음 {q['표본 수(n)가 같은 %']}% · "
+            f"p50 차이 가운데 값 {q['p50 차이 가운데 값(%p)']}%p · ① 못 낸 {q['① 이 못 낸 건수']}건)"
+        )
+        lines.append(f"  - 종류별 p50 1%p 안: {q['종류별 p50 1%p 안 %']}")
+    pn = r.get("parity_now") or {}
+    qn = pn.get("우리 낙찰만(운영과 같은 자료)") if pn.get("건수") else None
+    if qn:
+        lines.append(
+            f"- 지금 규칙(rules-0.20.0 이상 엔진)으로 만든 스냅샷만({pn['건수']}건, 그 전 엔진 스냅샷은 유찰 횟수 셈 등 규칙이 달랐음): "
+            f"**p50 차이 1%p 안 {qn['p50 차이 1%p 안 %']}%** (표본 수 같음 {qn['표본 수(n)가 같은 %']}% · "
+            f"p50 차이 가운데 값 {qn['p50 차이 가운데 값(%p)']}%p)"
+        )
+    gate = (
+        qn["p50 차이 1%p 안 %"] if qn else p["우리 낙찰만(운영과 같은 자료)"]["p50 차이 1%p 안 %"]
+    )
+    ok = gate > 90
+    lines.append(
+        f"- 판정(기준: 지금 규칙 스냅샷 · 운영과 같은 자료로 90% 초과): **{'통과' if ok else '미달 — 원인을 찾을 때까지 ②③ 비교 결론을 쓰지 않음'}**"
+    )
+    return ok, lines + [""]
+
+
+def _round_section(r: dict, summary: dict) -> list[str]:
+    """(가) 회차 셈 결과."""
+    rd = r["rounds"]
+    lines = ["## (가) 회차 셈 — 최저가율로 거꾸로 센 결과", ""]
+    lines.append(
+        "방법: 법원마다 저감률(기준표 court_reduction_pct, 20% 또는 30%)로 사다리 100·(1−저감률)^회차 를 만들고, 최저가율에 가장 가까운 회차(0~8)를 고름. "
+        f"차이가 {LADDER_TOL}%p 넘으면 「못 셈」 → ④⑤ 에서 뺌(①②③ 은 그대로 냄)."
+    )
+    for label in ("전체 줄", "낙찰 줄"):
+        s = rd[label]
+        lines.append(
+            f"- {label} {s['줄']}줄: 셈 {s['셈']} · **못 셈 {s['못 셈']}** (저감률 모르는 법원 {s['저감률 모르는 법원']} · 사다리에서 2%p 넘게 벗어남 {s['사다리에서 2%p 넘게 벗어남']})"
+        )
+    same = rd["전체 줄"]["지금 쓰는 회차와 같은 비율"]
+    e, pr = same["eff_failed"], same["price_round(우리 자료)"]
+    lines.append(
+        f"- 지금 쓰는 회차와 같은 비율: **price_round(우리 자료 · 운영과 같은 값)와 {pr['%']}%**({pr['같음']}/{pr['비교한 줄']}줄) · "
+        f"①②③ 이 쓰는 회차(eff_failed — 강사 자료는 최저가로 센 값, 못 세면 법원 숫자−1 )와 {e['%']}%({e['같음']}/{e['비교한 줄']}줄)"
+    )
+    lines.append(f"- 종류별 못 셈(전체 줄): {rd['전체 줄']['종류별 못 셈']}")
+    cells = r["ladder_combos"]["cells"]
+    bn, bt = r["ladder_best"]["N"], int(r["ladder_best"]["이상치 뺌"])
+    bc = cells[f"{bn}|{bt}"]
+    lines.append(
+        f"- 낙찰 물건 중 ④⑤ 에서 빠진 수(못 셈 + 칸에 표본 부족, 쓴 조합 N={bn} · {COMBO_NAME[bool(bt)]}): "
+        f"④ {bc[LADDER_METHODS[0]]['제외']}건 · ⑤ {bc[LADDER_METHODS[1]]['제외']}건"
+    )
+    dropped = summary.get("dropped") or {}
+    lines.append(
+        f"- 「결과 없음(변경 · 취하)」은 강사님 장부도 채점에서 빼는데, 우리 표도 같다: 변경 · 취하는 법원 결과에 거의 안 나와 표에 줄이 없고, "
+        f"상태가 불분명한 줄 {dropped.get('결과 불분명', '?')}건은 표를 만들 때 뺐다. 가격 채점은 낙찰 건만 하고 유찰 건은 팔릴 확률 점검에만 쓴다."
+    )
+    return lines + [""]
+
+
+def _pp(v) -> str:
+    return "-" if v is None else str(v)
+
+
+def _winner_rows(cat: str, w: dict, pooled_adj: dict) -> list[str]:
+    """종류 하나의 같은 물건끼리 표 줄들(방식마다 한 줄)."""
+    if w["이긴 방식"] == "표본 적음":
+        return [
+            f"| {cat} | {w['건수']} | {' · '.join(w.get('비교한 방식', []))} | 표본 적어 가릴 수 없음 | | | | | | |"
+        ]
+    out = []
+    for m in w["비교한 방식"]:
+        mark = "◀ 이김" if m == w["이긴 방식"] else ""
+        if m == w["가운데 오차 기준 이긴 방식"] and m != w["이긴 방식"]:
+            mark = "(가운데 오차 기준 이김)"
+        adj = w["범위 안(맞춘 뒤) %"][m]
+        adj_txt = (
+            "-"
+            if adj is None
+            else f"{adj} ({w['맞춘 뒤 비교 건수']}건, 원래 {w['그 건수의 범위 안(원래) %'][m]})"
+        )
+        out.append(
+            f"| {cat if m == w['비교한 방식'][0] else ''} | {w['건수'] if m == w['비교한 방식'][0] else ''} | {m} | {w['평균 오차 %p'][m]} | {w['가운데 값 %p'][m]} "
+            f"| {w['10%p 넘게 %'][m]} | {w['가운데 오차 %'][m]} | {w['범위 안(원래) %'][m]} | {adj_txt} | {mark} |"
+        )
+    return out
+
+
+def _winner_section(r: dict, gate_ok: bool) -> list[str]:
+    lines = ["## (나) 종류마다 ①~⑤ 같은 물건끼리 — 이긴 방식", ""]
+    b = r["ladder_best"]
+    lines.append(
+        f"이긴 방식 = 낙찰가율 평균 오차(%p)가 가장 작은 방식(강사님 장부 잣대). 가운데 오차(%, 낙찰가 대비) 기준 승자는 따로 표시. "
+        f"④⑤ 는 N={b['N']} · {COMBO_NAME[bool(b['이상치 뺌'])]} 조합(6조합 중 ④⑤ 평균 오차 평균이 가장 작음 — 부록 표). "
+        "②는 시세가 있는 3종(아파트 · 빌라 · 오피스텔)만 냄 — 나머지 종류는 ①③④⑤."
+    )
+    if not gate_ok:
+        lines.append("※ ① 맞춰 보기가 통과하지 않아 ②③ 이 낀 비교는 참고용 숫자일 뿐 결론이 아님.")
+    for v, label in VARIANTS.items():
+        lines += ["", f"### 시세: {label}", ""]
+        lines.append(
+            "| 종류 | 같은 물건 건수 | 방식 | 평균 오차 %p | 가운데 값 %p | 10%p 넘게 틀린 % | 가운데 오차 % | 범위 안(원래) % | 범위 안(맞춘 뒤) % | 이김 |"
+        )
+        lines.append("|---|---|---|---|---|---|---|---|---|---|")
+        for cat in CATS:
+            lines += _winner_rows(cat, r["variants"][v]["winners"][cat], {})
+    lines += [
+        "",
+        f"평가 달: {', '.join(r['eval_months']) or '없음'} (첫 달은 배움용). 범위 안 「맞춘 뒤」는 k 를 구할 수 있었던(지난 성적 30건 이상) 달의 물건만, 괄호는 그 건수와 같은 물건의 원래 값.",
+        "",
+    ]
+    return lines
+
+
+def _ledger_section(r: dict) -> list[str]:
+    """(다) 강사님 장부 숫자와 우리 ④⑤ 나란히."""
+    lines = ["## (다) 강사님 장부 숫자와 우리 ④ · ⑤ 나란히", ""]
+    lines.append(
+        "※ 설계서 5-6 은 이 숫자(5.6 / 5.4%p · 11.5 / 12.9%)를 「모양을 보이려는 예시」라고 적었다 — 실제 채점 결과인지 확인되지 않음. 견주는 값은 시세 「전체」 묶음, 같은 물건끼리가 아니라 각 방식이 낸 전부."
+    )
+    lines.append("")
+    lines.append(
+        "| 방식 | 범위 | 건수 | 평균 오차 %p | 장부 | 차이 | 10%p 넘게 틀린 % | 장부 | 차이 |"
+    )
+    lines.append("|---|---|---|---|---|---|---|---|---|")
+    big = []
+    pooled = r["variants"]["all"]["pooled"]
+    for meth, key in ((LADDER_METHODS[0], "④"), (LADDER_METHODS[1], "⑤")):
+        for scope in ("전체", HOUSING3):
+            m = pooled.get(scope, {}).get(meth)
+            if not m or not m.get("건수"):
+                continue
+            a, w = m["평균 오차 %p"], m["10%p 넘게 틀린 %"]
+            da, dw = (
+                round(a - LEDGER[key]["평균 오차 %p"], 2),
+                round(w - LEDGER[key]["10%p 넘게 %"], 1),
+            )
+            lines.append(
+                f"| {meth} | {scope} | {m['건수']} | {a} | {LEDGER[key]['평균 오차 %p']} | {da:+} | {w} | {LEDGER[key]['10%p 넘게 %']} | {dw:+} |"
+            )
+            if abs(da) > 2 or abs(dw) > 2:
+                big.append((meth, scope, da, dw))
+    lines.append("")
+    if big:
+        lines.append(
+            "2%p 넘게 다른 칸이 있다(평균 오차는 가깝고, 10%p 넘게 틀린 비율이 장부보다 3%p 안팎 높음). 까닭은 **짐작**이다(확인 안 함):"
+        )
+    else:
+        lines.append("평균 오차와 10%p 넘게 틀린 비율 모두 장부 숫자와 2%p 안이다.")
+    bd = r.get("ladder_breakdown") or {}
+    if bd:
+        parts = [
+            f"{k.split('|')[1]} {v['평균 오차 %p']}%p · {v['10%p 넘게 %']}% ({v['건수']}건)"
+            for k, v in bd.items()
+            if k.startswith("회차|")
+        ]
+        lines.append(
+            f"- (확인한 숫자) ④ 를 회차별로 쪼개면: {' / '.join(parts)} — 처음 나온 물건(회차 0)에서 크게 틀린다."
+        )
+        parts = [
+            f"{k.split('|')[1]} {v['평균 오차 %p']}%p · {v['10%p 넘게 %']}%"
+            for k, v in bd.items()
+            if k.startswith("종류|")
+        ]
+        lines.append(f"- (확인한 숫자) 종류별: {' / '.join(parts)}")
+    lines += [
+        "- (짐작) 장부 숫자가 예시값일 수 있다(설계서가 그렇게 적음).",
+        "- (짐작) 장부가 처음 나온 물건(회차 0)을 채점에 넣는지 모르겠다 — 우리 표는 넣었고 이 칸이 가장 크게 틀린다.",
+        "- (짐작) 장부는 서울 · 경기 한 주(412건) 채점표 모양인데 우리는 4개월 · 6종류를 합쳤다. 다만 「주거 3종」으로 좁혀도 숫자가 안 줄어서(위 표) 종류 구성만으로는 설명이 안 된다(확인한 숫자). 아파트가 가장 크게 틀린다.",
+        "- (짐작) 장부는 금요일에 다음 주 물건을 적고, 우리는 입찰일 하루 전까지 쌓인 낙찰을 쓴다(우리가 조금 유리). 반대로 우리 자료는 17주뿐이라 비교 사례가 적다(불리).",
+        "- (짐작) 용도군을 장부는 7개, 우리는 6개로 나눴고, 최저가율 사다리 허용 오차(2%p)와 표본 기준 N 이 장부와 다를 수 있다.",
+        "",
+    ]
+    return lines
+
+
+def _combo_appendix(r: dict) -> list[str]:
+    """부록: 6조합 표."""
+    lines = ["## 부록 — ④⑤ 6조합 (N × 이상치) — 전체 종류, 낙찰 물건 기준", ""]
+    lines.append(
+        "| N | 이상치 | 방식 | 건수 | 제외 | 평균 오차 %p | 가운데 값 %p | 10%p 넘게 틀린 % | 가운데 오차 % | 범위 안 % | 낮게 % | 높게 % |"
+    )
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    best = r["ladder_best"]
+    for key, cell in r["ladder_combos"]["cells"].items():
+        n, trim = key.split("|")
+        for meth, m in cell.items():
+            star = " ★" if int(n) == best["N"] and bool(int(trim)) == best["이상치 뺌"] else ""
+            lines.append(
+                f"| {n}{star} | {COMBO_NAME[bool(int(trim))]} | {meth} | {m['건수']} | {m['제외']} | {m['평균 오차 %p']} | {m['가운데 값 %p']} "
+                f"| {m['10%p 넘게 틀린 %']} | {m['가운데 오차 %']} | {m['범위 안(25~75%) %']} | {m['낮게 %']} | {m['높게 %']} |"
+            )
+    means = [
+        m["평균 오차 %p"] for cell in r["ladder_combos"]["cells"].values() for m in cell.values()
+    ]
+    lines += [
+        "",
+        f"6조합 12칸의 평균 오차(%p)는 {min(means)} ~ {max(means)} — 차이 {round(max(means) - min(means), 2)}%p 로, N 과 이상치 거르기가 결과를 거의 안 바꾼다.",
+    ]
+    lines += ["", "★ = 본문에 쓴 조합. 어느 단 · 칸을 썼는지 건수(쓴 조합):"]
+    for m, c in r["ladder_scopes"].items():
+        lines.append(f"- {m}: {c}")
+    lines.append("")
+    return lines
 
 
 def render(r: dict, today: date, summary: dict | None = None) -> str:
     summary = summary or {}
     lines = [f"# 낙찰가 예측 되짚어 채점 ({today:%Y-%m-%d})", ""]
-    p = r["parity"]
-    lines.append("## (가) 맞춰 보기 — ① 지금 규칙이 운영과 같은가")
-    if not p.get("건수"):
-        lines.append(
-            "- 입찰 전 분석 스냅샷이 붙은 낙찰이 학습 표에 없어 맞춰 볼 수 없음 → ②③ 비교 결론을 쓰지 않음"
-        )
-        gate_ok = False
-    else:
-        lines.append(
-            f"스냅샷(analysis.sale_snapshots) 낙찰 {p['건수']}건 · 스냅샷 날짜 {p['스냅샷 날짜'][0]}~{p['스냅샷 날짜'][1]}. "
-            "실험실 ① 의 낙찰가율 p25 · p50 · p75(법원 차이 · 최저가 손질 전 원값)와 스냅샷의 analysis->sale_rate 를 견줌, 기준일은 스냅샷 만든 날."
-        )
-        for name in ("우리 낙찰만(운영과 같은 자료)", "실험실 전체 자료"):
-            q = p[name]
-            lines.append(
-                f"- 비교 사례 {name}: **p50 차이 1%p 안 {q['p50 차이 1%p 안 %']}%** "
-                f"(p25 {q['p25 차이 1%p 안 %']}% · p75 {q['p75 차이 1%p 안 %']}% · 표본 수 같음 {q['표본 수(n)가 같은 %']}% · "
-                f"p50 차이 가운데 값 {q['p50 차이 가운데 값(%p)']}%p · ① 못 낸 {q['① 이 못 낸 건수']}건)"
-            )
-            lines.append(f"  - 종류별 p50 1%p 안: {q['종류별 p50 1%p 안 %']}")
-        pn = r.get("parity_now") or {}
-        qn = pn.get("우리 낙찰만(운영과 같은 자료)") if pn.get("건수") else None
-        if qn:
-            lines.append(
-                f"- 지금 규칙(rules-0.20.0 이상 엔진)으로 만든 스냅샷만({pn['건수']}건, 그 전 엔진 스냅샷은 유찰 횟수 셈 등 규칙이 달랐음): "
-                f"**p50 차이 1%p 안 {qn['p50 차이 1%p 안 %']}%** (표본 수 같음 {qn['표본 수(n)가 같은 %']}% · "
-                f"p50 차이 가운데 값 {qn['p50 차이 가운데 값(%p)']}%p)"
-            )
-        gate = (
-            qn["p50 차이 1%p 안 %"]
-            if qn
-            else p["우리 낙찰만(운영과 같은 자료)"]["p50 차이 1%p 안 %"]
-        )
-        gate_ok = gate > 90
-        lines.append(
-            f"- 판정(기준: 지금 규칙 스냅샷 · 운영과 같은 자료로 90% 초과): **{'통과' if gate_ok else '미달 — 원인을 찾을 때까지 ②③ 비교 결론을 쓰지 않음'}**"
-        )
-    lines.append("")
-    lines.append("## (나) 종류마다 이긴 방식 — 같은 물건끼리 (가운데 오차 · 범위 안 둘 다)")
-    if not gate_ok:
-        lines.append("※ (가) 가 통과하지 않아 아래는 참고용 숫자일 뿐 결론이 아님.")
-    for v, label in VARIANTS.items():
-        lines.append("")
-        lines.append(f"### 시세: {label}")
-        for cat in CATS:
-            lines.append(_winner_line(cat, r["variants"][v]["winners"][cat]))
-    lines += [
-        "",
-        f"평가 달: {', '.join(r['eval_months']) or '없음'} (첫 달은 배움용). 범위 안 「맞춘 뒤」는 k 를 구할 수 있었던(지난 성적 30건 이상) 달의 물건만.",
-        "",
-    ]
+    gate_ok, parity_lines = _parity_section(r)
+    lines += _round_section(r, summary)
+    lines += _winner_section(r, gate_ok)
+    lines += _ledger_section(r)
+    lines += parity_lines
 
     chk = summary.get("rounds_check")
     lines.append("## ① 의 유찰 횟수 · 시세 붙이기 — 어떻게 했나")
@@ -586,6 +899,7 @@ def render(r: dict, today: date, summary: dict | None = None) -> str:
     lines.append(
         "주의: 단지 이름(d)으로 붙인 시세는 이름이 같은 다른 동 · 다른 필지를 섞을 수 있다. 그래서 위 결과를 「전체」와 「지번만」 둘로 나눠 냈다."
     )
+    lines += _combo_appendix(r)
     return "\n".join(lines) + "\n"
 
 
