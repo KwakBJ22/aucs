@@ -50,7 +50,7 @@ def _err_metrics(items: list[dict]) -> dict:
     inside = sum(1 for i in items if i["lo"] <= i["actual"] <= i["hi"])
     low = sum(1 for i in items if i["actual"] < i["lo"])
     high = sum(1 for i in items if i["actual"] > i["hi"])
-    mid_err = sum(abs(i["actual"] - i["mid"]) / i["mid"] for i in items if i["mid"]) / n
+    mid_err = sum(abs(i["actual"] - i["mid"]) / i["actual"] for i in items if i["actual"]) / n
     wrong10 = sum(1 for i in items if abs(i["pred_mid_ratio"] - i["actual_ratio"]) > 10) / n
     return {
         "건수": n,
@@ -174,7 +174,11 @@ def run(table: Path, out_dir: Path, today: date) -> dict:
             winners[cat] = {"이긴 방식": "표본 적음", "건수": len(full)}
             continue
         err = {
-            m: sum(abs(v[m]["actual"] - v[m]["mid"]) / v[m]["mid"] for v in full) / len(full)
+            m: sum(abs(v[m]["actual"] - v[m]["mid"]) / v[m]["actual"] for v in full) / len(full)
+            for m in METHODS
+        }
+        inside = {
+            m: sum(1 for v in full if v[m]["lo"] <= v[m]["actual"] <= v[m]["hi"]) / len(full)
             for m in METHODS
         }
         best = min(err, key=err.get)
@@ -182,6 +186,7 @@ def run(table: Path, out_dir: Path, today: date) -> dict:
             "이긴 방식": best,
             "건수": len(full),
             "가운데 오차 %": {m: round(100 * e, 1) for m, e in err.items()},
+            "범위 안 %": {m: round(100 * c, 1) for m, c in inside.items()},
         }
 
     sold_p = [p for p, y in sold_pairs]
@@ -224,8 +229,10 @@ def render(r: dict, today: date) -> str:
         else:
             e = w["가운데 오차 %"]
             err = " · ".join(f"{m} {v}%" for m, v in e.items())
+            ins = " · ".join(f"{m} {v}%" for m, v in w["범위 안 %"].items())
             lines.append(
-                f"- {cat}: 이긴 방식 **{w['이긴 방식']}** · 세 방식 다 낸 {w['건수']}건 기준 (가운데 오차 {err})"
+                f"- {cat}: 이긴 방식 **{w['이긴 방식']}** · 세 방식 다 낸 {w['건수']}건 기준 "
+                f"(가운데 오차 {err} / 범위 안 {ins})"
             )
     lines += ["", f"평가 달: {', '.join(r['eval_months']) or '없음'} (첫 달은 배움용)", ""]
 
