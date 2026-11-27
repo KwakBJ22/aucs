@@ -216,7 +216,11 @@ where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/S
   -- 11/27 대표님 「우선 받을 목록」: 법원이 지금 열어 둔 것(감정평가서는 매각기일 2주 전 ~ 매각기일)만
   and (not %(soon)s or i.sale_date <= (now() at time zone 'Asia/Seoul')::date + 14)
 group by i.case_id, c.court_code, c.case_no
-order by case when min(p.rank) is null then 2
+-- soon 이면 앞의 세 줄(입찰일 → 홈 → 역)이 순서를 정하고, soon 이 아니면 그 줄들은 모두 null(무시)
+order by case when %(soon)s then min(i.sale_date) end,
+         case when %(soon)s then min(p.rank) end nulls last,
+         case when %(soon)s then not bool_or(s.item_id is not null) end,
+         case when min(p.rank) is null then 2
               when min(i.sale_date) <= (now() at time zone 'Asia/Seoul')::date + 14 then 0 else 1 end,  -- 홈 추천은 입찰 14일 안
          min(p.rank), not bool_or(s.item_id is not null), min(i.sale_date), i.case_id
 offset %(offset)s limit %(limit)s"""
@@ -232,6 +236,8 @@ where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/S
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
   and not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id)
   and coalesce(i.sigungu, '') <> ''
+  -- 우선 받을 목록(soon)이면 건수도 그 목록 기준 — 목록과 시군구 건수가 같은 기준이어야 함(11/27)
+  and (not %(soon)s or i.sale_date <= (now() at time zone 'Asia/Seoul')::date + 14)
 group by 1 order by 1"""
 
 
@@ -247,7 +253,9 @@ def appraisal_targets(offset: int = 0, sigungu: str | None = None, soon: bool = 
             {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE, "sg": sigungu or None, "soon": soon},
         ).fetchall()
         areas = (
-            c.execute(_APPRAISAL_AREAS_SQL, {"vehicles": VEHICLES}).fetchall() if offset == 0 else []
+            c.execute(_APPRAISAL_AREAS_SQL, {"vehicles": VEHICLES, "soon": soon}).fetchall()
+            if offset == 0
+            else []
         )
         last = c.execute(
             """select started_at, status, item_count, left(message, 500) as message from ops.job_runs
