@@ -2300,6 +2300,11 @@ export const copy = {
     },
     roleName: { owner: "대표", operator: "운영자", viewer: "보기" } as Record<string, string>,
     logout: "로그아웃",
+    // 복사한 줄 칩(회색): 오늘이면 「복사함 21:58」 · 그 전이면 「11/26 복사함」 — lib/copied-mark.ts 가 씀
+    copiedChip: {
+      today: (hm: string) => `복사함 ${hm}`,
+      before: (md: string) => `${md} 복사함`,
+    },
     loading: "불러오는 중",
     none: "없어요",
     done: "했어요",
@@ -2349,7 +2354,6 @@ export const copy = {
       item: (n: number | null) => (n ? `물건 ${n}` : ""),
       hasAppraisal: "감정평가서 있음",
       registry: "등기부등본 받기",
-      copied: "복사함",
     },
     getAppraisal: {
       title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
@@ -2365,7 +2369,6 @@ export const copy = {
       openCourt: "법원경매정보 열기",
       openHint: "한 번 열어 두고, 아래에서 「복사」만 눌러 그 창에 붙여 넣으세요",
       copy: "복사",
-      copied: "복사함",
       // 11/27 대표님: 우선 받을 목록 · 그 줄에서 바로 올리기
       soon: "우선 받을 목록",
       soonOn: "전체 목록",
