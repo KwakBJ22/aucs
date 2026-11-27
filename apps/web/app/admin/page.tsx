@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminGate } from "@/components/admin/gate";
 import { AdminProvider } from "@/components/admin/ctx";
+import { signOut } from "@/lib/auth";
 import { AppraisalGet } from "@/components/admin/appraisal-get";
 import { DocsGet } from "@/components/admin/docs-get";
 import { SpecGet } from "@/components/admin/spec-get";
@@ -67,6 +68,13 @@ export default function AdminPage() {
                 </button>
               ))}
               <span className="sub adm-role">{t.roleName[role]}</span>
+              <button
+                type="button"
+                className="adm-logout"
+                onClick={() => void signOut().then(() => window.location.assign("/home"))}
+              >
+                {t.logout}
+              </button>
             </nav>
             <div className="adm-body">
               <h1 className="adm-h1">{t.menu[m]}</h1>

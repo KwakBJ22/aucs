@@ -2299,6 +2299,7 @@ export const copy = {
       adjusted: (b: number) => `했어요 · 지금 ${b.toLocaleString("ko-KR")}P`,
     },
     roleName: { owner: "대표", operator: "운영자", viewer: "보기" } as Record<string, string>,
+    logout: "로그아웃",
     loading: "불러오는 중",
     none: "없어요",
     done: "했어요",
