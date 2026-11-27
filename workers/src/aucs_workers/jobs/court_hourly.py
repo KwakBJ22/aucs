@@ -174,6 +174,20 @@ def official_due(now: datetime) -> bool:
         return True
 
 
+# 11/27 대표님: 예정물건(배당요구종기공고) — 법원 16곳 약 170번, 1번 PC 가 11시 뒤 첫 매시 차례 끝에 하루 한 번.
+NOTICES_FROM = 11
+NOTICES_DONE = LOCK.parent / "court_notices.done"
+
+
+def notices_due(now: datetime) -> bool:
+    if now.hour < NOTICES_FROM:
+        return False
+    try:
+        return NOTICES_DONE.read_text(encoding="utf-8").strip() != now.date().isoformat()
+    except OSError:
+        return True
+
+
 # 11/26 대표님: PC 두 대(다른 인터넷)로 나눠 받기 — .env 의 AUCS_ROLE 로 맡을 일을 나눔. 하루 법원 한도는 PC 마다 따로(logs/court_budget.json).
 #   main(1번 PC): 아침 묶음 · 매시(관심 · 입찰 임박 · 새 사건 · 사진 · 다음 회차 · 첫 바퀴 · 분석) · 공시가격 · 관리자 요청
 #   docs(2번 PC): 매시 서류 보관(현황조사서 · 문건송달)만 몫 전부로 + 14시 뒤 전국 보관. 분석은 1번 PC 가 다음 차례에
@@ -294,6 +308,12 @@ def main() -> None:
             code = subprocess.call([sys.executable, "-m", *mod], env=env)
             if code != 0:
                 print(f"   {name} 멈춤({code}) — 한도·막힘이면 다음 시간에 이어서", flush=True)
+        if notices_due(datetime.now()):
+            print("── 예정물건(배당요구종기공고, 하루 한 번)", flush=True)
+            NOTICES_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")
+            code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_notices"])
+            if code != 0:
+                print(f"   예정물건 멈춤({code}) — 내일 다시", flush=True)
         if official_due(datetime.now()):
             print("── 공시가격(하루 한 번, 브이월드)", flush=True)
             OFFICIAL_DONE.write_text(datetime.now().date().isoformat(), encoding="utf-8")

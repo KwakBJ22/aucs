@@ -22,6 +22,8 @@
 | priority_repayment | 우선변제권 |
 | top_priority_repayment | 최우선변제 (소액임차) |
 | claim_deadline | 배당요구종기 |
+| upcoming_case | 예정물건 (배당요구종기공고에 오른 사건 — 매각공고 전) |
+| ordered_date | 경매개시결정일 |
 | distribution | 배당 |
 | spec_sheet | 매각물건명세서 |
 | status_report | 현황조사서 |

@@ -73,6 +73,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.probe_land"]
     if key == "court_nationwide":  # 전국 매각결과 · 물건 목록 보관(11/18) — 아침 묶음 끝에도 돎
         return [sys.executable, "-m", "aucs_workers.collectors.court_nationwide"]
+    if key == "court_notices":  # 예정물건(배당요구종기공고) 한 번(11/27) — 낮에 court_hourly 가 하루 한 번
+        return [sys.executable, "-m", "aucs_workers.collectors.court_notices"]
     if key == "stores":  # 상가 물건 주변 가게(상권정보) 받기(11/16) — 아침 묶음이 같이 돌림
         return [sys.executable, "-m", "aucs_workers.collectors.stores"]
     if key == "units":  # 건축물대장 전유공용면적(호) 받기(11/16) — 아침 묶음이 같이 돌림
