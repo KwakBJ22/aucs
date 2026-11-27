@@ -348,6 +348,92 @@ def make_upcoming_alerts(conn: psycopg.Connection) -> int:
     return n
 
 
+# ── 경매개시 알림(11/28, 예정물건 3단계) — 동네(시군구) · 단지(지역 코드 + 지번). 걸어 둔 뒤 처음 본 것만.
+UP_KINDS = ["01", "02", "03"]  # 토지 · 건물 · 집합건물(자동차 등은 주소 칸이 밀려 뺌)
+AREA_SQL = """
+select count(*)::int as n, max(u.first_seen_at) as last
+  from core.upcoming_cases u
+ where u.first_seen_at > %(since)s and u.list_kind = any(%(kinds)s)
+   and not exists (select 1 from core.cases c where c.court_code = u.court_code and c.case_no = u.case_no)
+   and (u.sigungu = any(%(sg)s) or split_part(u.sigungu, ' ', 1) = any(%(sg)s))"""
+LOT_UP_SQL = """
+select u.court_code, u.case_no, u.building_name, u.building_detail, u.first_seen_at
+  from core.upcoming_cases u
+ where u.region_code = %(rc)s and u.lot_no = %(lot)s and u.first_seen_at > %(since)s
+   and u.list_kind = any(%(kinds)s)
+   and not exists (select 1 from core.cases c where c.court_code = u.court_code and c.case_no = u.case_no)"""
+LOT_ITEM_SQL = f"""
+select i.item_id, c.case_no, i.sale_date, i.address
+  from core.items i join core.cases c using (case_id) {ANALYSIS_JOIN}
+ where {COURT_VISIBLE} and i.region_code = %(rc)s and i.lot_no = %(lot)s
+   and (select min(fetched_at) from raw.court_item_raw r where r.doc_key = i.doc_key) > %(since)s"""
+
+
+def area_text(sigungu: list[str], n: int) -> tuple[str, str]:
+    """(순수 함수) 동네 알림 글 — 하루 한 번 묶음."""
+    place = sigungu[0] + (f" 외 {len(sigungu) - 1}곳" if len(sigungu) > 1 else "")
+    return (
+        f"{place}에 곧 나올 물건 {n}건",
+        "경매가 막 시작된 사건이에요 · 매각 날짜가 잡히기 전에 미리 보세요",
+    )
+
+
+def lot_text(
+    label: str, case_no: str, *, unit: str | None = None, sale_date: Any = None
+) -> tuple[str, str]:
+    """(순수 함수) 단지 알림 글 — 공고 전 사건(sale_date 없음) · 매각공고 물건(sale_date 있음)."""
+    if sale_date:
+        return f"{label}에 경매 물건이 나왔어요", f"{case_no} · 첫 매각기일 {sale_date:%m월 %d일}"
+    return (
+        f"{label}에 경매가 시작됐어요",
+        f"{case_no}{f' · {unit}' if unit else ''} · 매각 날짜가 잡히기 전 사건이에요",
+    )
+
+
+def make_area_alerts(conn: psycopg.Connection) -> int:
+    n = 0
+    for uid, sg, since in conn.execute(
+        "select user_id, sigungu, checked_at from app.upcoming_areas"
+    ).fetchall():
+        cnt, last = conn.execute(
+            AREA_SQL, {"since": since, "kinds": UP_KINDS, "sg": list(sg)}
+        ).fetchone()
+        if not cnt:
+            continue
+        title, body = area_text(list(sg), cnt)
+        _noti(conn, uid, None, title, body, "/collections?key=upcoming")
+        conn.execute(
+            "update app.upcoming_areas set checked_at = %s where user_id = %s", (last, uid)
+        )
+        n += 1
+    return n
+
+
+def make_lot_alerts(conn: psycopg.Connection) -> int:
+    n = 0
+    today = date.today()
+    for uid, rc, lot, label, since in conn.execute(
+        "select user_id, region_code, lot_no, label, created_at from app.lot_watches"
+    ).fetchall():
+        p = {"rc": rc, "lot": lot, "since": since, "kinds": UP_KINDS, "today": today}
+        name = label or lot
+        for court, case_no, bname, unit, _ in conn.execute(LOT_UP_SQL, p).fetchall():
+            eid = _event(conn, uid, f"up:{court}:{case_no}", "lot_upcoming", None, case_no)
+            if eid:
+                title, body = lot_text(
+                    name, case_no, unit=" ".join(x for x in (bname, unit) if x) or None
+                )
+                _noti(conn, uid, eid, title, body, "/collections?key=upcoming")
+                n += 1
+        for item_id, case_no, sale_date, _ in conn.execute(LOT_ITEM_SQL, p).fetchall():
+            eid = _event(conn, uid, item_id, "lot_listed", None, case_no)
+            if eid:
+                title, body = lot_text(name, case_no, sale_date=sale_date)
+                _noti(conn, uid, eid, title, body, f"/item/{item_id}")
+                n += 1
+    return n  # 같은 사건 · 물건은 alert_events 가 한 번만 — 켠 때(created_at) 뒤 것을 늘 다시 봄
+
+
 MORNING_BODY = "등기부·매각물건명세서가 어제와 같은지, 입찰표 금액을 한글로 읽어 보세요"
 DEADLINE_KEYS = {"pay": "잔금", "tax": "취득세 신고", "order_deadline": "인도명령 신청"}
 
@@ -462,6 +548,7 @@ def run_once(*, morning: bool, push: bool = True) -> str:
         u = make_upcoming_alerts(
             conn
         )  # 먼저 — 관심에 넣은 물건의 처음 값을 아래 관심 알림이 기준으로 적음
+        u += make_area_alerts(conn) + make_lot_alerts(conn)
         s, w = make_search_alerts(conn), make_watch_alerts(conn)
         b, d = make_bid_prep_alerts(conn, morning=False), make_deadline_alerts(conn)
         o = (

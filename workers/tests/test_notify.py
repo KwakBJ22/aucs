@@ -1,6 +1,14 @@
 from datetime import date
 
-from aucs_workers.jobs.notify import Change, change_text, match_sql, watch_changes, won
+from aucs_workers.jobs.notify import (
+    Change,
+    area_text,
+    change_text,
+    lot_text,
+    match_sql,
+    watch_changes,
+    won,
+)
 
 
 def test_first_value_is_baseline_only():
@@ -92,3 +100,12 @@ def test_upcoming_text() -> None:
     t, b = upcoming_text("2026타경101761", " 관악구 신림큐브 ", date(2027, 3, 4), 310_000_000)
     assert t == "2026타경101761 매각공고됐어요"
     assert b.startswith("관악구 신림큐브 · 첫 매각기일 03월 04일 · 감정가 3억 1,000만원")
+
+
+def test_area_and_lot_texts():
+    assert area_text(["강서구"], 3)[0] == "강서구에 곧 나올 물건 3건"
+    assert area_text(["강서구", "양천구", "구로구"], 12)[0] == "강서구 외 2곳에 곧 나올 물건 12건"
+    t, b = lot_text("강서구 화곡동 1-1", "2026타경1", unit="우장산아이파크 101동 1203호")
+    assert t == "강서구 화곡동 1-1에 경매가 시작됐어요" and "1203호" in b
+    t, b = lot_text("강서구 화곡동 1-1", "2026타경1", sale_date=date(2027, 3, 4))
+    assert t.endswith("경매 물건이 나왔어요") and b == "2026타경1 · 첫 매각기일 03월 04일"

@@ -290,6 +290,55 @@ def delete_upcoming(court: str, case_no: str, uid: Uid) -> dict[str, bool]:
     return {"ok": True}
 
 
+class AreaIn(BaseModel):
+    sigungu: list[str] = Field(default_factory=list, max_length=20)
+
+
+@router.get("/upcoming/area")
+def get_upcoming_area(uid: Uid) -> list[str]:
+    """곧 나올 물건 동네 알림(시군구, 11/28) — 빈 목록이면 꺼짐."""
+    from aucs_api.services import upcoming
+
+    return upcoming.area_get(uid)
+
+
+@router.put("/upcoming/area")
+def put_upcoming_area(body: AreaIn, uid: Uid) -> list[str]:
+    from aucs_api.services import upcoming
+
+    return upcoming.area_set(uid, body.sigungu)
+
+
+@router.get("/lot-watch/{item_id}")
+def get_lot_watch(item_id: str, uid: Uid) -> dict[str, bool]:
+    """이 물건과 같은 단지 경매 알림이 켜져 있는지(11/28)."""
+    from aucs_api.services import upcoming
+
+    return {"on": upcoming.lot_get(uid, item_id)}
+
+
+@router.put("/lot-watch/{item_id}")
+def put_lot_watch(item_id: str, uid: Uid) -> dict[str, bool]:
+    from aucs_api.services import upcoming
+
+    try:
+        upcoming.lot_set(uid, item_id, True)
+    except ValueError as e:
+        raise HTTPException(404, "지번을 모르는 물건이에요") from e
+    return {"ok": True}
+
+
+@router.delete("/lot-watch/{item_id}")
+def delete_lot_watch(item_id: str, uid: Uid) -> dict[str, bool]:
+    from aucs_api.services import upcoming
+
+    try:
+        upcoming.lot_set(uid, item_id, False)
+    except ValueError:
+        pass
+    return {"ok": True}
+
+
 @router.get("/searches")
 def get_searches(uid: Uid) -> list[dict[str, Any]]:
     return me.searches(uid)

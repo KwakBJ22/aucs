@@ -188,3 +188,72 @@ def watch_set(uid: str, court: str, case_no: str, on: bool) -> None:
                 "delete from app.upcoming_watches where user_id = %s and court_code = %s and case_no = %s",
                 (uid, court, case_no),
             )
+
+
+# ── 경매개시 알림(11/28, 3단계) — 동네(시군구 목록) · 단지(지역 코드 + 지번). 알림은 jobs/notify.py 가 보냄.
+MAX_AREAS = 10
+
+
+def area_get(uid: str) -> list[str]:
+    with connect() as c:
+        r = c.execute(
+            "select sigungu from app.upcoming_areas where user_id = %s", (uid,)
+        ).fetchone()
+    return list(r["sigungu"]) if r else []
+
+
+def area_set(uid: str, sigungu: list[str]) -> list[str]:
+    """동네 알림 켜기(시군구 목록 그대로 바꿈) · 빈 목록이면 끔. 켤 때부터 새로 들어온 사건만 알림."""
+    sg = list(dict.fromkeys(s.strip() for s in sigungu if s and s.strip()))[:MAX_AREAS]
+    with connect() as c:
+        if not sg:
+            c.execute("delete from app.upcoming_areas where user_id = %s", (uid,))
+        else:
+            c.execute(
+                "insert into app.upcoming_areas (user_id, sigungu) values (%s, %s) "
+                "on conflict (user_id) do update set sigungu = excluded.sigungu",
+                (uid, sg),
+            )
+    return sg
+
+
+def lot_label(address: str | None, lot_no: str | None) -> str:
+    """(순수 함수) 「경기도 안산시 단원구 와동 709-2 시온캐슬 4층401호」 → 「안산시 단원구 와동 709-2」."""
+    a = (address or "").split()
+    if lot_no and lot_no in a:
+        a = a[: a.index(lot_no) + 1]
+    if a and a[0].endswith(("도", "특별시", "광역시", "특별자치시")):
+        a = a[1:]
+    return " ".join(a)[:60]
+
+
+LOT_OF_ITEM = "select region_code, lot_no, address from core.items where item_id = %s"
+
+
+def lot_get(uid: str, item_id: str) -> bool:
+    with connect() as c:
+        r = c.execute(
+            "select 1 from app.lot_watches w join core.items i on i.region_code = w.region_code "
+            "and i.lot_no = w.lot_no where w.user_id = %s and i.item_id = %s",
+            (uid, item_id),
+        ).fetchone()
+    return bool(r)
+
+
+def lot_set(uid: str, item_id: str, on: bool) -> None:
+    """물건과 같은 단지(지역 코드 + 지번) 알림 켜기 · 끄기. 지번을 모르는 물건이면 ValueError."""
+    with connect() as c:
+        r = c.execute(LOT_OF_ITEM, (item_id,)).fetchone()
+        if not r or not r["region_code"] or not r["lot_no"]:
+            raise ValueError("lot")
+        if on:
+            c.execute(
+                "insert into app.lot_watches (user_id, region_code, lot_no, label) values (%s, %s, %s, %s) "
+                "on conflict do nothing",
+                (uid, r["region_code"], r["lot_no"], lot_label(r["address"], r["lot_no"])),
+            )
+        else:
+            c.execute(
+                "delete from app.lot_watches where user_id = %s and region_code = %s and lot_no = %s",
+                (uid, r["region_code"], r["lot_no"]),
+            )

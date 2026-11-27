@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from aucs_api.services.upcoming import expect, market_by_lot, timing_table
+from aucs_api.services.upcoming import expect, lot_label, market_by_lot, timing_table
 
 
 def test_timing_table_small_court_uses_all() -> None:
@@ -31,3 +31,9 @@ def test_market_by_lot_top_two_by_count() -> None:
     ]
     m = market_by_lot(rows)[("1162010200", "1421-1")]
     assert [x["area"] for x in m] == [59, 84]
+
+
+def test_lot_label_cuts_at_lot_and_drops_sido() -> None:
+    a = "경기도 안산시 단원구 와동 709-2 시온캐슬 4층401호"
+    assert lot_label(a, "709-2") == "안산시 단원구 와동 709-2"
+    assert lot_label("서울특별시 강서구 화곡동 1-1", None) == "강서구 화곡동 1-1"

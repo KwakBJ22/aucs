@@ -16,6 +16,7 @@ import { GoLinks } from "@/components/item/go-links";
 import { WorthTradesChart } from "@/components/item/trades-chart";
 import { useState } from "react";
 import Link from "next/link";
+import { LotAlert } from "@/components/lot-alert";
 
 const TENANTS_FIRST = 5;
 const FAIL_CHIP: Record<string, string> = {
@@ -400,6 +401,7 @@ export function Body({ q, d }: { q: Question; d: ItemDetail }) {
           </>
         )}
         {b.complex && <ComplexBlock cx={b.complex} />}
+        {b.complex && <LotAlert id={d.item_id} />}
         <GoLinks keys={["kb", "kapt"]} d={d} />
       </>
     );

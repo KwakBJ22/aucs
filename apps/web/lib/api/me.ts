@@ -323,6 +323,15 @@ export const meApi = {
       method: on ? "PUT" : "DELETE",
     });
   },
+  /** 곧 나올 물건 동네 알림 시군구(11/28) — 빈 목록이면 꺼짐. */
+  upcomingArea: (t: string) => call<string[]>(t, "/upcoming/area"),
+  setUpcomingArea: (t: string, sigungu: string[]) =>
+    call<string[]>(t, "/upcoming/area", { method: "PUT", body: JSON.stringify({ sigungu }) }),
+  /** 이 물건과 같은 단지 경매 알림(11/28). */
+  lotWatch: (t: string, id: string) =>
+    call<{ on: boolean }>(t, `/lot-watch/${encodeURIComponent(id)}`),
+  setLotWatch: (t: string, id: string, on: boolean) =>
+    call(t, `/lot-watch/${encodeURIComponent(id)}`, { method: on ? "PUT" : "DELETE" }),
   searches: (t: string) => call<SavedSearch[]>(t, "/searches"),
   addSearch: (t: string, name: string, filters: Record<string, unknown>) =>
     call<SavedSearch>(t, "/searches", {

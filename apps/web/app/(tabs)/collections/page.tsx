@@ -76,6 +76,25 @@ function CollectionsView() {
       .catch(() => {});
   }, [up, token]);
 
+  // 동네 알림(11/28): 「내 지역」 시군구에 새 사건(공고 전)이 들어오면 하루 한 번 묶어 알림
+  const [areaOn, setAreaOn] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!up || !token) return;
+    meApi
+      .upcomingArea(token)
+      .then(setAreaOn)
+      .catch(() => {});
+  }, [up, token]);
+  const areaToggle = () => {
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+    const next = areaOn?.length ? [] : (profile?.regions ?? []);
+    setAreaOn(next);
+    meApi.setUpcomingArea(token, next).catch(() => setAreaOn(areaOn));
+  };
+
   const upMore = () => {
     if (!upData) return;
     const page = upData.page + 1;
@@ -152,6 +171,11 @@ function CollectionsView() {
       <section className="section">
         <h2>{cur?.[1]}</h2>
         <p className="sub mt-0">{cur?.[2]}</p>
+        {up && mine && (
+          <button className="btn soft w-full mb-12" onClick={areaToggle}>
+            {areaOn?.length ? copy.upcoming.areaOn(areaOn.length) : copy.upcoming.areaOff}
+          </button>
+        )}
         {(up ? upNow === null : rows === null) && !failed && (
           <Delayed>
             <SkRows n={6} />
