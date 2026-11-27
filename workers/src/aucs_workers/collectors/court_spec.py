@@ -162,6 +162,26 @@ def save(
     )
     if not pages:
         return 0
+    return save_tenants(conn, t, words)
+
+
+def reparse(conn: psycopg.Connection) -> tuple[int, int]:
+    """받아 둔 명세서 원본 낱말을 법원에 다시 묻지 않고 다시 읽음(11/27 — 읽는 규칙을 고쳤을 때)."""
+    rows = conn.execute(
+        """select distinct on (d.case_id, d.doc_kind) d.case_id, i.item_id, d.payload->'words' as words
+           from raw.court_doc_raw d join core.items i on i.case_id = d.case_id and d.doc_kind = 'spec_' || i.item_no
+           where d.doc_kind like 'spec\\_%%' and jsonb_array_length(coalesce(d.payload->'words', '[]')) > 0
+           order by d.case_id, d.doc_kind, d.fetched_at desc"""
+    ).fetchall()
+    n = 0
+    for case_id, item_id, ws in rows:
+        words = [tuple(w) for w in ws]
+        n += save_tenants(conn, {"case_id": case_id, "item_id": item_id}, words)
+        conn.commit()
+    return len(rows), n
+
+
+def save_tenants(conn: psycopg.Connection, t: dict[str, Any], words: list[Any]) -> int:
     res = parse_tenants(words)
     conn.execute("delete from core.tenants where item_id = %s and source = 'spec'", (t["item_id"],))
     for r in res["rows"]:
@@ -195,7 +215,14 @@ def main() -> None:
     ap.add_argument("--case", nargs=3, metavar=("법원코드", "사건번호", "물건번호"))
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--old", action="store_true", help="입찰 지난 60일(없어지기 직전 것부터)")
+    ap.add_argument("--reparse", action="store_true", help="받아 둔 원본을 다시 읽기만(법원에 안 물음)")
     a = ap.parse_args()
+    if a.reparse:
+        with connect() as conn, run(conn, "court_spec_reparse", "매각물건명세서 원본 다시 읽기") as job:
+            docs, n = reparse(conn)
+            job.count = docs
+        print(f"끝: 명세서 {docs}건 다시 읽음 · 임차인 줄 {n}", flush=True)
+        return
     from playwright.sync_api import sync_playwright
 
     polite = Polite(daily_limit=SPEC_MAX * 2, hourly=not a.case)

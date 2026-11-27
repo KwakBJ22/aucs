@@ -28,3 +28,23 @@ def test_guarantor_merged_into_tenant() -> None:
 def test_guarantor_alone_kept() -> None:
     rows = [{"name_raw": "시보증공사(윤소연)", "move_in_date": date(2021, 8, 6), "deposit_krw": 270_000_000}]
     assert merge_guarantor(rows) == rows
+
+
+def test_split_names_both_look_like_guarantor() -> None:
+    # 서울동부 2025타경51965: 「유현성한국주택금융」 · 「공사(임차인:유현성)」 — 같은 1.25억 · 같은 전입
+    d = date(2022, 12, 16)
+    rows = [
+        {"name_raw": "유현성한국주택금융", "move_in_date": d, "claim_date": None, "deposit_krw": 125_000_000,
+         "has_lease_registration": True},
+        {"name_raw": "공사(임차인:유현성)", "move_in_date": d, "claim_date": date(2025, 8, 22),
+         "deposit_krw": 125_000_000, "has_lease_registration": False},
+    ]  # fmt: skip
+    out = merge_guarantor(rows)
+    assert len(out) == 1 and out[0]["claim_date"] == date(2025, 8, 22) and out[0]["has_lease_registration"]
+
+
+def test_different_people_same_deposit_not_merged() -> None:
+    d = date(2022, 1, 1)
+    rows = [{"name_raw": "김가", "move_in_date": d, "deposit_krw": 10_000_000},
+            {"name_raw": "이나", "move_in_date": d, "deposit_krw": 10_000_000}]  # fmt: skip
+    assert len(merge_guarantor(rows)) == 2

@@ -251,7 +251,42 @@ def parse_tenants(ws: list[Word]) -> dict[str, Any]:
             ]  # 이름 칸이 두 줄을 한 칸으로 묶은 경우(같은 사람 · 출처만 다름)
             row["name_shared"] = True
         rows.append(row)
-    return {"none": none and not rows, "rows": merge_same(rows)}
+    return {"none": none and not rows, "rows": merge_same(fix_names(rows))}
+
+
+GUARANTORS = ("주택도시보증공사", "한국주택금융공사", "서울보증보험")
+
+
+def fix_names(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """이름 칸이 줄을 넘어 앞뒤 사람에게 갈라 붙은 것을 바로잡음(11/27 — 진행 명세서 원본 524줄 중 109줄).
+
+    ① 「유현성한국주택금융」 + 「공사(임차인:유현성)」 → 「유현성」 + 「한국주택금융공사(임차인:유현성)」
+    ② 이름이 빈 줄은 보증금 · 전입일이 같은 다른 줄의 이름으로(같은 사람이 출처만 다른 줄 — 서울… 2025타경508836)."""
+    rows = [dict(r) for r in rows]
+    for i in range(len(rows) - 1):
+        a, b = rows[i].get("name") or "", rows[i + 1].get("name") or ""
+        for g in GUARANTORS:
+            if b.startswith(g) or g in a:
+                continue
+            for k in range(len(g) - 1, 0, -1):
+                if a.endswith(g[:k]) and b.startswith(g[k:]):
+                    rows[i]["name"] = a[:-k] or None
+                    rows[i + 1]["name"] = g + b[len(g) - k :]
+                    break
+            else:
+                continue
+            break
+    for r in rows:
+        if r.get("name") or not (r.get("deposit_krw") or r.get("move_in_date")):
+            continue
+        twin = next(
+            (o for o in rows if o is not r and o.get("name")
+             and o.get("deposit_krw") == r.get("deposit_krw") and o.get("move_in_date") == r.get("move_in_date")),
+            None,
+        )  # fmt: skip
+        if twin:
+            r["name"] = twin["name"]
+    return rows
 
 
 def merge_same(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -259,7 +294,7 @@ def merge_same(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for r in rows:
         # 「한국주택금융공사(임차인:김은)」처럼 임차인 권리를 이어받은 줄 → 그 임차인과 같은 보증금이면 한 줄(11/26 서울동부 2025타경51836)
-        heir = re.search(r"\(임차인\s*:\s*([^)]+)\)", r["name"] or "")
+        heir = re.search(r"\(임차인\s*:?\s*([^)]+)\)", r["name"] or "")
         who = heir.group(1).strip() if heir else r["name"]
         twin = next(
             (o for o in out if o["name"] == who and o["deposit_krw"] == r["deposit_krw"]
