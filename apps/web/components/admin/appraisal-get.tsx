@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DDay } from "@/components/dday";
 import { COURT_CASE_PAGE } from "@/components/item/appraisal";
-import { t as itemT } from "@/components/item/shared";
 import { adminApi, type AppraisalTargets } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
@@ -52,6 +51,12 @@ export function AppraisalGet() {
   useEffect(() => {
     void load(0, area);
   }, [load, area]);
+  // 복사 뒤 2초 동안만 단추 글자를 「복사함」으로
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(null), 2000);
+    return () => window.clearTimeout(id);
+  }, [copied]);
   if (!d) return null;
   const all = areas.reduce((n, a) => n + a.n, 0);
   const copyNo = (caseNo: string) => {
@@ -97,34 +102,28 @@ export function AppraisalGet() {
         </button>
       </div>
       <p className="sub fs-sm mt-6">{soon ? t.soonHint : t.openHint}</p>
-      {d.rows.map((r) => {
-        const [year = "", num = r.case_no] = r.case_no.split("타경");
-        return (
-          <div key={r.case_id} className="adm-card">
-            <Link
-              prefetch={false}
-              href={`/item/${encodeURIComponent(r.item_id)}`}
-              target="_blank"
-              className="link fw-6"
-            >
-              {r.place}
-            </Link>
-            <div className="sub mt-2">
-              <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
-              {r.home && <span className="chip blue ml-6">{t.home}</span>}
-              {r.station && <span className="chip green ml-6">{t.station}</span>}
-            </div>
-            <div className="adm-line mt-8">
-              <button type="button" className="btn soft sm" onClick={() => copyNo(r.case_no)}>
-                {t.copy}
-              </button>
-              {copied === r.case_no && (
-                <p className="sub fs-sm w-full m-0">{itemT.appraisal.copied(r.court, year, num)}</p>
-              )}
-            </div>
+      {d.rows.map((r) => (
+        <div key={r.case_id} className="adm-card adm-item">
+          <Link
+            prefetch={false}
+            href={`/item/${encodeURIComponent(r.item_id)}`}
+            target="_blank"
+            className="link fw-6 adm-item-addr"
+          >
+            {r.place}
+          </Link>
+          <div className="sub adm-item-info">
+            <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no}
+            {r.home && <span className="chip blue ml-6">{t.home}</span>}
+            {r.station && <span className="chip green ml-6">{t.station}</span>}
           </div>
-        );
-      })}
+          <div className="adm-item-btns">
+            <button type="button" className="btn soft sm" onClick={() => copyNo(r.case_no)}>
+              {copied === r.case_no ? t.copied : t.copy}
+            </button>
+          </div>
+        </div>
+      ))}
       {d.rows.length < d.total && (
         <button className="adm-btn mt-8" onClick={() => load(d.next, area)}>
           {t.more}

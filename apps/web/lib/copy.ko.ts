@@ -2349,7 +2349,7 @@ export const copy = {
       item: (n: number | null) => (n ? `물건 ${n}` : ""),
       hasAppraisal: "감정평가서 있음",
       registry: "등기부등본 받기",
-      copied: "주소를 복사했어요 · 인터넷등기소에서 붙여 넣어 찾으세요",
+      copied: "복사함",
     },
     getAppraisal: {
       title: (n: number) => `감정평가서 받기 · 남은 사건 ${n.toLocaleString("ko-KR")}건`,
@@ -2365,6 +2365,7 @@ export const copy = {
       openCourt: "법원경매정보 열기",
       openHint: "한 번 열어 두고, 아래에서 「복사」만 눌러 그 창에 붙여 넣으세요",
       copy: "복사",
+      copied: "복사함",
       // 11/27 대표님: 우선 받을 목록 · 그 줄에서 바로 올리기
       soon: "우선 받을 목록",
       soonOn: "전체 목록",

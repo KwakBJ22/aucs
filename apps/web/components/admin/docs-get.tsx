@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DDay } from "@/components/dday";
 import { OriginalLink } from "@/components/item/appraisal";
 import { adminApi, type CaseItem } from "@/lib/api/admin";
@@ -22,6 +22,12 @@ export function DocsGet() {
   const [rows, setRows] = useState<CaseItem[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  // 복사 뒤 2초 동안만 단추 글자를 「복사함」으로
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(null), 2000);
+    return () => window.clearTimeout(id);
+  }, [copied]);
   const find = () => {
     if (!q.trim()) return;
     setBusy(true);
@@ -48,21 +54,21 @@ export function DocsGet() {
       </div>
       {rows?.length === 0 && <p className="sub mt-8">{t.none}</p>}
       {rows?.map((r) => (
-        <div key={r.item_id} className="adm-card">
+        <div key={r.item_id} className="adm-card adm-item">
           <Link
             prefetch={false}
             href={`/item/${encodeURIComponent(r.item_id)}`}
             target="_blank"
-            className="link fw-6"
+            className="link fw-6 adm-item-addr"
           >
             {r.address ?? r.item_id}
           </Link>
-          <div className="sub mt-2">
+          <div className="sub adm-item-info">
             <DDay d={dDay(r.sale_date)} /> · {r.court} {r.case_no} {t.item(r.item_no)}
             {r.usage && ` · ${r.usage}`}
             {r.has_appraisal && <span className="chip green ml-6">{t.hasAppraisal}</span>}
           </div>
-          <div className="adm-line mt-8">
+          <div className="adm-item-btns">
             {!r.has_appraisal && <OriginalLink court={r.court} caseNo={r.case_no} compact />}
             <a
               className="btn soft sm"
@@ -77,10 +83,9 @@ export function DocsGet() {
                 );
               }}
             >
-              {t.registry}
+              {copied === r.item_id ? t.copied : t.registry}
             </a>
           </div>
-          {copied === r.item_id && <p className="sub fs-sm m-0">{t.copied}</p>}
         </div>
       ))}
     </section>

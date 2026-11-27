@@ -234,6 +234,42 @@ textarea.adm-input {
   flex-direction: column;
   gap: 4px;
 }
+/* 서류 목록 한 물건(11/27 대표님): PC 한 줄 · 휴대폰 두 줄(주소 / 나머지) */
+.adm-item {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.adm-item-addr {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adm-item-info {
+  flex: none;
+  white-space: nowrap;
+}
+.adm-item-btns {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+@media (max-width: 600px) {
+  .adm-item-addr {
+    flex: 1 1 100%;
+  }
+  .adm-item-info {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
 .adm-detail {
   padding: 12px;
   margin: 8px 0;
