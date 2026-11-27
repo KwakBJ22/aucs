@@ -42,7 +42,8 @@ export function AppraisalGet() {
       adminApi
         .appraisalTargets(token, offset, sg, soon)
         .then((x) => {
-          if (!offset && !sg && x.areas.length) setAreas(x.areas);
+          // 시군구 건수는 우선 목록 · 전체 목록마다 그 기준으로 새로(11/27)
+          if (!offset) setAreas(x.areas);
           setD((v) => (offset && v ? { ...x, rows: [...v.rows, ...x.rows] } : x));
         })
         .catch((e) => say(errText(e))),
@@ -88,6 +89,10 @@ export function AppraisalGet() {
               {t.area(a.area, a.n)}
             </option>
           ))}
+          {/* 고른 시군구가 이 목록에 없으면(0건) 고르기는 그대로 두고 그 칸만 0건으로 보임 */}
+          {area && !areas.some((a) => a.area === area) && (
+            <option value={area}>{t.area(area, 0)}</option>
+          )}
         </select>
         {/* 11/26 대표님: 처음에만 열고, 이미 열려 있으면 다시 불러오지 않고 그 창으로만(적어 둔 검색이 남게) */}
         <button type="button" className="btn soft sm" onClick={openCourt}>
