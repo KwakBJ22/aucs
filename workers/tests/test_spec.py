@@ -92,3 +92,24 @@ def test_same_name_unknown_deposit_merged() -> None:
             {**base, "name": "장소희", "deposit_krw": None, "move_in_date": date(2025, 3, 4)}]  # fmt: skip
     out = merge_same(fix_names(rows))
     assert [(r["name"], r["deposit_krw"]) for r in out] == [("변병림", 30_000_000), ("장소희", None)]
+
+
+def test_lists_to_items() -> None:
+    # 서울남부 2025타경548: 물건 1 = 목록 1~7(11층), 물건 2 = 목록 8~14(12층)
+    from aucs_workers.extract.case_docs import lists_to_items
+
+    det = {1: {"dma_result": {"gdsDspslObjctLst": [{"dspslObjctSeq": str(i)} for i in range(1, 8)]}},
+           2: {"dma_result": {"gdsDspslObjctLst": [{"dspslObjctSeq": i} for i in range(8, 15)]}}}  # fmt: skip
+    m = lists_to_items(det)
+    assert m[2] == 1 and m[7] == 1 and m[8] == 2 and m[14] == 2 and 15 not in m
+
+
+def test_two_rows_in_one_cell() -> None:
+    from aucs_workers.extract.spec import _money, fix_names
+
+    assert _money(["250,000,000", "250,000,000"]) == 250_000_000
+    assert _money(["18,000,000"]) == 18_000_000 and _money([]) is None
+    base = {"part": None, "source": None, "title": None, "period": None, "monthly_rent_krw": None,
+            "fixed_date": None, "claim_date": None, "claim_text": None, "move_in_date": None}  # fmt: skip
+    rows = fix_names([{**base, "name": "박종민주택도시보증공사(박종민)", "deposit_krw": 226_000_000}])
+    assert rows[0]["name"] == "박종민"

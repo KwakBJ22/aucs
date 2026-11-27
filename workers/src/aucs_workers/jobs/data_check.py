@@ -117,8 +117,14 @@ select distinct item_id from t where fixed_date < move_in_date - interval '5 yea
   or move_in_date > current_date or fixed_date > current_date or claim_date > current_date
   or move_in_date < date '1980-01-01'
 """
-DEPOSIT_BIG_SQL = _LIVE_T + """
-select l.item_id from live l join (select item_id, sum(deposit_krw) s from t group by 1) x using (item_id)
+DEPOSIT_BIG_SQL = _LIVE_T + f"""
+select l.item_id from live l join (
+  select a.item_id, sum(a.deposit_krw) s from t a
+  -- 보증기관 줄은 같은 보증금 · 전입의 원래 임차인 줄이 있으면 한 사람(분석의 merge_guarantor 와 같게, 11/27)
+  where not (coalesce(a.name_raw, '') ~ '{_GUAR}' and exists (
+    select 1 from t b where b.item_id = a.item_id and b.tenant_id <> a.tenant_id and b.deposit_krw = a.deposit_krw
+      and coalesce(b.name_raw, '') !~ '{_GUAR}'))
+  group by 1) x using (item_id)
 where l.appraisal_krw > 0 and x.s > 1.5 * l.appraisal_krw
 """
 MARKET_ODD_SQL = f"""

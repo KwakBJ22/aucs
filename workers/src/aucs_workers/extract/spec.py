@@ -117,6 +117,16 @@ def _join(parts: list[str]) -> str:
     return out
 
 
+def _money(parts: list[str]) -> int | None:
+    """금액 칸 조각 → 원. 같은 사람 두 줄(등기 · 권리신고)이 한 칸에 모이면 「250,000,000」 둘이 이어 붙어
+    25경 원이 됐음(11/27 서울북부 2025타경11716) → 금액을 하나씩 읽고 첫 금액을 씀."""
+    vals = [v for p in parts if (v := parse_krw(p))]
+    if not vals:
+        joined = "".join(parts)  # 「250,」 / 「000,000」 처럼 한 금액이 갈라진 때만
+        return parse_krw(joined) if joined else None
+    return vals[0]
+
+
 def _join_dates(parts: list[str]) -> str:
     """날짜 칸 조각 잇기 — 줄이 바뀌며 「2022.08.1 / 0.」처럼 나뉜 날짜를 붙임(11/27 성남 2025타경52870: 08-10 을 08-01 로 읽었음)."""
     out = ""
@@ -216,8 +226,8 @@ def parse_tenants(ws: list[Word]) -> dict[str, Any]:
             "source": _join(r.get("source", [])) or None,
             "title": _join(r.get("title", [])) or None,
             "period": "".join(r.get("period", [])) or None,
-            "deposit_krw": parse_krw("".join(r.get("deposit", []))) if r.get("deposit") else None,
-            "monthly_rent_krw": parse_krw("".join(r.get("rent", []))) if r.get("rent") else None,
+            "deposit_krw": _money(r.get("deposit", [])),
+            "monthly_rent_krw": _money(r.get("rent", [])),
             "move_in_date": parse_dot_date(dates_in[0]) if dates_in else None,
             "fixed_date": parse_dot_date(dates_fx[0]) if dates_fx else None,
             "claim_date": parse_dot_date(claim_t),
@@ -254,7 +264,8 @@ def parse_tenants(ws: list[Word]) -> dict[str, Any]:
     return {"none": none and not rows, "rows": merge_same(fix_names(rows))}
 
 
-GUARANTORS = ("주택도시보증공사", "한국주택금융공사", "서울보증보험")
+GUARANTORS = ("주택도시보증공사", "한국주택금융공사", "서울보증보험", "한국토지주택공사")
+_HEIR_IN_NAME = re.compile(r"^(.+?)(?:" + "|".join(GUARANTORS) + r")\((?:임차인\s*:?\s*)?\1\)$")
 
 
 def fix_names(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -276,6 +287,11 @@ def fix_names(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             else:
                 continue
             break
+    for r in rows:
+        # 「박종민주택도시보증공사(박종민)」 — 두 줄이 한 칸에 모인 것: 원래 임차인 이름만(보증기관은 셈에서 한 사람)
+        nm = r.get("name") or ""
+        if m := _HEIR_IN_NAME.match(nm):
+            r["name"] = m.group(1)
     for r in rows:
         if r.get("name") or not (r.get("deposit_krw") or r.get("move_in_date")):
             continue

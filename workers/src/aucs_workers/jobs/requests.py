@@ -55,6 +55,8 @@ def command(key: str) -> list[str] | None:
         return [sys.executable, "-m", "aucs_workers.collectors.complexes"]
     if key == "trades_land":  # 토지 매매 실거래 처음 2년치(11/16) — 그 뒤는 매월 trades 가 같이
         return [sys.executable, "-m", "aucs_workers.collectors.trades", "--types", "land_sale", "--months", "24", "--skip-done"]
+    if key == "tenants_resave":  # 여러 물건 사건 임차인 줄을 받아 둔 현황조사서로 다시 씀(11/27 목록 → 물건 번호)
+        return [sys.executable, "-m", "aucs_workers.extract.case_docs", "resave"]
     if key == "data_check":  # 자료 점검 한 번(11/27 — 아침 묶음 말고 규칙을 고친 뒤 바로)
         return [sys.executable, "-m", "aucs_workers.jobs.data_check"]
     if key == "spec_reparse":  # 받아 둔 명세서 원본을 다시 읽기(11/27 — 법원에 안 물음)

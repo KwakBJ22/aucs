@@ -297,8 +297,50 @@ def occupant_unknown(sr: dict[str, Any]) -> bool:
     return bool(re.search(r"폐문부재|아무도 만나지 못|점유자\s*미상", text))
 
 
+def lists_to_items(details: dict[int, Any]) -> dict[int, int]:
+    """물건상세(물건 번호 → payload)의 매각 목록(gdsDspslObjctLst.dspslObjctSeq) → {목록 번호: 물건 번호}(순수 함수).
+
+    11/27 서울남부 2025타경548: 물건 1 = 11층 1101~1107호(목록 1~7), 물건 2 = 12층(목록 8~14) 일괄매각인데
+    현황조사서 목록 번호를 물건 번호로 써서 1102호 임차인이 물건 2에, 1103~1207호는 사건 전체(모든 물건)에 붙었음."""
+    out: dict[int, int] = {}
+    for no, p in details.items():
+        for o in ((p or {}).get("dma_result") or {}).get("gdsDspslObjctLst") or []:
+            seq = str(o.get("dspslObjctSeq") or "")
+            if seq.isdigit():
+                out.setdefault(int(seq), no)
+    return out
+
+
+def _list_map(conn: psycopg.Connection, case_id: str) -> dict[int, int] | None:
+    """사건의 모든 물건에 물건상세가 있으면 {목록 번호: 물건 번호}, 하나라도 없으면 None(예전처럼)."""
+    items = [r[0] for r in conn.execute(
+        "select item_no from core.items where case_id = %s and status_code is distinct from 'gone'", (case_id,)
+    ).fetchall()]  # fmt: skip
+    if len(items) < 2:
+        return None
+    details: dict[int, Any] = {}
+    for kind, payload in conn.execute(
+        """select distinct on (doc_kind) doc_kind, payload from raw.court_doc_raw
+           where case_id = %s and doc_kind like 'item\\_detail\\_%%' and jsonb_typeof(payload->'dma_result') = 'object'
+           order by doc_kind, fetched_at desc""",
+        (case_id,),
+    ).fetchall():
+        no = kind.rsplit("_", 1)[-1]
+        if no.isdigit():
+            details[int(no)] = payload
+    if not all(n in details for n in items):
+        return None
+    m = lists_to_items({n: details[n] for n in items})
+    return m or None
+
+
 def save_tenants(conn: psycopg.Connection, case_id: str, sr: dict[str, Any]) -> int:
     rows = tenants_from_status_report(sr)
+    # 11/27: 현황조사서 번호는 「목록」 번호 — 물건상세 목록으로 물건 번호를 찾음. 지금 매각하지 않는 목록(다른 물건 ·
+    # 빠진 호)의 임차인은 넣지 않음(사건 전체로 넣으면 모든 물건에 붙음 — 진행 20사건 530줄)
+    lm = _list_map(conn, case_id)
+    if lm is not None:
+        rows = [{**t, "item_no": lm[t["item_no"]]} for t in rows if t["item_no"] in lm]
     conn.execute(
         "delete from core.tenants where case_id = %s and source = 'status_report'", (case_id,)
     )
@@ -332,6 +374,22 @@ def save_tenants(conn: psycopg.Connection, case_id: str, sr: dict[str, Any]) -> 
         (case_id,),
     ).fetchall():
         drop_status_rows(conn, case_id, item_id)
+    return len(rows)
+
+
+def resave_multi(conn: psycopg.Connection) -> int:
+    """받아 둔 현황조사서로 여러 물건 사건의 임차인 줄을 다시 씀(11/27 — 목록 번호 → 물건 번호)."""
+    rows = conn.execute(
+        """select distinct on (r.case_id) r.case_id, r.payload from raw.court_doc_raw r
+           where r.doc_kind = 'status_report' and r.payload ? 'dlt_ordTsLserLtn'
+             and (select count(*) from core.items i where i.case_id = r.case_id
+                  and i.status_code is distinct from 'gone') > 1
+           order by r.case_id, r.fetched_at desc"""
+    ).fetchall()
+    for case_id, sr in rows:
+        save_tenants(conn, case_id, sr)
+        conn.execute("update core.items set updated_at = now() where case_id = %s", (case_id,))
+        conn.commit()
     return len(rows)
 
 
@@ -381,7 +439,9 @@ if __name__ == "__main__":
     from aucs_workers.db import connect
 
     with connect() as c:
-        if sys.argv[1:] == ["events"]:
+        if sys.argv[1:] == ["resave"]:
+            print(f"임차인 줄 다시 씀(여러 물건 사건): {resave_multi(c)}사건")
+        elif sys.argv[1:] == ["events"]:
             print(f"문건 흐름 다시 씀: {rebuild_events(c)}사건")
         else:
             print(f"임차인 호 채움: {backfill_items(c)}줄")
