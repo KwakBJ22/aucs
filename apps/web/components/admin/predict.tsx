@@ -8,6 +8,7 @@ import { copy } from "@/lib/copy.ko";
 import { errText, useAdmin } from "./ctx";
 
 const t = copy.admin.predict;
+const SHADOW_MIN_N = 50; // 「그림자가 나음」 칩은 현행 · 그림자 모두 이 건수 이상일 때만
 
 function Factor({ f, months }: { f: PredictFactor; months: string[] }) {
   const isFail = f.key.startsWith("fail:");
@@ -108,7 +109,8 @@ export function PredictView() {
         {shadowRows.length === 0 && <p className="sub">{t.none}</p>}
         {shadowRows.map((r) => {
           const better =
-            r.shadow.n > 0 &&
+            r.shadow.n >= SHADOW_MIN_N &&
+            r.current.n >= SHADOW_MIN_N &&
             (r.shadow.inside ?? 0) > (r.current.inside ?? 0) &&
             (r.shadow.mid_err ?? 0) < (r.current.mid_err ?? 0);
           return (
