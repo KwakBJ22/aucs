@@ -27,7 +27,7 @@ from aucs_rules.courts import COURTS
 from aucs_rules.find_filter import VEHICLES
 from psycopg.types.json import Jsonb
 
-from aucs_workers.collectors.browser import launch_chrome
+from aucs_workers.collectors.browser import launch_chrome, lean_context
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
@@ -576,7 +576,7 @@ def _run(a: argparse.Namespace, polite: Polite, req_ids: list[int]) -> None:
         light = bool(a.picks or a.next or a.photos or a.details or a.new)
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
-            page = browser.new_page()
+            page = lean_context(browser).new_page()  # 11/27 사진 · 글꼴은 안 받음
             page.goto(CASE_PAGE, wait_until="networkidle", timeout=60000)
             try:
                 for court, case_no in targets:

@@ -25,7 +25,7 @@ import psycopg
 from aucs_rules.courts import COURTS
 from psycopg.types.json import Jsonb
 
-from aucs_workers.collectors.browser import launch_chrome
+from aucs_workers.collectors.browser import launch_chrome, lean_context
 from aucs_workers.collectors.court_docs import (
     ARCHIVE_USAGES,
     AREA,
@@ -36,6 +36,7 @@ from aucs_workers.collectors.court_docs import (
 from aucs_workers.collectors.parse import checksum
 from aucs_workers.collectors.polite import DailyLimitReached, Polite
 from aucs_workers.db import connect
+from aucs_workers.doc_files import save_file
 from aucs_workers.extract.spec import parse_tenants, words_from_texts
 from aucs_workers.jobs.runlog import run
 
@@ -69,7 +70,8 @@ where {AREA} and {REAL_ESTATE} and i.status_code is distinct from 'gone' and i.i
   -- 같은 문서를 이미 글까지 받았으면 건너뜀 · 못 받았으면(아직 비공개 등) 하루 뒤 다시
   and not exists (select 1 from raw.court_doc_raw s where s.case_id = i.case_id and s.doc_kind = 'spec_' || i.item_no
                   and s.payload->>'ecdoc' = d.payload->'dma_result'->'dspslGdsDxdyInfo'->>'dspslGdsSpcfcEcdocId'
-                  and ((s.payload->>'pages')::int > 0 or s.fetched_at > now() - interval '1 day'))
+                  and (((s.payload->>'pages')::int > 0 and s.payload ? 'pdf') or s.fetched_at > now() - interval '1 day'))
+  -- 11/27: 원본 파일을 보관하기 전에 글만 읽은 것(pdf 표시 없음)은 한 번 더 받아 원본을 남김
 order by i.sale_date, {LIVE_FIRST}
 limit %(n)s"""
 
@@ -104,8 +106,11 @@ def open_spec(page: Any, polite: Polite, t: dict[str, Any]) -> dict[str, Any]:
     return polite.call(one, f"{t['case_no']} 명세서{t['item_no']}")
 
 
-def read_viewer(browser: Any, url: str, enc: str) -> dict[int, list[dict[str, Any]]]:
-    """② 뷰어를 열어 쪽마다 글(texts/N)을 모음. 화면에 안 보인 쪽은 틀을 내려 부르게 함."""
+def read_viewer(
+    ctx: Any, url: str, enc: str, pdf: list[bytes] | None = None
+) -> dict[int, list[dict[str, Any]]]:
+    """② 뷰어를 열어 쪽마다 글(texts/N)을 모음. 화면에 안 보인 쪽은 틀을 내려 부르게 함.
+    11/27: 뷰어가 받아 오는 원본 PDF 를 pdf 에 담음(쪽 그림 · 글꼴은 lean_context 가 막음)."""
     pd = base64.b64encode(
         json.dumps({"encParam": enc, "pspSid": "NA", "pspTkn": "NA"}).encode()
     ).decode()
@@ -114,6 +119,15 @@ def read_viewer(browser: Any, url: str, enc: str) -> dict[int, list[dict[str, An
 
     def on_resp(r: Any) -> None:
         u = r.url.split("?")[0]
+        if pdf is not None and not pdf:
+            try:
+                ct = (r.headers.get("content-type") or "").lower()
+                if "pdf" in ct or "getpdf" in u.lower():
+                    b = r.body()
+                    if b[:4] == b"%PDF":
+                        pdf.append(b)
+            except Exception:  # noqa: BLE001 — 원본을 못 받아도 글은 씀
+                pass
         if "/streamdocs/v4/documents/" not in u:
             return
         try:
@@ -127,7 +141,7 @@ def read_viewer(browser: Any, url: str, enc: str) -> dict[int, list[dict[str, An
         except Exception:  # noqa: BLE001 — 한 쪽을 못 읽어도 나머지는 씀
             pass
 
-    v = browser.new_page()
+    v = ctx.new_page()
     try:
         v.on("response", on_resp)
         v.goto(f"{url}?paramData={pd}", timeout=60000)
@@ -147,13 +161,26 @@ def read_viewer(browser: Any, url: str, enc: str) -> dict[int, list[dict[str, An
 
 
 def save(
-    conn: psycopg.Connection, t: dict[str, Any], pages: dict[int, list[dict[str, Any]]], status: int
-) -> int:
+    conn: psycopg.Connection, t: dict[str, Any], pages: dict[int, list[dict[str, Any]]], status: int,
+    pdf: bytes | None = None,
+) -> int:  # fmt: skip
     words = words_from_texts(pages)
+    kept = False
+    if pdf:
+        try:
+            sd = conn.execute("select sale_date from core.items where item_id = %s", (t["item_id"],)).fetchone()
+            r = save_file(conn, t["case_id"], t["item_no"], "spec", "court", pdf,
+                          sale_date=sd[0] if sd else None, pages=len(pages) or None)  # fmt: skip
+            kept = bool(r.get("path"))
+            if r.get("error"):
+                print(f"   {t['case_no']}-{t['item_no']} 원본 보관 실패 {r['error']}", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"   {t['case_no']}-{t['item_no']} 원본 보관 실패 {type(e).__name__}", flush=True)
     payload = {
         "ecdoc": t["ecdoc"],
         "pages": len(pages),
         "status": status,
+        "pdf": kept,  # 11/27 원본 파일을 core.doc_files 에 남겼는지
         "words": [list(w) for w in words],
     }
     conn.execute(
@@ -238,7 +265,8 @@ def main() -> None:
         got = rows = 0
         with sync_playwright() as p:
             browser = launch_chrome(p, headless=not a.show)
-            page = browser.new_page()
+            ctx = lean_context(browser)  # 11/27 사진 · 글꼴 · 쪽 그림은 안 받고, 뷰어 화면 파일은 한 번만
+            page = ctx.new_page()
             page.goto(CASE_PAGE, wait_until="networkidle", timeout=60000)
             try:
                 for t in ts:
@@ -249,15 +277,16 @@ def main() -> None:
                         break
                     info = (res.get("data") or {}).get("dma_dspslSpcfcInfo") or {}
                     pages: dict[int, list[dict[str, Any]]] = {}
+                    pdf: list[bytes] = []
                     if info.get("encParam") and info.get("url"):
                         try:
-                            pages = read_viewer(browser, info["url"], info["encParam"])
+                            pages = read_viewer(ctx, info["url"], info["encParam"], pdf)
                         except Exception as e:  # noqa: BLE001
                             print(
                                 f"   {t['case_no']}-{t['item_no']} 뷰어 실패 {type(e).__name__}",
                                 flush=True,
                             )
-                    rows += save(conn, t, pages, int(res.get("status") or 0))
+                    rows += save(conn, t, pages, int(res.get("status") or 0), pdf[0] if pdf else None)
                     conn.commit()
                     got += 1 if pages else 0
                     job.count = got

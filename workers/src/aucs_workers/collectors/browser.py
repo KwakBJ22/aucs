@@ -8,6 +8,23 @@ from typing import Any
 OFFSCREEN_ARGS = ["--window-position=-3000,-3000", "--window-size=1000,900"]
 
 
+# 11/27: 법원 화면을 열 때 사진 · 글꼴 · 동영상까지 다 받아 버리던 것(2번 PC 휴대폰 데이터 35GB) — 우리가 쓰는 건 글 자료뿐.
+# 법원이 주는 사진은 물건상세 JSON 안에 들어 있어 이걸 막아도 그대로 받음.
+LEAN_TYPES = {"image", "font", "media"}
+
+
+def lean_context(browser: Any) -> Any:
+    """사진 · 글꼴 · 동영상은 받지 않는 창 묶음. 같은 묶음의 창끼리는 한 번 받은 화면 파일을 다시 쓰므로 창마다 새로 받지 않음."""
+    ctx = browser.new_context()
+    ctx.route(
+        "**/*",
+        lambda route: route.abort()
+        if route.request.resource_type in LEAN_TYPES
+        else route.continue_(),
+    )
+    return ctx
+
+
 def launch_chrome(
     p: Any, *, headless: bool = True, offscreen: bool = False, tries: int = 3, wait: float = 20
 ) -> Any:
