@@ -115,21 +115,18 @@ def read_viewer(
         json.dumps({"encParam": enc, "pspSid": "NA", "pspTkn": "NA"}).encode()
     ).decode()
     pages: dict[int, list[dict[str, Any]]] = {}
-    meta: dict[str, int] = {}
+    meta: dict[str, Any] = {}
 
     def on_resp(r: Any) -> None:
         u = r.url.split("?")[0]
-        if pdf is not None and not pdf:
-            try:
-                ct = (r.headers.get("content-type") or "").lower()
-                if "pdf" in ct or "getpdf" in u.lower():
-                    b = r.body()
-                    if b[:4] == b"%PDF":
-                        pdf.append(b)
-            except Exception:  # noqa: BLE001 — 원본을 못 받아도 글은 씀
+        if pdf is not None and "getpdf" in u.lower():
+            try:  # getPdf 답의 출입 열쇠(accessToken) — 원본 PDF 를 받을 때 씀
+                meta["tok"] = (json.loads(r.body()).get("data") or {}).get("accessToken") or ""
+            except Exception:  # noqa: BLE001
                 pass
         if "/streamdocs/v4/documents/" not in u:
             return
+        meta.setdefault("sid", u.split("/streamdocs/v4/documents/")[1].split("/")[0])
         try:
             if "/texts/" in u:
                 pages[int(u.rsplit("/", 1)[1])] = json.loads(r.body())
@@ -155,6 +152,27 @@ def read_viewer(
                         fr.evaluate(
                             "document.querySelectorAll('*').forEach(e=>{if(e.scrollHeight>e.clientHeight+50){e.scrollTop+=1500}})"
                         )
+        # 11/27: 원본 PDF — 뷰어 틀(pvo) 안에서 GET /streamdocs/v4/documents/<id> + Bearer 열쇠(probe_spec 로 확인, 약 90KB)
+        if pdf is not None and meta.get("sid") and meta.get("tok"):
+            for fr in v.frames:
+                if "pvo." not in fr.url:
+                    continue
+                try:
+                    b64 = fr.evaluate(
+                        """async ([sid, tok]) => {
+                          const r = await fetch('/streamdocs/v4/documents/' + sid, { headers: { Authorization: 'Bearer ' + tok } });
+                          if (!r.ok) return '';
+                          const b = new Uint8Array(await r.arrayBuffer()); let s = '';
+                          for (let i = 0; i < b.length; i += 32768) s += String.fromCharCode(...b.subarray(i, i + 32768));
+                          return btoa(s); }""",
+                        [meta["sid"], meta["tok"]],
+                    )
+                except Exception:  # noqa: BLE001 — 원본을 못 받아도 글은 씀
+                    b64 = ""
+                data = base64.b64decode(b64) if b64 else b""
+                if data[:4] == b"%PDF":
+                    pdf.append(data)
+                break
     finally:
         v.close()
     return pages

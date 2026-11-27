@@ -69,6 +69,13 @@ def one(browser: Any, page: Any, court: str, case_no: str, seq: int) -> list[str
 
     def on_resp(r: Any) -> None:
         u = r.url.split("?")[0]
+        if "getpdf" in u.lower():
+            try:
+                meta["tok"] = (json.loads(r.body()).get("data") or {}).get("accessToken")
+            except Exception:  # noqa: BLE001
+                pass
+        if "/streamdocs/v4/documents/" in u:
+            meta["sid"] = u.split("/streamdocs/v4/documents/")[1].split("/")[0]
         if "/streamdocs/v4/documents/" not in u:
             return
         try:
@@ -94,6 +101,26 @@ def one(browser: Any, page: Any, court: str, case_no: str, seq: int) -> list[str
                 for _ in range(meta["layout"] * 3):
                     fr.evaluate("window.scrollBy(0, 1500); document.querySelectorAll('*').forEach(e=>{if(e.scrollHeight>e.clientHeight+50){e.scrollTop+=1500}})")
                     v.wait_for_timeout(400)
+    # 11/27: 원본 PDF 를 받는 주소 찾기 — 뷰어 틀(pvo) 안에서 몇 주소를 물어 봄(법원경매정보 한도와 따로)
+    sid, tok = meta.get("sid"), meta.get("tok")
+    for fr in v.frames:
+        if "pvo." in fr.url and sid:
+            res = fr.evaluate(
+                """async ([sid, tok]) => { const out = [];
+                  for (const tail of ['/file', '/download', '/original', '/pdf', '/source', '', '/file?type=pdf']) {
+                    for (const auth of [false, true]) { if (auth && !tok) continue;
+                      try { const r = await fetch('/streamdocs/v4/documents/' + sid + tail,
+                              { headers: auth ? { Authorization: 'Bearer ' + tok } : {} });
+                        const b = new Uint8Array(await r.arrayBuffer());
+                        out.push([tail, auth, r.status, r.headers.get('content-type'), b.length,
+                                  String.fromCharCode(...b.slice(0, 8))]);
+                      } catch (e) { out.push([tail, auth, 'err', String(e).slice(0, 60)]); } } }
+                  return out; }""",
+                [sid, tok],
+            )
+            for row in res:
+                out.append(f"  원본 시험 {row}")
+            break
     v.close()
     segs = [list(w) for w in words_from_texts(pages)]
     out.append(f"  ② 쪽 {meta.get('layout')} 중 글 받은 쪽 {sorted(pages)} · 조각 {len(segs)}")
