@@ -36,7 +36,8 @@ Uid = Annotated[str, Depends(current_user_id)]
 
 
 class SearchIn(BaseModel):
-    name: str = Field(min_length=1, max_length=40)
+    # 11/27: 지역을 많이 고르면 이름이 40자를 넘어 422 → 홈 「알림 받기」가 아무 반응 없었음. 넘치면 잘라서 받음
+    name: str = Field(min_length=1, max_length=400)
     filters: dict[str, Any]
     delivery: str = Field(default="daily", pattern="^(instant|daily)$")
 
@@ -269,7 +270,8 @@ def get_searches(uid: Uid) -> list[dict[str, Any]]:
 
 @router.post("/searches")
 def post_search(body: SearchIn, uid: Uid) -> dict[str, Any] | None:
-    return me.search_add(uid, body.name, body.filters, body.delivery)
+    name = body.name if len(body.name) <= 40 else body.name[:39] + "…"
+    return me.search_add(uid, name, body.filters, body.delivery)
 
 
 @router.delete("/searches/{search_id}")

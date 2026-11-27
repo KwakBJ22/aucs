@@ -84,12 +84,19 @@ export default function Home() {
       router.push("/login");
       return;
     }
-    await meApi.addSearch(token, condSummary({ sigungu: p.regions, max_cash: p.cash }), {
-      sigungu: p.regions,
-      max_cash: p.cash,
-    });
-    track("alert_on");
-    const r = await subscribePush(token);
+    // 11/27: 실패하면 아무 반응이 없었음 → 글을 띄움
+    let r: Awaited<ReturnType<typeof subscribePush>>;
+    try {
+      await meApi.addSearch(token, condSummary({ sigungu: p.regions, max_cash: p.cash }), {
+        sigungu: p.regions,
+        max_cash: p.cash,
+      });
+      track("alert_on");
+      r = await subscribePush(token);
+    } catch {
+      setAlertMsg(copy.alert.failed);
+      return;
+    }
     setAlertMsg(
       r === "ok"
         ? copy.alert.saved
