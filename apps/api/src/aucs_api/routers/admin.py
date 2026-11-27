@@ -317,9 +317,31 @@ def put_refund(a: Owner, request_id: int, body: RefundDecideIn) -> dict[str, boo
 # 3-2 감정평가서 받기(11/14): 원본 없는 사건(홈 노출 · 역 가까운 곳 먼저) — 받아 PC 폴더에 두면 알아서 올라감
 @router.get("/appraisal/targets")
 def get_appraisal_targets(
-    _: Any_, offset: int = Query(default=0, ge=0), sigungu: str | None = Query(default=None, max_length=40)
-) -> dict[str, Any]:
-    return admin_ops.appraisal_targets(offset, sigungu)
+    _: Any_, offset: int = Query(default=0, ge=0), sigungu: str | None = Query(default=None, max_length=40),
+    soon: bool = Query(default=False),
+) -> dict[str, Any]:  # fmt: skip
+    return admin_ops.appraisal_targets(offset, sigungu, soon)
+
+
+# 11/27 대표님: 감정평가서를 그 줄에서 바로 올림 — 화면이 보관함에 바로 올리고(서명된 주소) 다 올라가면 「done」
+@router.post("/appraisal/{case_id}/upload-url")
+def post_appraisal_upload_url(case_id: str, _: Op) -> dict[str, Any]:
+    try:
+        return admin_ops.appraisal_upload_url(case_id)
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
+
+
+@router.post("/appraisal/{case_id}/done")
+def post_appraisal_done(case_id: str, _: Op) -> dict[str, Any]:
+    try:
+        return admin_ops.appraisal_uploaded(case_id)
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(503, str(e)) from e
 
 
 # 3-3 서류 올리기(11/18 대표님): 사건번호로 물건을 찾아 손님 화면과 같은 칸으로 감정평가서 · 등기부를 올림(포인트 없음)

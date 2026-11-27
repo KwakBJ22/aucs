@@ -213,6 +213,8 @@ where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/S
   and i.status_code is distinct from 'gone' and coalesce(i.usage_name, '') !~ %(vehicles)s
   and not exists (select 1 from core.appraisal_files f where f.case_id = i.case_id)
   and (%(sg)s::text is null or concat_ws(' ', left(i.sido, 2), i.sigungu, i.gu) = %(sg)s)
+  -- 11/27 대표님 「우선 받을 목록」: 법원이 지금 열어 둔 것(감정평가서는 매각기일 2주 전 ~ 매각기일)만
+  and (not %(soon)s or i.sale_date <= (now() at time zone 'Asia/Seoul')::date + 14)
 group by i.case_id, c.court_code, c.case_no
 order by case when min(p.rank) is null then 2
               when min(i.sale_date) <= (now() at time zone 'Asia/Seoul')::date + 14 then 0 else 1 end,  -- 홈 추천은 입찰 14일 안
@@ -233,15 +235,16 @@ where i.display_policy = 'public' and i.sale_date >= (now() at time zone 'Asia/S
 group by 1 order by 1"""
 
 
-def appraisal_targets(offset: int = 0, sigungu: str | None = None) -> dict[str, Any]:
-    """감정평가서 원본이 없는 사건 30건씩(홈 노출 · 역 가까운 곳 먼저) + 받은 폴더의 마지막 결과."""
+def appraisal_targets(offset: int = 0, sigungu: str | None = None, soon: bool = False) -> dict[str, Any]:
+    """감정평가서 원본이 없는 사건 30건씩(홈 노출 · 역 가까운 곳 먼저) + 받은 폴더의 마지막 결과.
+    soon = 우선 받을 목록(법원이 지금 열어 둔 입찰 14일 안만 — 기일이 지나면 법원에서 닫힘)."""
     from aucs_rules.courts import COURTS
     from aucs_rules.find_filter import VEHICLES
 
     with connect() as c:
         rows = c.execute(
             _APPRAISAL_SQL,
-            {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE, "sg": sigungu or None},
+            {"vehicles": VEHICLES, "offset": offset, "limit": APPRAISAL_PAGE, "sg": sigungu or None, "soon": soon},
         ).fetchall()
         areas = (
             c.execute(_APPRAISAL_AREAS_SQL, {"vehicles": VEHICLES}).fetchall() if offset == 0 else []
@@ -1012,3 +1015,85 @@ def hidden_items() -> list[dict[str, Any]]:
                select item_id, null, null from core.onbid_items where display_policy = 'blocked'
                order by 1 limit 200"""
         ).fetchall()
+
+
+# 11/27 대표님: 관리자에서 받은 감정평가서를 그 줄에서 바로 올림(폴더 말고도). 큰 PDF(수십 MB)는 Vercel 이 못 받아
+# 화면이 보관함(appraisal-pdfs)에 바로 올리고(서명된 주소), 서버는 다 올라간 뒤 읽어 적기만 함.
+def _storage() -> tuple[str, dict[str, str]] | None:
+    from aucs_api import settings
+
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY:
+        return None
+    k = settings.SUPABASE_SECRET_KEY
+    return f"{settings.SUPABASE_URL}/storage/v1", {"apikey": k, "Authorization": f"Bearer {k}"}
+
+
+def _appraisal_path(case_id: str) -> str:
+    from aucs_workers.photos import safe_name
+
+    return f"{safe_name(case_id)}.pdf"
+
+
+def appraisal_upload_url(case_id: str) -> dict[str, Any]:
+    """이 사건 감정평가서를 올릴 서명된 주소(2시간)."""
+    import httpx
+
+    st = _storage()
+    if not st:
+        raise RuntimeError("파일 보관함 설정이 없어요")
+    with connect() as c:
+        if not c.execute("select 1 from core.cases where case_id = %s", (case_id,)).fetchone():
+            raise LookupError("사건을 찾지 못했어요")
+    base, h = st
+    r = httpx.post(f"{base}/object/upload/sign/appraisal-pdfs/{_appraisal_path(case_id)}",
+                   headers={**h, "x-upsert": "true"}, json={}, timeout=15)  # fmt: skip
+    if r.status_code >= 300:
+        raise RuntimeError(f"올릴 주소를 못 받았어요({r.status_code})")
+    return {"url": base + r.json()["url"]}
+
+
+def appraisal_uploaded(case_id: str) -> dict[str, Any]:
+    """보관함에 올라간 PDF 를 읽어 적음(감정평가서인지 · 이 사건인지 확인 — 아니면 지움)."""
+    import httpx
+    from aucs_workers.collectors.parse import checksum
+    from aucs_workers.extract.appraisal_pdf import case_numbers, read_pdf
+
+    st = _storage()
+    if not st:
+        raise RuntimeError("파일 보관함 설정이 없어요")
+    base, h = st
+    path = _appraisal_path(case_id)
+    r = httpx.get(f"{base}/object/appraisal-pdfs/{path}", headers=h, timeout=120)
+    if r.status_code != 200:
+        raise LookupError("올린 파일을 찾지 못했어요 · 다시 올려 주세요")
+    raw = r.content
+
+    def drop(why: str) -> dict[str, Any]:
+        httpx.request("DELETE", f"{base}/object/appraisal-pdfs", headers=h, json={"prefixes": [path]}, timeout=15)
+        return {"ok": False, "why": why}
+
+    if not raw.startswith(b"%PDF"):
+        return drop("not_pdf")
+    try:
+        data = {"from": "admin", **read_pdf(raw)}
+    except Exception:  # noqa: BLE001 — 깨진 PDF
+        return drop("broken")
+    head = str(data.get("head") or "")
+    with connect() as c:
+        if c.execute("select 1 from core.appraisal_files where case_id = %s", (case_id,)).fetchone():
+            return {"ok": True, "already": True}
+        case_no = case_id.split("-", 1)[-1]
+        nums = case_numbers(head)
+        if not data["scanned"] and ("감정평가" not in head or (nums and case_no not in nums)):
+            return drop("other_doc")
+        c.execute(
+            "insert into raw.court_doc_raw (case_id, doc_kind, payload, checksum) values (%s,'appraisal_pdf',%s,%s) on conflict do nothing",
+            (case_id, Jsonb(data), checksum(data)),
+        )
+        c.execute(
+            """insert into core.appraisal_files (case_id, appraisal_no, path, firm, pages, bytes)
+               values (%s,%s,%s,%s,%s,%s) on conflict (case_id) do nothing""",
+            (case_id, None, path, data.get("firm"), data.get("pages"), len(raw)),
+        )
+    return {"ok": True, "firm": data.get("firm"), "pages": data.get("pages"),
+            "points": len(data.get("points") or []), "scanned": bool(data.get("scanned"))}  # fmt: skip

@@ -2361,6 +2361,20 @@ export const copy = {
       openCourt: "법원경매정보 열기",
       openHint: "한 번 열어 두고, 아래에서 「복사」만 눌러 그 창에 붙여 넣으세요",
       copy: "복사",
+      // 11/27 대표님: 우선 받을 목록 · 그 줄에서 바로 올리기
+      soon: "우선 받을 목록",
+      soonOn: "전체 목록",
+      soonHint: "법원이 지금 열어 둔 것(입찰 14일 안)만 · 기일이 지나면 법원에서 닫혀요",
+      pick: "PDF 올리기",
+      busy: "올리는 중…",
+      saved: (firm: string | null | undefined, pages?: number) =>
+        `올렸어요 · ${firm ?? "회사 이름 못 찾음"} · ${pages ?? 0}쪽`,
+      scanned: " · 그림 PDF(글 없음)",
+      already: "이미 원본이 있어요",
+      wrong: (why?: string) =>
+        why === "other_doc"
+          ? "이 사건 감정평가서가 아닌 것 같아요 · 다시 확인해 주세요"
+          : "PDF를 읽지 못했어요",
     },
     today: {
       todo: (n: number) => `하실 일 ${n}`,

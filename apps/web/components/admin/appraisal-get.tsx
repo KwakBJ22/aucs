@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DDay } from "@/components/dday";
 import { COURT_CASE_PAGE } from "@/components/item/appraisal";
 import { t as itemT } from "@/components/item/shared";
-import { adminApi, type AppraisalTargets } from "@/lib/api/admin";
+import { adminApi, type AppraisalSaved, type AppraisalTargets } from "@/lib/api/admin";
 import { copy } from "@/lib/copy.ko";
 import { parseTime } from "@/lib/format";
 import { errText, useAdmin, when } from "./ctx";
@@ -37,20 +37,39 @@ export function AppraisalGet() {
   const [areas, setAreas] = useState<AppraisalTargets["areas"]>([]);
   const [area, setArea] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [soon, setSoon] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [done, setDone] = useState<Record<string, string>>({});
   const load = useCallback(
     (offset: number, sg: string) =>
       adminApi
-        .appraisalTargets(token, offset, sg)
+        .appraisalTargets(token, offset, sg, soon)
         .then((x) => {
           if (!offset && !sg && x.areas.length) setAreas(x.areas);
           setD((v) => (offset && v ? { ...x, rows: [...v.rows, ...x.rows] } : x));
         })
         .catch((e) => say(errText(e))),
-    [token, say],
+    [token, say, soon],
   );
   useEffect(() => {
     void load(0, area);
   }, [load, area]);
+  const send = (caseId: string, f: File | undefined) => {
+    if (!f) return;
+    setBusy(caseId);
+    adminApi
+      .uploadAppraisal(token, caseId, f)
+      .then((s: AppraisalSaved) => {
+        const msg = !s.ok
+          ? t.wrong(s.why)
+          : s.already
+            ? t.already
+            : t.saved(s.firm, s.pages) + (s.scanned ? t.scanned : "");
+        setDone((x) => ({ ...x, [caseId]: msg }));
+      })
+      .catch((e) => say(errText(e)))
+      .finally(() => setBusy(null));
+  };
   if (!d) return null;
   const all = areas.reduce((n, a) => n + a.n, 0);
   const copyNo = (caseNo: string) => {
@@ -87,8 +106,15 @@ export function AppraisalGet() {
         <button type="button" className="btn soft sm" onClick={openCourt}>
           {t.openCourt}
         </button>
+        <button
+          type="button"
+          className={`btn sm ${soon ? "primary" : "soft"}`}
+          onClick={() => setSoon((v) => !v)}
+        >
+          {soon ? t.soonOn : t.soon}
+        </button>
       </div>
-      <p className="sub fs-sm mt-6">{t.openHint}</p>
+      <p className="sub fs-sm mt-6">{soon ? t.soonHint : t.openHint}</p>
       {d.rows.map((r) => {
         const [year = "", num = r.case_no] = r.case_no.split("타경");
         return (
@@ -110,10 +136,21 @@ export function AppraisalGet() {
               <button type="button" className="btn soft sm" onClick={() => copyNo(r.case_no)}>
                 {t.copy}
               </button>
+              <label className="btn soft sm">
+                {busy === r.case_id ? t.busy : t.pick}
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  hidden
+                  disabled={busy === r.case_id}
+                  onChange={(e) => send(r.case_id, e.target.files?.[0])}
+                />
+              </label>
               {copied === r.case_no && (
                 <p className="sub fs-sm w-full m-0">{itemT.appraisal.copied(r.court, year, num)}</p>
               )}
             </div>
+            {done[r.case_id] && <p className="sub fs-sm m-0">{done[r.case_id]}</p>}
           </div>
         );
       })}
