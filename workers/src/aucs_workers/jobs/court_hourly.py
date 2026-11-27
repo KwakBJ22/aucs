@@ -230,11 +230,19 @@ def docs_main() -> None:
     end = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1, minutes=8)
     # 11/26 밤 지시 1126a: 매각물건명세서 원본 먼저 — 한 차례 최대 SPEC_MINUTES분, 남는 시간은 서류 보관
     print("── 명세서 원본(2번 PC)", flush=True)
-    spec_end = min(end, datetime.now() + timedelta(minutes=SPEC_MINUTES))
-    env = dict(os.environ, AUCS_DEADLINE=str(spec_end.timestamp()))
-    code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_spec"], env=env)
-    if code != 0:
-        print(f"   명세서 원본 멈춤({code}) — 다음 차례에 이어서", flush=True)
+    # 11/27 대표님: 절반은 급한 것(오늘 ~ 7일 안), 절반은 없어지기 직전 것(지난 60일, 오래된 것부터)
+    start = datetime.now()
+    for extra, label in (([], "급한 것"), (["--old"], "지난 것")):
+        if label == "지난 것":
+            print("── 명세서 원본 · 지난 것(2번 PC)", flush=True)
+            spec_end = min(end, start + timedelta(minutes=SPEC_MINUTES))
+        else:
+            spec_end = min(end, start + timedelta(minutes=SPEC_MINUTES // 2))
+        env = dict(os.environ, AUCS_DEADLINE=str(spec_end.timestamp()))
+        cmd = [sys.executable, "-m", "aucs_workers.collectors.court_spec", *extra]
+        code = subprocess.call(cmd, env=env)
+        if code != 0:
+            print(f"   명세서 원본({label}) 멈춤({code}) — 다음 차례에 이어서", flush=True)
     print("── 서류 보관(2번 PC)", flush=True)
     env = dict(os.environ, AUCS_DEADLINE=str(end.timestamp()))
     cmd = [sys.executable, "-m", "aucs_workers.collectors.court_docs", "--archive"]

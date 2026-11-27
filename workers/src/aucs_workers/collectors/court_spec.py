@@ -9,7 +9,8 @@
 원본(낱말과 자리)은 raw.court_doc_raw doc_kind='spec_<물건번호>' 에 · 임차인 줄은 core.tenants(source='spec')에 —
 명세서를 받은 물건은 현황조사서 임차인 줄을 지움(같은 사람을 두 번 세지 않게. 명세서가 법원이 정리한 최종 표).
 
-    uv run python -m aucs_workers.collectors.court_spec            # 지난 60일 ~ 입찰 7일 안, 오래된 것부터(시간 몫은 매시 작업이 줌)
+    uv run python -m aucs_workers.collectors.court_spec            # 오늘 ~ 입찰 7일 안(급한 것), 입찰일 이른 순
+    uv run python -m aucs_workers.collectors.court_spec --old      # 입찰 지난 60일, 없어지기 직전(오래된) 것부터
     uv run python -m aucs_workers.collectors.court_spec --case B000210 2026타경121 1
 """
 
@@ -73,10 +74,15 @@ order by i.sale_date, {LIVE_FIRST}
 limit %(n)s"""
 
 
-def targets(conn: psycopg.Connection, today: date) -> list[dict[str, Any]]:
+def targets(conn: psycopg.Connection, today: date, mode: str = "soon") -> list[dict[str, Any]]:
+    """soon = 오늘 ~ 입찰 7일 안(급한 것) · old = 지난 60일(없어지기 직전 것부터). 둘 다 입찰일 이른 순."""
+    if mode == "old":
+        frm, to = today - timedelta(days=SPEC_BACK_DAYS), today - timedelta(days=1)
+    else:
+        frm, to = today, today + timedelta(days=SPEC_DAYS)
     rows = conn.execute(
         TARGETS_SQL,
-        {"from": today - timedelta(days=SPEC_BACK_DAYS), "to": today + timedelta(days=SPEC_DAYS),
+        {"from": frm, "to": to,
          "usages": list(ARCHIVE_USAGES), "n": SPEC_MAX},
     ).fetchall()  # fmt: skip
     cols = ["item_id", "case_id", "court", "case_no", "item_no", "cs_no", "ecdoc"]
@@ -188,6 +194,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--case", nargs=3, metavar=("법원코드", "사건번호", "물건번호"))
     ap.add_argument("--show", action="store_true")
+    ap.add_argument("--old", action="store_true", help="입찰 지난 60일(없어지기 직전 것부터)")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
 
@@ -197,7 +204,7 @@ def main() -> None:
         if a.case:
             ts = [t for t in targets_all(conn, a.case)]
         else:
-            ts = targets(conn, today)
+            ts = targets(conn, today, "old" if a.old else "soon")
         print(f"대상 {len(ts)}건", flush=True)
         if not ts:
             return

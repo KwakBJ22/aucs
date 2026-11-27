@@ -363,7 +363,13 @@ def date_from(s: str) -> date:
     return date.fromisoformat(s)
 
 
+# 11/27 대표님: 휴대폰 푸시는 서비스 정상 오픈 뒤에 켬 — 그 전에는 앱 안 알림 목록만 쌓음(pushed_at 은 비워 둠)
+PUSH_ON = False
+
+
 def send_pushes(conn: psycopg.Connection) -> int:
+    if not PUSH_ON:
+        return 0
     key, subject = (
         os.getenv("VAPID_PRIVATE_KEY", "").strip(),
         os.getenv("VAPID_SUBJECT", "").strip(),
