@@ -261,11 +261,42 @@ def parse_tenants(ws: list[Word]) -> dict[str, Any]:
             ]  # 이름 칸이 두 줄을 한 칸으로 묶은 경우(같은 사람 · 출처만 다름)
             row["name_shared"] = True
         rows.append(row)
-    return {"none": none and not rows, "rows": merge_same(fix_names(rows))}
+    return {"none": none and not rows, "rows": merge_same(fix_names(merge_fragments(rows)))}
 
 
 GUARANTORS = ("주택도시보증공사", "한국주택금융공사", "서울보증보험", "한국토지주택공사")
 _HEIR_IN_NAME = re.compile(r"^(.+?)(?:" + "|".join(GUARANTORS) + r")\((?:임차인\s*:?\s*)?\1\)$")
+
+
+_KEYS = ("deposit_krw", "move_in_date", "fixed_date", "claim_date", "monthly_rent_krw", "part")
+
+
+def merge_fragments(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """한 사람 칸이 여러 줄로 쪼개진 것(이름 · 호 · 출처 중 빈 칸이 있는 줄)을 바로 옆 줄과 합침(11/27).
+
+    서울동부 2025타경52605: 박수연 한 사람이 「(이름 없음) 601호 등기 2.1억」 · 「박수연 2.1억」 · 「박수연 601호
+    권리신고」 세 줄로 나왔음. 서로 다른 값이 하나도 없고, 같은 값이 하나 이상이고, 둘 중 하나가 덜 찬 줄일 때만 합침."""
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        prev = out[-1] if out else None
+        if prev is not None:
+            part = lambda x: not (x.get("name") and x.get("part") and x.get("source"))  # noqa: E731
+            clash = any(prev.get(k) is not None and r.get(k) is not None and prev[k] != r[k] for k in _KEYS)
+            same = any(prev.get(k) is not None and prev.get(k) == r.get(k) for k in (*_KEYS, "name"))
+            names_ok = not (prev.get("name") and r.get("name")) or prev["name"] == r["name"] or part(r) or part(prev)
+            if not clash and same and names_ok and (part(prev) or part(r)):
+                for k, v in r.items():
+                    if v is None:
+                        continue
+                    if k == "name" and prev.get("name") and prev["name"] != v:
+                        prev["name"] = _join([prev["name"], v])
+                    elif k == "source" and prev.get("source") and v not in prev["source"]:
+                        prev["source"] = prev["source"] + " · " + v
+                    elif prev.get(k) is None:
+                        prev[k] = v
+                continue
+        out.append(dict(r))
+    return out
 
 
 def fix_names(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

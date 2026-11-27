@@ -113,3 +113,12 @@ def test_two_rows_in_one_cell() -> None:
             "fixed_date": None, "claim_date": None, "claim_text": None, "move_in_date": None}  # fmt: skip
     rows = fix_names([{**base, "name": "박종민주택도시보증공사(박종민)", "deposit_krw": 226_000_000}])
     assert rows[0]["name"] == "박종민"
+
+
+def test_fragments_one_person() -> None:
+    # 서울동부 2025타경52605: 박수연 한 사람이 세 줄로 쪼개졌음
+    rows = _rows("spec_words_52605.json")
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["name"] == "박수연" and r["deposit_krw"] == 210_000_000 and r["part"] == "601호"
+    assert r["move_in_date"] == date(2022, 6, 21) and r["claim_date"] == date(2025, 12, 31)

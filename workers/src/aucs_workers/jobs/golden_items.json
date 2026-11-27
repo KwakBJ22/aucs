@@ -11,5 +11,8 @@
   "B000251-2026타경50199-1": {"tenant_count": 0, "not": ["risk.prior_rights"], "note": "신흥 · 조사된 임차내역 없음"},
   "B000240-2025타경508836-1": {"tenant_count": 2, "not": ["risk.tenant_power"], "note": "소래포구 · 변병림 + 동거인(전입 2018-09 · 근저당 2018-02 뒤)"},
   "B000211-2025타경51965-1": {"tenant_count": 1, "has": ["risk.lease_reg_released"], "note": "길동 · 유현성 + 한국주택금융공사 한 사람"},
-  "B000250-2024타경83584-1": {"has": ["risk.superficies_released"], "not": ["risk.prior_rights"], "note": "수원 · 지상권자 말소동의서"}
+  "B000250-2024타경83584-1": {"has": ["risk.superficies_released"], "not": ["risk.prior_rights"], "note": "수원 · 지상권자 말소동의서"},
+  "B000211-2023타경61278-1": {"tenant_count": 1, "note": "서울동부 · 206호 김윤석 + 보증공사 한 사람 · 지금 안 파는 508호 임차인은 안 붙음"},
+  "B000211-2025타경52605-1": {"tenant_count": 1, "note": "서울동부 · 박수연 한 사람이 명세서에서 세 줄로 쪼개졌던 것"},
+  "B000213-2025타경11716-1": {"title_not": ["경"], "note": "서울북부 · 보증금 2.5억 두 줄이 이어 붙어 25경 원이었던 것"}
 }
