@@ -1,6 +1,26 @@
 // 서울·경기·인천 시군구 이름(11/4 · 인천은 2026-07 개편 이름) — 첫 화면에서 서버를 기다리지 않고 바로 띄우려고 화면 코드에 둠.
 // 원본은 DB ref.regions(level='sigungu'). 숫자(진행 물건 수)는 /regions 로 뒤에 채운다.
 // 이름이 바뀌거나 새 시군구가 생기면 이 목록도 같이 고친다(서버 목록에만 있는 이름은 받은 뒤 덧붙여 보임).
+// 고른 시군구를 한 줄로(11/27 대표님 — 서울·경기를 다 고르면 홈에 지역 이름만 여섯 줄이 넘었음):
+// 한 시도를 다 골랐으면 「서울 전체」, 남은 것이 셋 넘으면 「강남구 외 N곳」. 같은 이름(중구 등)은 이름으로만 셈
+export function regionsShort(rs: readonly string[]): string {
+  const left = new Set(rs);
+  const whole: string[] = [];
+  for (const [sido, short] of [
+    ["서울특별시", "서울"],
+    ["경기도", "경기"],
+    ["인천광역시", "인천"],
+  ] as const) {
+    const all = SIGUNGU.filter(([s]) => s === sido).map(([, g]) => g);
+    if (all.length > 0 && all.every((g) => left.has(g))) {
+      whole.push(`${short} 전체`);
+      all.forEach((g) => left.delete(g));
+    }
+  }
+  const rest = [...left];
+  return [...whole, ...(rest.length > 3 ? [`${rest[0]} 외 ${rest.length - 1}곳`] : rest)].join("·");
+}
+
 export const SIGUNGU: readonly (readonly [sido: string, sigungu: string])[] = [
   ...[
     "강남구",

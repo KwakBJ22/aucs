@@ -1347,3 +1347,20 @@ input.f-input[type="search"]::-webkit-search-cancel-button {
     font-weight: 400;
   }
 }
+
+/* 옆으로 넘기는 줄은 옆으로만(11/27 대표님 — 위로 올려도 줄 안쪽이 손가락을 잡아 화면이 안 움직임).
+   overflow-x 를 auto 로 두면 세로도 저절로 auto 가 되어, 줄 안 높이가 몇 px 만 넘쳐도 위아래 손짓을 줄이 가져감.
+   세로는 막고, 옆으로 끝까지 넘겨도 뒤 화면(뒤로 가기 손짓)으로 번지지 않게. 새 옆 넘김 줄은 여기에 한 줄 더함 */
+.pick-row,
+.mini-row,
+.col-chips,
+.m-chips,
+.item-tags,
+.case-cats,
+.photo-strip,
+.ac-rail,
+.board,
+.ox-auto {
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}

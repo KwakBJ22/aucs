@@ -28,6 +28,7 @@ import { condSummary as condName } from "@/lib/cond";
 import { copy } from "@/lib/copy.ko";
 import { dday, won } from "@/lib/format";
 import { loadProfile } from "@/lib/profile";
+import { regionsShort } from "@/lib/regions";
 import { useIsPc } from "@/lib/use-pc";
 
 const t = copy.find;
@@ -469,7 +470,7 @@ export default function Find() {
   if (pc)
     return (
       <main className="page wide">
-        <PageHeader title={t.title} sub={regions.join(" · ")} right={mapLink} />
+        <PageHeader title={t.title} sub={regionsShort(regions)} right={mapLink} />
         <div className="find-bar pos-relative">
           <svg
             width="20"

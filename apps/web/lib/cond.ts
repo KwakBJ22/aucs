@@ -1,11 +1,12 @@
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
+import { regionsShort } from "@/lib/regions";
 
 // 저장한 조건을 한 줄로(11/1): 예전엔 이름이 모두 「내 조건」이라 무엇을 저장했는지 알 수 없었음
 export function condSummary(f: Record<string, unknown>): string {
   const out: string[] = [];
   const sg = f.sigungu as string[] | undefined;
-  if (sg?.length) out.push(sg.join("·"));
+  if (sg?.length) out.push(regionsShort(sg));
   const us = f.usage as string[] | undefined;
   if (us?.length) out.push(us.map((u) => copy.find.usages[u] ?? u).join("·"));
   if (typeof f.max_cash === "number") out.push(`현금 ${won(f.max_cash)}`);

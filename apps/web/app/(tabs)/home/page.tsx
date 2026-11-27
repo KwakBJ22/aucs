@@ -27,6 +27,7 @@ import { subscribePush } from "@/lib/push";
 import { track } from "@/lib/track";
 import { CollectionIcon } from "@/components/collection-icon";
 import { STAGES } from "@/lib/academy.ko";
+import { regionsShort } from "@/lib/regions";
 import { count, doneLessons } from "@/lib/academy";
 
 const t = copy.home;
@@ -147,7 +148,7 @@ export default function Home() {
   const shown = mine && { ...mine, items: mine.items.filter((c) => !dropped.has(c.item_id)) };
   const onbidClosing = (onbidSoon?.items ?? []).filter((c) => !dropped.has(c.item_id)).slice(0, 4);
   const summary = [
-    profile.regions.join("·"),
+    regionsShort(profile.regions),
     profile.cash ? `현금 ${won(profile.cash)}` : null,
     profile.purpose ? t.purposeName[profile.purpose] : null,
   ]
