@@ -137,6 +137,7 @@ cross join lateral (select d.payload -> 'dma_result' -> 'dspslGdsDxdyInfo' ->> '
                     order by d.fetched_at desc limit 1) k
 where {LIVE} and k.keep ~ '말소\s*에?\s*동의|말소\s*하는\s*(것|데)\s*에?\s*동의'
   and k.keep !~ '전세권|가등기|가처분|지역권|유치권|근저당(?!\\s*권자\\s*겸)'
+  and not (k.keep ~ '지상권' and k.keep !~ '지상권\\s*자')
   and exists (select 1 from jsonb_array_elements(r.result -> 'signals') x where x ->> 'rule_id' = 'risk.prior_rights')
 """
 DOC_LATE_SQL = f"""

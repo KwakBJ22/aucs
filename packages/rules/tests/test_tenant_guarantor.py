@@ -48,3 +48,10 @@ def test_different_people_same_deposit_not_merged() -> None:
     rows = [{"name_raw": "김가", "move_in_date": d, "deposit_krw": 10_000_000},
             {"name_raw": "이나", "move_in_date": d, "deposit_krw": 10_000_000}]  # fmt: skip
     assert len(merge_guarantor(rows)) == 2
+
+
+def test_unknown_deposit_not_unclaimed() -> None:
+    ts = [Tenant(move_in_date=date(2022, 3, 7), claim_date=date(2025, 3, 14), deposit_krw=148_000_000),
+          Tenant(move_in_date=date(2022, 9, 13))]  # fmt: skip
+    tp = power_tenants(ts, date(2023, 1, 1))
+    assert tp and tp["n"] == 2 and tp["deposit_krw"] == 148_000_000 and tp["unclaimed"] is False
