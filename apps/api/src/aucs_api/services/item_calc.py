@@ -8,6 +8,7 @@ from aucs_api.db import batch, connect
 from aucs_api.services.item_complex import median
 from aucs_api.services.item_worth import worth
 from aucs_api.services.items import COURT_NAME
+from aucs_api.services.picks import reduction_table
 
 
 def _one(r: dict[str, Any] | None) -> dict[str, Any]:
@@ -49,7 +50,7 @@ def bid_check(item_id: str, bid_krw: int) -> dict[str, Any] | None:
 
 _CALC_SQL = """
 select i.item_id, i.sido, i.address, i.appraisal_krw, i.min_price_krw, i.building_area_m2, i.note_masked,
-       i.usage_name, i.building_desc, i.sale_date,
+       i.usage_name, i.building_desc, i.sale_date, split_part(i.item_id, '-', 1) as court_code,
        a.result -> 'sale_rate' as sale_rate, a.result -> 'court_cell' as court_cell,
        a.result -> 'local_peers' as local_peers, a.result -> 'new_item' as new_item,
        a.result -> 'market' as market, a.result -> 'signals' as signals, a.result -> 'building' as building
@@ -189,7 +190,9 @@ def build_calc(
         # 취득세 · 대출 종류(11/17): 그 호 전유 용도 → 법원 용도 + 물건 설명 → 대장 주용도 순(usage_for_kind)
         "usage": usage_for_kind(r.get("usage_name"), r.get("building_desc"), b.get("unit_use"), b.get("main_use")),
     }  # fmt: skip
-    _, _, rate = worth(r, r.get("signals") or [])
+    # 11/27: 상세와 같은 범위로 — 법원 저감률을 넘겨 「지난 회차 최저가(이미 유찰된 값)」 위로 안 올라가게.
+    # 예전엔 계산 화면만 이 값을 안 넘겨, 많이 유찰된 물건(최저가 8%)에 감정가의 46%를 입찰가로 냈음(진행 98건)
+    _, _, rate = worth(r, r.get("signals") or [], "", r.get("reduction_pct"))
     # 떠안는 권리(11/1): 선순위 전세권·대항력 임차인 등을 떠안으면 낙찰가 + 그 돈이 실제 값.
     # 금액을 모르면 추천 입찰가·「이 선을 넘으면 비싸다」를 내지 않음(예전엔 시세 기준으로 최저가의 8~11배를 추천했음)
     risk = assume_risk(r.get("signals") or [])
@@ -304,6 +307,8 @@ def calc(
         r = qs[0].fetchone()
         if not r or not r["min_price_krw"]:
             return None
+        red = reduction_table(date.today()).get(r["court_code"])
+        r = {**r, "reduction_pct": red["pct"] if red else None}
         rows: dict[str, list[Any]] = {}
         for x in qs[1].fetchall():
             rows.setdefault(x["rule_key"], []).append((x["valid_from"], x["value"]))
