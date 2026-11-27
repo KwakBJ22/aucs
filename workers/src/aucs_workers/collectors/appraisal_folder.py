@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg
+from aucs_rules.courts import court_name
 from psycopg.types.json import Jsonb
 
 from aucs_workers.collectors.parse import checksum
@@ -95,6 +96,41 @@ def find_case(
     return [r[0] for r in rows]
 
 
+def extra_text(raw: bytes, data: dict[str, Any]) -> str:
+    """pypdf 가 못 읽은 앞쪽 글 — pdfium 글, 그래도 거의 없으면 글자 인식(tesseract, PC 에만). 못 하면 빈 글."""
+    text = ""
+    try:
+        import pypdfium2 as pdfium
+
+        doc = pdfium.PdfDocument(raw)
+        text = "\n".join(doc[i].get_textpage().get_text_range() for i in range(min(3, len(doc))))
+    except Exception:  # noqa: BLE001
+        text = ""
+    if len(re.sub(r"\s", "", text)) < 200 and data.get("scanned"):
+        try:
+            from aucs_workers.extract.pdf_ocr import ocr_head
+
+            text += "\n" + ocr_head(raw)
+        except Exception:  # noqa: BLE001 — tesseract 가 없는 곳(VM 등)
+            pass
+    return text.replace("\x00", "")
+
+
+def pick_court(cases: list[str], text: str) -> list[str]:
+    """(순수 함수) 같은 사건번호가 두 법원에 있을 때 — 글 속 법원 이름으로 고름.
+    「수원지방법원 평택지원」처럼 지원 이름이 맞으면 그쪽을 먼저(본원 이름도 같이 적혀 있으므로)."""
+    flat = re.sub(r"\s", "", text or "")
+
+    def name(cid: str) -> str:
+        return court_name(cid.split("-", 1)[0])
+
+    branch = [c for c in cases if f"{name(c)}지원" in flat]
+    if branch:
+        return branch
+    main = [c for c in cases if f"{name(c)}지방법원" in flat]
+    return main or cases
+
+
 def ingest(conn: psycopg.Connection, f: Path, court: str | None = None) -> tuple[str | None, str]:
     """PDF 하나를 넣음 → (사건, 한 줄). 못 넣으면 사건은 None 이고 한 줄은 까닭."""
     raw = f.read_bytes()
@@ -104,6 +140,14 @@ def ingest(conn: psycopg.Connection, f: Path, court: str | None = None) -> tuple
     except Exception as e:  # noqa: BLE001 — 깨진 PDF 는 건너뜀
         return None, f"못 읽음 {type(e).__name__}"
     cases = find_case(conn, {**data, "file": f.stem}, no, court)
+    more = ""
+    if not cases or len(cases) > 1:
+        # 11/28: 한글 글꼴(KSC) PDF 는 pypdf 가 글을 못 꺼냄 → pdfium 으로, 그래도 없으면 그림 PDF → 글자 인식(PC)
+        more = extra_text(raw, data)
+        if not cases and more:
+            cases = find_case(conn, {"head": more, "file": f.stem}, no, court)
+    if len(cases) > 1:
+        cases = pick_court(cases, f"{data.get('head') or ''}\n{more}")
     if len(cases) != 1:
         return None, "사건 못 찾음" if not cases else "법원 여럿 " + ", ".join(cases)
     conn.execute(
