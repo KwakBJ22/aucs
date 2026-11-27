@@ -64,6 +64,9 @@ def command(key: str) -> list[str] | None:
     if key == "probe_spec":  # 매각물건명세서 원본 한 건 보기(11/26 지시 1126a) — DB 에 안 넣음, logs/probe_spec.log
         return [sys.executable, "-m", "aucs_workers.collectors.probe_spec",
                 "B000211", "2025타경51836", "1", "B000210", "2026타경100740", "1", "B000212", "2026타경10", "1"]  # fmt: skip
+    if key == "probe_schedule":  # 끝난 사건 기일내역에 낙찰가가 나오나(11/27) — 3번만 부름, DB 에 안 넣음, logs/probe_schedule.log
+        return [sys.executable, "-m", "aucs_workers.collectors.probe_schedule",
+                "B000240", "2020타경11553", "B000240", "2020타경12181", "B000212", "2023타경6427"]  # fmt: skip
     if key == "probe_land":  # 군포시 토지 매매가 늘 0줄인 까닭 표본(11/18) — 4번만 부름, DB 에 안 넣음
         return [sys.executable, "-m", "aucs_workers.collectors.probe_land"]
     if key == "court_nationwide":  # 전국 매각결과 · 물건 목록 보관(11/18) — 아침 묶음 끝에도 돎
