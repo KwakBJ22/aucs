@@ -470,28 +470,6 @@ async function uploadSpec(token: string, itemId: string, file: File): Promise<Sp
   return (await res.json()) as SpecSaved;
 }
 
-// 감정평가서 올리기(11/27): 보관함에 바로 올리고(큰 PDF — Vercel 은 4.5MB 까지만) 서버가 읽어 적음
-export type AppraisalSaved = {
-  ok: boolean;
-  why?: string;
-  already?: boolean;
-  firm?: string | null;
-  pages?: number;
-  points?: number;
-  scanned?: boolean;
-};
-async function uploadAppraisal(token: string, caseId: string, file: File): Promise<AppraisalSaved> {
-  const id = encodeURIComponent(caseId);
-  const { url } = await call<{ url: string }>(token, `/appraisal/${id}/upload-url`, "POST");
-  const put = await fetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": "application/pdf", "x-upsert": "true" },
-    body: file,
-  });
-  if (!put.ok) throw new AdminError(put.status, `올리기 실패(${put.status})`);
-  return call<AppraisalSaved>(token, `/appraisal/${id}/done`, "POST");
-}
-
 export const adminApi = {
   specItems: (t: string, q: string, offset = 0) =>
     call<{ rows: SpecItem[]; total: number }>(
@@ -518,7 +496,6 @@ export const adminApi = {
       t,
       `/appraisal/targets?offset=${offset}${sigungu ? `&sigungu=${encodeURIComponent(sigungu)}` : ""}${soon ? "&soon=true" : ""}`,
     ),
-  uploadAppraisal,
   ackJob: (t: string, job_id: string) => call(t, `/jobs/${enc(job_id)}/ack`, "POST"),
   requestJob: (t: string, job_key: string) =>
     call<{ req_id: number; dup: boolean }>(t, "/job-requests", "POST", { job_key }),
