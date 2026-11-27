@@ -1,0 +1,15 @@
+{
+  "_설명": "사람이 법원 원문과 맞대 본 물건의 정답(11/27 물건 검증 2~). 자료 점검(golden)이 날마다 맞대 봄 — 틀어지면 규칙 · 읽기를 고친 것이 다른 곳을 망가뜨린 것. tenant_count = 그 물건 임차인 수(같은 사람 한 번), has / not = 있어야 · 없어야 할 신호, title_not = 신호 글에 나오면 안 되는 말.",
+  "B000253-2025타경41544-1": {"tenant_count": 1, "has": ["risk.lease_reg_released"], "note": "평택 · 보증공사 대항력 포기서"},
+  "B000253-2026타경50615-1": {"tenant_count": 2, "not": ["risk.tenant_power"], "note": "평택 · 2025 전입 두 세대(근저당 2018 뒤)"},
+  "B000251-2025타경52870-1": {"tenant_count": 1, "has": ["risk.lease_reg_released"], "note": "성남 · 최소라 + 보증공사 한 사람 · 확정 2022-08-10"},
+  "B000253-2025타경663-1": {"tenant_count": 0, "not": ["risk.tenant_power", "risk.prior_rights"], "note": "평택 · 조사된 임차내역 없음"},
+  "B000250-2025타경56521-1": {"tenant_count": 1, "not": ["risk.tenant_power"], "note": "수원 · 전세권자 겸 임차인(전입 칸 빔)"},
+  "B000211-2025타경51173-1": {"title_not": ["2억 9,600만", "배당요구가 없어"], "note": "서울동부 · 정은나 + 보증공사 한 사람 1.48억 · 배당요구 있음"},
+  "B000211-2025타경476-1": {"tenant_count": 1, "has": ["risk.prior_rights"], "note": "건대입구 · 토지 지상권 인수(명세서 원문)"},
+  "B000253-2025타경43097-1": {"tenant_count": 1, "has": ["risk.lease_reg_released"], "note": "송탄 · 신정선 + 보증공사"},
+  "B000251-2026타경50199-1": {"tenant_count": 0, "not": ["risk.prior_rights"], "note": "신흥 · 조사된 임차내역 없음"},
+  "B000240-2025타경508836-1": {"tenant_count": 2, "not": ["risk.tenant_power"], "note": "소래포구 · 변병림 + 동거인(전입 2018-09 · 근저당 2018-02 뒤)"},
+  "B000211-2025타경51965-1": {"tenant_count": 1, "has": ["risk.lease_reg_released"], "note": "길동 · 유현성 + 한국주택금융공사 한 사람"},
+  "B000250-2024타경83584-1": {"has": ["risk.superficies_released"], "not": ["risk.prior_rights"], "note": "수원 · 지상권자 말소동의서"}
+}

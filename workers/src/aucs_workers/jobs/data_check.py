@@ -18,13 +18,17 @@
   market_odd   시세가 감정가의 절반 아래 · 두 배 위(다른 집 거래를 잡았을 수 있음)
   prior_release 「소멸되지 않는 권리」 칸에 말소 동의 글이 있는데 「인수」 신호가 남음
   doc_late     분석 뒤 6시간 넘게 지나 새 서류를 받았는데 다시 분석 안 됨
+  golden       사람이 원문과 맞대 본 물건(golden_items.json)의 정답과 지금 분석이 다름 — 고친 것이 다른 곳을 망가뜨림
+  changes      하루 안에 다시 분석된 물건 중 신호 · 임차인 수가 바뀐 것(빨간 불 아님 — 규칙을 고친 효과를 건수로)
 결과는 ops.job_runs.message(JSON)에 — 빨간 불 판단은 ops_watch.red_lights 한 곳(LIMITS 넘으면).
 
     uv run python -m aucs_workers.jobs.data_check
 """
 
 import json
+from collections import Counter
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -142,6 +146,66 @@ where {LIVE} and exists (select 1 from raw.court_doc_raw d where d.case_id = i.c
                          and d.fetched_at > r.computed_at + interval '6 hours')
 """
 
+GOLDEN = Path(__file__).with_name("golden_items.json")
+LATEST2_SQL = """
+select item_id, version, result from (
+  select a.item_id, a.version, a.result, row_number() over (partition by a.item_id order by a.version desc) n
+  from analysis.item_analysis a where a.item_id = any(%s)) x where n <= 2 order by item_id, version desc
+"""
+CHANGED_IDS_SQL = f"""
+select i.item_id from core.items i where {LIVE}
+  and exists (select 1 from analysis.item_analysis a where a.item_id = i.item_id and a.computed_at > now() - interval '1 day')
+  and (select count(*) from analysis.item_analysis a where a.item_id = i.item_id) >= 2
+"""
+
+
+def _rules(result: dict[str, Any] | None) -> set[str]:
+    return {s.get("rule_id") for s in (result or {}).get("signals") or [] if s.get("rule_id")}
+
+
+def golden_misses(expected: dict[str, dict[str, Any]], results: dict[str, dict[str, Any]]) -> list[str]:
+    """정답표와 지금 분석을 맞댐(순수 함수) → 「물건 무엇이 다름」 목록. 분석이 없는 물건(끝남)은 건너뜀."""
+    out = []
+    for item_id, e in expected.items():
+        if item_id.startswith("_") or item_id not in results:
+            continue
+        r = results[item_id] or {}
+        rules = _rules(r)
+        titles = " ".join(s.get("title") or "" for s in r.get("signals") or [])
+        if "tenant_count" in e and r.get("tenant_count") != e["tenant_count"]:
+            out.append(f"{item_id} 임차인 {r.get('tenant_count')}명(정답 {e['tenant_count']})")
+        out += [f"{item_id} {k} 없음" for k in e.get("has", []) if k not in rules]
+        out += [f"{item_id} {k} 있음" for k in e.get("not", []) if k in rules]
+        out += [f"{item_id} 「{w}」" for w in e.get("title_not", []) if w in titles]
+    return out
+
+
+def change_summary(pairs: dict[str, tuple[dict[str, Any], dict[str, Any]]]) -> dict[str, Any]:
+    """물건마다 (지금, 바로 앞) 분석 → 바뀐 신호 · 임차인 수 건수(순수 함수)."""
+    added: Counter[str] = Counter()
+    removed: Counter[str] = Counter()
+    tenants = 0
+    changed = []
+    for item_id, (now, before) in pairs.items():
+        a, b = _rules(now), _rules(before)
+        t = (now or {}).get("tenant_count") != (before or {}).get("tenant_count")
+        if a != b or t:
+            changed.append(item_id)
+        added.update(a - b)
+        removed.update(b - a)
+        tenants += t
+    return {"n": len(changed), "ex": changed[:5], "added": dict(added.most_common(10)),
+            "removed": dict(removed.most_common(10)), "tenant_count": tenants}  # fmt: skip
+
+
+def _latest2(cur: Any, ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    got: dict[str, list[dict[str, Any]]] = {}
+    for k in range(0, len(ids), 2000):
+        for item_id, _v, result in cur.execute(LATEST2_SQL, (ids[k : k + 2000],)).fetchall():
+            got.setdefault(item_id, []).append(result)
+    return got
+
+
 # 비고 사실 → 신호
 NOTE_RULE = {
     "lien_reported": "risk.lien",
@@ -187,7 +251,13 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "prior_release": [r[0] for r in cur.execute(PRIOR_RELEASE_SQL).fetchall()],
         "doc_late": [r[0] for r in cur.execute(DOC_LATE_SQL).fetchall()],
     }
-    return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
+    expected = json.loads(GOLDEN.read_text(encoding="utf-8"))
+    g = _latest2(cur, [k for k in expected if not k.startswith("_")])
+    found["golden"] = golden_misses(expected, {k: v[0] for k, v in g.items()})
+    ch = _latest2(cur, [r[0] for r in cur.execute(CHANGED_IDS_SQL).fetchall()])
+    changes = change_summary({k: (v[0], v[1]) for k, v in ch.items() if len(v) == 2})
+    return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {
+        "changes": changes, "engine": ENGINE_VERSION}  # fmt: skip
 
 
 def main() -> None:

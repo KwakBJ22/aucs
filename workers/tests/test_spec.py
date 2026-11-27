@@ -78,3 +78,17 @@ def test_fix_split_guarantor_names() -> None:
     out = merge_same(fixed)
     assert [r["name"] for r in out] == ["유현성", "변병림"]
     assert out[0]["claim_date"] == date(2025, 8, 22)
+
+
+def test_same_name_unknown_deposit_merged() -> None:
+    from aucs_workers.extract.spec import fix_names, merge_same
+
+    d = date(2018, 9, 27)
+    base = {"part": None, "source": None, "title": None, "period": None, "monthly_rent_krw": None,
+            "fixed_date": None, "claim_date": None, "claim_text": None}  # fmt: skip
+    rows = [{**base, "name": None, "deposit_krw": 30_000_000, "move_in_date": d},
+            {**base, "name": "변병림", "deposit_krw": None, "move_in_date": d, "source": "현황조사"},
+            {**base, "name": "변병림", "deposit_krw": 30_000_000, "move_in_date": d, "source": "권리신고"},
+            {**base, "name": "장소희", "deposit_krw": None, "move_in_date": date(2025, 3, 4)}]  # fmt: skip
+    out = merge_same(fix_names(rows))
+    assert [(r["name"], r["deposit_krw"]) for r in out] == [("변병림", 30_000_000), ("장소희", None)]

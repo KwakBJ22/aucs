@@ -37,3 +37,18 @@ def test_is_registry_iros_print():
     from aucs_workers.collectors.registry_folder import is_registry
 
     assert is_registry("a.pdf", "", "viewer.jsp_optNoUi=true&optLang=ko&contentId=B208B319631C6D9")
+
+
+def test_golden_and_changes():
+    from aucs_workers.jobs.data_check import GOLDEN, change_summary, golden_misses
+
+    exp = {"_설명": "x", "a": {"tenant_count": 1, "has": ["risk.x"], "not": ["risk.y"], "title_not": ["2억"]},
+           "gone": {"tenant_count": 3}}  # fmt: skip
+    res = {"a": {"tenant_count": 2, "signals": [{"rule_id": "risk.y", "title": "보증금 2억"}]}}
+    assert golden_misses(exp, res) == ["a 임차인 2명(정답 1)", "a risk.x 없음", "a risk.y 있음", "a 「2억」"]
+    assert golden_misses(exp, {"a": {"tenant_count": 1, "signals": [{"rule_id": "risk.x"}]}}) == []
+    s = change_summary({"a": ({"signals": [{"rule_id": "risk.x"}], "tenant_count": 1},
+                              {"signals": [{"rule_id": "risk.y"}], "tenant_count": 2}),
+                        "b": ({"signals": [], "tenant_count": 0}, {"signals": [], "tenant_count": 0})})  # fmt: skip
+    assert s["n"] == 1 and s["added"] == {"risk.x": 1} and s["removed"] == {"risk.y": 1} and s["tenant_count"] == 1
+    assert json.loads(GOLDEN.read_text(encoding="utf-8"))

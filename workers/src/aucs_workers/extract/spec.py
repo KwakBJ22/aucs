@@ -297,7 +297,10 @@ def merge_same(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         heir = re.search(r"\(임차인\s*:?\s*([^)]+)\)", r["name"] or "")
         who = heir.group(1).strip() if heir else r["name"]
         twin = next(
-            (o for o in out if o["name"] == who and o["deposit_krw"] == r["deposit_krw"]
+            (o for o in out if o["name"] == who
+             and (o["deposit_krw"] == r["deposit_krw"]
+                  # 11/27: 현황조사 줄(보증금 「미상」)과 권리신고 줄 — 같은 이름 · 같은 전입이면 한 사람
+                  or (not heir and None in (o["deposit_krw"], r["deposit_krw"]) and o["move_in_date"] is not None))
              and (heir or o["move_in_date"] == r["move_in_date"])),
             None,
         )  # fmt: skip
@@ -307,7 +310,7 @@ def merge_same(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         twin["source"] = " · ".join(x for x in (twin["source"], r["source"]) if x)
         if heir:
             twin["heir"] = r["name"]
-        for k in ("claim_date", "fixed_date", "monthly_rent_krw", "part", "period"):
+        for k in ("claim_date", "fixed_date", "monthly_rent_krw", "part", "period", "deposit_krw"):
             if twin.get(k) is None and r.get(k) is not None:
                 twin[k] = r[k]
         if twin.get("claim_date") is None and r.get("claim_text"):

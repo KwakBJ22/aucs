@@ -100,7 +100,7 @@ DATA_LIMITS = {"list_diff": 20, "note_signal": 0, "soon_docs": 299, "stale": 50,
                "unit_area": 20, "over_market": 400,
                # 11/27 물건 검증 2 — 11/27 고친 뒤 남은 건수 위로 늘면(새 꼴이 생김) 빨간 불
                "tenant_dup": 100, "tenant_name": 10, "tenant_date": 15, "deposit_big": 110, "market_odd": 40,
-               "prior_release": 0, "doc_late": 30}  # fmt: skip  # over_market: 11/26 294건 — 크게 늘면 시세나 낙찰가율 셈이 틀어진 것
+               "prior_release": 0, "doc_late": 30, "golden": 0}  # fmt: skip  # over_market: 11/26 294건 — 크게 늘면 시세나 낙찰가율 셈이 틀어진 것
 DATA_TEXT = {
     "list_diff": "법원 목록 원문과 최저가 · 감정가 · 기일이 다른 물건",
     "note_signal": "비고에 적힌 위험(농취증 · 유치권 · 대항력 있는 임차인 등)인데 신호가 없는 물건",
@@ -116,6 +116,7 @@ DATA_TEXT = {
     "market_odd": "시세가 감정가의 절반 아래 · 두 배 위인 물건(다른 집 거래를 잡았을 수 있음)",
     "prior_release": "말소 동의 글이 있는데 「인수」 신호가 남은 물건",
     "doc_late": "새 서류를 받고 6시간 넘게 다시 분석 안 된 물건",
+    "golden": "사람이 원문과 맞대 본 물건의 정답과 지금 분석이 다름(고친 것이 다른 곳을 망가뜨림)",
 }
 
 
