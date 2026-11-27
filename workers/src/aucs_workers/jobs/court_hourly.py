@@ -146,6 +146,8 @@ NATIONWIDE_DONE = LOCK.parent / "court_nationwide.done"
 # 11/26 밤 대표님: 전국 보관을 멈춤 — 법원에 막힌 세 번(11/23 · 11/26 2번 PC 14:10 · 1번 PC 19:34)이 모두 전국 보관 중이었음.
 #   다시 할 때는 하루 몇십 쪽씩 아주 천천히 따로 시험한 뒤 켬.
 NATIONWIDE_ON = False
+# 11/27 대표님: 2번 PC 명세서 원본 몫 25분 → 50분(지난 60일 밀린 것까지 빨리) — 남는 시간은 서류 보관
+SPEC_MINUTES = 50
 
 
 def nationwide_due(now: datetime) -> bool:
@@ -226,9 +228,9 @@ def docs_main() -> None:
         return
     # 11/26 대표님: 2번 PC 는 한도 · 시간 몫 없이 계속(polite.uncapped) — 다음 차례(매시 10분) 2분 전까지만
     end = datetime.now().replace(minute=0, second=0, microsecond=0) + timedelta(hours=1, minutes=8)
-    # 11/26 밤 지시 1126a: 입찰 7일 안 매각물건명세서 원본 먼저 — 한 차례 최대 25분, 남는 시간은 서류 보관
+    # 11/26 밤 지시 1126a: 매각물건명세서 원본 먼저 — 한 차례 최대 SPEC_MINUTES분, 남는 시간은 서류 보관
     print("── 명세서 원본(2번 PC)", flush=True)
-    spec_end = min(end, datetime.now() + timedelta(minutes=25))
+    spec_end = min(end, datetime.now() + timedelta(minutes=SPEC_MINUTES))
     env = dict(os.environ, AUCS_DEADLINE=str(spec_end.timestamp()))
     code = subprocess.call([sys.executable, "-m", "aucs_workers.collectors.court_spec"], env=env)
     if code != 0:
