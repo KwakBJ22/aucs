@@ -363,8 +363,8 @@ def date_from(s: str) -> date:
     return date.fromisoformat(s)
 
 
-# 11/27 대표님: 휴대폰 푸시는 서비스 정상 오픈 뒤에 켬 — 그 전에는 앱 안 알림 목록만 쌓음(pushed_at 은 비워 둠)
-PUSH_ON = False
+# 11/27 10:04 대표님: 휴대폰 푸시 켬(09:31 에 껐다가 다시 켬). 끄려면 False — 그때는 앱 안 알림 목록만 쌓음
+PUSH_ON = True
 
 
 def send_pushes(conn: psycopg.Connection) -> int:
