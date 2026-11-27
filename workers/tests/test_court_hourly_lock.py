@@ -61,7 +61,7 @@ def test_docs_pc_runs_only_archive(tmp_path, monkeypatch) -> None:  # type: igno
     monkeypatch.setenv("AUCS_ROLE", "docs")
     m.main()
     # 11/26 밤: 2번 PC 는 명세서 원본 → 서류 보관
-    assert [c[-1] for c in calls] == ["aucs_workers.collectors.court_spec", "--archive"]
+    assert [c[-1] for c in calls] == ["aucs_workers.collectors.court_spec", "--old", "--archive"]
     calls.clear()
     monkeypatch.setenv("AUCS_ROLE", "main")
     monkeypatch.setattr(m, "docs_pc_alive", lambda: True)
