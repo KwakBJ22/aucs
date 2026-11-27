@@ -2215,6 +2215,28 @@ export const copy = {
         `범위 안 ${Math.round((inside / n) * 100)}% · 낮게 ${Math.round((below / n) * 100)}% · 높게 ${Math.round((above / n) * 100)}% (${n}건)`,
       scoreNote:
         "유찰 1회 이상 · 처음 나온 물건 · 표본 적음 · 지분 · 특수 · 자동차 · 입찰가 오기는 빼요",
+      split: "나눠 보기",
+      splitFail: (g: number) => (g >= 3 ? "유찰 3회+" : `유찰 ${g}회`),
+      splitRow: (c: {
+        n: number;
+        inside?: number;
+        below?: number;
+        above?: number;
+        mid_err?: number;
+      }) =>
+        `범위 안 ${c.inside}% · 낮게 ${c.below}% · 높게 ${c.above}% · 오차 ${c.mid_err}% · ${c.n}건`,
+      splitFew: (n: number) => `표본 적음 · ${n}건`,
+      splitNote: (min: number) =>
+        `가운데 오차 = 낙찰가와 예상 가운데 값의 차이 ÷ 낙찰가(가운데 값) · ${min}건 미만 칸은 숫자를 안 내요`,
+      shadow: "그림자 — 시세 기준",
+      shadowNote: (min: number, days: number) =>
+        `같은 낙찰을 「낙찰가 ÷ 시세」로 다시 맞힘 · 입찰일 전 ${days}일 안 같은 종류 · 유찰 묶음 ${min}건 이상(시도 → 전국)`,
+      shadowCols: ["현행", "그림자"],
+      shadowCell: (c: { n: number; inside?: number; mid_err?: number }) =>
+        c.n ? `범위 안 ${c.inside}% · 오차 ${c.mid_err}% · ${c.n}건` : "-",
+      shadowBetter: "그림자가 나음",
+      shadowExcluded: (n: number) => `제외 ${n}건`,
+      all: "전체",
       kept: "쌓인 낙찰 순간 기록",
       keptRow: (sold: number, failed: number, market: number) =>
         `낙찰 ${sold} · 유찰 ${failed} · 시세 있던 낙찰 ${market}`,

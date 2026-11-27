@@ -319,7 +319,30 @@ export type PredictFactor = {
   wrong_way: boolean;
   examples: { item_id: string; address: string | null; sale_date: string; ratio: number }[];
 };
+// 한 칸의 성적(현행 또는 그림자). n 만 있으면 비어 있음
+export type PredictCell = {
+  n: number;
+  inside?: number;
+  below?: number;
+  above?: number;
+  mid_err?: number;
+};
+export type PredictSplit = {
+  kind: string;
+  g: number; // 유찰 묶음 1 · 2 · 3(회 이상)
+  n: number;
+  few: boolean;
+} & Partial<Omit<PredictCell, "n">>;
+export type ShadowRow = {
+  month: string;
+  kind: string; // 종류 이름 또는 「전체」
+  excluded: number;
+  current: PredictCell;
+  shadow: PredictCell;
+};
 export type PredictScreen = {
+  score_split: PredictSplit[];
+  shadow_market: { rows: ShadowRow[]; pool_min: number; pool_days: number };
   kept: { month: string; sold: number; failed: number; sold_market: number }[];
   score: { month: string; n: number; inside: number; below: number; above: number }[];
   months: string[];

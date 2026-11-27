@@ -50,6 +50,7 @@ export function PredictView() {
   const { token, say } = useAdmin();
   const [d, setD] = useState<PredictScreen | null>(null);
   const [u, setU] = useState<"apt" | "villa">("apt");
+  const [kind, setKind] = useState("전체");
   useEffect(() => {
     adminApi
       .screen(token, "predict")
@@ -64,6 +65,8 @@ export function PredictView() {
       </Delayed>
     );
   const list = d.factors.filter((f) => f.u === u);
+  const kinds = [...new Set(d.shadow_market.rows.map((r) => r.kind))].filter((k) => k !== "전체");
+  const shadowRows = d.shadow_market.rows.filter((r) => r.kind === kind);
   return (
     <>
       <section className="section">
@@ -76,6 +79,55 @@ export function PredictView() {
           </div>
         ))}
         <p className="sub">{t.scoreNote}</p>
+      </section>
+      {d.score_split.length > 0 && (
+        <section className="section">
+          <h2>{t.split}</h2>
+          {d.score_split.map((s) => (
+            <div key={`${s.kind}${s.g}`} className="adm-row">
+              <span>
+                {s.kind} · {t.splitFail(s.g)}
+              </span>
+              <span className="sub">{s.few ? t.splitFew(s.n) : t.splitRow(s)}</span>
+            </div>
+          ))}
+          <p className="sub">{t.splitNote(15)}</p>
+        </section>
+      )}
+      <section className="section">
+        <div className="adm-row">
+          <h2>{t.shadow}</h2>
+          <div className="adm-tabs">
+            {["전체", ...kinds].map((k) => (
+              <button key={k} className={kind === k ? "on" : ""} onClick={() => setKind(k)}>
+                {k === "전체" ? t.all : k}
+              </button>
+            ))}
+          </div>
+        </div>
+        {shadowRows.length === 0 && <p className="sub">{t.none}</p>}
+        {shadowRows.map((r) => {
+          const better =
+            r.shadow.n > 0 &&
+            (r.shadow.inside ?? 0) > (r.current.inside ?? 0) &&
+            (r.shadow.mid_err ?? 0) < (r.current.mid_err ?? 0);
+          return (
+            <div key={r.month} className="adm-card">
+              <div className="adm-line mt-0">
+                <b>{r.month}</b>
+                {better && <span className="chip green">{t.shadowBetter}</span>}
+                <span className="sub">{t.shadowExcluded(r.excluded)}</span>
+              </div>
+              <span className="sub">
+                {t.shadowCols[0]} {t.shadowCell(r.current)}
+              </span>
+              <span className="sub">
+                {t.shadowCols[1]} {t.shadowCell(r.shadow)}
+              </span>
+            </div>
+          );
+        })}
+        <p className="sub">{t.shadowNote(d.shadow_market.pool_min, d.shadow_market.pool_days)}</p>
       </section>
       <section className="section">
         <div className="adm-row">

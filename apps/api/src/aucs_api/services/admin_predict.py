@@ -7,8 +7,13 @@
   기준(claude/요인표.md): 있는 쪽 · 없는 쪽 각 50건 이상 + 최근 석 달 같은 쪽(달마다 5건 이상) → 「통과 후보」.
   셋째 기준(넣었을 때 성적표가 오르는지)은 넣어 봐야 알아 화면에 「확인 필요」.
 - 상식과 반대(떠안는 권리 · 지분 · 지하 등이 + 로 나옴)면 「원인부터」 + 그 물건 5건.
+- 나눠 보기(score_split): 성적표와 같은 거르기, 종류 × 유찰 묶음(1 · 2 · 3회 이상)으로 쪼갠 성적.
+- 그림자 — 시세 기준(shadow_market, 11/28): 같은 낙찰을 「낙찰가 ÷ 시세」 분포로 다시 맞혀 현행과 나란히 견줌
+  (화면만 — 손님 예측 · 분석 엔진은 그대로).
 """
 
+import re
+from bisect import bisect_left
 from collections import defaultdict
 from statistics import median
 from typing import Any
@@ -63,6 +68,195 @@ from analysis.sale_snapshots s left join core.items i using (item_id)
 where s.result = 'sold' and s.winning_bid_krw > 0 and s.usage_name = any(%s) and not {MISBID}
   and (s.analysis -> 'market' ->> 'price_krw')::bigint > 0
 """
+
+
+# 줄 단위 하나로 받아 나눠 보기 · 그림자가 같이 씀(서버 호출을 늘리지 않음). 거르기 = 지분 · 특수 · 자동차 · 입찰가 오기 뺌.
+# 성적표 대상(유찰 1회 이상 · 처음 나온 물건 · 표본 적음 뺌)인지는 파이썬에서 가림 — 그림자 풀은 더 넓게(유찰 0 포함).
+_SPLIT_SQL = f"""
+select s.sale_date, s.usage_name, coalesce(s.failed_count, 0) as failed_count,
+       s.sale_rate::float as sale_rate, (s.analysis -> 'sale_rate' ->> 'p25')::float as p25,
+       (s.analysis -> 'sale_rate' ->> 'p50')::float as p50, (s.analysis -> 'sale_rate' ->> 'p75')::float as p75,
+       coalesce((s.analysis -> 'sale_rate' ->> 'small_sample')::boolean, false) as small_sample,
+       coalesce((s.analysis ->> 'new_item')::boolean, false) as new_item,
+       s.appraisal_krw, s.min_price_krw, s.winning_bid_krw,
+       (s.analysis -> 'market' ->> 'price_krw')::bigint as market_krw, i.address
+from analysis.sale_snapshots s left join core.items i using (item_id)
+where s.result = 'sold' and s.winning_bid_krw > 0 and not {MISBID}
+  and not coalesce(s.is_special_case, false) and not coalesce(s.is_share, false)
+  and coalesce(s.usage_name, '') !~ '{VEHICLES}'
+"""
+
+KINDS = ("아파트", "빌라", "오피스텔", "상가", "땅", "그 밖")
+VILLA = ("다세대", "연립주택,다세대,빌라", "연립주택")
+_SHOP = re.compile(r"근린|상가|판매")
+_LAND = re.compile(r"전답|임야|대지|잡종지|과수원|목장|공장용지|구거|유지|묘지|도로|^[전답]$")
+MIN_CELL = 15  # 나눠 보기 칸이 이보다 적으면 「표본 적음」
+MIN_POOL = 30  # 그림자 비교 사례(같은 종류 · 유찰 묶음)가 이보다 적으면 시도 → 전국 → 제외
+POOL_DAYS = 365
+
+
+def kind_of(usage: str | None) -> str:
+    """법원 용도 이름 → 종류."""
+    u = usage or ""
+    if u == "아파트":
+        return "아파트"
+    if u in VILLA:
+        return "빌라"
+    if u == "오피스텔":
+        return "오피스텔"
+    if _SHOP.search(u):
+        return "상가"
+    if _LAND.search(u):
+        return "땅"
+    return "그 밖"
+
+
+def fail_bucket(n: int | None) -> int:
+    """유찰 묶음: 0 · 1 · 2 · 3회 이상."""
+    return min(max(n or 0, 0), 3)
+
+
+def is_scored(r: dict[str, Any]) -> bool:
+    """성적표(_SCORE_SQL)와 같은 대상: 유찰 1회 이상 · 낙찰가율 · p25~p75 있음 · 표본 적음 · 처음 나온 물건 아님."""
+    return bool(
+        fail_bucket(r["failed_count"]) > 0
+        and r["sale_rate"] is not None
+        and r["p25"] is not None
+        and r["p50"] is not None
+        and r["p75"] is not None
+        and not r["small_sample"]
+        and not r["new_item"]
+        and r["appraisal_krw"]
+    )
+
+
+def _current(r: dict[str, Any]) -> dict[str, float]:
+    """현행 예측: lo · hi 는 낙찰가율(%) p25 · p75, mid 는 감정가 × p50 ÷ 100(원, 오차용)."""
+    return {
+        "lo": float(r["p25"]),
+        "mid": float(r["appraisal_krw"]) * float(r["p50"]) / 100,
+        "hi": float(r["p75"]),
+        "rate": float(r["sale_rate"]),
+        "win": float(r["winning_bid_krw"]),
+    }
+
+
+def _cell(items: list[dict[str, float]]) -> dict[str, Any]:
+    """칸 하나의 성적. 가운데 오차 = |낙찰가 − 예상 가운데| ÷ 낙찰가 의 가운데 값(%)."""
+    n = len(items)
+    if not n:
+        return {"n": 0}
+    return {
+        "n": n,
+        "inside": round(100 * sum(1 for i in items if i["lo"] <= i["rate"] <= i["hi"]) / n, 1),
+        "below": round(100 * sum(1 for i in items if i["rate"] < i["lo"]) / n, 1),
+        "above": round(100 * sum(1 for i in items if i["rate"] > i["hi"]) / n, 1),
+        "mid_err": round(100 * median(abs(i["win"] - i["mid"]) / i["win"] for i in items), 1),
+    }
+
+
+def score_split(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """나눠 보기(순수 함수): 종류 × 유찰 묶음(1 · 2 · 3회 이상)의 성적. 15건 미만 칸은 few=True 로 건수만."""
+    cells: dict[tuple[str, int], list[dict[str, float]]] = defaultdict(list)
+    for r in rows:
+        if is_scored(r):
+            cells[(kind_of(r["usage_name"]), fail_bucket(r["failed_count"]))].append(_current(r))
+    out = []
+    for kind in KINDS:
+        for g in (1, 2, 3):
+            items = cells.get((kind, g), [])
+            if not items:
+                continue
+            c = _cell(items)
+            out.append(
+                {
+                    "kind": kind,
+                    "g": g,
+                    **({"n": c["n"], "few": True} if c["n"] < MIN_CELL else {**c, "few": False}),
+                }
+            )
+    return out
+
+
+def _quantile(xs: list[float], q: float) -> float:
+    s = sorted(xs)
+    pos = (len(s) - 1) * q
+    lo = int(pos)
+    hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (pos - lo)
+
+
+def _sido(address: str | None) -> str | None:
+    parts = (address or "").split()
+    return parts[0] if parts else None
+
+
+def shadow_market(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """그림자 — 시세 기준(순수 함수, DB · 현재 시각 안 씀). 같은 낙찰을 「낙찰가 ÷ 시세」 분포로 다시 맞혀 현행과 견줌.
+
+    대상: 성적표와 같은 조건 + 시세 > 0. 비교 사례: 대상 입찰일 앞선 365일 안(당일 · 뒤는 절대 안 넣음) 낙찰 중
+    같은 종류 · 같은 유찰 묶음 · 시세 > 0, 같은 시도 30건 이상이면 그것, 아니면 전국 30건 이상, 그래도 모자라면 「제외」.
+    범위 = 시세 × ratio 의 25 · 50 · 75% 지점, 셋 다 최저가 밑으로 안 감. 감정가 비율로 바꿔 낙찰가율과 견줌."""
+    pool: dict[tuple[str, int], list[tuple[Any, float, str | None]]] = defaultdict(list)
+    for r in rows:
+        if r["market_krw"] and r["market_krw"] > 0 and r["winning_bid_krw"]:
+            pool[(kind_of(r["usage_name"]), fail_bucket(r["failed_count"]))].append(
+                (
+                    r["sale_date"],
+                    float(r["winning_bid_krw"]) / float(r["market_krw"]),
+                    _sido(r["address"]),
+                )
+            )
+    dates: dict[tuple[str, int], list[Any]] = {}
+    for k, v in pool.items():
+        v.sort(key=lambda x: x[0])
+        dates[k] = [x[0] for x in v]
+    acc: dict[tuple[str, str], dict[str, Any]] = defaultdict(
+        lambda: {"cur": [], "sh": [], "excluded": 0}
+    )
+    for r in rows:
+        if not is_scored(r) or not r["market_krw"] or r["market_krw"] <= 0:
+            continue
+        kind, g = kind_of(r["usage_name"]), fail_bucket(r["failed_count"])
+        d = r["sale_date"]
+        keys = [(d.strftime("%Y-%m"), kind), (d.strftime("%Y-%m"), "전체")]
+        lst, ds = pool.get((kind, g), []), dates.get((kind, g), [])
+        lo_i = bisect_left(ds, d.fromordinal(d.toordinal() - POOL_DAYS))
+        hi_i = bisect_left(ds, d)  # 입찰일 당일 · 뒤는 안 들어감
+        window = lst[lo_i:hi_i]
+        sido = _sido(r["address"])
+        ratios = [x[1] for x in window if sido and x[2] == sido]
+        if len(ratios) < MIN_POOL:
+            ratios = [x[1] for x in window]
+        if len(ratios) < MIN_POOL:
+            for k in keys:
+                acc[k]["excluded"] += 1
+            continue
+        mkt, app = float(r["market_krw"]), float(r["appraisal_krw"])
+        floor = float(r["min_price_krw"]) if r["min_price_krw"] else 0.0
+        lo, mid, hi = (max(_quantile(ratios, q) * mkt, floor) for q in (0.25, 0.5, 0.75))
+        cur = _current(r)
+        sh = {
+            "lo": lo / app * 100,
+            "mid": mid,
+            "hi": hi / app * 100,
+            "rate": cur["rate"],
+            "win": cur["win"],
+        }
+        for k in keys:
+            acc[k]["cur"].append(cur)
+            acc[k]["sh"].append(sh)
+    out = [
+        {
+            "month": m,
+            "kind": k,
+            "excluded": a["excluded"],
+            "current": _cell(a["cur"]),
+            "shadow": _cell(a["sh"]),
+        }
+        for (m, k), a in sorted(acc.items())
+    ]
+    return {"rows": out, "pool_min": MIN_POOL, "pool_days": POOL_DAYS}
 
 
 def _int(v: Any) -> int | None:
@@ -155,6 +349,7 @@ def screen() -> dict[str, Any]:
         kept = c.execute(_KEPT_SQL).fetchall()
         score = c.execute(_SCORE_SQL).fetchall()
         rows = c.execute(_ROWS_SQL, (list(HOUSING),)).fetchall()
+        split_rows = c.execute(_SPLIT_SQL).fetchall()
     months = sorted({r["month"] for r in rows})
     counts = defaultdict(int)
     for r in rows:
@@ -166,4 +361,6 @@ def screen() -> dict[str, Any]:
         "sample": dict(counts),
         "rule": {"min_side": MIN_SIDE, "min_month": MIN_MONTH, "months": MONTHS},
         "factors": factor_table(rows, months),
+        "score_split": score_split(split_rows),
+        "shadow_market": shadow_market(split_rows),
     }
