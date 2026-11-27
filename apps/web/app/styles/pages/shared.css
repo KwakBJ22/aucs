@@ -290,3 +290,30 @@
     font-weight: 700;
   }
 }
+/* 시작 화면 지역 고르기(11/27 대표님): 서울 · 경기 · 인천 탭 · 다음 단추는 화면 아래에 붙고 위에 고른 것 한 줄 */
+.start-tabs {
+  display: grid;
+  margin-top: 12px;
+  background: var(--line);
+}
+.start-tabs button.on {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.start-tab-n {
+  margin-left: 4px;
+  color: var(--blue-text);
+}
+.start-next {
+  position: sticky;
+  bottom: 0;
+  margin: 16px -24px -24px;
+  padding: 12px 24px calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  box-shadow: 0 -1px 0 var(--line);
+}
+.start-picked {
+  margin: 0 0 8px;
+  font-size: var(--fs-sm);
+}

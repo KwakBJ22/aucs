@@ -4,7 +4,7 @@ import { Logo } from "@/components/logo";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchRegions, type RegionRow } from "@/lib/api/items";
-import { SIGUNGU } from "@/lib/regions";
+import { SIGUNGU, regionsShort } from "@/lib/regions";
 import { Sk } from "@/components/skeleton";
 import { copy } from "@/lib/copy.ko";
 import { won } from "@/lib/format";
@@ -12,6 +12,11 @@ import { loadProfile, saveProfile, type Purpose } from "@/lib/profile";
 import { track } from "@/lib/track";
 
 const t = copy.start;
+const SIDO = [
+  ["서울특별시", "서울"],
+  ["경기도", "경기"],
+  ["인천광역시", "인천"],
+] as const;
 const wrap = {
   maxWidth: 480,
   margin: "0 auto",
@@ -50,6 +55,7 @@ export default function Start() {
   const [counts, setCounts] = useState<RegionRow[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
+  const [sido, setSido] = useState<string>(SIDO[0]![0]);
   const [man, setMan] = useState(""); // 만 원 단위 입력
   const [purpose, setPurpose] = useState<Purpose>("live");
 
@@ -78,7 +84,13 @@ export default function Start() {
     const extra = (counts ?? []).filter((r) => !known.has(`${r.sido}-${r.sigungu}`));
     return [...base, ...extra];
   }, [counts]);
-  const shown = useMemo(() => regions.filter((r) => !q || r.sigungu.includes(q)), [regions, q]);
+  // 찾는 말이 있으면 세 시도 모두에서, 없으면 고른 시도 탭만(11/27 — 80곳 가까이 한 목록이라 길었음)
+  const shown = useMemo(
+    () => regions.filter((r) => (q ? r.sigungu.includes(q) : r.sido === sido)),
+    [regions, q, sido],
+  );
+  const inSido = regions.filter((r) => r.sido === sido).map((r) => r.sigungu);
+  const allOn = inSido.length > 0 && inSido.every((g) => picked.includes(g));
   const count = regions
     .filter((r) => picked.includes(r.sigungu))
     .reduce((a, r) => a + (r.items ?? 0), 0);
@@ -114,10 +126,41 @@ export default function Start() {
             placeholder={t.regionSearch}
             className="f-input"
           />
-          <div
-            className="d-flex f-wrap gap-8 mt-14 oy-auto f-1"
-            style={{ alignContent: "flex-start" }}
-          >
+          {!q && (
+            <div className="seg track start-tabs" role="tablist">
+              {SIDO.map(([k, name]) => {
+                const n = regions.filter((r) => r.sido === k && picked.includes(r.sigungu)).length;
+                return (
+                  <button
+                    key={k}
+                    role="tab"
+                    aria-selected={sido === k}
+                    className={sido === k ? "on" : ""}
+                    onClick={() => setSido(k)}
+                  >
+                    {name}
+                    {n > 0 && <span className="start-tab-n">{n}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {/* 안쪽 칸 스크롤 없이 화면 하나로 넘김(11/27 대표님 — 칩 위에서 올리면 칸만 움직였음) */}
+          <div className="d-flex f-wrap gap-8 mt-14">
+            {!q && (
+              <button
+                className={`pill${allOn ? " on" : ""}`}
+                onClick={() =>
+                  setPicked(
+                    allOn
+                      ? picked.filter((x) => !inSido.includes(x))
+                      : [...new Set([...picked, ...inSido])],
+                  )
+                }
+              >
+                {t.sidoAll(SIDO.find(([k]) => k === sido)?.[1] ?? "")}
+              </button>
+            )}
             {shown.map((r) => {
               const on = picked.includes(r.sigungu);
               return (
@@ -140,16 +183,21 @@ export default function Start() {
               );
             })}
           </div>
-          {picked.length > 0 && counts && counts.length > 0 && (
-            <div className="fs-sm c-green my-12 mx-0">{t.count(count)}</div>
-          )}
-          <button
-            className="btn primary mt-16"
-            disabled={!picked.length}
-            onClick={() => setStep(2)}
-          >
-            {t.next}
-          </button>
+          <div className="f-1" />
+          {/* 다음은 화면 아래에 붙고, 위에 고른 것 한 줄 */}
+          <div className="start-next">
+            {picked.length > 0 && (
+              <p className="start-picked">
+                <b>{regionsShort(picked)}</b>
+                {counts && counts.length > 0 && (
+                  <span className="c-green"> · {t.count(count)}</span>
+                )}
+              </p>
+            )}
+            <button className="btn primary" disabled={!picked.length} onClick={() => setStep(2)}>
+              {t.next}
+            </button>
+          </div>
         </>
       )}
 

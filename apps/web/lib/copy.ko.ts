@@ -161,9 +161,10 @@ export const copy = {
   start: {
     step: (n: number) => `${n} / 3`,
     back: "←",
-    regionTitle: "어느 지역에\n관심이 있으세요?",
+    regionTitle: "어느 지역이 궁금하세요?",
     regionHint: "여러 곳을 골라도 돼요.",
     regionSearch: "구·시 이름",
+    sidoAll: (sido: string) => `${sido} 전체`,
     cashTitle: "가진 현금은\n얼마예요?",
     cashHint: "대출을 빼고 바로 쓸 수 있는 돈이에요.",
     cashUnit: "만 원",
@@ -1656,7 +1657,8 @@ export const copy = {
       addrItem: "이 물건",
       addrStill: "그래도 이 등기부로 보기",
       addrUnknown: "주소를 못 읽었어요 · 이 물건 등기부가 맞는지 확인해 주세요",
-      payUnknown: (names: string) => `금액은 등기부 원문 확인: ${names} — 세금은 먼저 받아 갈 수 있어요`,
+      payUnknown: (names: string) =>
+        `금액은 등기부 원문 확인: ${names} — 세금은 먼저 받아 갈 수 있어요`,
       payNote: "근저당은 채권최고액으로 잡아 임차인 몫을 적게 본 대략 계산이에요",
       checkReading: "올린 등기부를 읽고 있어요",
       checkDoc: "내 등기부",
