@@ -149,3 +149,20 @@ def test_note_pledge_by_tenant_or_creditor():
     )
     g = note_facts("한국주택금융공사로부터 대항력은 포기하며 임차권등기를 말소해 주겠다는 확약서가 제출됨")
     assert g.get("lease_reg_released") and not g.get("lease_reg_released_by")
+
+
+def test_release_wordings_11_27():
+    from aucs_rules.spec_facts import spec_facts
+
+    # 수원 2024타경83584: 지상권자 말소동의서 → 인수 아님
+    f = spec_facts({"keep": "목록2. 을구 순위 2번 지상권 설정등기(2017.5.31.접수번호 제49319호). 이에 대해 지상권자인 신청채권자의 말소동의서가 제출되어 있음."})
+    assert f.get("superficies_released") and not f.get("prior_assumed_rights")
+    # 성남 2024타경70499: 「임차권등기말소에 동의」(띄어쓰기 없음) → 보증기관 말소 동의
+    f = spec_facts({"keep": "매수인에게 대항할 수 있는 을구 순위 3번 주택임차권등기 있음. 배당에서 임차보증금이 전액 배당되지 아니하면 잔액을 매수인이 인수함. 다만, 주택도시보증공사가 대항력은 포기하며 전액을 배당받지 못하더라도 임차권등기말소에 동의한다는 내용의 인수조건확약서를 제출함."})
+    assert f.get("lease_reg_released") and not f.get("prior_assumed_rights") and not f.get("lease_registration_with_power")
+    # 근저당권자 겸 지상권자 → 지상권 말소 동의
+    f = spec_facts({"keep": "목록4. 을구 순위 1번 지상권설정등기에 대하여 근저당권자 겸 지상권자 양동신용협동조합의 말소동의서가 제출되어 있음"})
+    assert f.get("superficies_released")
+    # 가등기는 인수 그대로
+    f = spec_facts({"keep": "갑구 6번 소유권이전청구권가등기는 매수인이 인수함. 을구 9번 주택임차권등기(다만, 서울보증보험의 말소동의 확약서가 제출됨)"})
+    assert f.get("prior_assumed_rights") and not f.get("superficies_released")

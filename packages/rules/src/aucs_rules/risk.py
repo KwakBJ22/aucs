@@ -48,7 +48,7 @@ FAILURE_TYPES = {
 }
 RULE_TYPE = {
     "risk.senior_tenant": "T1", "risk.tenant_power": "T1", "risk.prior_rights": "T1", "risk.lease_reg": "T1", "risk.tenant_doubt": "T1", "risk.tenant_unlisted": "T1",
-    "risk.tenants_unknown": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1",
+    "risk.tenants_unknown": "T1", "risk.family": "T1", "risk.lease_reg_released": "T1", "risk.superficies_released": "T1",
     "risk.late_claim": "T2", "risk.commercial_over": "T3", "risk.tax_first": "T4",
     "risk.small_base_mortgage": "T5", "risk.stop": "T5", "risk.resale": "T6",
     "risk.duplicate": "T5", "risk.plan_facility": "T11",  # 11/15 중복경매 · 도시계획시설
@@ -136,6 +136,12 @@ def signals(f: dict[str, Any]) -> list[Signal]:
             if f.get("lease_reg_released_by") == "other"
             else "선순위 임차권등기 — 보증기관이 말소에 동의해 떠안지 않아요 · 입찰 전 매각물건명세서 확인",
             Status.CONFIRMED, text=f["lease_reg_released"],
+        )  # fmt: skip
+    if f.get("superficies_released"):  # 11/27 — 지상권자 말소 동의서: 떠안지 않음, 확인만
+        add(
+            "risk.superficies_released", "info",
+            "선순위 지상권 — 지상권자가 말소에 동의해 떠안지 않아요 · 입찰 전 매각물건명세서 확인",
+            Status.CONFIRMED, text=f["superficies_released"],
         )  # fmt: skip
     if f.get("land_or_building_only"):
         add("risk.partial", "high", "토지만 또는 건물만 매각")

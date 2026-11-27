@@ -10,6 +10,14 @@
   unit_area   진행 물건 중 대장 호 전유 면적이 법원 면적의 1.5배 넘게 다른 것 — 11/25: 다른 동 · 대장 두 장을 더했음
   over_market 진행 물건 중 예상 낙찰가(감정가 × 가운데 낙찰가율)가 시세보다 10% 넘게 높은 것 — 11/26 타워팰리스:
               입찰 전 값으로 되짚으면 이런 물건 41건 중 20건이 예상보다 낮게 팔림(범위 안 32%, 나머지 41%)
+11/27 물건 검증 2(메인 · 역세권 10건)에서 나온 꼴 — 사람이 표본을 보기 전에 전체에서 먼저 셈:
+  tenant_dup   같은 물건에 보증금 · 전입일이 같은 임차인 줄이 둘 이상(보증기관 줄 빼고) — 한 사람을 두 번 셈
+  tenant_name  명세서 원본 임차인 이름이 비었거나 보증기관 이름 조각(「…한국주」 · 「공사(…)」)으로 갈라짐
+  tenant_date  임차인 날짜가 말이 안 됨(확정일이 전입보다 5년 넘게 앞섬 · 앞으로의 날 · 1980년 전)
+  deposit_big  임차인 보증금 합이 감정가의 1.5배 넘음(같은 보증금을 여러 번 더했거나 잘못 읽음)
+  market_odd   시세가 감정가의 절반 아래 · 두 배 위(다른 집 거래를 잡았을 수 있음)
+  prior_release 「소멸되지 않는 권리」 칸에 말소 동의 글이 있는데 「인수」 신호가 남음
+  doc_late     분석 뒤 6시간 넘게 지나 새 서류를 받았는데 다시 분석 안 됨
 결과는 ops.job_runs.message(JSON)에 — 빨간 불 판단은 ops_watch.red_lights 한 곳(LIMITS 넘으면).
 
     uv run python -m aucs_workers.jobs.data_check
@@ -83,6 +91,57 @@ where i.sale_date >= current_date and i.status_code is distinct from 'gone' and 
   and i.appraisal_krw * (r.result -> 'sale_rate' ->> 'p50')::numeric / 100 > 1.1 * (r.result -> 'market' ->> 'price_krw')::numeric
 """
 
+# ── 11/27 물건 검증 2 ─────────────────────────────────────────────────────────
+_LIVE_T = f"""
+with live as (select i.* from core.items i where {LIVE}),
+t as (select l.item_id, t.tenant_id, t.name_raw, t.move_in_date, t.fixed_date, t.claim_date, t.deposit_krw, t.source
+      from live l join core.tenants t on t.case_id = l.case_id and (t.item_id is null or t.item_id = l.item_id))
+"""
+_GUAR = r"보증공사|보증보험|주택금융|도시보증|주택도|\(임차인"
+TENANT_DUP_SQL = _LIVE_T + f"""
+select distinct a.item_id from t a join t b on a.item_id = b.item_id and a.tenant_id < b.tenant_id
+  and a.deposit_krw = b.deposit_krw and a.move_in_date is not distinct from b.move_in_date
+where coalesce(a.name_raw, '') !~ '{_GUAR}' and coalesce(b.name_raw, '') !~ '{_GUAR}'
+"""
+TENANT_NAME_SQL = _LIVE_T + """
+select distinct item_id from t where source = 'spec' and (name_raw is null
+  or name_raw ~ '^(공사|시보증|택도시|도시보증|보증공사|택금융|금융공사)'
+  or name_raw ~ '[가-힣]{2,4}(한국주택금융|한국주택|한국주|주택도시|주택도)$')
+"""
+TENANT_DATE_SQL = _LIVE_T + """
+select distinct item_id from t where fixed_date < move_in_date - interval '5 years'
+  or move_in_date > current_date or fixed_date > current_date or claim_date > current_date
+  or move_in_date < date '1980-01-01'
+"""
+DEPOSIT_BIG_SQL = _LIVE_T + """
+select l.item_id from live l join (select item_id, sum(deposit_krw) s from t group by 1) x using (item_id)
+where l.appraisal_krw > 0 and x.s > 1.5 * l.appraisal_krw
+"""
+MARKET_ODD_SQL = f"""
+select i.item_id from core.items i
+cross join lateral (select result from analysis.item_analysis a where a.item_id = i.item_id order by version desc limit 1) r
+where {LIVE} and i.appraisal_krw > 0 and (r.result -> 'market' ->> 'price_krw') is not null
+  and ((r.result -> 'market' ->> 'price_krw')::numeric < 0.5 * i.appraisal_krw
+       or (r.result -> 'market' ->> 'price_krw')::numeric > 2 * i.appraisal_krw)
+"""
+PRIOR_RELEASE_SQL = f"""
+select i.item_id from core.items i
+cross join lateral (select result from analysis.item_analysis a where a.item_id = i.item_id order by version desc limit 1) r
+cross join lateral (select d.payload -> 'dma_result' -> 'dspslGdsDxdyInfo' ->> 'ndstrcRghCtt' as keep from raw.court_doc_raw d
+                    where d.case_id = i.case_id and d.doc_kind = 'item_detail_' || i.item_no
+                      and d.payload -> 'dma_result' -> 'dspslGdsDxdyInfo' ->> 'gdsSpcfcWrtYmd' is not null
+                    order by d.fetched_at desc limit 1) k
+where {LIVE} and k.keep ~ '말소\s*에?\s*동의|말소\s*하는\s*(것|데)\s*에?\s*동의'
+  and k.keep !~ '전세권|가등기|가처분|지역권|유치권|근저당(?!\\s*권자\\s*겸)'
+  and exists (select 1 from jsonb_array_elements(r.result -> 'signals') x where x ->> 'rule_id' = 'risk.prior_rights')
+"""
+DOC_LATE_SQL = f"""
+select i.item_id from core.items i
+cross join lateral (select computed_at from analysis.item_analysis a where a.item_id = i.item_id order by version desc limit 1) r
+where {LIVE} and exists (select 1 from raw.court_doc_raw d where d.case_id = i.case_id
+                         and d.fetched_at > r.computed_at + interval '6 hours')
+"""
+
 # 비고 사실 → 신호
 NOTE_RULE = {
     "lien_reported": "risk.lien",
@@ -120,6 +179,13 @@ def check(conn: psycopg.Connection, today: date) -> dict[str, Any]:
         "empty_detail": [r[0] for r in cur.execute(EMPTY_DETAIL_SQL).fetchall()],
         "unit_area": [r[0] for r in cur.execute(UNIT_AREA_SQL).fetchall()],
         "over_market": [r[0] for r in cur.execute(OVER_MARKET_SQL).fetchall()],
+        "tenant_dup": [r[0] for r in cur.execute(TENANT_DUP_SQL).fetchall()],
+        "tenant_name": [r[0] for r in cur.execute(TENANT_NAME_SQL).fetchall()],
+        "tenant_date": [r[0] for r in cur.execute(TENANT_DATE_SQL).fetchall()],
+        "deposit_big": [r[0] for r in cur.execute(DEPOSIT_BIG_SQL).fetchall()],
+        "market_odd": [r[0] for r in cur.execute(MARKET_ODD_SQL).fetchall()],
+        "prior_release": [r[0] for r in cur.execute(PRIOR_RELEASE_SQL).fetchall()],
+        "doc_late": [r[0] for r in cur.execute(DOC_LATE_SQL).fetchall()],
     }
     return {k: {"n": len(v), "ex": v[:5]} for k, v in found.items()} | {"engine": ENGINE_VERSION}
 
