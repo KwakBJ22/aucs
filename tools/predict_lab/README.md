@@ -13,36 +13,44 @@
 ## 실행 순서 (저장소 맨 위 `D:\Auction\auction-platform` 에서)
 
 1. 강사 zip 의 sqlite 를 실험실 원천 폴더에 한 번 푼다(원본 zip 은 그대로): `uv run --no-project python tools/predict_lab/unpack_instructor.py D:\Auction\_원본\attachments\초기자료_법원매각결과_20261127.zip`
-2. 우리 낙찰 자료를 읽기 전용으로 내려받는다: `uv run --no-project --with "psycopg[binary]" --with pandas --with pyarrow --with-editable packages/rules python tools/predict_lab/export_ours.py`
-3. 학습 표를 만든다(`table_YYYYMMDD.parquet` + 요약 json): `uv run --no-project --with pandas --with pyarrow --with-editable packages/rules python tools/predict_lab/build_table.py`
+2. 우리 낙찰 자료를 읽기 전용으로 내려받는다(낙찰 + 입찰 전 분석 스냅샷의 낙찰가율 · core.items 주소 · 법원 저감률): `uv run --no-project --with "psycopg[binary]" --with pandas --with pyarrow --with-editable packages/rules python tools/predict_lab/export_ours.py`
+3. 학습 표를 만든다(`table_YYYYMMDD.parquet` + 요약 json). 좌표로 지번 찾기(c)에서 브이월드를 부른다 — 하루 한도 `VWORLD_DAILY_LIMIT`(기본 3만) · 결과는 `geo_cache.json` 에 남겨 다시 안 묻는다(한도에 닿으면 다음 날 이어서). 안 부르려면 `--no-geocode`: `uv run --no-project --with pandas --with pyarrow --with pyproj --with httpx --with-editable packages/rules python tools/predict_lab/build_table.py`
 4. 되짚어 채점 보고서를 만든다(`report_YYYYMMDD.md` + `.json`): `uv run --no-project --with lightgbm --with scikit-learn --with pandas --with pyarrow --with-editable packages/rules python tools/predict_lab/backtest.py`
-5. 시험: `uv run --no-project --with pytest --with lightgbm --with scikit-learn --with pandas --with pyarrow --with-editable packages/rules python -m pytest tools/predict_lab/tests -q -p no:cacheprovider`
+5. 시험: `uv run --no-project --with pytest --with lightgbm --with scikit-learn --with pandas --with pyarrow --with pyproj --with httpx --with-editable packages/rules python -m pytest tools/predict_lab/tests -q -p no:cacheprovider`
 
 자료 폴더를 바꾸려면 환경 변수 `PREDICT_LAB_DIR`(결과 폴더)·`REALTRADE_DIR`(실거래 폴더)을 쓴다.
 
 ## 파일
-- `paths.py` — 자료 · 결과 폴더 위치.
+- `paths.py` — 자료 · 결과 폴더 위치(`geo_cache.json` 포함).
 - `unpack_instructor.py` — 강사 zip 의 sqlite 를 원천 폴더로 푼다.
-- `export_ours.py` — 우리 낙찰(`core.sale_results`) + 입찰 전 분석 스냅샷(`analysis.sale_snapshots`)을 읽기 전용으로 내려받는다.
+- `export_ours.py` — 우리 낙찰(`core.sale_results`) + 입찰 전 분석 스냅샷(`analysis.sale_snapshots`: 낙찰가율 p25·p50·p75 · 엔진 버전) + 물건 주소(`core.items`) + 법원 저감률(`ref.rule_tables`)을 읽기 전용으로 내려받는다.
 - `usage.py` — 법원 용도 이름 → 종류(아파트 · 빌라 · 오피스텔 · 상가 · 땅 · 그 밖 · 제외). 「기타」는 소분류 코드의 다수결.
-- `market.py` — 당시 시세. 실거래를 입찰일 전 자료만으로 붙인다. 계산은 `aucs_rules.price.market_price` 를 그대로 부른다.
-- `table.py` — 학습 표 순수 함수: 강사 자료 묶기 · 우리 자료 우선 · 거르기(지분 · 특수 · 동산 · 입찰가 오기).
-- `build_table.py` — 학습 표 만들기.
-- `methods.py` — ① 지금 규칙(`aucs_rules.sale_rate.rate_range`) · ② 시세 기준 · 확률 보조 · 달 나누기.
+- `geo.py` — 좌표(KATEC) → 지번 브이월드 역지오코딩 + 캐시 · 하루 한도.
+- `market.py` — 당시 시세. 지번 찾는 순서 (a) 강사 maejibun(등기 설명이라 거의 없음) → (b) core.items 주소 → (c) 좌표 역지오코딩 → (d) 단지 이름(`market_how='name'`). 시세 계산은 `aucs_rules.price.market_price` 를 그대로 부른다. 입찰일 전 거래만.
+- `table.py` — 학습 표 순수 함수: 강사 자료 묶기 · 우리 자료 우선 · 거르기 · 유찰 횟수 정하기(`pick_rounds`).
+- `build_table.py` — 학습 표 만들기(+ 요약: 시세 붙은 수 (a)~(d) · 유찰 횟수 점검).
+- `methods.py` — ① 지금 규칙(운영과 같은 `rate_range` → `court_cell` → `adjusted_rates`) · ② 시세 기준 · 확률 보조 · 달 나누기 · 범위 폭 배수 k.
 - `ml.py` — ③ LightGBM 분위수(10·25·50·75·90%) + 팔릴 확률 분류.
-- `backtest.py` — 달마다 「그 달 전까지 배우고 그 달을 맞힘」. 첫 달은 배움용으로만 쓴다. 보고서 작성.
-- `tests/` — 미래 섞임 · ② 30건 미만 제외 · 최저가 밑으로 안 감 · 거르기 · 손님 경로 격리.
+- `backtest.py` — 맞춰 보기 · 달마다 「그 달 전까지 배우고 그 달을 맞힘」 · 범위 폭 맞추기 · 보고서 작성.
+- `tests/` — 미래 섞임 · ② 30건 미만 제외 · adjusted_rates 상한 · 유찰 횟수 정하기 · 지번 찾는 순서 · 역지오코딩 캐시 · k 가 미래 달을 안 봄 · 손님 경로 격리.
+
+## ① 을 운영과 같게 한 것
+- 비교 사례: 운영 `analyze.load_sales` 와 같게 — 낙찰 · 낙찰가율 있음 · 지분 · 특수 · 입찰가 오기(낙찰가율 300%↑ · 최저가 10배↑) 뺌 · 용도는 법원 용도 이름 그대로(`usage_raw`) · 시도는 시도 코드 · 시군구는 「시」 단위 글(운영 `sigungu_from_address` 와 같음: 수원시 권선구 → 수원시) · 면적은 낙찰 표의 칸이 비면 core.items 에서.
+- 유찰 횟수: 우리 자료는 `price_round`(운영과 같음). 강사 자료는 최저가로 센 값(DB 의 `core.price_round` 와 같은 셈: ln(최저가÷감정가) ÷ ln(1−법원 저감률)이 정수일 때), 못 세는 물건에는 (법원 `yuchalCnt` · 그 값−1 · 같은 물건의 앞 매각기일 줄 수) 중 센 물건에서 가장 잘 맞은 것(이번에 yuchalCnt−1 이 89%, 앞 기일 수 60%, yuchalCnt 그대로 1.5%).
+- 범위: `rate_range` → `court_cell`(관할 법원 차이) → `adjusted_rates`(법원 차이만큼 옮김 · 최저가 아래로 안 감 · 지난 유찰가 위로 안 감). 지난 유찰가에 쓰는 법원 저감률은 운영 `reduction_table` 과 같은 출처(verified 법원, 없으면 30%).
+- 맞춰 보기: 입찰 전 분석 스냅샷(`analysis.sale_snapshots`)의 낙찰가율 p25 · p50 · p75 와 견준다. 스냅샷은 만든 날의 엔진 규칙대로라 **rules-0.20.0(price_round) 이상 엔진으로 만든 스냅샷만** 지금 코드와 견줄 수 있다.
 
 ## 결과 읽는 법
-- `report_YYYYMMDD.md` 맨 위: 종류마다 이긴 방식과 세 방식 다 낸 건수, 그리고 방식별 가운데 오차 · 범위 안 %. 이기기는 「세 방식 다 낸 물건」에서 가운데 오차가 가장 작은 방식.
+- `report_YYYYMMDD.md` 맨 위: (가) ① 맞춰 보기(p50 차이 1%p 안 비율, 90% 넘어야 ②③ 결론) (나) 종류마다 이긴 방식 — 같은 물건끼리 가운데 오차 · 범위 안(원래 / 맞춘 뒤) · 건수. 시세 「전체(d 포함)」와 「지번만(a·b·c)」 두 가지.
 - 가운데 오차 % = 평균( |실제 낙찰가 − 예측 가운데 값| ÷ 실제 낙찰가 ) × 100. 범위 안 % = 실제 낙찰가가 예측 25~75% 구간 안에 든 비율(목표는 50%).
+- 범위 폭 맞추기: 방식 · 종류마다 지난달까지 성적으로 배수 k(범위 안 50%가 되게 p50 중심으로 아래 · 위 폭을 k 배)를 정해 그달에 적용. 지난 성적 30건 미만이면 안 맞춤(표 빈칸). 「맞춘 뒤」 숫자는 k 가 있는 달의 물건만이라 같은 건수의 「원래」와 나란히 본다.
 - 성적: 건수 · 범위 안(25~75%) % · 낮게 % · 높게 % · 가운데 오차 % · 10%p 넘게 틀린 %. 제외 건수는 방식별 · 종류별.
-- 이길 확률 점검(입찰가율 X% 로 쓰면 이길 확률)과 팔릴 확률 점검은 예측 평균과 실제 비율을 10% 칸마다 맞춘 표.
-- `table_YYYYMMDD_summary.json`: 원천 행 수 · 겹침 · 거른 건수 · 시세 붙은 건수.
+- 이길 확률 점검(입찰가율 X% 로 쓰면 이길 확률)과 팔릴 확률 점검은 예측 평균과 실제 비율을 10% 칸마다 맞춘 표. 머신러닝이 크게 본 칸 순위도 그대로.
+- `table_YYYYMMDD_summary.json`: 원천 행 수 · 겹침 · 거른 건수 · 시세 붙은 건수((a)~(d)별) · 역지오코딩 · 유찰 횟수 점검.
 
 ## 알려진 한계
 - 강사 자료는 2026-07-28~11-23 17주치뿐이라 배움 자료가 적다(첫 달 배움 1,657건). 8월 성적은 참고만.
-- 강사 자료에는 지번이 없다(`maejibun` 은 등기 설명). 시세는 단지 이름(`buldNm`)으로 맞춘다. 이름이 없거나 실거래 이름과 다르면 시세가 빈다.
+- 강사 자료에는 지번 칸이 없다(`maejibun` 은 대부분 등기 설명). 우리 core.items · 좌표 역지오코딩으로 지번을 찾고, 그래도 없을 때만 단지 이름(`buldNm`)으로 맞춘다(그 줄은 `market_how='name'`). 강사 좌표 중 `wgs84*` 칸은 정수 도(127 · 37)뿐이라 못 쓰고 `xCordi · yCordi`(KATEC)를 변환해 쓴다.
 - 강사 자료에는 특수 표시가 없어 특수 거르기는 우리 자료에만 걸린다.
 - 시군구 이름이 구 없이 쓰인 경우(예: 경기도 화성시)는 법정동 목록으로 고르고, 그래도 못 고르면 빈칸으로 센다.
-- 법원 「유찰 횟수」 칸은 믿지 않는 기록이 대표 쪽에 있다(설계서 5-2). 이 표는 법원 칸을 그대로 쓴다.
+- 법원 「유찰 횟수」 칸(`yuchalCnt`)은 최저가로 센 값보다 거의 늘 1 크다(이번 점검 35,402건 중 맞은 것 1.5%). 그래서 최저가로 센 값을 쓴다(위 「① 을 운영과 같게 한 것」).

@@ -33,7 +33,9 @@ def frame(rows: list[dict], levels: dict[str, list]) -> pd.DataFrame:
     out["category"] = pd.Categorical(df["category"], categories=levels["category"])
     out["sido"] = pd.Categorical(df["sido"].astype(object), categories=levels["sido"])
     out["court"] = pd.Categorical(df["court_code"].astype(object), categories=levels["court"])
-    out["failed_count"] = num("failed_count")
+    out["failed_count"] = (
+        num("eff_failed").fillna(num("failed_count")) if "eff_failed" in df else num("failed_count")
+    )
     out["log_app"] = np.log(num("appraisal_krw"))
     out["min_rate"] = num("min_rate")
     out["market_ratio"] = num("market_ratio")

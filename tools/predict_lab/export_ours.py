@@ -8,24 +8,34 @@
 실행: uv run ... python tools/predict_lab/export_ours.py
 """
 
+import json
 import re
 from pathlib import Path
 
-from paths import OURS_PARQUET, SRC_DIR
+from paths import ITEMS_PARQUET, OURS_PARQUET, REDUCTION_JSON, SRC_DIR
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 SQL = """
-select s.court_code, s.case_no, s.item_no, s.sale_date, s.usage_name, s.region_code,
-       s.address, s.building_area_m2, s.appraisal_krw, s.min_price_krw, s.winning_bid_krw,
-       s.failed_count, s.result, s.is_share, s.is_special_case,
-       a.tenant_count, a.signal_count, a.high_count
+select s.court_code, s.case_no, s.item_no, s.sale_date, s.usage_name, s.sido as sido_name, it.sigungu as sigungu_txt, s.region_code,
+       s.address, coalesce(s.building_area_m2, it.building_area_m2) as building_area_m2, s.appraisal_krw, s.min_price_krw, s.winning_bid_krw,
+       s.failed_count, s.price_round, s.result, s.is_share, s.is_special_case,
+       a.tenant_count, a.signal_count, a.high_count,
+       a.snap_p25, a.snap_p50, a.snap_p75, a.snap_n, a.snap_scope, a.snap_date, a.snap_engine
 from core.sale_results s
+left join core.items it on it.item_id = s.item_id
 left join lateral (
   select (x.analysis->>'tenant_count')::int as tenant_count,
          jsonb_array_length(x.analysis->'signals') as signal_count,
          (select count(*) from jsonb_array_elements(x.analysis->'signals') e
-           where e->>'level' = 'high') as high_count
+           where e->>'level' = 'high') as high_count,
+         (x.analysis->'sale_rate'->>'p25')::float8 as snap_p25,
+         (x.analysis->'sale_rate'->>'p50')::float8 as snap_p50,
+         (x.analysis->'sale_rate'->>'p75')::float8 as snap_p75,
+         (x.analysis->'sale_rate'->>'n')::int as snap_n,
+         x.analysis->'sale_rate'->>'scope' as snap_scope,
+         x.analysis_at::date as snap_date,
+         x.engine_version as snap_engine
   from analysis.sale_snapshots x
   where x.court_code = s.court_code and x.case_no = s.case_no and x.item_no = s.item_no
     and x.sale_date = s.sale_date and x.analysis_at::date < s.sale_date
@@ -34,6 +44,18 @@ left join lateral (
 ) a on true
 where s.sale_date >= '2026-07-01'
 order by s.sale_date, s.court_code, s.case_no, s.item_no
+"""
+
+
+ITEMS_SQL = """
+select split_part(case_id, '-', 1) as court_code,
+       substr(case_id, position('-' in case_id) + 1) as case_no,
+       item_no, address, lot_no, region_code
+from core.items
+"""
+REDUCTION_SQL = """
+select value from ref.rule_tables where rule_key = 'court_reduction_pct'
+order by valid_from desc limit 1
 """
 
 
@@ -56,8 +78,32 @@ def export() -> int:
             cur.execute(SQL)
             cols = [d.name for d in cur.description]
             rows = cur.fetchall()
+            cur.execute(ITEMS_SQL)
+            icols = [d.name for d in cur.description]
+            items = cur.fetchall()
+            cur.execute(REDUCTION_SQL)
+            red = cur.fetchone()
     df = pd.DataFrame(rows, columns=cols)
     df.to_parquet(OURS_PARQUET, index=False)
+    pd.DataFrame(items, columns=icols).to_parquet(ITEMS_PARQUET, index=False)
+    table = dict(red[0]) if red else {}
+    REDUCTION_JSON.write_text(
+        json.dumps(
+            {
+                "pct": {
+                    c: v["pct"]
+                    for c, v in table.items()
+                    if isinstance(v, dict) and v.get("pct") is not None
+                },
+                "verified": sorted(
+                    c for c, v in table.items() if isinstance(v, dict) and v.get("verified")
+                ),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    print(f"물건 주소 {len(items)}건 · 법원 저감률 {len(table)}곳")
     return len(df)
 
 

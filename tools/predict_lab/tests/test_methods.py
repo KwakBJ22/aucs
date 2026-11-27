@@ -8,6 +8,7 @@ from methods import (
     Pred,
     brier,
     build_ratio_pools,
+    build_sale_pool,
     calibration,
     cdf_from_quantiles,
     months_range,
@@ -50,7 +51,7 @@ def test_방식1은_기준일_당일_거래를_쓰지_않는다():
 def test_방식1_pool_을_주면_같은_답():
     base = [_sold(date(2026, 9, 1) + timedelta(days=i), 60 + (i % 9)) for i in range(25)]
     target = _target(date(2026, 10, 1))
-    pool = {"아파트": base}
+    pool = build_sale_pool(base)
     assert predict_rule(base, target).p50 == pytest.approx(
         predict_rule(base, target, pool=pool).p50
     )

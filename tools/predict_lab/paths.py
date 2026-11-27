@@ -12,3 +12,8 @@ INSTRUCTOR_DB = SRC_DIR / "강사_법원매각결과.sqlite"
 OURS_PARQUET = SRC_DIR / "우리_낙찰.parquet"
 REALTRADE_DIR = Path(os.environ.get("REALTRADE_DIR", r"D:\Auction\data\실거래"))
 SGG_JSON = REALTRADE_DIR / "sgg.json"
+ITEMS_PARQUET = (
+    SRC_DIR / "우리_물건주소.parquet"
+)  # core.items 의 (법원 · 사건 · 물건번호 → 주소) — 지번 찾기 (b)
+REDUCTION_JSON = SRC_DIR / "법원_저감률.json"  # ref.rule_tables court_reduction_pct 복사본
+GEO_CACHE = LAB_DIR / "geo_cache.json"  # 브이월드 역지오코딩 결과(한 번 물은 좌표는 다시 안 물음)
