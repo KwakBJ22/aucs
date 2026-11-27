@@ -436,8 +436,8 @@ def load_spec(detail: dict[str, Any]) -> dict[str, Any] | None:
             "base": clean("tprtyRnkHypthcStngDts")}  # fmt: skip
 
 
-# 법원 공개(물건상세 「유의사항」): 현황조사서 · 감정평가서 매각기일 3주 전, 매각물건명세서 1주 전
-SR_POSTED_DAYS = 21
+# 법원 공개(법원경매정보 물건상세검색 안내, 11/27 확인): 현황조사서 · 감정평가서 매각기일 2주 전, 매각물건명세서 1주 전
+SR_POSTED_DAYS = 14
 
 def build_facts(
     item: dict[str, Any],
@@ -697,7 +697,7 @@ def analyze_item(
     ).value
     over = commercial_over(item, tenants, commercial_table, today, hint)
     market = load_market(conn, item, today, pre)
-    # 11/27 대표님: 법원이 현황조사서를 올렸을 때(매각기일 3주 안)인데 우리가 못 받았으면 손님 글을 내지 않음 —
+    # 11/27 대표님: 법원이 현황조사서를 올렸을 때(매각기일 2주 안)인데 우리가 못 받았으면 손님 글을 내지 않음 —
     # 「올라오면 정리해 드려요」는 정말 아직 안 올라왔을 때만. 못 받은 물건은 추천 「위험 없음」에서 뺌(tenants_missing)
     sr_due = bool(item.get("sale_date")) and (item["sale_date"] - today).days <= SR_POSTED_DAYS
     facts = build_facts(item, events, tenants, has_sr or sr_due, over, case_tenants=case_tenants)

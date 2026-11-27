@@ -68,13 +68,18 @@ def store_upload(
     conn: psycopg.Connection, item: dict[str, Any], data: bytes, file_name: str
 ) -> dict[str, Any]:
     """올린 PDF → raw 'spec_<물건번호>'(법원 원본과 같은 칸) + core.tenants(source='spec').
-    item = {item_id, case_id, item_no}. 현황조사서 임차인 줄은 court_spec 과 같이 지움(두 번 세지 않게)."""
+    item = {item_id, case_id, item_no, sale_date}. 현황조사서 임차인 줄은 court_spec 과 같이 지움(두 번 세지 않게).
+    원본 PDF 는 글자가 없어도(그림 PDF) 보관함(court-docs)에 남김 — 나중에 글자 인식으로 읽을 수 있게."""
+    from aucs_workers.doc_files import save_file
+
     pages = pages_from_pdf(data)
+    kept = save_file(conn, item["case_id"], item["item_no"], "spec", "upload", data,
+                     sale_date=item.get("sale_date"), pages=len(pages))  # fmt: skip
     words = words_from_texts(pages)
     payload = {"source": "upload", "file_name": file_name[:120], "pages": len(pages),
                "status": 200, "words": [list(w) for w in words]}  # fmt: skip
     if not words:
-        return {"ok": False, "why": "no_text", "rows": 0}
+        return {"ok": False, "why": "no_text", "rows": 0, "kept": bool(kept.get("path"))}
     res = parse_tenants(words)
     conn.execute(
         "insert into raw.court_doc_raw (case_id, doc_kind, payload, checksum) values (%s,%s,%s,%s) on conflict do nothing",
@@ -100,4 +105,5 @@ def store_upload(
             (item["case_id"], item["item_id"]),
         )
     conn.execute("update core.items set updated_at = now() where item_id = %s", (item["item_id"],))
-    return {"ok": True, "rows": len(res["rows"]), "none": bool(res["none"]), "pages": len(pages)}
+    return {"ok": True, "rows": len(res["rows"]), "none": bool(res["none"]), "pages": len(pages),
+            "kept": bool(kept.get("path"))}  # fmt: skip

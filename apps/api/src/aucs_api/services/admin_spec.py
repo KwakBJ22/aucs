@@ -76,7 +76,7 @@ def save_spec(item_id: str, data: bytes, file_name: str) -> dict[str, Any]:
 
     with connect() as c:
         it = c.execute(
-            "select item_id, case_id, item_no from core.items where item_id = %s", (item_id,)
+            "select item_id, case_id, item_no, sale_date from core.items where item_id = %s", (item_id,)
         ).fetchone()
         if not it:
             raise LookupError("물건을 찾지 못했어요")

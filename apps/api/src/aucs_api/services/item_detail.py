@@ -147,8 +147,8 @@ def build_detail(
         q("hold", "무엇을 떠안나", hold_ans, "red" if any(s.get("level") == "fatal" for s in warn) else "orange" if warn else "gray",
           {"tenants": tenants, "signals": signals,
            "status_report": ds.get("status_report") in ("extracted", "verified"),
-           # 11/27: 법원이 아직 안 올렸을 때만 「올라오면 보여 드려요」(3주 안인데 없으면 우리가 못 받은 것 — 글 안 냄)
-           "status_pending": bool(r["sale_date"] and (r["sale_date"] - today).days > 21)}),
+           # 11/27: 법원이 아직 안 올렸을 때만 「올라오면 보여 드려요」(2주 안인데 없으면 우리가 못 받은 것 — 글 안 냄)
+           "status_pending": bool(r["sale_date"] and (r["sale_date"] - today).days > 14)}),
         q("worth", "얼마짜리인가", rate_ans, "gray" if not rate else "blue",
           {"appraisal_krw": app, "rate": rate, "notes": rate_notes, "market": r.get("market"),
            "near_market": r.get("near_market"),
