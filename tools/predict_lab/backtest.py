@@ -308,6 +308,7 @@ def evaluate(
     sold_pairs: list[tuple[float, int]] = []
     importance_last: list[dict] = []
     monthly_meta: list[dict] = []
+    sold_items: list[dict] = []  # 물건마다 팔릴 확률(현행 모형) — 신건 따로 채점이 씀
     history: dict[tuple, list[dict]] = defaultdict(list)  # (방식, 종류) → 지난 달들의 채점 행
     k_table: dict[str, dict] = defaultdict(dict)  # "방식|종류" → {달: k}
 
@@ -330,11 +331,13 @@ def evaluate(
             cat = t["category"]
             if t["result"] != "sold":
                 sold_pairs.append((mp["p_sold"], 0))  # 유찰: 가격은 채점 안 함. 팔릴 확률만
+                sold_items.append({"item": item_key(t), "p": mp["p_sold"], "y": 0})
                 continue
             actual = float(t["winning_bid_krw"])
             app = float(t["appraisal_krw"])
             actual_ratio = actual * 100 / app
             sold_pairs.append((mp["p_sold"], 1))
+            sold_items.append({"item": item_key(t), "p": mp["p_sold"], "y": 1})
             for x in BID_GRID:
                 bid_pairs.append(
                     (cdf_from_quantiles(x, mp["ratio_q"]), 1 if actual_ratio <= x else 0)
@@ -420,6 +423,8 @@ def evaluate(
         else None,
         "sold_calibration": calibration(sold_pairs),
         "importance_last_month": importance_last,
+        "_records": records,  # 물건 × 방식 채점 행(run 이 보고서 json 에 넣기 전에 뺌 — 신건 따로 보고가 씀)
+        "_sold_items": sold_items,
     }
 
 
@@ -497,6 +502,8 @@ def run(table: Path, out_dir: Path, today: date) -> dict:
     variants = {}
     for v in VARIANTS:
         variants[v] = evaluate(variant_rows(rows, v), months, pool, reduction, ladder_best)
+        variants[v].pop("_records", None)
+        variants[v].pop("_sold_items", None)
     main = variants["all"]
     result = {
         "built_on": today.isoformat(),
