@@ -202,15 +202,15 @@ const seen = (page, text) =>
 
 const PATHS = [
   {
-    name: "로그인 링크 받기",
+    name: "로그인 메일 받기",
     dev: phone,
     login: false,
     run: async (page, hit) => {
       await page.goto(`${BASE}/login`);
       await page.getByRole("button", { name: "이메일로 계속하기" }).click(); // 11/22 디자인: 누르면 칸이 열림
       await page.locator('input[type="email"]').fill(EMAIL);
-      await page.getByRole("button", { name: "로그인 링크 받기" }).click();
-      await seen(page, "메일함에서 링크를 누르면 로그인돼요");
+      await page.getByRole("button", { name: "로그인 메일 받기" }).click();
+      await seen(page, "메일에 온 숫자를 아래에 넣거나");
       if (!hit.otp) throw new Error("로그인 링크 요청이 나가지 않았어요");
     },
   },
