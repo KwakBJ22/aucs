@@ -61,6 +61,13 @@ export async function sendLoginLink(email: string): Promise<string | null> {
   return error ? error.message : null;
 }
 
+// 메일의 숫자로 로그인(11/28 대표님 — 메일 링크가 다른 브라우저에서 열리면 이 창은 로그인이 안 됐음)
+export async function verifyLoginCode(email: string, code: string): Promise<string | null> {
+  if (!supabase) return "로그인 설정이 아직 없어요";
+  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+  return error ? error.message : null;
+}
+
 // 로그인 뒤 돌아갈 곳: /login?next=/item/... 처럼 받은 우리 사이트 안 주소만(밖으로 새지 않게)
 export function nextPath(): string {
   const n = new URLSearchParams(window.location.search).get("next") ?? "";

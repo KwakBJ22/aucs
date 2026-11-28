@@ -41,7 +41,7 @@ export function AdminGate(props: { children: (token: string, role: Role) => Reac
       <main className="adm-gate">
         <h1>{t.title}</h1>
         <p className="sub">{t.needLogin}</p>
-        <Link href="/login" className="btn primary">
+        <Link href="/login?next=/admin" className="btn primary">
           {t.login}
         </Link>
       </main>
